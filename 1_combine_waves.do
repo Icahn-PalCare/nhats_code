@@ -1,3 +1,10 @@
+/*Combines rounds 1 and 2 sample person SP interview files
+along with the round 2 cumulative tracker file case status variables
+into a single file
+
+Data format is multiple observations per subject, one for each round
+*/
+
 capture log close
 clear all
 set more off
@@ -10,16 +17,15 @@ log using `logs'\1_nhats_setup1.txt, text replace
 //local r2raw C:\data\nhats\round_2
 //local work C:\data\nhats\working
 
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2
+local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
 *********************************************
 
 //round 1
-//use `r1raw'\NHATS_Round_1_SP_File.dta
-use `r1raw'/NHATS_Round_1_SP_File.dta
+use `r1raw'NHATS_Round_1_SP_File.dta
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -30,8 +36,7 @@ save round_1_1.dta, replace
 clear
 
 //round 2
-//use `r2raw'\NHATS_Round_2_SP_File_v2.dta
-use `r2raw'/NHATS_Round_2_SP_File_v2.dta
+use `r2raw'NHATS_Round_2_SP_File_v2.dta
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -85,6 +90,14 @@ r`w'dintvwrage
 //combine 2 waves into single dataset
 use round_1_ltd.dta
 append using round_2_ltd.dta
+
+//merge in tracker status information
+merge m:1 spid using `r2raw'NHATS_Round_2_Tracker_File_v2, ///
+	keepusing(yearsample r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr)
+	
+//drop obs that are in tracker file but not sp file
+drop if _merge==2
+drop _merge	
 save round_1_2.dta, replace
 
 *********************************************

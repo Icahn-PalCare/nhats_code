@@ -16,9 +16,36 @@ use round_1_2.dta
 tab wave, missing
 
 *********************************************
-//residential status - determines if SP interview questions are inapplicable
-//sp questions not asked if resid status = 3 or 4
+//interview type, varies by wave, use tracker status variables
 
+gen ivw_type=3
+replace ivw_type=1 if r1spstat==20 & wave==1 | (r2spstat==20 & r2status!=62) & wave==2
+replace ivw_type=2 if (r2spstat==20 & r2status==62) & wave==2
+la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interview completed" ///
+	3"SP interview not completed"
+la val ivw_type ivw_type
+tab ivw_type wave, missing
+
+tab r1status if wave==1, missing
+tab r1spstat if wave==1, missing
+gen sp_ivw_yes=1 if r1spstat==20 & wave==1
+replace sp_ivw_yes=0 if inlist(r1spstat,11,24) & wave==1
+
+tab r2status r2spstat if wave==2, missing
+replace sp_ivw_yes=1 if r2spstat==20 & wave==2
+replace sp_ivw_yes=0 if inlist(r2spstat,11,12,24) & wave==2
+
+la var sp_ivw_yes "SP interview conducted? yes=1"
+tab sp_ivw_yes wave, missing
+
+gen lml_ivw_yes = 0
+replace lml_ivw_yes=1 if r2spstat==20 & r2status==62 & wave==2
+la var lml_ivw_yes "LWL interview? yes=1"
+
+tab sp_ivw_yes lml_ivw_yes, missing
+tab lml_ivw_yes wave, missing
+
+tab mo2outoft r2status if wave==2, missing
 
 /*missing data convention per user guide
 For our purposes, code all as missing
@@ -40,7 +67,12 @@ la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
 	3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
 la val 	freq_go_out freq_go_out
 la var freq_go_out "How often go outside"
-tab freq_go_out, missing
+tab freq_go_out sp_ivw_yes if wave==1, missing
+tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==0, missing
+tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==1, missing
+
+tab freq_go_out r2status if wave==2 & lml_ivw_yes==1, missing
+
 
 *********************************************
 log close
