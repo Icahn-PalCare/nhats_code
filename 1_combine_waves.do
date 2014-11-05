@@ -1,6 +1,6 @@
-/*Combines rounds 1 and 2 sample person SP interview files
-along with the round 2 cumulative tracker file case status variables
-into a single file
+/*Combines rounds 1 and 2 sample person SP interview files,
+sensitive demo files and the round 2 cumulative tracker file case 
+status variables into a single file
 
 Data format is multiple observations per subject, one for each round
 */
@@ -9,17 +9,19 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs
-local logs /Users/rebeccagorges/Documents/data/nhats/logs
-log using `logs'\1_nhats_setup1.txt, text replace
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+log using `logs'1_nhats_setup1.txt, text replace
 
-//local r1raw C:\data\nhats\round_1
-//local r2raw C:\data\nhats\round_2
-//local work C:\data\nhats\working
+local r1raw C:\data\nhats\round_1\
+local r2raw C:\data\nhats\round_2\
+local work C:\data\nhats\working
+local r1s C:\data\nhats\r1_sensitive\
+local r2s C:\data\nhats\r2_sensitive\
 
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local work /Users/rebeccagorges/Documents/data/nhats/working
+//local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+//local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
+//local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
 *********************************************
@@ -83,6 +85,14 @@ keep `keepallwaves' re2intplace re2newstrct
 save round_`w'_ltd.dta, replace
 }
 
+//check sensitive data files, keep only some variables, merge with ltd datasets
+foreach w in 1 2{
+	use `r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta
+	sort spid 
+	quietly by spid: gen dup = cond(_N==1,0,_n)
+	tab dup	
+	clear
+}
 /*variables I'll need to pull once I get the sensitive dataset
 r`w'dintvwrage
 */
@@ -90,6 +100,17 @@ r`w'dintvwrage
 //combine 2 waves into single dataset
 use round_1_ltd.dta
 append using round_2_ltd.dta
+
+//merge in sensitive data, use r1 as basis
+merge m:1 spid using `r1s'NHATS_Round_1_SP_Sen_Dem_File.dta, ///
+	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
+	rl1primarace rl1hisplatno)	
+drop _merge
+
+//merge in additional r2 sensitive data
+merge m:1 spid using `r2s'NHATS_Round_2_SP_Sen_Dem_File.dta, ///
+	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
+drop _merge
 
 //merge in tracker status information
 merge m:1 spid using `r2raw'NHATS_Round_2_Tracker_File_v2, ///
