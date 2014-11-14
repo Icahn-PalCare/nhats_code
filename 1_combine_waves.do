@@ -56,17 +56,17 @@ use round_`w'_1.dta
 //keep selected variables only
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 	mo`w'out* r`w'd2intvrage hh`w'martlstat ///
-	ip`w'cmedicaid  ///
+	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* ///
-	is`w'resptype
+	is`w'resptype ht`w'placedesc
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan el`w'higstschl ///
-ia`w'toincim1-ia`w'toincim5 re`w'resistrct
+ia`w'toincim1-ia`w'toincim5 ia1totinc re`w'resistrct
 }
 
 if `w'==2 {	
-keep `keepallwaves' re2intplace re2newstrct
+keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dadrscorr ip2nginslast
 }
 
 save round_`w'_ltd.dta, replace
