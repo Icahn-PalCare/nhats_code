@@ -48,30 +48,17 @@ la var wave "Survey wave"
 save round_2_1.dta, replace
 clear 
 
-//drop variables not needed
-local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
-	mo`w'out* r`w'd2intvrage hh`w'martlstat ///
-	ia`w'toincim1-ia`w'toincim5 ip`w'cmedicaid rl`w'spkothlan re`w'resistrct ///
-	hh`w'dlvngarrg hh`w'dhshldnum hc`w'health hc`w'disescn1-hc`w'disescn10 ///
-	hc`w'depresan* is`w'resptype cp`w'chgthink* cg`w'speaktosp cg`w'todaydat* ///
-	cg`w'presidna* cg`w'vpname* cg`w'dclkdraw cg`w'dwrdimmrc cg`w'dwrddlyrc ///
-	hc`w'brokebon1 hc`w'fllsinmth sc`w'deathelp sc`w'dbathhelp sc`w'dtoilhelp ///
-	sc`w'ddreshelp mc`w'havregdoc mc`w'regdoclyr mc`w'hwgtregd8 hc`w'hosptstay ///
-	hc`w'hosovrnht
-	
+
 //round 1
 foreach w in 1 2{
 use round_`w'_1.dta
 
+//keep selected variables only
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 	mo`w'out* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid  ///
-	hh`w'dlvngarrg hh`w'dhshldnum hc`w'health hc`w'disescn1-hc`w'disescn10 ///
-	hc`w'depresan* is`w'resptype cp`w'chgthink* cg`w'speaktosp cg`w'todaydat* ///
-	cg`w'presidna* cg`w'vpname* cg`w'dclkdraw cg`w'dwrdimmrc cg`w'dwrddlyrc ///
-	hc`w'brokebon1 hc`w'fllsinmth sc`w'deathelp sc`w'dbathhelp sc`w'dtoilhelp ///
-	sc`w'ddreshelp mc`w'havregdoc mc`w'regdoclyr mc`w'hwgtregd8 hc`w'hosptstay ///
-	hc`w'hosovrnht
+	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* ///
+	is`w'resptype
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan el`w'higstschl ///
