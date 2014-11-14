@@ -109,22 +109,80 @@ la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never"5"NA, reported no
 la val out_on_own out_on_own
 la var out_on_own "When left house, left by yourself?"
 tab out_on_own wave if sp_ivw_yes==1, missing
+*********************************************
+//needs help when go outside? gets help and also goes outside on own != never
+gen needshelp=0
+replace needshelp=1 if help_go_out==1& out_on_own~=4
+la var needshelp "Leaves houme but with help"
+tab needshelp wave, missing
 
+*********************************************
+//has difficulty? when you used your walker,cane,etc? how much difficulty
+//did you have leaving the house by yourself? 1=none, 2=a little, 3=some, 4=a lot
+//inapplicable if don't report using any device to help, so set to 0 here
+gen hasdifficulty=0
+foreach w in 1 2{
+	tab mo`w'outdif if wave==`w', missing
+	replace hasdifficulty=1 if inlist(mo`w'outdif,2,3,4,-8)
+	replace hasdifficulty=0 if mo`w'outdif==1
+}
+la var hasdifficulty "Leaves home on own but has difficulty"
+tab hasdifficulty wave if sp_ivw_yes==1, missing
+*********************************************
+//needs help or has difficulty going outside?
+gen helpdiff=.
+replace helpdiff=0 if needshelp==0 & hasdifficulty==0
+replace helpdiff=1 if needshelp==1 | hasdifficulty==1
+la var helpdiff "Either needs help or has difficulty going outside"
+tab helpdiff wave if sp_ivw_yes==1, missing
+*********************************************
+//independent - go out some/most days but are independent
+gen independent=0
+replace independent=1 if help_go_out==0 & hasdifficulty==0
+la var independent "Independently leaves home"
+tab independent wave if sp_ivw_yes==1, missing
+
+tab independent helpdiff, missing //no overlap
 *********************************************
 /*homebound categories
 0 = never go out
 1 = rarely go out
 2 = go out but never by self
 3 = go out but need help/have difficulty
-
+4 = go out, independent - don't need help or have difficulty
 */
 gen homebound_cat=.
 replace homebound_cat=0 if freq_go_out==5
 replace homebound_cat=1 if freq_go_out==4
 replace homebound_cat=2 if inlist(freq_go_out,3,2,1) & out_on_own==4
+replace homebound_cat=3 if inlist(freq_go_out,3,2,1) & helpdiff==1
+replace homebound_cat=4 if inlist(freq_go_out,3,2,1) & independent==1
 
-
+la var homebound_cat "Homebound status, categorical"
+la def hb 0 "Never leave home" 1 "Rarely leaves home" 2 "Leaves home but never by self" ///
+3 "Leaves home but needs help/has difficulty" 4 "Independent, not homebound"
+la val homebound_cat hb
 tab homebound_cat wave if sp_ivw_yes==1, missing
+*********************************************
+/*subcategories for level 4 homeboud category
+independent but go out only rarely
+independent and go out frequently*/
+gen indeplow=0
+replace indeplow=1 if freq_go_out==3 & independent==1
+la var indeplow "Independent, go out rarely" 
+
+gen indephigh=0
+replace indephigh=1 if inlist(freq_go_out,2,1) & independent==1
+la var indephigh "Independent, go out often"
+
+tab indeplow wave if sp_ivw_yes==1, missing
+tab indephigh wave if sp_ivw_yes==1, missing
+
+*********************************************
+*********************************************
+//demographic information
+*********************************************
+*********************************************
 
 
 *********************************************
