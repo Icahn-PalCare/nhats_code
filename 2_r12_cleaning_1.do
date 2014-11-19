@@ -2,13 +2,13 @@ capture log close
 clear all
 set more off
 
-local logs C:\data\nhats\logs\
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+//local logs C:\data\nhats\logs\
+local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
 log using `logs'2_nhats_cleaning.txt, text replace
 
-local work C:\data\nhats\working
-//local work /Users/rebeccagorges/Documents/data/nhats/working
+//local work C:\data\nhats\working
+local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
 use round_1_2.dta
@@ -419,27 +419,7 @@ replace livealone=0 if inlist(livearrang,2,3,4)
 la var livealone "Lives alone"
 tab livealone livearrang, missing
 
-*********************************************
-*********************************************
-//self reported health status/conditions
-*********************************************
-*********************************************
-gen srh=.
-foreach w in 1 2{
-tab hc`w'health if wave==`w', missing
-replace srh=hc`w'health if wave==`w'
-}
-replace srh=. if inlist(srh,-9,-8,-1)
-
-la var srh "Self reported health, categorical"
-la def srh 1 "Excellent" 2 "Very good" 3 "Good" 4 "Fair" 5 "Poor"
-la val srh srh
-tab srh if ivw_type==1, missing
-
-gen srh_fp=1 if srh==4 | srh==5
-replace srh_fp=0 if inlist(srh,1,2,3)
-la var srh_fp "Self reported health=fair/poor"
-tab srh_fp srh, missing
+save round_1_2_cleanv1.dta, replace
 
 
 *********************************************
