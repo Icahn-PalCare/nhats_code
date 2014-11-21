@@ -79,11 +79,13 @@ ia`w'toincim1-ia`w'toincim5 ia1totinc re`w'resistrct
 }
 
 if `w'==2 {	
-keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dadrscorr ip2nginslast
+keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
+	re2dadrscorr re2dcensdiv ip2nginslast
 }
 
 if `w'==3 {	
-keep `keepallwaves' re3intplace re3newstrct re3spadrsnew ip3nginslast
+keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
+	re3dcensdiv ip3nginslast
 }
 
 save round_`w'_ltd.dta, replace
