@@ -9,21 +9,22 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs\
-local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1_nhats_setup1.txt, text replace
 
-/*local r1raw C:\data\nhats\round_1\
+local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
+local r3raw C:\data\nhats\round_3\
 local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
-local r2s C:\data\nhats\r2_sensitive\ */
+local r2s C:\data\nhats\r2_sensitive\ 
 
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
+local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ */
 
 cd `work'
 *********************************************
@@ -50,9 +51,19 @@ la var wave "Survey wave"
 save round_2_1.dta, replace
 clear 
 
+//round 3
+use `r3raw'NHATS_Round_3B_SP_File.dta
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+gen wave=3
+la var wave "Survey wave"
+save round_3_1.dta, replace
+clear 
 
 //round 1
-foreach w in 1 2{
+foreach w in 1 2 3{
 use round_`w'_1.dta
 
 //keep selected variables only
@@ -71,6 +82,10 @@ if `w'==2 {
 keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dadrscorr ip2nginslast
 }
 
+if `w'==3 {	
+keep `keepallwaves' re3intplace re3newstrct re3spadrsnew ip3nginslast
+}
+
 save round_`w'_ltd.dta, replace
 }
 
@@ -82,13 +97,11 @@ foreach w in 1 2{
 	tab dup	
 	clear
 }
-/*variables I'll need to pull once I get the sensitive dataset
-r`w'dintvwrage
-*/
 
-//combine 2 waves into single dataset
+//combine 3 waves into single dataset
 use round_1_ltd.dta
 append using round_2_ltd.dta
+append using round_3_ltd.dta
 
 //merge in sensitive data, use r1 as basis
 merge m:1 spid using `r1s'NHATS_Round_1_SP_Sen_Dem_File.dta, ///
@@ -108,7 +121,7 @@ merge m:1 spid using `r2raw'NHATS_Round_2_Tracker_File_v2, ///
 //drop obs that are in tracker file but not sp file
 drop if _merge==2
 drop _merge	
-save round_1_2.dta, replace
+save round_1_to_3.dta, replace
 
 *********************************************
 log close
