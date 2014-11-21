@@ -115,8 +115,9 @@ merge m:1 spid using `r2s'NHATS_Round_2_SP_Sen_Dem_File.dta, ///
 drop _merge
 
 //merge in tracker status information
-merge m:1 spid using `r2raw'NHATS_Round_2_Tracker_File_v2, ///
-	keepusing(yearsample r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr)
+merge m:1 spid using `r3raw'NHATS_Round_3B_Tracker_File, ///
+	keepusing(yearsample r3status r3spstat r3spstatdtyr ///
+		r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr)
 	
 //drop obs that are in tracker file but not sp file
 drop if _merge==2
