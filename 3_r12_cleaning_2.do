@@ -11,7 +11,7 @@ log using `logs'3_nhats_cleaning.txt, text replace
 local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
-use round_1_2_cleanv1.dta
+use round_1_3_cleanv1.dta
 *********************************************
 tab wave, missing
 

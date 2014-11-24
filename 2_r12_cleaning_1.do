@@ -2,13 +2,13 @@ capture log close
 clear all
 set more off
 
-local logs C:\data\nhats\logs\
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+//local logs C:\data\nhats\logs\
+local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
 log using `logs'2_nhats_cleaning.txt, text replace
 
-local work C:\data\nhats\working
-//local work /Users/rebeccagorges/Documents/data/nhats/working
+//local work C:\data\nhats\working
+local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
 use round_1_to_3.dta
@@ -366,6 +366,7 @@ tab private_ltc wave,missing
 *********************************************
 //residence physical structure variable only in wave 1
 tab re1resistrct if wave==1, missing
+tab re1resistrct ht1placedesc if wave==1, missing
 //derived variable in waves 2, 3
 tab re2dresistrct if wave==2, missing
 //per user guide, need to fix this variable since incorrectly coded for 71 obs
@@ -378,22 +379,7 @@ foreach w in 1 2 3{
 tab ht`w'placedesc if wave==`w', missing
 }
 
-//most residence information from wave 1
-//only filled in in wave 2,3 if new address reported
-gen residence=.
-replace residence=re1resistrct if wave==1
-replace residence=re2dresistrct if wave==2
-replace residence=re3dresistrct if wave==3
-replace residence=3 if inlist(residence,4,91)
-
-tab residence wave
-
-//place description in wave 1, then only asked again if moved wave 2 or 3
-foreach w in 1 2 3{
-replace residence=1 if ht`w'placedesc==1
-replace residence=2 if inlist(ht`w'placedesc,2,3,4,91)
-}
-
+//if missing housing type in waves 2,3, backfill with wave 1 info
 //get indicators for moving in waves 2 or 3
 tab re2dadrscorr, missing
 
@@ -406,16 +392,35 @@ gen w3_moved=1 if re3spadrsnew==2
 replace w3_moved=0 if re3spadrsnew==1 | re3spadrsnew==3
 tab w3_moved
 
-//if did not move, set residence=. so can fill it in from prior waves
-foreach w in 2 3{
-replace residence=. if w`w'_moved==0 & wave==`w'
-tab residence w`w'_moved if wave==`w', missing
+gen ht_new=.
+foreach w in 1 2 3{
+replace ht_new=ht`w'placedesc if wave==`w'
 }
 
-//if didn't move, then fill in wave 2,3 res with wave 1 answer
-sort spid wave
-by spid (wave): carryforward residence, replace
+foreach w in 2 3{
+replace ht_new=. if ht`w'placedesc==-1 & w`w'_moved==0
+}
 
+tab ht_new wave, missing
+
+sort spid wave
+by spid (wave): carryforward ht_new, replace
+
+tab ht_new wave, missing
+
+//most residence information from wave 1
+//used derived variables wave 2,3
+gen residence=.
+replace residence=re1resistrct if wave==1
+replace residence=re2dresistrct if wave==2
+replace residence=re3dresistrct if wave==3
+replace residence=3 if inlist(residence,4,91)
+
+tab residence wave
+
+//now overwrite with the new housing type description as done in orig code
+replace residence=1 if ht_new==1
+replace residence=2 if inlist(ht_new,2,3,4,91)
 replace residence=. if inlist(residence,-9,-1)
 tab residence wave, missing
 
@@ -426,25 +431,15 @@ tab residence if wave==1, missing
 tab residence if wave==2, missing
 tab residence if wave==3, missing
 
-***************************************************
-
-***************************************************
-
-***************************************************
-
-***************************************************
-
-***************************************************
-
-
-
+***********************************************************
 //living arrangement, NHATS derived variable
 gen livearrang=.
-foreach w in 1 2{
+foreach w in 1 2 3{
 tab hh`w'dlvngarrg if wave==`w' & ivw_type==1, missing
 replace livearrang=hh`w'dlvngarrg if wave==`w'
 replace livearrang=1 if (hh`w'dlvngarrg==-9 & hh`w'dhshldnum==1)  & wave==`w'
 }
+replace livearrang=. if livearrang==-1 
 
 la var livearrang "Living arrangmeent, categorical"
 la def livearrang 1 "Alone" 2 "With spouse/partner" ///
@@ -458,8 +453,6 @@ replace livealone=0 if inlist(livearrang,2,3,4)
 la var livealone "Lives alone"
 tab livealone livearrang, missing
 
-save round_1_2_cleanv1.dta, replace
-
-
+save round_1_3_cleanv1.dta, replace
 *********************************************
 log close
