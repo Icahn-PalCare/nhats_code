@@ -2,13 +2,13 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs\
-local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
 log using `logs'2_nhats_cleaning.txt, text replace
 
-//local work C:\data\nhats\working
-local work /Users/rebeccagorges/Documents/data/nhats/working
+local work C:\data\nhats\working
+//local work /Users/rebeccagorges/Documents/data/nhats/working
 
 cd `work'
 use round_1_to_3.dta
