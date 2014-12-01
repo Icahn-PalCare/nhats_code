@@ -4,24 +4,24 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs\
-local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1_nsoc_nhats_setup1.txt, text replace
 
-/*local r1raw C:\data\nhats\round_1\
+local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
 local r3raw C:\data\nhats\round_3\
 local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
-local r2s C:\data\nhats\r2_sensitive\ */
+local r2s C:\data\nhats\r2_sensitive\ 
 
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
 local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-
+*/
 cd `work'
 
 //spid is the nhats spid, so if more than one caregiver, more than one row
@@ -40,6 +40,16 @@ replace sp_died=1 if inlist(r2status,62,86) | inlist(r3status,62,86)
 tab sp_died, missing
 
 save caregiver_ds_nsoc_v1.dta, replace
+
+//how many unique SP's is this?
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+replace dup=dup+1
+tab dup
+
+drop if dup>1
+tab sp_died,missing
 
 *******************************************************
 log close
