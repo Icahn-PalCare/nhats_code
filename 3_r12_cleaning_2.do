@@ -215,7 +215,7 @@ la var sr_gad2_anxiety "Anxiety per GAD-2, score=3+"
 tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
 
 *************************************************
-//Dementia
+//Dementia, based on NHATS technical paper no. 5, expanded for 3 waves
 //separate variables for proxy vs self interviews
 *************************************************
 tab proxy_ivw ivw_type, missing
@@ -243,13 +243,141 @@ replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
 replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1
 tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
 
+*************************************************
 //for self interviews
+*************************************************
+//current date questions
+tab cg1todaydat1 cg1speaktosp if wave==1 & ivw_type==1, missing
 
+forvalues i = 1/4{
+	gen date_item`i'=.
+	foreach w in 1 2 3{
+		replace date_item`i'=1 if cg`w'todaydat`i'==1 & wave==`w' //yes
+		replace date_item`i'=0 if inlist(cg`w'todaydat`i',2,-7) & wave==`w' //no, dont know, refused
+	}
+}
+//count date questions correct
+gen date_sum=date_item1+date_item2+date_item3+date_item4
+tab date_sum wave, missing
+
+//add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
+foreach w in 1 2 3{
+	replace date_sum=-2 if date_sum==. & cg`w'speaktosp==2 & wave==`w'
+	replace date_sum=-3 if (date_item1==. | date_item2==. | date_item3==. | ///
+		date_item4==. ) & cg`w'speaktosp==1 & wave==`w'
+}
+tab date_sum wave, missing
+
+//new version date sum measure, without the extra categories
+gen date_sumr=date_sum
+replace date_sumr=. if date_sum==-2
+replace date_sumr=0 if date_sum==-3
+
+//president/vp items and count
+capture program drop president 
+program define president
+	args newv oldv
+	gen `newv'=.	
+	foreach w in 1 2 3{
+		replace `newv'=1 if cg`w'`oldv'==1  & wave==`w' //yes
+		replace `newv'=0 if inlist(cg`w'`oldv',2,-7) & wave==`w' //no, refused
+	}
+	tab `newv' wave, missing
+end
+
+president preslast presidna1	
+president presfirst presidna3
+president vplast vpname1
+president vpfirst vpname3
+
+//count president questions correct
+gen presvp=preslast+presfirst+vplast+vpfirst
+tab presvp wave, missing
+
+//add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
+foreach w in 1 2 3{
+	replace presvp=-2 if presvp==. & cg`w'speaktosp==2 & wave==`w'
+	replace presvp=-3 if presvp==. & (preslast==. | presfirst==. | vplast==. | ///
+		vpfirst==. ) & cg`w'speaktosp==1 & wave==`w'
+}
+tab presvp wave, missing
+
+//new version president sum measure, without the extra categories
+gen presvpr=presvp
+replace presvpr=. if presvp==-2
+replace presvpr=0 if presvp==-3
+
+//total orientation domain, date and president questions
+gen date_prvp=date_sumr+presvpr
+tab date_prvp, missing
+
+//executive function domain, clock drawing score
+gen clock_scorer=.
+foreach w in 1 2 3{
+	replace clock_scorer=cg`w'dclkdraw if wave==`w'
+	replace clock_scorer=. if inlist(cg`w'dclkdraw,-2,-9) & wave==`w' //missing
+	replace clock_scorer=0 if inlist(cg`w'dclkdraw,-3,-4,-7) & wave==`w' //refused,unable
+//assign mean values where missing response
+	replace clock_scorer=2 if cg`w'dclkdraw==-9 & cg`w'speaktosp==1 & wave==`w' //proxy
+	replace clock_scorer=3 if cg`w'dclkdraw==-9 & cg`w'speaktosp==-1 & wave==`w' //self
+	}
+tab clock_scorer wave, missing //left as -1 if inapplicable
+
+//memory domain, word recall, uses derived scores, not raw responses
+capture program drop recall
+program define recall
+	args newv oldv
+	gen `newv'=.
+	foreach w in 1 2 3{
+		replace `newv'=cg`w'`oldv' if wave==`w'
+		replace `newv'=. if inlist(cg`w'`oldv',-2,-1) & wave==`w' //n/a or not asked
+		replace `newv'=0 if inlist(cg`w'`oldv',-7,-3) & wave==`w' //refused or unable
+	}
+	tab `newv' wave, missing
+end
+
+recall irecall dwrdimmrc
+recall drecall dwrddlyrc
+
+gen wordrecall0_20=irecall+drecall
+
+//overall cognitive domain score, assigns cutoffs for each of the domain variables
+gen clock65=0 if clock_scorer>1 & clock_scorer<=5
+replace clock65=1 if inlist(clock_scorer,0,1)
+
+gen word65=0 if wordrecall0_20>3 & wordrecall0_20<=20
+replace word65=1 if inlist(wordrecall0_20,0,1,2,3)
+
+gen datena65=0 if date_prvp>3 & date_prvp<=8
+replace datena65=1 if inlist(date_prvp,0,1,2,3)
+
+gen domain65=clock65+word65+datena65
+tab domain65 wave, missing
+
+//dementia categories, probable dementia, possible dementia, no dementia
+//probable = diagnosis reported or 2+ ad8 questions (proxy) or <1.5 SD below mean
+
+//first xwave variable for proxy allowed sp to answer cg section
+gen speaktosp=.
+foreach w in 1 2 3{
+	replace speaktosp=cg`w'speaktosp if wave==`w'
+}
+
+gen dem_3_cat=. //3 category dementia variable
+replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
+****************************
+****************************
+****************************
+****************************
+****************************
+****************************
+//start here! ad8_dem variable, need to check since I changed variable names, coding
+replace dem_3_cat=1 if dem_3_cat==. & ad8_dem==1 //if proxy ivw indicates dem
+replace dem_3_cat=3 if dem_3_cat==. & ad8_dem==2 & speaktosp==2  //proxy ind no dem
+tab dem_via_proxy
 
 *************************************************
 //rate memory
-cg`w'ratememry //for self interviews
-cp`w'memrygood //proxy interview
 gen memory=.
 foreach w in 1 2 3{
 replace memory=cg`w'ratememry if wave==`w'&proxy_ivw==0 //self interview
@@ -260,6 +388,10 @@ la var memory "Rate memory 1=Excell, 5=Poor"
 la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
 la val memory mem
 tab memory wave, missing
+
+
+*************************************************
+save round_1_3_cleanv2.dta, replace
 
 *************************************************
 log close

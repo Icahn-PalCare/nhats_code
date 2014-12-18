@@ -59,6 +59,7 @@ drop _merge
 //create indicator of those SPIDs that died
 gen sp_died=0
 replace sp_died=1 if inlist(r2status,62,86) | inlist(r3status,62,86)
+la var sp_died "Sample person died r2 or r3"
 tab sp_died, missing
 
 save caregiver_ds_nsoc_v1.dta, replace
