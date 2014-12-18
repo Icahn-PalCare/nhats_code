@@ -220,7 +220,7 @@ tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
 *************************************************
 tab proxy_ivw ivw_type, missing
 
-//for proxy interviews, get ad8 score
+//for proxy interviews, use ad8 score
 forvalues i = 1/8{
 gen pr_ad8_`i'=-1 if proxy_ivw==0 | proxy_ivw==. //set to n/a if not proxy ivw
 foreach w in 1 2 3{
@@ -233,6 +233,33 @@ tab pr_ad8_`i' wave if proxy_ivw==1, missing
 
 tab pr_ad8_1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
 tab pr_ad8_1 sr_dementia_ever if wave==2 & proxy_ivw==1, missing // reported dementia directly
+
+gen pr_ad8_score=pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8 if proxy_ivw==1
+tab pr_ad8_score proxy_ivw, missing
+tab pr_ad8_score wave if proxy_ivw==1, missing
+
+gen dem_via_proxy=1 if pr_ad8_score>=2 & pr_ad8_score~=. //from ad8 score directly
+replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
+replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1
+tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
+
+//for self interviews
+
+
+*************************************************
+//rate memory
+cg`w'ratememry //for self interviews
+cp`w'memrygood //proxy interview
+gen memory=.
+foreach w in 1 2 3{
+replace memory=cg`w'ratememry if wave==`w'&proxy_ivw==0 //self interview
+replace memory=cp`w'memrygood if wave==`w'&proxy_ivw==1 //proxy interview
+}
+replace memory=. if inlist(memory,-8,-7,-1)
+la var memory "Rate memory 1=Excell, 5=Poor"
+la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
+la val memory mem
+tab memory wave, missing
 
 *************************************************
 log close
