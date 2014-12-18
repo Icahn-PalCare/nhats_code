@@ -62,6 +62,17 @@ tab lml_ivw_yes wave, missing
 tab mo2outoft r2status if wave==2, missing
 tab mo3outoft r3status if wave==3, missing
 
+//identify proxy SP interviews
+gen proxy_ivw=.
+foreach w in 1 2 3{
+replace proxy_ivw=1 if is`w'resptype==2
+replace proxy_ivw=0 if is`w'resptype==1
+}
+la var proxy_ivw "Interview via proxy"
+tab proxy_ivw wave, missing
+tab proxy_ivw wave if ivw_type==1, missing
+tab proxy_ivw wave if ivw_type==2, missing
+
 /*missing data convention per user guide
 For our purposes, code all as missing
 The following codes were used at the item level for missing data of different types:
