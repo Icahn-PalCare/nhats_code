@@ -96,7 +96,25 @@ la var sr_cancer_raw "Self report Cancer, Raw"
 la var sr_cancer_ever "Ever Self report Cancer"
 la var sr_cancer_new "Self report Cancer since prev year"
 
-foreach dis in ami stroke cancer{
+//same question pattern, different variable name though, for hip fracture
+gen sr_hip_raw=.
+foreach w in 1 2 3{
+	replace sr_hip_raw=1 if hc`w'brokebon1==1 & wave==`w'
+	replace sr_hip_raw=0 if hc`w'brokebon1==2 & wave==`w'
+}
+//create two new variables from this...
+gen sr_hip_ever=sr_hip_raw
+replace sr_hip_ever=. if (wave==2 | wave==3) & sr_hip_raw==0 //set to missing if report no new wave
+
+sort spid wave
+by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
+
+gen sr_hip_new=sr_hip_raw if wave==2 | wave==3
+la var sr_hip_raw "Self report Hip Fracture, Raw"
+la var sr_hip_ever "Ever Self report Hip Fracture (since age 50)"
+la var sr_hip_new "Self report Hip Fracture since prev year"
+
+foreach dis in ami stroke cancer hip{
 tab sr_`dis'_raw wave if ivw_type==1, missing
 tab sr_`dis'_ever wave if ivw_type==1, missing
 tab sr_`dis'_new wave if ivw_type==1, missing
@@ -213,6 +231,7 @@ replace sr_gad2_anxiety=0 if sr_gad2_score<3 & sr_gad2_score~=.
 la var sr_gad2_score "GAD-2 combined score 0-6 scale"
 la var sr_gad2_anxiety "Anxiety per GAD-2, score=3+"
 tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
+tab sr_gad2_anxiety wave, missing
 
 *************************************************
 //Dementia, based on NHATS technical paper no. 5, expanded for 3 waves
@@ -220,29 +239,51 @@ tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
 *************************************************
 tab proxy_ivw ivw_type, missing
 
+//Initialize 3 category dementia variable
+//probable dementia, possible dementia, no dementia
+//probable = diagnosis reported or 2+ ad8 questions (proxy) or <1.5 SD below mean
+gen dem_3_cat=-1 if ivw_type!=1 //set to na if not SP interview
+replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
+
 //for proxy interviews, use ad8 score
 forvalues i = 1/8{
-gen pr_ad8_`i'=-1 if proxy_ivw==0 | proxy_ivw==. //set to n/a if not proxy ivw
+gen pr_ad8_`i'=-1 //initialize to n/a
+replace pr_ad8_`i'=. if proxy_ivw==1 & dem_3_cat==. //set missing if proxy ivw w/o direct report dementia
 foreach w in 1 2 3{
-	replace pr_ad8_`i'=1 if inlist(cp`w'chgthink`i',1,3) & wave==`w' //yes or dementia reported
-	replace pr_ad8_`i'=0 if cp`w'chgthink`i'==2 & wave==`w' //no
-	}
+	replace pr_ad8_`i'=1 if inlist(cp`w'chgthink`i',1,3) & wave==`w' & dem_3_cat==. & proxy_ivw==1 //yes or dementia reported
+	replace pr_ad8_`i'=0 if inlist(cp`w'chgthink`i',2,-8) & wave==`w' & dem_3_cat==. &  proxy_ivw==1 //no or don't know
+	}	
 tab pr_ad8_`i' wave, missing
 tab pr_ad8_`i' wave if proxy_ivw==1, missing
 }
 
+tab pr_ad8_3 cp1chgthink3 if wave==1, missing
+tab cp2chgthink1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
+
+tab pr_ad8_1 wave, missing
 tab pr_ad8_1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
 tab pr_ad8_1 sr_dementia_ever if wave==2 & proxy_ivw==1, missing // reported dementia directly
 
-gen pr_ad8_score=pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8 if proxy_ivw==1
+gen pr_ad8_score=(pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8) if proxy_ivw==1 & dem_3_cat==.
 tab pr_ad8_score proxy_ivw, missing
-tab pr_ad8_score wave if proxy_ivw==1, missing
+tab pr_ad8_score wave, missing
 
 gen dem_via_proxy=1 if pr_ad8_score>=2 & pr_ad8_score~=. //from ad8 score directly
 replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
-replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1
+replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1 //if previous interview ad8 indicated dementia
+replace dem_via_proxy=-1 if sr_dementia_ever==1
 tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
 
+//set 3 category dementia state variable
+//first xwave variable for proxy allowed sp to answer cg section
+gen speaktosp=.
+foreach w in 1 2 3{
+	replace speaktosp=cg`w'speaktosp if wave==`w'
+}
+
+replace dem_3_cat=1 if dem_3_cat==. & dem_via_proxy==1 //if proxy ivw indicates dem
+replace dem_3_cat=3 if dem_3_cat==. & dem_via_proxy==0 & speaktosp==2  //proxy ind no dem
+tab dem_3_cat wave, missing
 *************************************************
 //for self interviews
 *************************************************
@@ -354,28 +395,21 @@ replace datena65=1 if inlist(date_prvp,0,1,2,3)
 gen domain65=clock65+word65+datena65
 tab domain65 wave, missing
 
-//dementia categories, probable dementia, possible dementia, no dementia
-//probable = diagnosis reported or 2+ ad8 questions (proxy) or <1.5 SD below mean
+//now apply to dementia 3 category variable
+replace dem_3_cat=1 if dem_3_cat==. & inlist(speaktosp,1,-1) & inlist(domain65,2,3)
+replace dem_3_cat=2 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==1
+replace dem_3_cat=3 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==0
 
-//first xwave variable for proxy allowed sp to answer cg section
-gen speaktosp=.
-foreach w in 1 2 3{
-	replace speaktosp=cg`w'speaktosp if wave==`w'
-}
+la def dem3 1"Probable dementia" 2"Possible dementia" 3"No dementia"
+la val dem_3_cat dem3
+la var dem_3_cat "Dementia likelihood, 3 categories"
 
-gen dem_3_cat=. //3 category dementia variable
-replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
-****************************
-****************************
-****************************
-****************************
-****************************
-****************************
-//start here! ad8_dem variable, need to check since I changed variable names, coding
-replace dem_3_cat=1 if dem_3_cat==. & ad8_dem==1 //if proxy ivw indicates dem
-replace dem_3_cat=3 if dem_3_cat==. & ad8_dem==2 & speaktosp==2  //proxy ind no dem
-tab dem_via_proxy
+tab dem_3_cat wave, missing
 
+gen dem_2_cat=1 if inlist(dem_3_cat,1,2)
+replace dem_2_cat=0 if dem_3_cat==3
+la var dem_2_cat "Ind prob/possible dementia"
+tab dem_2_cat wave, missing
 *************************************************
 //rate memory
 gen memory=.
@@ -389,6 +423,17 @@ la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
 la val memory mem
 tab memory wave, missing
 
+*************************************************
+//total number self reported medical conditions, ever
+//note that depression and anxeity are from the specific interview questions
+//the others are all if the person has reported the condition in any interview wave
+egen sr_numconditions1=anycount(sr_ami_ever sr_stroke_ever sr_cancer_ever ///
+	sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
+	sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever sr_phq2_depressed ///
+	sr_gad2_anxiety), values(1)
+replace sr_numconditions1=. if ivw_type!=1
+la var 	sr_numconditions1 "Count medical conditions"
+tab sr_numconditions1 wave, missing
 
 *************************************************
 save round_1_3_cleanv2.dta, replace
