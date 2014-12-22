@@ -51,6 +51,58 @@ la var adl_eat_help "Has help while eating"
 la var adl_bath_help "Has help while bathing"
 la var adl_toil_help "Has help while toileting"
 la var adl_dres_help "Has help while dressing"
+*********************************************
+//household activity help, using derived variables in the HA section
+//if did not do by self b/c of health
+//reason only or health and other reason, then new help var ==1
+tab ha1dlaunsfdf ha1dlaunreas if wave==1, missing
+tab ha2dlaunsfdf ha2dlaunreas if wave==2, missing
+
+capture program drop hhact
+program define hhact
+	args act
+	
+	gen iadl_`act'_help=.
+	foreach w in 1 2 3 {
+		replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
+			inlist(ha`w'd`act'reas,1,3) & wave==`w'
+		replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3) & wave==`w' //did by self, no diff.
+		replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
+			inlist(ha`w'd`act'reas,2,4) & wave==`w'		
+	}	
+	tab iadl_`act'_help wave, missing
+	tab iadl_`act'_help wave if ivw_type==1, missing
+	end
+	
+hhact laun
+hhact shop
+hhact meal
+hhact bank
+
+la var iadl_laun_help "Rec'd help doing laundry last month"
+la var iadl_shop_help "Rec'd help shopping last month"
+la var iadl_meal_help "Rec'd help preparing meals last month"
+la var iadl_bank_help "Rec'd help with banking last month"
+ 
+//taking medications, questions slightly different and in mc section
+//set to =0 if do not take medications
+tab mc1dmedssfdf mc1dmedsreas if wave==1, missing
+tab mc2dmedssfdf mc2dmedsreas if wave==2, missing
+
+gen iadl_meds_help=.
+foreach w in 1 2 3 {
+	replace iadl_meds_help=1 if inlist(mc`w'dmedssfdf,1,8) & ///
+		inlist(mc`w'dmedsreas,1,3) & wave==`w'
+	//did by self or don't take medications
+	replace iadl_meds_help=0 if inlist(mc`w'dmedssfdf,2,3,6,9) & wave==`w' 
+	replace iadl_meds_help=0 if inlist(mc`w'dmedssfdf,1,8) & ///
+		inlist(mc`w'dmedsreas,2,4) & wave==`w'		
+	}	
+
+la var iadl_meds_help "Rec'd help taking medications last month"
+tab iadl_meds_help wave, missing
+tab iadl_meds_help wave if ivw_type==1, missing
+
 
 *********************************************
 //has , sees regular doctor
