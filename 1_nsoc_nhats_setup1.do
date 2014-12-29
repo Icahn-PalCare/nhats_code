@@ -1,4 +1,7 @@
 //get caregivers dataset from nsoc 
+//note: this links in the cleaned version of the Round 1 SP interviews
+//created in the file "4_r12_cleaning_3.do" file
+
 
 capture log close
 clear all
@@ -31,6 +34,20 @@ save `work'round1_only_clean.dta, replace
 
 //spid is the nhats spid, so if more than one caregiver, more than one row
 use `r1s'NSOC_Round_1_File_v2.dta
+
+//merge in sp nsoc elgibility information SP tracker file by sp
+merge m:1 spid using `r1s'NSOC_Round_1_SP_Tracker_File.dta 
+//shouldn't merge if not elgible for nsoc or no helpers participated
+tab fl1dnsoc _merge, missing
+tab fl1dnsoccomp _merge, missing //entry in nsoc if number helpers > 0
+drop if _merge==2
+drop _merge
+
+//merge in the other person nsoc tracker file
+merge 1:1 spid opid using `r1s'NSOC_Round_1_OP_Tracker_File.dta
+tab _merge
+drop if _merge==2
+drop _merge
 
 //merge in round 3 tracker file to get indicator of death
 merge m:1 spid  using `r3raw'NHATS_Round_3B_Tracker_File.dta
