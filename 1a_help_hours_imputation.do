@@ -8,24 +8,26 @@ capture log close
 clear all
 set more off
 
-local logs C:\data\nhats\logs\
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+//local logs C:\data\nhats\logs\
+local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1a-help_hours_imputation-LOG.txt, text replace
 
-local r1raw C:\data\nhats\round_1\
+//PC file paths
+/*local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
 local r3raw C:\data\nhats\round_3\
 local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
 local r2s C:\data\nhats\r2_sensitive\
-
-/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+ */
+//Rebecca mac file paths
+local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
 local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
- */
+
  
 cd `work'
 
@@ -220,7 +222,6 @@ replace regular=1 if op`w'helpsched==1 & wave==`w'
 }
 tab regular wave, missing
 
-
 la def hrsmth -13"-13:Deceased" -12"-12:Zero days/wk" -11"-11:hours missing" ///
  -10"-10:days missing" -9 "-9:days+hours mssing" -1"-1:NA" 1"1:Valid" 9999"9999:<1hr/day",replace
 la val op_ind_hrsmth hrsmth 
@@ -295,25 +296,33 @@ svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
 gen op_hrsmth_i=0
 replace op_hrsmth_i=op`w'dhrsmth if impute_cat==4  //use actual value
 replace op_hrsmth_i=0 if impute_cat==2 //set to zero
-replace op_hrsmth_i=(.5*op`w'numdayswk*4.3) if impute_cat==3 & op1helpsched==1 //assign small hours
-replace op_hrsmth_i=(.5*op`w'numdaysmn) if impute_cat==3 & inlist(op1helpsched,2,-7,-8)  //assign small hours
+replace op_hrsmth_i=(.5*op`w'numdayswk*4.3) if impute_cat==3 & op`w'helpsched==1 //assign small hours
+replace op_hrsmth_i=(.5*op`w'numdaysmn) if impute_cat==3 & inlist(op`w'helpsched,2,-7,-8)  //assign small hours
+
+//impute where op_ind_hrsmth=-10, missing days per month
+gen op_numdays_i=0
+replace op_numdays_i=op`w'numdayswk*4.3 if inlist(impute_cat,3,4) & op`w'helpsched==1
+replace op_numdays_i=op`w'numdaysmn if inlist(impute_cat,3,4) & inlist(op`w'helpsched,2,-7,-8)
+
+gen ln_opnumdays_i=ln(op_numdays_i) if inlist(impute_cat,3,4)
+svy: reg ln_opnumdays_i spouse otherrel regular yearnotmonth oneact disab ///
+ op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
+ op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp ///
+ op`w'dreshlp op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp ///
+ if inlist(impute_cat,3,4)
+predict ln_opnumdays_i2 if impute_cat==1 & op_ind_hrsmth==-10
+gen op_numdays_i2=exp(ln_opnumdays_i2) if impute_cat==1 & op_ind_hrsmth==-10
+replace op_hrsmth_i= op_numdays_i2*op`w'numhrsday if impute_cat==1 & ///
+ op_ind_hrsmth==-10 & op`w'numhrsday>=1
+replace op_hrsmth_i= op_numdays_i2*.5 if impute_cat==1 & ///
+ op_ind_hrsmth==-10 & op`w'numhrsday==0
+
+tab op_hrsmth_i impute_cat if wave==1, missing
+
 
 save R`w'_hrs_imputed_added.dta,replace
 
 }
-
-/*
-**************
-*reduce data set–keep only needed variables************************************
-
-********************************************************************
-//set weighting
-svyset w1varunit [pweight=w1anfinwgt0], strata(w1varstrat)
-
-
-keep op* numact yearnotmonth disab w1anfinwgt0 w1varstrat w1varunit r1dresid ///
-spid justone spouse otherrel nonrel regular oneact
-
 
 ********************************************************************
 log close
