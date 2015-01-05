@@ -8,6 +8,7 @@ local logs C:\data\nhats\logs\
 //local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'2_nsoc_nhats_cleaning1.txt, text replace
 
+//PC file paths
 local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
 local r3raw C:\data\nhats\round_3\
@@ -15,6 +16,7 @@ local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
 local r2s C:\data\nhats\r2_sensitive\ 
 
+//Rebecca Mac file paths
 /*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
@@ -54,7 +56,11 @@ sum cg_age, detail
 
 tab op1catgryage if cg_age==., missing
 
+******************************************************************
 //caregiver resides in same household, use OP reside in household flag
+******************************************************************
+******* Not complete, this section needs work! *********
+******************************************************************
 tab op1prsninhh, missing //caregiver in household
 gen cg_lives_with_sp=1 if op1prsninhh==1
 replace cg_lives_with_sp=0 if op1prsninhh==2
@@ -67,6 +73,7 @@ tab livearrang if cg_lives_with_sp==. & cg_relationship_cat==1, missing
 //check hh1livwthspo (SP lives with spouse), needs to come from sp interview though
 tab hh1livwthspo cg_lives_with_sp  if cg_relationship_cat==1
 
+******************************************************************
 //caregiver level of education
 tab op1leveledu, missing
 tab hh1spouseduc if op1leveledu==. & cg_relationship_cat==1, missing
@@ -75,7 +82,6 @@ tab hh1spouseduc if op1leveledu==. & cg_relationship_cat==1, missing
 tab che1health, missing //caregiver self reported health
 gen cg_srh=che1health
 replace cg_srh=. if che1health==-8 | che1health==-7
-la def srh 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
 la val cg_srh srh
 gen cg_srh_fp=1 if inlist(cg_srh,4,5)
 replace cg_srh_fp=0 if inlist(cg_srh,1,2,3)
@@ -88,54 +94,6 @@ tab cg_srh cg_srh_fp, missing
 //excluded from HHS Informal Caregiving for Older Americans: Analysis of the 2011 NSOC
 //April 2014 report dataset (n=11)
 tab cca1hlplstyr, missing
-
-***********************************************************
-//from caregiver file, hours helped in the last month
-
-tab cdc1hlpsched //regular schedule to help?
-//days /week asked if answer regular schedule
-gen help_days_per_week=cdc1hlpdyswk if cdc1hlpsched==1 
-tab help_days_per_week, missing
-replace help_days_per_week=. if help_days_per_week==-8
-//days in last month helped if not regular sched
-gen help_days_last_mo=cdc1hlpdysmt if cdc1hlpsched==2
-tab help_days_last_mo, missing
-replace help_days_last_mo=. if inlist(help_days_last_mo,-8,-7)
-
-tab cdc1hlphrsdy //hours per day helped, na if missing days/week or last month
-tab cdc1hlpdysmt cdc1hlpdyswk if cdc1hlphrsdy==-1
-gen help_hrs_per_day=cdc1hlphrsdy if cdc1hlphrsdy>0
-
-gen calc_hrs_helped=.
-//regular schedule days/week*hours/day*4 weeks/month
-replace calc_hrs_helped=4*(help_days_per_week*help_hrs_per_day) if cdc1hlpsched==1
-//varied schedule days/month*hours/day
-replace calc_hrs_helped=help_days_last_mo*help_hrs_per_day if cdc1hlpsched==2
-la var calc_hrs_helped "Hours helped in last month, calculated"
-tab calc_hrs_helped, missing
-
-//verify hours helped per month
-tab cdc1hlphrmvf if calc_hrs_helped~=.
-
-//if no, then asked hours helped, use that response
-replace calc_hrs_helped=cdc1hlphrlmt if cdc1hlphrmvf~=1
-tab calc_hrs_helped, missing
-replace calc_hrs_helped=. if inlist(calc_hrs_helped,-8,-7)
-
-***************************************************************
-//identify whether or not primary caregiver based on hours helped
-//from the caregiver interview reporting
-tab fl1dnsoccomp, missing
-
-gen primary_cg=0
-egen max_hrs_helped=max(calc_hrs_helped), by(spid)
-replace primary_cg=1 if calc_hrs_helped==max_hrs_helped
-//replace primary_cg=1 if fl1dnsoccomp==1 & max_hrs_helped==. //primary if only helper interviewed
-tab primary_cg, missing
-
-//check that each sp has 1 primary cg identified
-egen num_primary_cg=sum(primary_cg), by(spid)
-tab num_primary_cg, missing //n=13 have 2 primary cg, need to fix this!
 
 ***************************************************************
 //identify care activities helped with
@@ -164,11 +122,6 @@ foreach v in mdapt spkdr insrn othin{
 replace help_coordhc=1 if cca1hlp`v'==1
 }
 tab help_coordhc, missing
-
-
-
-
-
 
 
 ************************

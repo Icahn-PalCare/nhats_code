@@ -29,7 +29,7 @@ cd `work'
 
 //get just round 1 sp cleaned interviews, save ds for merging in later
 //note need to update this with final clean dataset name
-use `work'round_1_3_cleanv1.dta if wave==1
+use `work'round_1_3_clean_helper_added.dta if wave==1
 save `work'round1_only_clean.dta, replace
 
 //spid is the nhats spid, so if more than one caregiver, more than one row
