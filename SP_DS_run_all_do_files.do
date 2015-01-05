@@ -18,5 +18,8 @@ do `dofilepath'2_r12_cleaning_1.do
 /*continues r1,2,3 cleaning*/
 do `dofilepath'3_r12_cleaning_2.do
 
-/*merges in the helper details, continues r1,2,3 cleaning*/
+/*Continues r1,2,3 cleaning*/
 do `dofilepath'4_r12_cleaning_3.do
+
+/*Merges in the helper details at the SP level*/
+do `dofilepath'5_r12_add_helper.do

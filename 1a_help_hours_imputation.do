@@ -32,7 +32,6 @@ local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/
 cd `work'
 
 **User note: This section can be commented out after run one time to set up datasets
-/*
 ********************************************************************
 //combine op and sp data files
 //round 1
@@ -59,8 +58,6 @@ merge m:1 spid using round_3_1.dta //bring in sorted sp ivw dataset
 keep if _merge==3 //drop obs with no OP entries
 save R3_OPSPlinked.dta, replace
 
-
- 
 foreach w in 1 2 3{
 	use R`w'_OPSPlinked.dta
 	
@@ -81,7 +78,7 @@ append using R2_OPSPltd.dta
 append using R3_OPSPltd.dta
 
 save R123_OPSPltd.dta, replace
-*/ /*
+********************************************************************
 use R123_OPSPltd.dta, clear
 
 tab wave, missing
@@ -364,8 +361,6 @@ mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=w`w'anfinwgt0]
 save R`w'_hrs_imputed_added.dta,replace
 
 }
-********************************************************************
-
 
 ********************************************************************
 log close
