@@ -8,26 +8,26 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs\
-local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1a-help_hours_imputation-LOG.txt, text replace
 
 //PC file paths
-/*local r1raw C:\data\nhats\round_1\
+local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
 local r3raw C:\data\nhats\round_3\
 local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
 local r2s C:\data\nhats\r2_sensitive\
- */
-//Rebecca mac file paths
+
+/* //Rebecca mac file paths
 local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
 local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-
+ */
  
 cd `work'
 
@@ -81,7 +81,7 @@ append using R2_OPSPltd.dta
 append using R3_OPSPltd.dta
 
 save R123_OPSPltd.dta, replace
-*/
+*/ /*
 use R123_OPSPltd.dta, clear
 
 tab wave, missing
@@ -275,19 +275,18 @@ tab impute_cat op_ind_hrsmth if wave==3, missing
 
 ********************************************************************
 //save separate datasets for r 1 2 & 3 so can run imputation with weighting
-keep op* wave numact yearnotmonth disab w1anfinwgt0 w1varstrat w1varunit r1dresid ///
- spid justone spouse otherrel nonrel regular oneact impute_cat
-
 foreach w in 1 2 3{
 preserve
+keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
+ r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat
 keep if wave==`w'
 save R`w'_for_hrs_impute.dta,replace
 restore
 }
-
+*/
 ********************************************************************
 //implement matching, do separately for each wave
-foreach w in 1 /*2 3*/{
+foreach w in 1 2 3{
 use R`w'_for_hrs_impute.dta, clear
 
 svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
@@ -305,11 +304,13 @@ replace op_numdays_i=op`w'numdayswk*4.3 if inlist(impute_cat,3,4) & op`w'helpsch
 replace op_numdays_i=op`w'numdaysmn if inlist(impute_cat,3,4) & inlist(op`w'helpsched,2,-7,-8)
 
 gen ln_opnumdays_i=ln(op_numdays_i) if inlist(impute_cat,3,4)
-svy: reg ln_opnumdays_i spouse otherrel regular yearnotmonth oneact disab ///
+
+local adjvars spouse otherrel regular yearnotmonth oneact disab ///
  op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
  op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp ///
- op`w'dreshlp op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp ///
- if inlist(impute_cat,3,4)
+ op`w'dreshlp op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp
+
+svy: reg ln_opnumdays_i `adjvars' if inlist(impute_cat,3,4)
 predict ln_opnumdays_i2 if impute_cat==1 & op_ind_hrsmth==-10
 gen op_numdays_i2=exp(ln_opnumdays_i2) if impute_cat==1 & op_ind_hrsmth==-10
 replace op_hrsmth_i= op_numdays_i2*op`w'numhrsday if impute_cat==1 & ///
@@ -317,12 +318,54 @@ replace op_hrsmth_i= op_numdays_i2*op`w'numhrsday if impute_cat==1 & ///
 replace op_hrsmth_i= op_numdays_i2*.5 if impute_cat==1 & ///
  op_ind_hrsmth==-10 & op`w'numhrsday==0
 
-tab op_hrsmth_i impute_cat if wave==1, missing
+//impute where op_ind_hrsmth=-11, missing hours per day
+gen op_numhrsday_i=0
+replace op_numhrsday_i=.5 if impute_cat==3
+replace op_numhrsday_i=op`w'numhrsday if impute_cat==4
+gen ln_opnumhrsday_i=ln(op_numhrsday_i) if inlist(impute_cat,3,4)
+svy: reg ln_opnumhrsday_i `adjvars' if inlist(impute_cat,3,4)
+predict ln_opnumhrsday_i2 if impute_cat==1 & op_ind_hrsmth==-11
+gen op_numhrsday_i2=exp(ln_opnumhrsday_i2) if impute_cat==1 & op_ind_hrsmth==-11
+replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & op`w'helpsched==1
+replace op_hrsmth_i=op`w'numdaysmn*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & op`w'numdaysmn>=1
+replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & ///
+ op`w'numdaysmn<1 & op`w'numdayswk>=1 
 
+//impute where op_ind_hrsmth=-9, -12 or 9999, missing hours and days or <1hr/day
+gen ln_opdhrsmth_i=ln(op_hrsmth_i) if inlist(impute_cat,3,4)
+svy: reg ln_opdhrsmth_i `adjvars' if inlist(impute_cat,3,4)
+predict ln_opdhrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+gen op_hrsmth_i2=exp(ln_opdhrsmth_i2) if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+replace op_hrsmth_i=op_hrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+replace op_hrsmth_i=-1 if op`w'ishelper~=1 
+
+//look at imputed hours per month by imputation category
+di "where op_ind_hrsmth==-12"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-12 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-11"
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-11 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-10"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-10 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-9"
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-9 [pweight=w`w'anfinwgt0] 
+di "where op_ind_hrsmth==9999"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==9999 [pweight=w`w'anfinwgt0] 
+
+di "impute_cat==2"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==2 [pweight=w`w'anfinwgt0]
+di "impute_cat==3"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==3 [pweight=w`w'anfinwgt0]
+di "impute_cat==4"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=w`w'anfinwgt0]
 
 save R`w'_hrs_imputed_added.dta,replace
 
 }
+********************************************************************
+
 
 ********************************************************************
 log close
