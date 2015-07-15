@@ -4,7 +4,7 @@ to create the SP round 1, 2, 3 dataset
 resulting dataset is organized with one row for each SP for each 
 interview (so can have up to 3 rows per SP)*/
 
-local dofilepath /Users/rebeccagorges/Documents/nhats_code/
+local dofilepath C:\data\nhats\Code\
 
 /*merges individual datasets into single file with r1,2,3 interviews*/
 do `dofilepath'1_combine_waves.do

@@ -9,23 +9,23 @@ capture log close
 clear all
 set more off
 
-//local logs C:\data\nhats\logs\
-local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+local logs C:\data\nhats\logs\
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1_nhats_setup1.txt, text replace
 
-/*local r1raw C:\data\nhats\round_1\
+local r1raw C:\data\nhats\round_1\
 local r2raw C:\data\nhats\round_2\
 local r3raw C:\data\nhats\round_3\
 local work C:\data\nhats\working
 local r1s C:\data\nhats\r1_sensitive\
-local r2s C:\data\nhats\r2_sensitive\ */
+local r2s C:\data\nhats\r2_sensitive\ 
 
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
 local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
 local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
+local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ */
 
 cd `work'
 *********************************************
@@ -53,7 +53,7 @@ save round_2_1.dta, replace
 clear 
 
 //round 3
-use `r3raw'NHATS_Round_3B_SP_File.dta
+use `r3raw'NHATS_Round_3_SP_File.dta
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -116,9 +116,9 @@ drop _merge
 merge m:1 spid using `r2s'NHATS_Round_2_SP_Sen_Dem_File.dta, ///
 	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
 drop _merge
-
+//3B?
 //merge in tracker status information
-merge m:1 spid using `r3raw'NHATS_Round_3B_Tracker_File, ///
+merge m:1 spid using `r3raw'NHATS_Round_3_Tracker_File, ///
 	keepusing(yearsample r3status r3spstat r3spstatdtyr ///
 		r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr)
 	

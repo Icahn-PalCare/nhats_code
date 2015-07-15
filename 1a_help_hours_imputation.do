@@ -51,7 +51,7 @@ keep if _merge==3 //drop obs with no OP entries
 save R2_OPSPlinked.dta, replace
 
 //round 3
-use `r3raw'NHATS_Round_3B_OP_File.dta
+use `r3raw'NHATS_Round_3_OP_File.dta
 sort spid opid
 
 merge m:1 spid using round_3_1.dta //bring in sorted sp ivw dataset

@@ -50,7 +50,7 @@ drop if _merge==2
 drop _merge
 
 //merge in round 3 tracker file to get indicator of death
-merge m:1 spid  using `r3raw'NHATS_Round_3B_Tracker_File.dta
+merge m:1 spid  using `r3raw'NHATS_Round_3_Tracker_File.dta
 drop if _merge==2
 drop _merge
 //merge in tracker file details

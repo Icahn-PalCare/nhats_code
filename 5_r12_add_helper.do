@@ -34,7 +34,7 @@ local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
 local work /Users/rebeccagorges/Documents/data/nhats/working
 local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
 local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
- */
+*/
  
 cd `work'
 
@@ -128,6 +128,8 @@ la var prim_helper_opid "Primary helper OPID"
 //save the dataset with helper information added
 
 save round_1_3_clean_helper_added.dta, replace
+
+saveold round_1_3_clean_helper_added_old.dta, replace
 
 ***************************************************************
 log close
