@@ -174,7 +174,7 @@ run;
 
 
 
-/*FUTURE REFERENCE: PUT DEATH IN THE BEGINNING!!!!*/
+/*FUTURE REFERENCE: PUT DEATH AND RACE IN THE BEGINNING!!!!*/
 
 proc sql;
 create table nhats_wave1_2_1
@@ -196,7 +196,7 @@ proc freq data=raw_nhats_r3;
 where r1dresid = 1 or r1dresid = 2;
 table is3resptype;
 run;
-/*Caregiver with Died*/
+/*Community with Died*/
 data nhats_wave1_2_2;
 set nhats_wave1_2_1;
 died = 0;
@@ -206,10 +206,7 @@ proc freq data=nhats_wave1_2_2;
 table died;
 run;
 
-data nhats_wave1_3;
-set nhats_wave1_2;
-if adl_eating| adl_bed = 1 | adl_chair = 1 | adl_walk_in = 1 | adl_walk_out = 1 | adl_dress = 1 | adl_bathe = 1 | iadl_meals = 1 | iadl_laundry = 1 | iadl_housewk = 1 | iadl_shop = 1 | iadl_money = 1 | iadl_meds = 1 | iadl_phone = 1;
-run;
+
 proc sql;
 create table nhats_wave1_3_1
 as select a.*, b.is2resptype as is2resptype1, b.is2reasnprx7, c.is3resptype as is3resptype1, c.is3reasnprx7
@@ -220,3 +217,34 @@ left join raw_nhats_r3 c
 on a.spid = c.spid;
 quit; 
 /*Caregiver, Disabled with died*/
+data nhats_wave1_3_2;
+set nhats_wave1_3_1;
+died = 0;
+if is2reasnprx7 = 1 or is3reasnprx7 = 1 then died = 1;
+run;
+
+proc sql;
+create table nhats_wave1_5_1
+as select a.*, b.is2resptype as is2resptype1, b.is2reasnprx7, c.is3resptype as is3resptype1, c.is3reasnprx7
+from nhats_wave1_5 a
+left join raw_nhats_r2 b
+on a.spid = b.spid
+left join raw_nhats_r3 c
+on a.spid = c.spid;
+quit; 
+/*Caregiver, Disabled with died*/
+data nhats_wave1_5_2;
+set nhats_wave1_5_1;
+died = 0;
+if is2reasnprx7 = 1 or is3reasnprx7 = 1 then died = 1;
+run;
+
+proc freq data=nhats_wave1_2_2;
+table female*died race_cat*died education*died maritalstat*died medicaid*died srh_fp*died sr_ami_ever*died sr_heart_dis_ever*died sr_ra_ever*died
+sr_diabetes_ever*died sr_lung_dis_ever*died sr_stroke_ever*died sr_cancer_ever*died sr_phq2_depressed*died dem_2_cat*died fall_last_month*died
+reg_doc_seen*died reg_doc_homevisit*died sr_hosp_ind*died / chisq;
+run;
+proc ttest data=nhats_wave1_2_2;
+class died;
+var age sr_numconditions1 sr_hosp_stays;
+run;
