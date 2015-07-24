@@ -8,17 +8,17 @@ capture log close
 clear all
 set more off
 
-local logs C:\data\nhats\logs\
+local logs E:\data\nhats\logs\
 //local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 log using `logs'1a-help_hours_imputation-LOG.txt, text replace
 
 //PC file paths
-local r1raw C:\data\nhats\round_1\
-local r2raw C:\data\nhats\round_2\
-local r3raw C:\data\nhats\round_3\
-local work C:\data\nhats\working
-local r1s C:\data\nhats\r1_sensitive\
-local r2s C:\data\nhats\r2_sensitive\
+local r1raw E:\data\nhats\round_1\
+local r2raw E:\data\nhats\round_2\
+local r3raw E:\data\nhats\round_3\
+local work E:\data\nhats\working
+local r1s E:\data\nhats\r1_sensitive\
+local r2s E:\data\nhats\r2_sensitive\
 
 /* //Rebecca mac file paths
 local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
