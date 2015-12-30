@@ -1,0 +1,370 @@
+--------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\5-add_helper_to_SP_ds-LOG.txt
+  log type:  text
+ opened on:  11 Dec 2015, 14:02:09
+
+. 
+. local r1raw E:\nhats\data\NHATS Public\round_1\
+
+. local r2raw E:\nhats\data\NHATS Public\round_2\
+
+. local r3raw E:\nhats\data\NHATS Public\round_3\
+
+. local r4raw E:\nhats\data\NHATS Public\round_4\
+
+. local work E:\nhats\data\NHATS working data
+
+. local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+
+. local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+
+. local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+
+. local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+
+. local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+. 
+. cd "`work'"
+E:\nhats\data\NHATS working data
+
+. ***************************************************************
+. //get all 3 waves helper imputed hours into a single dataset
+. use R1_hrs_imputed_added.dta
+
+. 
+. local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
+>  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw
+
+. 
+. keep `keepvars'
+
+. 
+. qui append using R2_hrs_imputed_added.dta, keep(`keepvars')
+
+.  
+. qui append using R3_hrs_imputed_added.dta, keep(`keepvars')
+
+. 
+. qui append using R4_hrs_imputed_added.dta, keep(`keepvars')
+
+.  
+. tab wave opishelper_allw, missing
+
+    Survey |    opishelper_allw
+      wave |        -1          1 |     Total
+-----------+----------------------+----------
+         1 |    26,500     11,597 |    38,097 
+         2 |    28,120      9,824 |    37,944 
+         3 |    27,332      8,413 |    35,745 
+         4 |    25,931      7,085 |    33,016 
+-----------+----------------------+----------
+     Total |   107,883     36,919 |   144,802 
+
+
+. 
+. //just keep OP's that are helpers
+. keep if opishelper_allw==1
+(107883 observations deleted)
+
+. ***************************************************************
+. //identify primary helper, person with the most hours / month using imputed hours
+. sort spid wave opid spouse
+
+. 
+. gen primary_cg=0
+
+. egen max_hrs_helped=max(op_hrsmth_i), by(spid wave)
+
+. replace primary_cg=1 if op_hrsmth_i==max_hrs_helped
+(20442 real changes made)
+
+. tab primary_cg wave, missing
+
+           |                 Survey wave
+primary_cg |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     4,764      4,329      3,993      3,391 |    16,477 
+         1 |     6,833      5,495      4,420      3,694 |    20,442 
+-----------+--------------------------------------------+----------
+     Total |    11,597      9,824      8,413      7,085 |    36,919 
+
+
+. 
+. //check that each sp has 1 primary cg identified, doesn't matter!
+. egen num_primary_cg=sum(primary_cg), by(spid wave)
+
+. tab num_primary_cg wave, missing
+
+num_primar |                 Survey wave
+      y_cg |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         1 |    10,686      9,180      7,954      6,662 |    34,482 
+         2 |       729        538        398        379 |     2,044 
+         3 |       124         86         57         31 |       298 
+         4 |        36         13          4          8 |        61 
+         5 |        10          0          0          5 |        15 
+         6 |        12          0          0          0 |        12 
+         7 |         0          7          0          0 |         7 
+-----------+--------------------------------------------+----------
+     Total |    11,597      9,824      8,413      7,085 |    36,919 
+
+
+. 
+. //assign relationship to primary helper
+. //if same number of hours for two different helpers, then assign to spouse first
+. gen prim_helper_cat=1 if primary_cg==1 & spouse==1
+(28009 missing values generated)
+
+. replace prim_helper_cat=2 if primary_cg==1 & otherrel==1 & prim_helper_cat==.
+(8513 real changes made)
+
+. replace prim_helper_cat=3 if prim_helper_cat==.
+(19496 real changes made)
+
+. la def helpcat 1"Spouse" 2"Other relative" 3"Other, not relative"
+
+. la val prim_helper_cat helpcat
+
+. tab prim_helper_cat wave, missing
+
+                    |                 Survey wave
+    prim_helper_cat |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |     8,910 
+     Other relative |     2,845      2,278      1,812      1,578 |     8,513 
+Other, not relative |     5,630      5,160      4,701      4,005 |    19,496 
+--------------------+--------------------------------------------+----------
+              Total |    11,597      9,824      8,413      7,085 |    36,919 
+
+
+. 
+. //get total number hours/month help received and number of helpers per spid/wave
+. egen tot_hrsmonth_help_i=total(op_hrsmth_i), by(spid wave)
+
+. egen n_helpers=count(op_hrsmth_i), by(spid wave)
+
+. 
+. //keep the entry for the primary caregiver only, this will then be the 
+. //information merged into the SP dataset
+. keep if primary_cg==1
+(16477 observations deleted)
+
+. 
+. //sort and keep only first primary cg, again preference given if spouse
+. sort spid wave opid spouse otherrel
+
+. quietly by spid wave: gen dup = cond(_N==1,0,_n)
+
+. tab dup
+
+        dup |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     18,576       90.87       90.87
+          1 |        865        4.23       95.10
+          2 |        865        4.23       99.33
+          3 |        105        0.51       99.85
+          4 |         21        0.10       99.95
+          5 |          6        0.03       99.98
+          6 |          3        0.01      100.00
+          7 |          1        0.00      100.00
+------------+-----------------------------------
+      Total |     20,442      100.00
+
+. keep if dup==0
+(1866 observations deleted)
+
+. //now one obs per sp - wave
+. 
+. sum tot_hrsmonth_help_i, detail
+
+                     tot_hrsmonth_help_i
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            0              0
+ 5%            2              0
+10%            4              0       Obs               18576
+25%        12.99              0       Sum of Wgt.       18576
+
+50%     38.81189                      Mean            112.812
+                        Largest       Std. Dev.      190.8286
+75%     114.0542           1880
+90%          300           1926       Variance       36415.54
+95%          720           1942       Skewness       2.937462
+99%          804       2280.927       Kurtosis       12.90956
+
+. tab n_helpers wave, missing
+
+           |                 Survey wave
+ n_helpers |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         1 |     3,356      2,526      1,856      1,529 |     9,267 
+         2 |     1,634      1,401      1,240      1,046 |     5,321 
+         3 |       683        668        585        483 |     2,419 
+         4 |       257        244        230        208 |       939 
+         5 |       107        105        103         83 |       398 
+         6 |        36         32         41         28 |       137 
+         7 |        20          8         15         10 |        53 
+         8 |         8          4          4          3 |        19 
+         9 |         2          4          5          2 |        13 
+        10 |         0          2          0          3 |         5 
+        11 |         0          1          0          2 |         3 
+        12 |         1          0          0          0 |         1 
+        13 |         0          0          0          1 |         1 
+-----------+--------------------------------------------+----------
+     Total |     6,104      4,995      4,079      3,398 |    18,576 
+
+
+. tab prim_helper_cat wave, missing
+
+                    |                 Survey wave
+    prim_helper_cat |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,055      2,343      1,877      1,479 |     8,754 
+     Other relative |     2,316      1,912      1,553      1,370 |     7,151 
+Other, not relative |       733        740        649        549 |     2,671 
+--------------------+--------------------------------------------+----------
+              Total |     6,104      4,995      4,079      3,398 |    18,576 
+
+
+. ***************************************************************
+. //merge this helper data with the main SP dataset
+. save helper_by_sp.dta, replace
+file helper_by_sp.dta saved
+
+. 
+. use round_1_4_cleanv3, clear
+
+. 
+. merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers ///
+>  tot_hrsmonth_help_i prim_helper_cat)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         7,280
+        from master                     7,280  (_merge==1)
+        from using                          0  (_merge==2)
+
+    matched                            18,576  (_merge==3)
+    -----------------------------------------
+
+. 
+. drop _merge 
+
+. 
+. replace n_helpers=0 if n_helpers==.
+(7280 real changes made)
+
+. 
+. gen ind_no_helpers=.
+(25856 missing values generated)
+
+. replace ind_no_helpers=1 if n_helpers==0
+(7280 real changes made)
+
+. replace ind_no_helpers=0 if n_helpers>0
+(18576 real changes made)
+
+. la var ind_no_helpers "Indicator no Helpers reported"
+
+. tab ind_no_helpers wave, missing
+
+ Indicator |
+no Helpers |                 Survey wave
+  reported |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     6,104      4,995      4,079      3,398 |    18,576 
+         1 |     2,141      2,080      1,720      1,339 |     7,280 
+-----------+--------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. 
+. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+
+. sum tot_hrsmonth_help_i, detail
+
+      Hours / month help received, all helpers, imputed
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            0              0
+ 5%            2              0
+10%            4              0       Obs               18576
+25%        12.99              0       Sum of Wgt.       18576
+
+50%     38.81189                      Mean            112.812
+                        Largest       Std. Dev.      190.8286
+75%     114.0542           1880
+90%          300           1926       Variance       36415.54
+95%          720           1942       Skewness       2.937462
+99%          804       2280.927       Kurtosis       12.90956
+
+. la var n_helpers "Number helpers reported by SP"
+
+. tab n_helpers wave, missing
+
+    Number |
+   helpers |
+  reported |                 Survey wave
+     by SP |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     2,141      2,080      1,720      1,339 |     7,280 
+         1 |     3,356      2,526      1,856      1,529 |     9,267 
+         2 |     1,634      1,401      1,240      1,046 |     5,321 
+         3 |       683        668        585        483 |     2,419 
+         4 |       257        244        230        208 |       939 
+         5 |       107        105        103         83 |       398 
+         6 |        36         32         41         28 |       137 
+         7 |        20          8         15         10 |        53 
+         8 |         8          4          4          3 |        19 
+         9 |         2          4          5          2 |        13 
+        10 |         0          2          0          3 |         5 
+        11 |         0          1          0          2 |         3 
+        12 |         1          0          0          0 |         1 
+        13 |         0          0          0          1 |         1 
+-----------+--------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. la var prim_helper_cat "Primary helper relationship, missing if no helper"
+
+. tab prim_helper_cat wave, missing
+
+     Primary helper |
+      relationship, |
+      missing if no |                 Survey wave
+             helper |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,055      2,343      1,877      1,479 |     8,754 
+     Other relative |     2,316      1,912      1,553      1,370 |     7,151 
+Other, not relative |       733        740        649        549 |     2,671 
+                  . |     2,141      2,080      1,720      1,339 |     7,280 
+--------------------+--------------------------------------------+----------
+              Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. 
+. rename opid prim_helper_opid
+
+. la var prim_helper_opid "Primary helper OPID"
+
+. 
+. ***************************************************************
+. //save the dataset with helper information added
+. 
+. save round_1_4_clean_helper_added.dta, replace
+file round_1_4_clean_helper_added.dta saved
+
+. 
+. saveold round_1_4_clean_helper_added_old.dta, replace
+file round_1_4_clean_helper_added_old.dta saved
+
+. 
+. ***************************************************************
+. log close
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\5-add_helper_to_SP_ds-LOG.txt
+  log type:  text
+ closed on:  11 Dec 2015, 14:02:12
+--------------------------------------------------------------------------------------------------------

@@ -1,0 +1,571 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="Importing Data from NHATS/NSOC/NLTCS(just vars)"
+/******************************** IMPORT **********************************/
+libname ko "E:\nhats\data\Projects\Caregivers";
+
+proc import out=raw_nhats_r1
+datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta";
+run;
+proc import out=raw_nhats_r2
+datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_old.dta";
+run;
+proc import out=raw_nhats_r3
+datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_old.dta";
+run;
+proc import out=nhats
+datafile = "E:\nhats\data\NHATS working data\round_1_3_clean_helper_added_old.dta";
+run;
+proc import out=nsoc
+datafile = "E:\nhats\data\NHATS working data\caregiver_ds_nsoc_clean_v2_old.dta";
+run;
+proc import out=nsoc_tracker
+datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta";
+run;
+proc import out=nhats_r2_sen
+datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_SP_Sen_Dem_File.dta";
+run;
+
+/* some of the current variables in the "final" dataset doesn't have some essential variables. I am merging them in from the raw data files */
+
+/* in the final dataset, the NLTCS questions were not there. I plan on merging these into the dataset */
+data raw_nhats_r1_1 (keep = spid ls1evdayact1-ls1evdayact8 ls1ableto1-ls1ableto7 ls1diskefrm1-ls1diskefrm7);
+set raw_nhats_r1;
+run;
+
+/*wave 1 data*/
+data nhats_wave1;
+set nhats;
+if wave = 1;
+run;
+
+/*merge the NLTCS questions to Wave 1 dataset*/
+proc sql;
+create table nhats_wave1_1
+as select a.*, b.*, c.is2resptype as is2resptype1, c.is2reasnprx7, d.is3resptype as is3resptype1, d.is3reasnprx7
+from nhats_wave1 a
+left join raw_nhats_r1_1 b
+on a.spid = b.spid
+left join raw_nhats_r2 c
+on a.spid = c.spid
+left join raw_nhats_r3 d
+on a.spid = d.spid;
+quit;
+
+ods html close;
+ods html;
+/*check for perfect merge: Check*/
+proc freq data=nhats_wave1_1;
+table ls1evdayact1-ls1evdayact8 ls1ableto1-ls1ableto7 ls1diskefrm1-ls1diskefrm7;
+run;
+
+H="Sample Creation"
+proc freq data=nhats_wave1_1;
+table is2reasnprx7;
+run;
+
+/*limit by community dwelling and create new ADL/IADL based on the questions from NLTCS*/
+data nhats_wave1_2;
+set nhats_wave1_1;
+/*Community Dwelling Variable. If the variable = "Community" or "Residential Care Resident not nursing home"*/
+if r1dresid = 1 or r1dresid = 2;
+/*total number after: 7609*/
+
+/*Changing ADL numbers. If the answers to ADL questions are "yes" or "can't do"*/
+if ls1evdayact1 = 1 or ls1evdayact1 = 3 then adl_eating = 1;
+if ls1evdayact1 = 2 then adl_eating = 0;
+if ls1evdayact2 = 1 or ls1evdayact2 = 3 then adl_bed = 1;
+if ls1evdayact2 = 2 then adl_bed = 0;
+if ls1evdayact3 = 1 or ls1evdayact3 = 3 then adl_chair = 1;
+if ls1evdayact3 = 2 then adl_chair = 0;
+if ls1evdayact4 = 1 or ls1evdayact4 = 3 then adl_walk_in = 1;
+if ls1evdayact4 = 2 then adl_walk_in = 0;
+if ls1evdayact5 = 1 or ls1evdayact5 = 3 then adl_walk_out = 1;
+if ls1evdayact5 = 2 then adl_walk_out = 0;
+if ls1evdayact6 = 1 or ls1evdayact6 = 3 then adl_dress = 1;
+if ls1evdayact6 = 2 then adl_dress = 0;
+if ls1evdayact7 = 1 or ls1evdayact7 = 3 then adl_bathe = 1;
+if ls1evdayact7 = 2 then adl_bathe = 0;
+if ls1evdayact8 = 1 or ls1evdayact8 = 3 then adl_toilet = 1;
+if ls1evdayact8 = 2 then adl_toilet = 0;
+
+/*changing IADL Numbers. If the answers on First IADL (Able to?) are "No" AND if the other IADL question (Keep from?) = "Yes"*/
+if ls1ableto1 = 2 and ls1diskefrm1 = 1 then iadl_meals = 1;
+if ls1ableto1 = 2 and ls1diskefrm1 = 2 then iadl_meals = 0;
+if ls1ableto1 = 1 then iadl_meals = 0;
+if ls1ableto2 = 2 and ls1diskefrm2 = 1 then iadl_laundry = 1;
+if ls1ableto2 = 2 and ls1diskefrm2 = 2 then iadl_laundry = 0;
+if ls1ableto2 = 1 then iadl_laundry = 0;
+if ls1ableto3 = 2 and ls1diskefrm3 = 1 then iadl_housewk = 1;
+if ls1ableto3 = 2 and ls1diskefrm3 = 2 then iadl_housewk = 0;
+if ls1ableto3 = 1 then iadl_housewk = 0;
+if ls1ableto4 = 2 and ls1diskefrm4 = 1 then iadl_shop = 1;
+if ls1ableto4 = 2 and ls1diskefrm4 = 2 then iadl_shop = 0;
+if ls1ableto4 = 1 then iadl_shop = 0;
+if ls1ableto5 = 2 and ls1diskefrm5 = 1 then iadl_money = 1;
+if ls1ableto5 = 2 and ls1diskefrm5 = 2 then iadl_money = 0;
+if ls1ableto5 = 1 then iadl_money = 0;
+if ls1ableto6 = 2 and ls1diskefrm6 = 1 then iadl_meds = 1;
+if ls1ableto6 = 2 and ls1diskefrm6 = 2 then iadl_meds = 0;
+if ls1ableto6 = 1 then iadl_meds = 0;
+if ls1ableto7 = 2 and ls1diskefrm7 = 1 then iadl_phone = 1;
+if ls1ableto7 = 2 and ls1diskefrm7 = 2 then iadl_phone = 0;
+if ls1ableto7 = 1 then iadl_phone = 0;
+
+/*Died at Round 2 or Round 3*/
+died = 0;
+if is2reasnprx7 = 1 then died = 1;
+if is2reasnprx7 = -9 then died = .;
+died_24 = 0;
+if is2reasnprx7 = 1 or is3reasnprx7 = 1 then died_24 = 1;
+if is2reasnprx7 = -9 or is3reasnprx7 = -9 then died_24 = .;
+
+white = 0;
+if race_cat = 1 then white = 1;
+married = 0;
+if maritalstat = 1 then married = 1;
+gt_hs_edu = 0;
+if education ~= 1 then gt_hs_edu = 1;
+label white = "White Non-Hispanic";
+label married = "Married";
+label gt_hs_edu = "Greater than High School";
+spouse = 0;
+if LIVEARRANG = 2 or LIVEARRANG = 3 or livearrang = 4 then spouse = 1;
+sum_adl = sum(adl_eating, adl_bed, adl_chair, adl_walk_in, adl_walk_out, adl_dress, adl_bathe, adl_toilet, 0);
+sum_adl_cat = 0;
+if sum_adl = 1 or sum_adl = 2 then sum_adl_cat = 1;
+if sum_adl > 2 then sum_adl_cat = 2;
+
+/*Labelling stuff*/
+label female = "Gender";
+label spouse = "Spouse + Other";
+label sum_adl_cat = "ADLs Categories";
+run;
+proc freq data=nhats_wave1_2;
+table died died_24 is3reasnprx7 is2reasnprx7;
+run;
+proc freq data=nhats_wave1_2;
+table race_cat white maritalstat married education gt_hs_edu LIVEARRANG spouse sum_adl sum_adl_cat ls1evdayact1 adl_eating ls1evdayact2 adl_bed ls1evdayact3 adl_chair
+ls1evdayact4 adl_walk_in ls1evdayact5 adl_walk_out ls1evdayact6 adl_dress ls1evdayact7 adl_bathe ls1evdayact8 adl_toilet ls1ableto1 ls1diskefrm1 iadl_meals ls1ableto2 ls1diskefrm2 iadl_laundry
+ls1ableto3 ls1diskefrm3 iadl_housewk ls1ableto4 ls1diskefrm4 iadl_shop ls1ableto5 ls1diskefrm5 iadl_money ls1ableto6 ls1diskefrm6 iadl_meds ls1ableto7 ls1diskefrm7 iadl_phone;
+run;
+/*if the person has any disability*/
+data nhats_wave1_3;
+set nhats_wave1_2;
+if adl_eating = 1| adl_bed = 1 | adl_chair = 1 | adl_walk_in = 1 | adl_walk_out = 1 | adl_dress = 1 | adl_bathe = 1 | adl_toilet = 1|iadl_meals = 1 | iadl_laundry = 1 | iadl_housewk = 1 | iadl_shop = 1 | iadl_money = 1 | iadl_meds = 1 | iadl_phone = 1;
+run;
+/*sample size greatly reduced to 2024*/
+
+/*in the NSOC data find those who are eligible "fl1dnsoc" and those who completed NSOC "fl1dnsoccomp"*/
+data nsoc_tracker1;
+set nsoc_tracker;
+eligible = 0;
+if fl1dnsoc = 1 then eligible = 1;
+complete = 0;
+if fl1dnsoccomp > 0 then complete = 1;
+run;
+/*merge with nhats*/
+proc sql;
+create table nhats_wave1_4
+as select a.*, b.eligible, b.complete, b.fl1dnsoccomp as total_caregiver_comp
+from nhats_wave1_3 a
+left join nsoc_tracker1 b
+on a.spid = b.spid;
+quit;
+proc freq data=nhats_wave1_4;
+table eligible*complete ;
+format eligible yesno_. complete yesno_.;
+run;
+proc freq data=nhats_wave1_4;
+where complete = 1;
+table total_caregiver_comp;
+run;
+proc means data=nhats_wave1_4;
+where complete = 1;
+var total_caregiver_comp;
+run;
+/*if eligible and completed NSOC*/
+data nhats_wave1_5;
+set nhats_wave1_4;
+if eligible = 1 and complete = 1;
+run;
+proc freq data=nhats_wave1_5;
+table died;
+run;
+/*Sample size is 1018*/
+
+/*find EOL Caregivers within 12 and 24 months at end of life*/
+data EOL_Caregivers_12mos;
+set nhats_wave1_5;
+if died = 1;
+run;
+data EOL_Caregivers_24mos;
+set nhats_wave1_5;
+if DIED_24 = 1;
+run;
+
+/* When I did things by Date*
+proc freq data=raw_nhats_r1;
+table ab1datemonth ab1dateyear;
+run;
+proc freq data=nhats_wave1_5;
+table PD2MTHDIED PD2YRDIED;
+run;
+data nhats_wave1_7;
+set nhats_wave1_6;
+interview_date = mdy(ab1datemonth, 1, ab1dateyear);
+if PD2YRDIED = 1 then death_year = 2011;
+if pd2yrdied = 2 then death_year = 2012;
+death_date = mdy(PD2MTHDIED, 1,death_year );
+format interview_date yymmd7. death_date yymmd7.;
+month_diff = intck('MONTH', interview_date, death_date);
+run;
+proc freq data=nhats_wave1_7;
+table death_year month_diff;
+run;
+proc freq data=nhats_wave1_7;
+table ADL_EAT_HELP;
+run;
+*/
+
+H="Formats"
+proc format;
+value yesno_ 1 = '    Yes'
+	     0 = '    No'
+	     . = '    Missing';
+value female_ 1 = '    Female'
+	      0 = '    Male'
+	      . = '    Missing';
+value fairpoor_ 1 = '    Fair/Poor'
+		0 = '    Good/Great'
+	  	. = '    Missing';
+value phq_ 1 = '    3+'
+	   0 = '    0-2'
+	   . = '    Missing';
+value adl_ 2 = '    3+ ADL'
+	   1 = '    1-2 ADL'
+	   0 = '    IADLs Only'
+	   . = '    Missing';
+value overall 1 = 'Overall';
+value died_ 1 = 'Died'
+	    0 = 'Survived';
+picture pctfmt(round)low-high= ' 009.9)' (prefix='(');
+run;
+
+H="Table 1"
+%macro table1(data);
+ods html close;
+ods html;
+ods rtf body = "E:\nhats\projects\Caregivers_KO\09182015\table_info_&data..rtf";
+proc sort data=&data;
+by died;
+run;
+
+proc freq data=&data;
+table female*died white*died gt_hs_edu*died married*died spouse*died medicaid*died srh_fp*died sr_ami_ever*died sr_heart_dis_ever*died sr_ra_ever*died
+sr_diabetes_ever*died sr_lung_dis_ever*died sr_stroke_ever*died sr_cancer_ever*died sr_phq2_depressed*died dem_2_cat*died fall_last_month*died sum_adl_cat*died
+reg_doc_seen*died reg_doc_homevisit*died sr_hosp_ind*died / chisq;
+weight w1anfinwgt0;
+run;
+
+proc surveymeans data=&data mean std median t;
+by died;
+class died;
+var age sr_numconditions1 sr_hosp_stays;
+weight w1anfinwgt0;
+run;
+
+ods rtf close;
+%mend;
+/*Community Dwelling Sample*/
+%table1(nhats_wave1_2);
+/*Community Dwelling, Chronically Disabled Sample*/
+%table1(nhats_wave1_3);
+/*Community Dwelling, Chronically Disabled, CAREGIVER COMPLETED, Sample*/
+%table1(nhats_wave1_5);
+proc export data=nhats_wave1_2 outfile = "E:\nhats\data\Projects\Caregivers\Caregiver_1.dta";
+run;
+proc export data=nhats_wave1_3 outfile = "E:\nhats\data\Projects\Caregivers\Caregiver_2.dta";
+run;
+proc export data=nhats_wave1_5 outfile = "E:\nhats\data\Projects\Caregivers\Caregiver_3.dta";
+run;
+
+H="raw NSOC"
+libname ko "E:\nhats\data\Projects\Caregivers";
+
+/************************** NSOC DATA SETUP ********************************/
+
+proc import out = RAW_NSOC
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_File_v2_old.dta"
+			replace;
+run;
+proc import out = RAW_OP
+			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta"
+			replace;
+run;
+proc import out = RAW_OP_SENSITIVE
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
+			replace;
+run;
+proc import out=raw_nhats_r1
+			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta"
+			replace;
+run; 
+
+proc freq data = RAW_OP;
+table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp;
+run;
+proc freq data = raw_op_sensitive;
+table op1age op1catgryage;
+run;
+
+proc sql;
+create table raw_nsoc1
+as select a.*, b.op1prsninhh, b.op1martlstat, b.op1numchldrn, b.op1ishelper, b.op1sppayshlp, b.op1leveledu,
+c.op1age, c.op1catgryage
+from raw_nsoc a
+left join raw_op b
+on a.spid = b.spid
+and a.opid = b.opid
+left join raw_op_sensitive c
+on a.spid = c.spid
+and a.opid = c.opid;
+quit;
+
+proc freq data= raw_nsoc1;
+table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage op1leveledu;
+run;
+
+data nsoc;
+set raw_nsoc1;
+
+/*** Drop the variations of the NSOC Weight Variable. Use primarily "w1cgfinwgt0" for full Sample ***/
+
+drop w1cgfinwgt1 - w1cgfinwgt56;
+
+run;
+
+data ko.nsoc_raw;
+set nsoc;
+run;
+
+
+H="Primary Caregiver NSOC + Creating Final NSOC Database"
+/********************** Katherine Additions *******************************/
+
+
+/*This Macro is taking all of the variables that will be used and for all those who did not answer the question (Refused/Don't know/Inapplicable/Missing) all just be considered
+"missing" in this case as a ".". That way they don't appear in frequency tables and various Chi-Sq calculations. */
+%let varlist = 
+c1dgender c1relatnshp c1intmonth c1dintdays cca1hwoftchs cca1hwoftshp cca1hlpordmd cca1hlpbnkng cca1cmpgrcry cca1cmpordrx cca1cmpbnkng cca1hwoftpc cca1hwofthom 
+cca1hwoftdrv cca1hlpmed cca1hlpshot cca1hlpmdtk cca1hlpexrcs cca1hlpdiet cca1hlpteeth cca1hlpfeet cca1hlpskin cca1hlpmdapt cca1hlpspkdr cca1hlpinsrn cca1hlpothin 
+cdc1hlpdyswk cdc1hlphrmvf cdc1hlphrlmt cdc1hlpyrpls cdc1hlpmthst cdc1hlpunit cdc1hlpyrs cdc1hlpyrst cac1joylevel cac1joylevel cac1arguelv cac1spapprlv cac1nerveslv 
+cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1diffinc cac1diffemo cac1diffphy cac1diffinlv cac1diffemlv cac1diffphlv cac1fmlydisa cac1exhaustd cac1toomuch cac1notime cac1uroutchg 
+cse1frfamact cpp1wrk4pay cpp1hlpkptwk cpp1careothr che1health che1hrtattck che1othheart che1highbld che1arthrits che1osteoprs che1diabetes che1lungdis che1cancer che1seeing 
+che1hearing che1fltdown che1fltnervs che1fltworry chd1martstat chd1chldlvng chd1numchild chd1numchu18 chd1educ chd1cgbrthmt chd1cgbrthyr cec1wrk4pay cec1hlpafwk1 cec1occuptn cec1worktype 
+chi1medicare chi1medigap chi1medicaid chi1privinsr chi1tricare chi1uninsurd chi1insrtype op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage op1leveledu;
+%macro create_missing();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while (&var ne );
+data nsoc;
+set nsoc;
+if &var < 0 then &var = .;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%end;
+%mend;
+%create_missing();
+
+/*obtaining all information from SP from NHATS Wave 1 data*/
+data nhats_final_sp;
+set ko.nhats_wave1 (keep = spid died hh1dhshldchd);
+run;
+data nsoc_ko;
+set nsoc (keep = spid cdc1hlphrmvf cdc1hlpsched opid c1dgender c1relatnshp c1intmonth c1dintdays cca1hwoftchs cca1hwoftshp cca1hlpordmd cca1hlpbnkng cca1cmpgrcry cca1cmpordrx cca1cmpbnkng cca1hwoftpc cca1hwofthom 
+cca1hwoftdrv cca1hlpmed cca1hlpshot cca1hlpmdtk cca1hlpexrcs cca1hlpdiet cca1hlpteeth cca1hlpfeet cca1hlpskin cca1hlpmdapt cca1hlpspkdr cca1hlpinsrn cca1hlpothin 
+cdc1hlpdyswk cdc1hlphrlmt cdc1hlpyrpls cdc1hlpmthst cdc1hlpunit cdc1hlpyrs cdc1hlpyrst cdc1hlpdysmt cdc1hlphrsdy cac1joylevel cac1joylevel cac1arguelv cac1spapprlv cac1nerveslv 
+cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1diffinc cac1diffemo cac1diffphy cac1diffinlv cac1diffemlv cac1diffphlv cac1fmlydisa cac1exhaustd cac1toomuch cac1notime cac1uroutchg 
+cse1frfamact cpp1wrk4pay cpp1hlpkptwk cpp1careothr che1health che1hrtattck che1othheart che1highbld che1arthrits che1osteoprs che1diabetes che1lungdis che1cancer che1seeing 
+che1hearing che1fltdown che1fltnervs che1fltworry chd1martstat chd1chldlvng chd1numchild chd1numchu18 chd1educ chd1cgbrthmt chd1cgbrthyr cec1wrk4pay cec1hlpafwk1 cec1occuptn cec1worktype 
+chi1medicare chi1medigap chi1medicaid chi1privinsr chi1tricare chi1uninsurd chi1insrtype op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage chd1numinhh op1leveledu);
+run;
+
+/*Merging NSOC data to our main NHATS final sample n = 1018 sample*/
+proc sql;
+create table nhats_nsoc
+as select * 
+from nhats_final_sp a
+left join nsoc_ko b
+on a.spid = b.spid;
+quit;
+
+/**** Arranging Spousal information and Number of hours worked ****/
+/* First creating a spouse variable based on the relationship variable */
+/* Calculation of the hours: Methods in Project Notes */
+proc freq data=nhats_nsoc;
+table c1relatnshp;
+run;
+data nhats_nsoc1;
+set nhats_nsoc;
+/*Creating Spouse Variable */
+if cg_spouse = .;
+if c1relatnshp = 2 then cg_spouse = 1;
+if c1relatnshp ~= 2 then cg_spouse = 0;
+/*gathering total hours a day/week/month/other */
+total_hours_day = cdc1hlphrsdy + 0;
+if total_hours_day < 0 then total_hours_day = .;
+total_hours_week = cdc1hlpdyswk + 0;
+if total_hours_week < 0 then total_hours_week = .;
+total_hours_month = cdc1hlpdysmt + 0;
+if total_hours_month < 0 then total_hours_month = .;
+total_hours_other = cdc1hlphrlmt + 0;
+if total_hours_other < 0 then total_hours_other = .;
+other_flag = 0;
+if cdc1hlphrmvf ~= 1 then other_flag=1;
+/*if the cargiver was a regular then you calculated it days a week per day and multiply that by 4*/
+if cdc1hlpsched = 1 then total_hours = total_hours_week * total_hours_day * 4;
+/*if they were not a regular than you calculated the total days in the month by total hours*/
+if cdc1hlpsched ~= 1 then total_hours = total_hours_month * total_hours_day;
+if other_flag = 1 then total_hours = total_hours_other;
+run;
+/*Primary Caregiver: by total hours a person spends then whether not the person is the spouse*/
+proc sort data=nhats_nsoc1;
+by spid descending total_hours cg_spouse;
+run;
+proc sort data=nhats_nsoc1 out=nhats_nsoc2 nodupkey;
+by spid;
+run;
+
+
+/************************* BREAK OFF FOR CHECKS HERE. CAN SKIP BECAUSE PROBLEM RESOLVED *************/
+/******* CHECKED: Those who did not fit the Criteria for Hours/Spouse are other SOLE 
+Caregiver that Answered the questions.
+/*those who didn't fit either criteria. Those with missing hours and no spouse.  */
+data missing_spouse_hr_info;
+set nhats_nsoc2;
+if total_hours = . and cg_spouse = 0;
+run;
+proc sql;
+create table missing_spouse_hr_info1
+as select a.*
+from nhats_nsoc1 a
+inner join missing_spouse_hr_info b
+on a.spid = b.spid;
+quit;
+proc sort data=missing_spouse_hr_info1;
+by spid descending total_hours cg_spouse;
+run;
+data missing_spouse_hr_info2;
+set missing_spouse_hr_info1 (keep = spid opid c1dgender c1relatnshp cg_spouse total_hours total_hours_day total_hours_week total_hours_month total_hours_other);
+run;
+proc sort data=missing_spouse_hr_info2 out=missing_spouse_hr_info3 nodupkey;
+by spid;
+run;
+
+/********************************* CONTINUE FROM HERE ***********************************/
+
+/*Checking number of people who died on second wave*/
+proc freq data=nhats_nsoc2;
+table died;
+run;
+
+/*Table 1: Demographic Information*/
+
+proc freq data=nhats_nsoc1;
+table c1dgender c1relatnshp op1prsninhh op1martlstat;
+run;
+
+proc freq data=nhats_nsoc2;
+table c1dgender c1relatnshp op1prsninhh chd1martstat op1martlstat chd1chldlvng chd1numchild op1ishelper op1sppayshlp op1prsninhh chd1numinhh op1leveledu;
+run;
+
+/************ EDUCATION, MARRIED, NUM LIVING IN HH and NUMBER OF CHILDREN Missing Problem *********************/
+
+/* FROM NSOC Survey
+"If preloaded CG Relationship to SP = 2, go to section EC Employment and Caregiving otherwise go to [Demographic Information]"
+This means that they skip over demographic questions if you are married.
+I will take the SP's (NHATS) number of children variable and impute it into the number of children for NSOC*/
+
+/*FROM the Raw NHATS Wave 1 data*/
+/*taking Num children, marital status, living children, total number in household*/ 
+/*Can be manipulated to add others from the raw database*/
+data SP_Demographics_Impute;
+set raw_nhats_r1 (keep = spid cs1dnumchild hh1martlstat cs1dreconcil hh1dhshldnum);
+run;
+/*merge with the nhats/nsoc dataset*/
+proc sql;
+create table nhats_nsoc3
+as select a.*, b.cs1dnumchild, b.hh1martlstat, b.cs1dreconcil, b.hh1dhshldnum
+from nhats_nsoc2 a
+left join SP_Demographics_Impute b
+on a.spid = b.spid;
+quit;
+
+/*Formats for tables in the future*/
+proc format;
+	value mar_ 1 = "Married"
+			2 = "Living with Partner"
+			3 = "Separated"
+			4 = "Divorced"
+			5 = "Widowed"
+			6 = "Never Married";
+	value educ_ 1 = "No Schooling Completed"
+				2 = "1-8th Grade Comp."
+				3 = "9-12th Grade Comp."
+				4 = "High School Graduate"
+				5 = "Vocational/Technical Certificate"
+				6 = "Some College"
+				7 = "Associate's Degree"
+				8 = "Bachelor's Degree"
+				9 = "Master's/Doctoral Degree"; 
+run;
+
+/*Manipulating missing data.*/
+/*Details in the Project Notes*/
+data nhats_nsoc4;
+set nhats_nsoc3;
+
+/* LIVING CHILDREN MISSING DATA */
+Any_Living_Children_SP = 0;
+if cs1dreconcil ~= 3 then Any_Living_Children_SP = 1;
+Any_Living_Children_CG = .;
+if chd1chldlvng = 2 then Any_Living_Children_CG = 0;
+if chd1chldlvng = 1 then Any_Living_Children_CG = 1;
+if cg_spouse = 1 then cg_living_children = Any_Living_Children_SP;
+if cg_spouse = 0 then cg_living_children = Any_Living_Children_CG;
+drop Any_Living_Children_SP Any_Living_Children_CG;
+
+/*MARITAL STATUS MISSING DATA */
+if cg_spouse = 1 then cg_Marital_status = hh1martlstat;
+if cg_spouse = 0 then cg_marital_status = chd1martstat;
+if cg_marital_status = . then cg_Marital_Status =op1martlstat; 
+
+/*NUMBER IN HOUSEHOLD */
+if cg_spouse = 1 then cg_total_in_hh = hh1dhshldnum;
+if cg_spouse = 0 then cg_total_in_hh = chd1numinhh;
+if cg_total_in_hh < 0 then cg_total_in_hh = .;
+
+/*EDUCATION OF CAREGIVER */
+if cg_spouse = 1 then cg_educ = op1leveledu;
+if cg_spouse = 0 then cg_educ = chd1educ;
+
+run;
+
+/*Checking for correct merge. Everything checks out*/
+proc freq data=nhats_nsoc4;
+table cg_spouse cs1dreconcil chd1chldlvng cg_living_children;
+run;
+proc freq data=nhats_nsoc4;
+format cg_Marital_status mar_.;
+table cg_Marital_status;
+run;
+proc freq data=nhats_nsoc4;
+table cg_total_in_hh;
+run;
+proc freq data=nhats_nsoc4;
+format cg_educ educ_.;
+table op1leveledu chd1educ cg_educ;
+run;
+
