@@ -181,6 +181,38 @@ la var sr_hosp_stays "Number unique hospital stays last year"
 tab sr_hosp_stays wave, missing
 tab sr_hosp_stays wave if ivw_type==1, missing
 
+//Well-Being
+foreach x in 1 2 3 4{
+gen wb_feel`x' = .
+}
+
+foreach w in 1 2 3 4{
+	foreach x in 1 2 3 4{
+	replace wb_feel`x' = 1 if wb`w'offelche`x' == 1 | wb`w'offelche`x' == 2 | wb`w'offelche`x' == 3
+	replace wb_feel`x' = 0 if wb`w'offelche`x' == 4 | wb`w'offelche`x' == 5
+	}
+}
+foreach x in 1 2 3 4{
+gen wb_life`x' = .
+}
+
+foreach w in 1 2 3 4{
+	foreach x in 1 2 3 4{
+	replace wb_life`x' = 1 if wb`w'truestme`x' == 1 
+	replace wb_life`x' = 0 if wb`w'truestme`x' == 2 | wb`w'truestme`x' == 3
+	}
+}
+foreach x in 1 2 3 4{
+gen wb_agr`x' = .
+}
+
+foreach w in 1 2 3 4{
+	foreach x in 1 2 3 {
+	replace wb_agr`x' = 1 if wb`w'agrwstmt`x' == 1 
+	replace wb_agr`x' = 0 if wb`w'agrwstmt`x' == 2 | wb`w'agrwstmt`x' == 3
+	}
+}
+
 save round_1_4_cleanv3.dta, replace
 
 local ivars fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help ///

@@ -1,0 +1,190 @@
+/*OPEN UP AND RUN: Table1_NHATS_Setup and Table2_Helper_Data_Setup(1_19_16) in the HOMEBOUND folder*/
+
+
+proc import out=nhats_tracker
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta"
+			replace;
+run;
+proc import out=op_nhats_tracker
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_OP_Tracker_File_old.dta"
+			replace;
+run;
+
+data nhats_rg_w1;
+set nhats_rg;
+if wave = 1;
+run;
+proc sql;
+create table nhats_rg_tracker
+as select *
+from nhats_rg_w1 a
+left join nhats_tracker b
+on a.spid = b.spid;
+quit;
+proc sql;
+create table nhats_wave1_tab1_test
+as select a.*, b.white, b.married, b.sum_adl_cat, b.community_dwelling, b.eligible, b.complete, b.w1anfinwgt0 , b.died, b.adl_walk_out, b.adl_walk_in, b.adl_bed
+from nhats_rg_tracker a
+left join nhats.Nhats_wave1_all_obs b
+on a.spid = b.spid;
+quit;
+
+proc freq data=nhats_wave1_tab1_test;
+table fl1dnsoc*eligible;
+run;
+
+data Nhats_wave1_tab1_test1;
+set Nhats_wave1_tab1_test;
+any_help = 0;
+if adl_walk_out = 1 | adl_walk_in = 1 | adl_bed = 1 | adl_eat_help = 1 | adl_bath_help = 1 | adl_toil_help = 1 | adl_dres_help = 1 | 
+iadl_laun_help = 1 | iadl_shop_help = 1 | iadl_meal_help = 1 | iadl_bank_help = 1 | iadl_meds_help = 1 then any_help = 1;
+if adl_walk_out = . & adl_walk_in = . & adl_bed = . & adl_eat_help = . & adl_bath_help = . & adl_toil_help = . & adl_dres_help = . & 
+iadl_laun_help = . & iadl_shop_help = . & iadl_meal_help = . & iadl_bank_help = . & iadl_meds_help = . then any_help = .;
+homebound_cat1 = .;
+if homebound_cat = 0 | homebound_cat = 1 then homebound_cat1 = 1;
+if homebound_cat = 2 then homebound_cat1 = 2;
+if homebound_cat = 3 then homebound_cat1 = 3;
+if homebound_cat = 4 then homebound_cat1 = 4;
+run;
+proc freq data=Nhats_wave1_tab1_test1;
+table any_help;
+run;
+proc freq data=Nhats_wave1_tab1_test1;
+table homebound_cat1;
+run;
+proc freq data=Nhats_wave1_tab1_test1;
+where eligible = 0 and homebound_cat1 = 1;
+table any_help;
+run;
+
+data Nhats_wave1_tab1_test2 (keep = spid adl_walk_out adl_walk_in adl_bed adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help any_help);
+set Nhats_wave1_tab1_test1;
+if eligible = 0 and homebound_cat1 = 1 and any_help = 0;
+run;
+data nhats_wave1_tab1_test3;
+set Nhats_wave1_tab1_test1;
+if eligible = 0 and homebound_cat1 = 1 and any_help = 1;
+SP_eligible = 1;
+run;
+ 
+
+/******* Helpers *********/
+proc freq data=helpers;
+table op1outhlp op1insdhlp op1bedhlp op1launhlp op1shophlp op1mealhlp op1bankhlp op1medshlp op1eathlp
+op1bathhlp op1toilhlp op1dreshlp op1dochlp op1insurhlp op1moneyhlp;
+run;
+
+data helpers_test;
+set helpers;
+run;
+
+
+%let varlist = out insd bed laun shop meal bank eat bath toil dres meds money;
+%macro adl_iadl();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data helpers_test;
+set helpers_test;
+%if &var=out | &var = insd | &var = bed | &var = eat | &var =  bath | &var =  toil | &var =  dres %then %do;
+op_adl_&var. = .;
+if op1&var.hlp = 1 then op_adl_&var. = 1;
+if op1&var.hlp ~= 1 then op_adl_&var. = 0;
+%end;
+%if &var = laun | &var = shop | &var = meal | &var =  bank | &var =  meds | &var = money %then %do;
+op_iadl_&var. = .;
+if op1&var.hlp = 1 then op_iadl_&var. = 1;
+if op1&var.hlp ~= 1 then op_iadl_&var. = 0;
+%end;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%end;
+%mend;
+%adl_iadl();
+OPTION SPOOL;
+proc freq data=helpers_test;
+table op1paidhelpr;
+run;
+data helpers_test;
+set helpers_test;
+if  op_adl_eat = 1 | op_adl_bath = 1 | op_adl_toil = 1 | op_adl_dres = 1 | op_adl_insd = 1 | op_adl_bed = 1 | op_adl_out = 1 then any_adl = 1;
+if any_adl = . then any_adl = 0;
+if op_iadl_laun = 1 | op_iadl_shop = 1 | op_iadl_meal = 1 | op_iadl_bank = 1 |  op_iadl_meds = 1 | op_iadl_money = 1 then any_iadl = 1;
+if any_iadl = . then any_iadl = 0;
+
+family_member = 0;
+if (op1relatnshp >= 2 and op1relatnshp <= 29) | op1relatnshp = 91 then family_member = 1;
+
+any_help = 0;
+if any_adl = 1 | any_iadl = 1 then any_help = 1;
+
+paid = .;
+if op1paidhelpr = 1 then paid = 1;
+if op1paidhelpr = 2 then paid = 0;
+
+paid_caregiver = 0;
+if family_member = 0 and paid = 1 then paid_caregiver = 1;
+
+
+
+run;
+proc freq data=helpers_test;
+table family_member any_adl any_iadl any_help;
+run;
+
+proc sql;
+create table helper_test_nsoc_elig
+as select a.*, b.op1dnsoc as NSOC_Eligible
+from helpers_test a
+left join op_nhats_tracker b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+
+proc sql;
+create table NSOC_eligible_helpers
+as select a.*, b.sp_eligible
+from helper_test_nsoc_elig a
+left join Nhats_wave1_tab1_test3 b
+on a.spid = b.spid;
+quit;
+
+proc freq data=NSOC_eligible_helpers;
+table sp_eligible;
+run;
+
+data nsoc_eligible_helpers1;
+set nsoc_eligible_helpers;
+if sp_eligible = 1;
+run;
+
+
+
+proc sort data = nsoc_eligible_helpers1 out=test nodupkey;
+by spid;
+run;
+
+proc freq data=nsoc_eligible_helpers1;
+table any_help;
+run;
+proc freq data=nsoc_eligible_helpers1;
+where any_help = 1;
+table family_member;
+run;
+proc freq data=nsoc_eligible_helpers1;
+where any_help = 1 and family_member = 0;
+table paid_caregiver;
+run;
+proc freq data=nsoc_eligible_helpers1;
+where any_help = 1 and family_member = 0 and paid_caregiver = 0;
+table NSOC_Eligible;
+run;
+
+data nsoc_eligible_helpers2;
+set nsoc_eligible_helpers1;
+if any_help = 1 and family_member = 0 and paid_caregiver = 0 and NSOC_Eligible = -1;
+run;
+data testing1;
+set nsoc_eligible_helpers1;
+if any_help = 0;
+run

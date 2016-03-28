@@ -13,7 +13,7 @@ tab paid_hours_cat, gen(paid_hours_cat)
 replace flag_no_help_mth = 0 if flag_no_help_mth == .
 replace months_to_death = 0 if died == 0 & months_to_death == .
 
-
+//drop if prim_caregiver == 0
 
 local ivars cg_female cg_age_cat_di cg_spouse cg_rel_cat1 cg_rel_cat2 cg_rel_cat3 cg_rel_cat4 cg_rel_cat5 /*cg_lives_with_sp*/ cg_gt_hs cg_living_children cg_medicare work_4_pay self_health_di ever_high_bp ever_osteoperosis ever_diff_seeing ever_diff_hearing ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer ///
 ever_pain pain_lim_act_di ever_breath_prob breath_lim_act_di ever_low_enrgy enrgy_lim_act_di trb_back_sleep lost_10_lbs_yr felt_depressed_di felt_nervous_di felt_lit_interest_di felt_worry_di ///
@@ -21,7 +21,7 @@ help_personal_care_di help_get_around_di help_shopping_di help_chores_di help_bi
 gain_more_conf_di gain_deal_better_di gain_closer2sp_di gain_more_satisfied_di neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di ///
 diff_financial diff_emotional diff_physical diff_financial_lv_di diff_emotional_lv_di diff_physical_lv_di cg_phq2_depressed cg_gad2_anxiety paid_last_week paid_hours_cat1 paid_hours_cat2 paid_hours_cat3 paid_last_week lives_in_hh flag_no_help_mth    
    
-local cvars helper_num_yrs total_hours_month all_helper_tot all_helper_family_tot months_to_death
+local cvars cg_age helper_num_yrs total_hours_month all_helper_tot all_helper_family_tot months_to_death
 
 label var diff_financial_lv_di "Financially Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
 label var diff_emotional_lv_di "Emotionally Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
@@ -111,6 +111,7 @@ label var prim_caregiver "Primary Caregiver Status"
 label var paid_hours_cat1 "Paid Hours: <= 20"
 label var paid_hours_cat2 "Paid Hours: 21 - 39"
 label var paid_hours_cat3 "Paid Hours: >= 40"
+label var cg_age "Average Age of Caregivers (Continuous)"
 
  svyset [pw=w1cgfinwgt0]
  svy: tab cg_spouse died 

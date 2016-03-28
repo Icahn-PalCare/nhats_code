@@ -12,29 +12,24 @@ capture log close
 clear all
 set more off
 
-local logs E:\nhats\nhats_code\NHATS data setup\logs
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'1_nhats_setup1.txt, text replace
-
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+log using "`logs'1_nhats_setup1.txt", text replace
 local r1raw E:\nhats\data\NHATS Public\round_1\
 local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
-/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
-local work /Users/rebeccagorges/Documents/data/nhats/working
-local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ */
-
-cd `work'
+cd "`work'"
 *********************************************
 
 //round 1
-use `r1raw'NHATS_Round_1_SP_File.dta
+use "`r1raw'NHATS_Round_1_SP_File.dta"
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -45,7 +40,7 @@ save round_1_1.dta, replace
 clear
 
 //round 2
-use `r2raw'NHATS_Round_2_SP_File_v2.dta
+use "`r2raw'NHATS_Round_2_SP_File_v2.dta"
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -56,7 +51,7 @@ save round_2_1.dta, replace
 clear 
 
 //round 3
-use `r3raw'NHATS_Round_3_SP_File.dta
+use "`r3raw'NHATS_Round_3_SP_File.dta"
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -66,19 +61,30 @@ la var wave "Survey wave"
 save round_3_1.dta, replace
 clear 
 
+//round 4
+use "`r4raw'NHATS_Round_4_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+gen wave=4
+la var wave "Survey wave"
+save round_4_1.dta, replace
+clear 
+
 //round 1
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 use round_`w'_1.dta
 
 //keep selected variables only
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
-	mo`w'out* r`w'd2intvrage hh`w'martlstat ///
+	mo* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
-	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* ///
-	is`w'resptype ht`w'placedesc
+	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
+	is`w'* ht`w'placedesc fl`w'*
 
 if `w'==1 {	
-keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan el`w'higstschl ///
+keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
 ia`w'toincim1-ia`w'toincim5 ia1totinc re`w'resistrct
 }
 
@@ -91,13 +97,17 @@ if `w'==3 {
 keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
 	re3dcensdiv ip3nginslast
 }
+if `w'==4 {	
+keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
+	re4dcensdiv ip4nginslast
+}
 
 save round_`w'_ltd.dta, replace
 }
 
 //check sensitive data files, keep only some variables, merge with ltd datasets
-foreach w in 1 2{
-	use `r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta
+foreach w in 1 2 3 4{
+	use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
 	sort spid 
 	quietly by spid: gen dup = cond(_N==1,0,_n)
 	tab dup	
@@ -108,27 +118,41 @@ foreach w in 1 2{
 use round_1_ltd.dta
 append using round_2_ltd.dta
 append using round_3_ltd.dta
+append using round_4_ltd.dta
 
 //merge in sensitive data, use r1 as basis
-merge m:1 spid using `r1s'NHATS_Round_1_SP_Sen_Dem_File.dta, ///
+merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
 	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
 	rl1primarace rl1hisplatno)	
 drop _merge
 
 //merge in additional r2 sensitive data
-merge m:1 spid using `r2s'NHATS_Round_2_SP_Sen_Dem_File.dta, ///
+merge m:1 spid using "`r2s'NHATS_Round_2_SP_Sen_Dem_File.dta", ///
 	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
 drop _merge
+
+//merge in additional r3 sensitive data
+merge m:1 spid using "`r3s'NHATS_Round_3_SP_Sen_Dem_File.dta", ///
+	keepusing(r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied)
+drop _merge
+
+//merge in additional r4 sensitive data
+merge m:1 spid using "`r4s'NHATS_Round_4_SP_Sen_Dem_File.dta", ///
+	keepusing(r4dintvwrage hh4dspousage r4ddeathage pd4mthdied pd4yrdied)
+drop _merge
+
 //3B?
 //merge in tracker status information
-merge m:1 spid using `r3raw'NHATS_Round_3_Tracker_File, ///
-	keepusing(yearsample r3status r3spstat r3spstatdtyr ///
-		r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr)
-	
+merge m:1 spid using "`r4raw'NHATS_Round_4_Tracker_File", ///
+	keepusing(yearsample r4status r4spstat r4spstatdtmt r4spstatdtyr r3status r3spstat r3spstatdtmt r3spstatdtyr ///
+		r2status r2spstat r2spstatdtmt r2spstatdtyr r1status r1spstat r1spstatdtmt r1spstatdtyr)
+
+//merge in nsoc tracker information
+merge m:1 spid using "`r1s'NSOC_Round_1_SP_tracker_file", nogen
 //drop obs that are in tracker file but not sp file
 drop if _merge==2
 drop _merge	
-save round_1_to_3.dta, replace
+save round_1_to_4.dta, replace
 
 *********************************************
 log close
@@ -145,17 +169,20 @@ capture log close
 clear all
 set more off
 
-logs E:\nhats\nhats_code\NHATS data setup\logs
+local logs E:\nhats\nhats_code\NHATS data setup\logs
 //local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'1a-help_hours_imputation-LOG.txt, text replace
+log using "`logs'1a-help_hours_imputation-LOG.txt", text replace
 
 //PC file paths
-local r1raw E:\nhats\data\NHATS Public\round_1\
-local r2raw E:\nhats\data\NHATS Public\round_2\
-local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
-local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r1raw "E:\nhats\data\NHATS Public\round_1\"
+local r2raw "E:\nhats\data\NHATS Public\round_2\"
+local r3raw "E:\nhats\data\NHATS Public\round_3\"
+local r4raw "E:\nhats\data\NHATS PUBLIC\round_4\"
+local work "E:\nhats\data\NHATS working data\"
+local r1s "E:\nhats\data\NHATS Sensitive\r1_sensitive\"
+local r2s "E:\nhats\data\NHATS Sensitive\r2_sensitive\"
+local r3s "E:\nhats\data\NHATS Sensitive\r3_sensitive\"
+local r4s "E:\nhats\data\NHATS Sensitive\r4_sensitive\"
 
 /* //Rebecca mac file paths
 local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
@@ -166,13 +193,13 @@ local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
 local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
  */
  
-cd `work'
+cd "`work'"
 
 **User note: This section can be commented out after run one time to set up datasets
 ********************************************************************
 //combine op and sp data files
 //round 1
-use `r1raw'NHATS_Round_1_OP_File_v2.dta, clear
+use "`r1raw'NHATS_Round_1_OP_File_v2.dta", clear
 sort spid opid 
 
 merge m:1 spid using round_1_1.dta //bring in sorted sp ivw dataset
@@ -180,7 +207,7 @@ keep if _merge==3 //drop obs with no OP entries
 save R1_OPSPlinked.dta, replace
 
 //round 2
-use `r2raw'NHATS_Round_2_OP_File_v2.dta
+use "`r2raw'NHATS_Round_2_OP_File_v2.dta", clear
 sort spid opid
 
 merge m:1 spid using round_2_1.dta //bring in sorted sp ivw dataset
@@ -188,14 +215,23 @@ keep if _merge==3 //drop obs with no OP entries
 save R2_OPSPlinked.dta, replace
 
 //round 3
-use `r3raw'NHATS_Round_3_OP_File.dta
+use "`r3raw'NHATS_Round_3_OP_File.dta", clear
 sort spid opid
 
 merge m:1 spid using round_3_1.dta //bring in sorted sp ivw dataset
 keep if _merge==3 //drop obs with no OP entries
 save R3_OPSPlinked.dta, replace
 
-foreach w in 1 2 3{
+//round 4
+use "`r4raw'NHATS_Round_4_OP_File.dta", clear
+sort spid opid
+
+merge m:1 spid using round_4_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R4_OPSPlinked.dta, replace
+
+
+foreach w in 1 2 3 4{
 	use R`w'_OPSPlinked.dta
 	
 //now create limited datasets for each wave with only needed variables
@@ -213,10 +249,11 @@ local keeplist spid op* wave  w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid 
 use R1_OPSPltd.dta, clear
 append using R2_OPSPltd.dta
 append using R3_OPSPltd.dta
+append using R4_OPSPltd.dta
 
-save R123_OPSPltd.dta, replace
+save R1234_OPSPltd.dta, replace
 ********************************************************************
-use R123_OPSPltd.dta, clear
+use R1234_OPSPltd.dta, clear
 
 tab wave, missing
 
@@ -224,22 +261,21 @@ tab wave, missing
 //recode helper time variables to -1 (na) if not helper per flag variable
 **Note, these OP variables are backfilled from wave to wave
 gen opishelper_allw=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 tab op`w'ishelper wave, missing //helper flag variable
 replace opishelper_allw=op`w'ishelper if wave==`w'
 }
 tab opishelper_allw wave, missing
 
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 	foreach v in op`w'helpsched op`w'numdayswk op`w'numdaysmn op`w'numhrsday {
 		tab `v' if op`w'ishelper==-1 & wave==`w', missing
 		replace `v'=-1 if op`w'ishelper==-1 & wave==`w'
 	}
 }
-
 //generate indicator of help with any task that has monthly reference period
 gen month=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace month=0 if wave==`w'
 replace month=1 if (op`w'outhlp==1 | op`w'insdhlp==1 | op`w'bedhlp==1 | ///
  op`w'tkplhlp1==1 | op`w'tkplhlp2==1 | op`w'launhlp==1 | op`w'shophlp==1 | ///
@@ -250,7 +286,7 @@ tab month wave, missing
 
  //generate indicator of help with any task that has yearly reference period
 gen year=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace year=0 if wave==`w'
 replace year=1 if (op`w'moneyhlp==1 | op`w'dochlp==1 | op`w'insurhlp==1) & wave==`w'
 tab year month if wave==`w', missing
@@ -265,7 +301,7 @@ tab yearnotmonth wave, missing
 //generate SP received help with self care or mobility activity or 
 //household activity for health and functioning reasons
 gen disab=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace disab=0 if wave==`w'
 //self care or mobility, assumed to be for health reasons
 replace disab=1 if (mo`w'douthelp==2 | mo`w'dinsdhelp==2 | mo`w'dbedhelp==2 | ///
@@ -283,7 +319,7 @@ tab disab wave, missing
 //flag variable for hours/month reported, valid
 tab op1dhrsmth wave, missing //derived hours/month from HL section
 gen op_ind_hrsmth=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace op_ind_hrsmth=op`w'dhrsmth if wave==`w'
 }
 recode op_ind_hrsmth (1/750=1)
@@ -295,14 +331,14 @@ tab op_ind_hrsmth wave, missing
 
 //generate variable indicating one day per month or one day per week
 gen justone=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace justone=0 if wave==`w'
 replace justone=1 if (op`w'numdayswk==1 | op`w'numdaysmn==1) & wave==`w'
 }
 tab justone op_ind_hrsmth, missing
 
 //recode help flags to 0=(no or inapplicable) or 1=yes
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 foreach v in op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
  op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp op`w'dreshlp ///
  op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp{
@@ -313,11 +349,12 @@ replace `v'=0 if `v'==-1 & wave==`w'
 
 //generate variable indicating help with only one activity
 gen numact=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace numact=op`w'outhlp + op`w'insdhlp + op`w'bedhlp + op`w'tkplhlp1 + op`w'tkplhlp2 + ///
  op`w'launhlp + op`w'shophlp + op`w'mealhlp + op`w'bankhlp + op`w'eathlp + op`w'bathhlp + ///
  op`w'toilhlp + op`w'dreshlp + op`w'medshlp + op`w'moneyhlp + op`w'dochlp + op`w'insurhlp if wave==`w'
 }
+
 tab numact wave, missing
 gen oneact=0 //note this =0 if help with no activities
 replace oneact=1 if numact==1
@@ -329,7 +366,7 @@ gen spouse=.
 gen otherrel=.
 gen nonrel=.
 
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace spouse=0 if wave==`w'
 replace spouse=1 if op`w'relat==2 & wave==`w'
 replace otherrel=0 if wave==`w'
@@ -350,7 +387,7 @@ tab nonrel wave, missing
 ********************************************************************
 //generate variables indicating help on a regular schedule
 gen regular=.
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 replace regular=0 if wave==`w'
 replace regular=1 if op`w'helpsched==1 & wave==`w'
 }
@@ -387,16 +424,16 @@ gen impute_cat=-1
 	//4=imputation not necessary, complete info
 	replace impute_cat=4 if op_ind_hrsmth==1 & op1ishelper==1 & wave==1
 
-//if wave==2 | wave==3
+//if wave==2 | wave==3 | wave == 4
 	//1=impute, wave 2,3 criteria
-	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inlist(wave,2,3)
-	replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inlist(wave,2,3)
+	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inlist(wave,2,3,4)
+	replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inlist(wave,2,3,4)
 	//2=recode to zero, wave 2, 3
-	replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inlist(wave,2,3)
+	replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inlist(wave,2,3,4)
 	//3=recode to small number
-	replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inlist(wave,2,3)
+	replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inlist(wave,2,3,4)
 	//4=imputation not necessary
-	replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inlist(wave,2,3)
+	replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inlist(wave,2,3,4)
 
 la def impute_cat -1"N/A, not helper" 1"Impute" 2"Recode to zero" ///
 3"Recode to small number" 4"No imputation needed"
@@ -406,10 +443,11 @@ tab impute_cat wave, missing
 tab impute_cat op_ind_hrsmth if wave==1, missing
 tab impute_cat op_ind_hrsmth if wave==2, missing
 tab impute_cat op_ind_hrsmth if wave==3, missing
+tab impute_cat op_ind_hrsmth if wave==4, missing
 
 ********************************************************************
 //save separate datasets for r 1 2 & 3 so can run imputation with weighting
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 preserve
 keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
  r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat
@@ -420,7 +458,7 @@ restore
 */
 ********************************************************************
 //implement matching, do separately for each wave
-foreach w in 1 2 3{
+foreach w in 1 2 3 4{
 use R`w'_for_hrs_impute.dta, clear
 
 svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
@@ -599,6 +637,7 @@ foreach w in 1 2 3 4{
 	tab mo`w'outoft, missing
 	replace freq_go_out=mo`w'outoft if wave==`w'
 }
+
 replace freq_go_out=. if inlist(freq_go_out,`miss')
 la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
 	3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
@@ -692,14 +731,16 @@ tab independent helpdiff, missing //no overlap
 4 = go out, independent - don't need help or have difficulty
 */
 gen homebound_cat=.
-replace homebound_cat=0 if freq_go_out==5
-replace homebound_cat=1 if freq_go_out==4
+replace homebound_cat=1 if freq_go_out==4 | freq_go_out==5
 replace homebound_cat=2 if inlist(freq_go_out,3,2,1) & out_on_own==4
 replace homebound_cat=3 if inlist(freq_go_out,3,2,1) & helpdiff==1
 replace homebound_cat=4 if inlist(freq_go_out,3,2,1) & independent==1
 
+//from technical paper
+replace homebound_cat=3 if spid==10009011 & wave==1
+
 la var homebound_cat "Homebound status, categorical"
-la def hb 0 "Never leave home" 1 "Rarely leaves home" 2 "Leaves home but never by self" ///
+la def hb 1 "Never/Rarely leaves home" 2 "Leaves home but never by self" ///
 3 "Leaves home but needs help/has difficulty" 4 "Independent, not homebound"
 la val homebound_cat hb
 tab homebound_cat wave if sp_ivw_yes==1, missing
@@ -761,6 +802,15 @@ label values race_cat race
 la var race_cat "Race, categorical"
 tab race_cat if wave==1, missing
 
+gen white=race_cat==1
+gen black=race_cat==2
+gen hisp=race_cat==4
+gen other_race=race_cat==3
+label var white "White Non-Hisp"
+label var black "Black Non-Hisp"
+label var hisp "Hispanic"
+label var other_race "Other race/ethnicity"
+
 //education
 generate education=.
 replace education=1 if inlist(el1higstschl,1,2,3)
@@ -775,6 +825,8 @@ label define edulbl 1 "<High School" 2 "High School/GED" 3 "Some College" ///
 	4 ">=Bachelors" 5 "DKRF"
 label values education edulbl
 tab education el1higstschl if wave==1, missing
+
+gen educ_hs_ind=education>=2 if education>0 & education!=.
 
 //income, just wave 1
 sum ia1totinc, detail //this is the actual reported income, only present 40% sample
@@ -1704,30 +1756,21 @@ Uses imputed hours per code 1a_help_hours_imputation.do
 capture log close
 clear all
 set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+log using "`logs'5-add_helper_to_SP_ds-LOG.txt", text replace
 
-local logs E:\nhats\nhats_code\NHATS data setup\logs
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'5-add_helper_to_SP_ds-LOG.txt, text replace
-
-//PC file paths
 local r1raw E:\nhats\data\NHATS Public\round_1\
 local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
-/* //Rebecca mac file paths
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
-local work /Users/rebeccagorges/Documents/data/nhats/working
-local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-*/
- 
-cd `work'
-
+cd "`work'"
 ***************************************************************
 //get all 3 waves helper imputed hours into a single dataset
 use R1_hrs_imputed_added.dta
@@ -1740,6 +1783,8 @@ keep `keepvars'
 qui append using R2_hrs_imputed_added.dta, keep(`keepvars')
  
 qui append using R3_hrs_imputed_added.dta, keep(`keepvars')
+
+qui append using R4_hrs_imputed_added.dta, keep(`keepvars')
  
 tab wave opishelper_allw, missing
 
@@ -1789,7 +1834,7 @@ tab prim_helper_cat wave, missing
 //merge this helper data with the main SP dataset
 save helper_by_sp.dta, replace
 
-use round_1_3_cleanv3, clear
+use round_1_4_cleanv3, clear
 
 merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers ///
  tot_hrsmonth_help_i prim_helper_cat)
@@ -1812,20 +1857,285 @@ la var prim_helper_cat "Primary helper relationship, missing if no helper"
 tab prim_helper_cat wave, missing
 
 rename opid prim_helper_opid
+destring prim_helper_opid, replace
 la var prim_helper_opid "Primary helper OPID"
 
 ***************************************************************
 //save the dataset with helper information added
 
-save round_1_3_clean_helper_added.dta, replace
+save round_1_4_clean_helper_added.dta, replace
 
-saveold round_1_3_clean_helper_added_old.dta, replace
+saveold round_1_4_clean_helper_added_old.dta, replace
 
 ***************************************************************
 log close
 
 
-H="Drop the Raw Variables to a Limited Data Set (6a_Drop_Variables)"
+H="NHATS Data Cleaning Part 7--Variable Construction"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+log using "`logs'7-variable construction-LOG.txt", text replace
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+cd "`work'"
+
+use round_1_4_clean_helper_added.dta
+
+//recoding all refuse, dk, na, as missing
+destring *, replace
+foreach x of varlist * {
+	replace `x'=. if inlist(`x',-1,-7,-8,-9)
+}
+
+//marital status-3 vars: married, married_or_partnered
+
+gen married=maritalstat==1 if maritalstat!=. //married
+gen marital_sep=maritalstat==3 if !mi(maritalstat)
+gen marital_div=maritalstat==4 if !mi(maritalstat)
+gen marital_wid=maritalstat==5 if !mi(maritalstat)
+gen marital_nev=maritalstat==6 if !mi(maritalstat)
+gen marriedpartnered=married
+replace marriedpartnered=1 if maritalstat==2 //living with a partner
+gen marital_sd=marital_sep
+replace marital_sd=1 if marital_div==1
+
+label var married "Married"
+label var marriedpartnered "Married or Live w/ Partner"
+
+//lives with spouse
+gen resspouse=.
+forvalues i=1/4 {
+	replace resspouse=hh`i'livwthspo==1 if wave==`i' & hh`i'livwthspo>0
+	replace resspouse=0 if marriedpart==0
+}
+label var resspouse "Lives with Spouse/Partner"
+
+//household members
+gen hhm=.
+forvalues i=1/4 {
+	replace hhm=hh`i'dhshldnum if hh`i'dhshldnum>0 & wave==`i'
+}
+label var hhm "Number of household members"
+
+//age categorical
+
+gen agecat = .
+forvalues i=1/4 {
+replace agecat= r`i'd2intvrage if wave==`i'
+}
+replace agecat=. if agecat==-1
+label values agecat r1d2intvrage
+label var agecat "Age, 5 yr categories"
+
+//activities past month
+
+gen attrelig=. //attend services
+gen imprelig=. //importance of religious services
+gen visitfrfam=. //visit fr. fam.
+gen impvisit=. //importance of visiting friends & fam
+gen attclub=. //participate in club, organized activity, class, etc.
+gen impclub=. //importance of such activities
+gen vigact=. //vigorous activities
+
+forvalues i=1/4 {
+	replace attrelig=pa`i'attrelser==1 if pa`i'attrelser>0 & wave==`i'
+	replace imprelig=pa`i'imprelser if pa`i'imprelser>0 & wave==`i' 
+	replace visitfrfam=pa`i'vistfrfam==1 if pa`i'vistfrfam>0 & wave==`i'
+	replace impvisit=pa`i'impvstfam if pa`i'impvstfam>0 & wave==`i'
+	replace attclub=pa`i'clbmtgrac==1 if pa`i'clbmtgrac>0 & wave==`i'
+	replace impclub=pa`i'imparclub if pa`i'imparclub>0 & wave==`i'
+	replace vigact=pa`i'vigoractv==1 if pa`i'vigoractv>0 & wave==`i'
+}
+
+gen religvimp=imprelig==1 if imprelig!=. //very important binary
+
+label var attrelig "Past mo. Attend religious services"
+label var imprelig "Importance of religious services"
+label var religvimp "Religious services very important, yes/no"
+label var visitfrfam "Past mo. visit friends or family"
+label var impvisit "Importance of visiting friends/family"
+label var attclub "Past mo. participate in clubs/classes/organized activities"
+label var impclub "Importance of club/class/etc. participation"
+label var vigact "Past mo. engage in vigorous activity"
+
+label values imprelig pa1imprelser
+label values impvisit pa1impvstfam
+label values impclub pa1imparclub
+
+//smokin'
+
+gen smokedever=sd1smokedreg==1 if wave==1 & sd1smokedreg>0
+sort spid wave
+carryforward smokedever, replace
+gen smokesnow=.
+by spid, sort: egen numcigsever=max(sd1numcigday)
+gen numcigsnow=.
+
+forvalues i=1/4 {
+	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
+	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
+}
+replace smokesnow=0 if smokedever==0
+replace numcigsnow=0 if smokesnow==0
+
+label var smokedever "Ever smoked"
+label var smokesnow "Smokes now"
+label var numcigsever "Number of cigarettes/day when smoked"
+label var numcigsnow "Number of cigarettes/day currently"
+
+//weight
+
+gen wgt_curr=.
+gen height_ft=.
+gen height_in=.
+
+forvalues i=1/4 {
+	replace wgt_curr=hw`i'currweigh if hw`i'currweigh>0 & wave==`i'
+	replace height_ft=hw`i'howtallft if hw`i'howtallft>0 & wave==`i'
+	replace height_in=hw`i'howtallin if hw`i'howtallin>0 & wave==`i'
+}
+
+label var wgt_curr "Current weight, lbs."
+label var height_ft "Current height, feet"
+label var height_in "Current height, inches"
+
+//get the per round weight, cluster, and strata vars (and why is moved created like that?)
+gen moved=.
+rename w1varunit varunit
+rename w1varstrat varstrat
+rename w1anfinwgt0 anfinwgt
+
+forvalues i=2/4 {
+	replace moved=w`i'_moved if wave==`i'
+	foreach x in anfinwgt varstrat varunit {
+		replace `x'=w`i'`x' if wave==`i'
+}
+drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
+}
+
+******************************************
+/*these are taken from Rebecca's code*/
+
+gen community_dwelling = 0
+replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+gen SP_completed = 0
+replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
+
+gen nhres=r1dresid==4 if r1dresid!=.
+gen res_care=r1dresid>1 if r1dresid!=.
+
+forvalues i=2/4 {
+	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
+	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
+}
+
+label var nhres "Nursing Home Resident"
+label var res_care "Residential Care, incl. NH"
+//these ADL variables were missing previously
+gen adl_ins_help = .
+foreach w in 1 2 3 4{
+	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
+	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
+	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
+}
+label var adl_ins_help "Received help getting around inside"
+
+gen adl_bed_help = .
+foreach w in 1 2 3 4{
+	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
+	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
+	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
+}
+label var adl_bed_help "Received help getting out of bed"
+
+gen ivw_day=1
+label define ivw_day 1 "Not provided" 
+label values ivw_day ivw_day
+gen ivw_month=.
+gen ivw_year=.
+forvalues i=1/4 {
+	replace ivw_month=r`i'spstatdtmt if wave==`i'
+	replace ivw_year=r`i'spstatdtyr if wave==`i'
+}
+
+gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_help+adl_bed_help
+replace adl_index=. if adl_index<0
+gen adl_independent=adl_index==0 if adl_index!=.
+
+label var adl_independent "Independent in ADLs"
+label var adl_index "Index of help w/ ADLs"
+
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
+
+//addition of variables from Eric's homebound code
+gen meals_wheels=.
+gen noone_talk=.
+gen restrnt_takeout=.
+
+forvalues i=1/4 {
+replace meals_wheels=ha`i'dmealwhl if wave==`i'
+replace noone_talk=fl`i'noonetalk if wave==`i'
+replace restrnt_takeout=ha`i'dmealtkot if wave==`i'
+foreach x in meals_wheels noone_talk restrnt_takeout {
+replace `x'=0 if `x'==.
+}
+}
+
+//use lml info to get death
+forvalues i=1/4 {
+gen ivw_wave_`i'=1 if wave==`i'
+by spid, sort: egen has_ivw_wave_`i'= max(ivw_wave_`i')
+}
+
+gen wd=wave if lml==1
+by spid, sort: egen wd1=max(wd)
+gen died_12=wd1-wave==1 if lml!=1 & has_ivw_wave_`=wave+1'==1
+gen died_24=wd1-wave<=2 if lml!=1 & has_ivw_wave_`=wave+2'==1
+replace died_24=1 if died_12==1
+
+drop wd wd1 ivw_wave_*
+foreach i in 12 24 {
+label var died_`i' "SP died w/in `i' months, per future LML interview"
+}
+
+gen eligible_nsoc=fl1dnsoc==1
+gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
+gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
+label var eligible  "Eligible for NSOC interview, wave 1 tracker"
+label var complete  "Completed Interview"
+label var total_caregiver_comp "Total Caregivers that Completed Interview"
+
+///and now drop all raw variables
+forvalues i=1/4 {
+	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
+	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* 
+}
+
+drop el1* rl1* ia1* pd2* pd3* pd4*
+
+
+
+//construct date of ivw--use 1st of month for all, because only have mo & yr
+
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_4", replace
+
+
+H="xxx(done step above) Drop the Raw Variables to a Limited Data Set (6a_Drop_Variables)"
 use "E:\nhats\data\NHATS working data\round_1_4_clean_helper_added_old.dta", clear
 //gen n = 1
 //Add a couple of essential variables

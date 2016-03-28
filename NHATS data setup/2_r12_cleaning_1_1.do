@@ -414,10 +414,10 @@ tab ht`w'placedesc if wave==`w', missing
 
 //if missing housing type in waves 2,3, backfill with wave 1 info
 //get indicators for moving in waves 2 or 3
-tab re2dadrscorr, missing
+tab re2spadrsnew, missing
 
-gen w2_moved=1 if re2dadrscorr==2
-replace w2_moved=0 if re2dadrscorr==1 | re2dadrscorr==3
+gen w2_moved=1 if re2spadrsnew==2
+replace w2_moved=0 if re2spadrsnew==1 | re2spadrsnew==3
 tab w2_moved
 
 tab re3spadrsnew, missing

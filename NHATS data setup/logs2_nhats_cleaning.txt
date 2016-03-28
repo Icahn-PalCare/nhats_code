@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- opened on:  11 Dec 2015, 11:36:46
+ opened on:  25 Mar 2016, 14:48:48
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -405,6 +405,7 @@ interview? |                 Survey wave
                          Total |     25,856      100.00
 (4737 real changes made)
 
+. 
 . replace freq_go_out=. if inlist(freq_go_out,`miss')
 (2103 real changes made, 2103 to missing)
 
@@ -945,11 +946,8 @@ tly leaves |     difficulty going outside
 . gen homebound_cat=.
 (25856 missing values generated)
 
-. replace homebound_cat=0 if freq_go_out==5
-(811 real changes made)
-
-. replace homebound_cat=1 if freq_go_out==4
-(1710 real changes made)
+. replace homebound_cat=1 if freq_go_out==4 | freq_go_out==5
+(2521 real changes made)
 
 . replace homebound_cat=2 if inlist(freq_go_out,3,2,1) & out_on_own==4
 (1060 real changes made)
@@ -961,9 +959,14 @@ tly leaves |     difficulty going outside
 (16835 real changes made)
 
 . 
+. //from technical paper
+. replace homebound_cat=3 if spid==10009011 & wave==1
+(1 real change made)
+
+. 
 . la var homebound_cat "Homebound status, categorical"
 
-. la def hb 0 "Never leave home" 1 "Rarely leaves home" 2 "Leaves home but never by self" ///
+. la def hb 1 "Never/Rarely leaves home" 2 "Leaves home but never by self" ///
 > 3 "Leaves home but needs help/has difficulty" 4 "Independent, not homebound"
 
 . la val homebound_cat hb
@@ -973,12 +976,11 @@ tly leaves |     difficulty going outside
     Homebound status, |                 Survey wave
           categorical |         1          2          3          4 |     Total
 ----------------------+--------------------------------------------+----------
-     Never leave home |       133        246        202        230 |       811 
-   Rarely leaves home |       428        464        449        369 |     1,710 
+Never/Rarely leaves h |       561        710        651        599 |     2,521 
 Leaves home but never |       342        259        248        211 |     1,060 
-Leaves home but needs |     1,018        918        719        630 |     3,285 
+Leaves home but needs |     1,019        918        719        630 |     3,286 
 Independent, not home |     5,681      4,531      3,649      2,974 |    16,835 
-                    . |         7        141        140         27 |       315 
+                    . |         6        141        140         27 |       314 
 ----------------------+--------------------------------------------+----------
                 Total |     7,609      6,559      5,407      4,441 |    24,016 
 
@@ -1258,6 +1260,23 @@ Other (Am Indian/Asian/Nat. Hawaii) |        231        2.80       94.28
                               Total |      8,245      100.00
 
 . 
+. gen white=race_cat==1
+
+. gen black=race_cat==2
+
+. gen hisp=race_cat==4
+
+. gen other_race=race_cat==3
+
+. label var white "White Non-Hisp"
+
+. label var black "Black Non-Hisp"
+
+. label var hisp "Hispanic"
+
+. label var other_race "Other race/ethnicity"
+
+. 
 . //education
 . generate education=.
 (25856 missing values generated)
@@ -1337,6 +1356,10 @@ High School/GED |         0 |     2,069
 ----------------+-----------+----------
           Total |       716 |     8,245 
 
+
+. 
+. gen educ_hs_ind=education>=2 if education>0 & education!=.
+(18343 missing values generated)
 
 . 
 . //income, just wave 1
@@ -2860,5 +2883,5 @@ Lives alone |      Freq.     Percent        Cum.
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- closed on:  11 Dec 2015, 11:36:50
+ closed on:  25 Mar 2016, 14:48:53
 --------------------------------------------------------------------------------------------------------

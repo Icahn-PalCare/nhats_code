@@ -1,12 +1,27 @@
+option nofmterr;
+
+data nsoc1;
+set ko.nsoc_full;
+run;
+
+proc sql;
+create table nsoc1a
+as select a.*, b.homebound_cat, b.homebound_cat1
+from nsoc1 a
+left join nhats.nhats_wave1_trunc b
+on a.spid = b.spid;
+quit;
+
+
 data nsoc_ko;
-set nsoc1 (keep = spid opid w1cgfinwgt0 died died_24 ADL_IADL_ind total_hours cg_medicare cg_spouse cg_living_children lives_in_hh cg_age_cat cg_relationship_cat cg_relationship_cat1 cg_gt_hs cg_female cg_Marital_status cg_educ 
+set nsoc1a (keep = spid opid w1cgfinwgt0 died died_24 ADL_IADL_ind total_hours cg_medicare cg_spouse cg_living_children lives_in_hh cg_age cg_age_cat cg_relationship_cat cg_relationship_cat1 cg_gt_hs cg_female cg_Marital_status cg_educ 
 ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer help_personal_care_di help_get_around_di help_shopping_di help_chores_di 
 ever_pain ever_breath_prob ever_low_enrgy trb_back_sleep lost_10_lbs_yr pain_lim_act_di breath_lim_act_di enrgy_lim_act_di felt_depressed_di felt_nervous_di felt_lit_interest_di felt_worry_di
 help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help
 gain_more_conf_di gain_deal_better_di gain_closer2SP_di gain_more_satisfied_di neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di 
 diff_financial diff_emotional diff_physical diff_financial_lv_di diff_emotional_lv_di diff_physical_lv_di c1relatnshp cdc1hlphrsdy op1age w1cgfinwgt0 work_4_pay self_health_di ever_high_bp ever_osteoperosis ever_diff_seeing ever_diff_hearing 
 cg_phq2_depressed cg_gad2_anxiety paid_hours_cat paid_last_week lives_in_hh cg_age_cat flag_no_help_mth informal_nsoc_comp informal_nsoc_elig all_helper_tot months_to_death total_hours_month
-helper_num_yrs solo_cg  all_helper_family_tot  solo_cg_fam);
+helper_num_yrs solo_cg  all_helper_family_tot  solo_cg_fam homebound_cat homebound_cat1 help_mob_dev help_home_safe help_paid_helpr help_insurance_any cg_medicaid op1dochlp);
 /*for creating primary caregiver*/
 relationship_sort = 0;
 if cg_relationship_cat = 2 then relationship_sort = 1;
@@ -21,8 +36,7 @@ if ever_pain = 0 then pain_lim_act_di = 0;
 
 run;
 proc freq data=nsoc_ko;
-where died = 1;
-table solo_cg_fam;
+table help_mob_dev;
 run;
 proc sort data=nsoc_ko out=test nodupkey;
 by spid;
@@ -38,22 +52,64 @@ run;*/
 proc sort data=nsoc_ko;
 by spid descending total_hours cg_relationship_cat;
 run;
-
+data nsoc_ko;
+set nsoc_ko;
+retain diff i level2; 
+by spid descending total_hours cg_relationship_cat;
+i = i + 1;
+diff = total_hours - lag(total_hours);
+if diff = 0 and i = 2 then level2 = 1;
+if first.spid then do;
+diff = .;
+i = 1;
+level2 = 0;
+end;
+run;
+proc freq data=nsoc_ko;
+table level2;
+run;
+data nsoc_ko_last;
+set nsoc_ko;
+by spid descending total_hours cg_relationship_cat;
+if last.spid;
+run;
+proc freq data=nsoc_ko_last;
+table level2 i;
+run;
 
 proc sort data=nsoc_ko out=nsoc_ko1a nodupkey;
 by spid;
 run;
+proc sql;
+create table nsoc_ko1b
+as select a.*, b.i as num_cg, b.level2 as level2_1
+from nsoc_ko1a a
+left join nsoc_ko_last b
+on a.spid = b.spid;
+quit;
+proc freq data=nsoc_ko1b;
+table level2_1 num_cg;
+run;
 
 /*putting primary caregiver into the main database*/
-data nsoc_ko1a;
-set nsoc_ko1a;
+data nsoc_ko1b;
+set nsoc_ko1b;
 prim_caregiver = 1;
+prim_caregiver_source = .;
+if total_hours ~= . then prim_caregiver_source = 1;
+if prim_caregiver_source = 1 and level2_1 = 1 then prim_caregiver_source = 2;
+if total_hours = . and num_cg = 1 then prim_caregiver_source = 3;
+if total_hours = . and num_cg ~= 1 then prim_caregiver_source = 4;
+
+run;
+proc freq data=nsoc_ko1b;
+table prim_caregiver_source;
 run;
 proc sql;
 create table nsoc_ko2
-as select a.*, b.prim_caregiver
+as select a.*, b.prim_caregiver, b.prim_caregiver_source
 from nsoc_ko a
-left join nsoc_ko1a b
+left join nsoc_ko1b b
 on a.spid = b.spid
 and a.opid = b.opid;
 quit;
@@ -123,9 +179,12 @@ run;
 %mend;
 %freq();
 */
-proc export data=nsoc_ko1a outfile = "E:\nhats\data\Projects\Caregivers\nsoc_121615_noNLTCS.dta" replace dbms = dta;
+data ko.nsoc_prim_caregiver;
+set nsoc_ko2;
 run;
-proc export data=nsoc_ko2 outfile = "E:\nhats\data\Projects\Caregivers\nsoc_121615_all_noNLTCS.dta" replace dbms = dta;
+proc export data=nsoc_ko1a outfile = "E:\nhats\data\Projects\Homebound\nsoc_121615_noNLTCS.dta" replace dbms = dta;
+run;
+proc export data=nsoc_ko2 outfile = "E:\nhats\data\Projects\Homebound\nsoc_121615_all_noNLTCS.dta" replace dbms = dta;
 run;
 proc freq data=nsoc_ko2;
 where died = 1;

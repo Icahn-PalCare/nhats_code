@@ -77,7 +77,7 @@ use round_`w'_1.dta
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 	mo* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
-	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* ///
+	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* wb* fl* ///
 	is`w'resptype ht`w'placedesc
 
 if `w'==1 {	

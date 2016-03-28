@@ -1,0 +1,2461 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="******************** SETUP **************"
+
+
+H="NHATS Table 1 Setup"
+libname nhats "E:\nhats\data\NHATS working data";
+
+proc import out=nhats_rg
+			datafile = "E:\nhats\data\NHATS working data\round_1_4_clean_helper_added_old.dta"
+			replace;
+run;
+proc freq data=nhats_rg;
+table fl1noonetalk;
+run;
+proc freq data=nhats_rg;
+where wave = 1;
+table homebound_cat;
+run;
+data nhats_rg;
+set nhats_rg;
+if spid = 10009011 then homebound_cat = 3;
+run;
+proc freq data=nhats_rg;
+where wave = 1;
+table homebound_cat;
+run;
+proc freq data=nhats_rg;
+table ha1dmealwhl;
+run;
+
+
+proc means data=nhats_rg;
+var lives_alone;
+run;
+proc freq data=nhats_rg;
+where wave = 1;
+table livealone;
+run;
+
+data old_nhats_w1 (keep = spid female white gt_hs_edu spouse medicaid srh_fp sr_ami_ever sr_heart_dis_ever sr_ra_ever sr_diabetes_ever sr_lung_dis_ever sr_stroke_ever sr_cancer_ever
+sr_phq2_depressed dem_2_cat fall_last_month sum_adl_cat reg_doc_seen reg_doc_homevisit sr_hosp_ind  age sr_numconditions1 sr_hosp_stays homebound_cat homebound_cat1 livealone meals_wheels noone_talk restrnt_takeout);
+set nhats_rg;
+if wave =1;
+homebound_cat1 = .;
+if homebound_cat = 0 | homebound_cat = 1 then homebound_cat1 = 1;
+if homebound_cat = 2 then homebound_cat1 = 2;
+if homebound_cat = 3 then homebound_cat1 = 3;
+if homebound_cat = 4 then homebound_cat1 = 4;
+
+gt_hs_edu = .;
+if education >= 2 then gt_hs_edu = 1;
+if education  = 1 then gt_hs_edu = 0;
+if education = -8 | education = -7 then gt_hs_edu = .;
+
+meals_wheels = .;
+if ha1dmealwhl = 1 then meals_wheels = 1;
+if ha1dmealwhl = -1 then meals_wheels = 0;
+
+noone_talk = .;
+if fl1noonetalk = 1 then noone_talk = 1;
+if fl1noonetalk = -1 then noone_talk = 0;
+
+restrnt_takeout=.;
+if ha1dmealtkot = 1 then restrnt_takeout = 1;
+if ha1dmealtkot = -1 then restrnt_takeout = 0;
+run;
+proc freq data=old_nhats_w1;
+table meals_wheels;
+run;
+
+proc sql;
+create table nhats_wave1_tab1
+as select a.*, b.white, b.married, b.sum_adl_cat, b.community_dwelling, b.eligible, b.complete, b.w1anfinwgt0 , b.died
+from old_nhats_w1 a
+left join nhats.Nhats_wave1_all_obs b
+on a.spid = b.spid;
+quit;
+/*check if weights are the same
+data test (keep = spid w1anfinwgt0 w1anfinwgt0_1);
+set nhats_wave1_tab1;
+run;
+*/
+proc freq data=nhats_wave1_tab1;
+where community_dwelling = 1;
+table died;
+run;
+proc freq data=nhats_wave1_tab1;
+where community_dwelling = 1;
+ table female*died white*died gt_hs_edu*died married*died medicaid*died srh_fp*died sr_ami_ever*died sr_heart_dis_ever*died sr_ra_ever*died
+sr_diabetes_ever*died sr_lung_dis_ever*died sr_stroke_ever*died sr_cancer_ever*died sr_phq2_depressed*died dem_2_cat*died fall_last_month*died sum_adl_cat*died
+reg_doc_seen*died reg_doc_homevisit*died sr_hosp_ind*died / chisq;
+weight w1anfinwgt0;
+run;
+
+
+data nhats.nhats_wave1_trunc;
+set nhats_wave1_tab1;
+run;
+
+
+proc export data=nhats_wave1_tab1 outfile = "E:\nhats\data\NHATS working data\NHATS_Table1_Caregiver_Project.dta" dbms = dta replace;
+run;
+
+
+H="Helper Table Setup"
+libname ko "E:\nhats\data\Projects\Caregivers";
+libname nhats "E:\nhats\data\NHATS working data";
+
+/*imported raw OP database from round 1*/
+
+proc import out=nhats_r1_OP
+			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta"
+			replace;
+run;
+proc import out=nhats_r1_hrs_imp
+			datafile = "E:\nhats\data\NHATS working data\R1_hrs_imputed_added_old.dta"
+			replace;
+run;
+proc sql; 
+create table nhats_r1_op1
+as select a.*, b.op_hrsmth_i as Total_Hours_Month_i
+from nhats_r1_op a
+left join nhats_r1_hrs_imp b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+
+/*checking frequencies on various variables (Scratch work)*/
+proc means data=nhats_r1_op1;
+var op1numhrsday;
+run;
+
+/*Checking for duplicates for OP*/
+proc sort data=nhats_r1_op1;
+by spid opid;
+run;
+proc sort data=nhats_r1_op1 out=test nodupkey;
+by spid opid;
+run;
+/*there are none*/
+
+proc freq data=helpers;
+table op1ishelper;
+run;
+/*Defining the "Helpers" as those who answered the Helper Question as "Yes" (NHATS Helpers form: BOX HL1)*/
+data helpers;
+set nhats_r1_op1;
+if op1ishelper = 1;
+run;
+
+data nhats_eligible;
+set nhats.nhats_wave1_trunc;
+if eligible = 1;
+run;
+proc sql;
+create table helpers0
+as select a.*, b.opid, b.op1relatnshp,b.op1numhrsday,b.op1numdayswk,b.op1numdaysmn,b.op1paidhelpr, b.op1dhrsmth, b.op1ishelper, b.op1paidhelpr, b.op1helpsched,
+b.op1insdhlp, b.op1bedhlp, b.op1launhlp, b.op1shophlp, b.op1mealhlp, b.op1bankhlp, b.op1eathlp, b.op1bathhlp, b.op1toilhlp, b.op1dreshlp, b.op1medshlp,
+b.op1outhlp, b.op1moneyhlp, b.op1tkplhlp1, b.op1dochlp, b.op1insurhlp, b.Total_Hours_Month_i
+from nhats_eligible a
+left join helpers b
+on a.spid = b.spid;
+quit;
+proc freq data=helpers0;
+table op1dhrsmth Total_Hours_Month_i;
+run;
+
+data helpers1;
+set helpers0;
+
+total_hours_i = Total_Hours_Month_i;
+*if died = . then delete;
+total_hours_wk_i = Total_Hours_Month_i/(52/12);
+
+total_hours = op1dhrsmth;
+if op1dhrsmth = 9999 then total_hours = 0;
+if op1dhrsmth < 0 then total_hours = .;
+total_hours_wk = total_hours / (52/12);
+
+/*paid caregiver*/
+op_is_paid = .;
+if op1paidhelpr = 1 then op_is_paid = 1;
+if op1paidhelpr = 2 then op_is_paid = 0;
+/*Relationship with SP: 1 is spouse, 2 is daughter, 3 is son, 4 is other relatives, 5 is paid caregiver, 6 is other non-relatives*/
+op_relationship_cat = .;
+if op1relatnshp = 2 then op_relationship_cat = 1;
+if op1relatnshp = 3 |  op1relatnshp = 5 | op1relatnshp = 7 then op_relationship_cat = 2;
+if op1relatnshp = 4 |  op1relatnshp = 6 | op1relatnshp = 8 then op_relationship_cat = 3;
+if (op1relatnshp >= 9 and op1relatnshp <= 29) OR op1relatnshp = 91 then op_relationship_cat = 4;
+/*Paid Caregiver. Only those we know who got paid is added as the paid caregiver*/
+if ((op1relatnshp >= 30 and op1relatnshp <= 40) OR op1relatnshp = 92) AND op_is_paid = 1 then op_relationship_cat = 5;
+if ((op1relatnshp >= 30 and op1relatnshp <= 40) OR op1relatnshp = 92) AND (op_is_paid = 0|op_is_paid=.) then op_relationship_cat = 6;
+/*dummy variables*/
+op_relationship_cat1 = (op_relationship_cat=1);
+op_relationship_cat2 = (op_relationship_cat=2);
+op_relationship_cat3 = (op_relationship_cat=3);
+op_relationship_cat4 = (op_relationship_cat=4);
+op_relationship_cat5 = (op_relationship_cat=5);
+op_relationship_cat6 = (op_relationship_cat=6);
+
+rename op1tkplhlp1 = op1tkpl1hlp;
+
+/*total hours worked Manually created: still have questions about why it's not the same if op1helpsched = 1
+total_hours_day = op1numhrsday + 0;
+if total_hours_day < 0 then total_hours_day = .;
+total_hours_week = op1numdayswk + 0;
+if total_hours_week < 0 then total_hours_week = .;
+total_days_month = op1numdaysmn + 0;
+if total_days_month < 0 then total_days_month = .;
+/*if the cargiver was a regular then you calculated it days a week per day and multiply that by 4
+if op1helpsched = 1 then total_hours = total_hours_week * total_hours_day * 4;
+/*if they were not a regular than you calculated the total days in the month by total hours
+if op1helpsched ~= 1 then total_hours = total_days_month * total_hours_day;
+*/
+run;
+proc freq data=helpers1;
+table eligible complete;
+run;
+proc means data=helpers1;
+var total_hours_i total_hours_wk_i total_hours total_hours_wk;
+run;
+
+data test;
+set helpers1 (keep = spid opid op1helpsched op1numhrsday op1numdayswk op1numdaysmn total_hours op1dhrsmth);
+run;
+
+proc means data=helpers1;
+class spouse;
+var total_hours;
+run;
+/*checking dummy variables*/
+proc freq data=helpers1;
+table op_relationship_cat1 op_relationship_cat2 op_relationship_cat3 op_relationship_cat4 op_relationship_cat5;
+run;
+/** ADLs and IADLs **/
+proc freq data=helpers1;
+table op1insdhlp op1bedhlp op1launhlp op1shophlp op1mealhlp op1bankhlp op1eathlp
+op1bathhlp op1toilhlp op1dreshlp op1medshlp op1outhlp op1moneyhlp op1tkpl1hlp op1dochlp op1insurhlp;
+run;
+ OPTION SPOOL;
+%let varlist = insd bed laun shop meal bank eat bath toil dres meds out money tkpl1 doc insur;
+%macro adl_iadl;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data helpers1;
+set helpers1;
+%if &var = insd | &var = bed | &var = eat | &var =  bath| &var =  toil| &var =  dres %then %do;
+op_adl_&var. = .;
+if op1&var.hlp = 1 then op_adl_&var. = 1;
+if op1&var.hlp ~= 1 then op_adl_&var. = 0;
+%end;
+%if &var = laun | &var = shop | &var = meal | &var =  bank | &var =  meds %then %do;
+op_iadl_&var. = .;
+if op1&var.hlp = 1 then op_iadl_&var. = 1;
+if op1&var.hlp ~= 1 then op_iadl_&var. = 0;
+%end;
+%if &var = out | &var = money | &var = tkpl1 | &var = doc | &var = insur %then %do;
+op_help_&var. = .;
+if op1&var.hlp = 1 then op_help_&var. = 1;
+if op1&var.hlp ~= 1 then op_help_&var. = 0;
+run;
+%end;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%end;
+%mend;
+%adl_iadl();
+quit;
+
+data helpers1;
+set helpers1;
+if  op_adl_eat = 1 | op_adl_bath = 1 | op_adl_toil = 1 | op_adl_dres = 1 | op_adl_insd = 1 | op_adl_bed = 1  then any_adl = 1;
+if any_adl = . then any_adl = 0;
+if op_iadl_laun = 1 | op_iadl_shop = 1 | op_iadl_meal = 1 | op_iadl_bank = 1 |  op_iadl_meds = 1 then any_iadl = 1;
+if any_iadl = . then any_iadl = 0;
+run;
+
+
+proc freq data=helpers1;
+table total_hours op_relationship_cat op_relationship_cat*op_is_paid /  missing;
+run;
+
+/*code 9999 = missing*/
+data test_9999;
+set helpers1;
+if op1dhrsmth = 9999;
+run;
+/*no one is above normal amount of hours. 744 = 31(days in mos) * 24(hours in day) */
+data test_extreme;
+set helpers1;
+if op1dhrsmth > 744;
+run;
+/*Ask Katherine about the distribution*/
+proc univariate data=helpers1;
+var op1dhrsmth;
+histogram;
+run;
+
+proc freq data=helpers1;
+table op1dhrsmth total_hours;
+run;
+proc sort data=helpers1;
+by spid opid;
+run;
+proc freq data=helpers1;
+table w1anfinwgt0 ;
+run;
+
+
+data helpers2;
+set helpers1;
+retain hours_helped hours_helped_i hours_helped_wk hours_helped_wk_i count_helpers num_spouse num_daug num_son num_oth_fam num_paid_cg num_other_nofam;
+by spid opid;
+hours_helped = sum(hours_helped, total_hours);
+hours_helped_i = sum(hours_helped_i, total_hours_i);
+hours_helped_wk = sum(hours_helped_wk, total_hours_wk);
+hours_helped_wk_i = sum(hours_helped_wk_i, total_hours_wk_i);
+count_helpers = count_helpers + 1;
+num_spouse = num_spouse + op_relationship_cat1;
+num_daug = num_daug + op_relationship_cat2;
+num_son = num_son + op_relationship_cat3;
+num_oth_fam = num_oth_fam + op_relationship_cat4;
+num_paid_cg = num_paid_cg + op_relationship_cat5;
+num_other_nofam = num_other_nofam + op_relationship_cat6;
+if first.spid then do;
+hours_helped = total_hours;
+hours_helped_i = total_hours_i;
+hours_helped_wk = total_hours_wk;
+hours_helped_wk_i = total_hours_wk_i;
+if op1ishelper = . then count_helpers = 0;
+if op1ishelper ~= . then count_helpers = 1;
+num_spouse = op_relationship_cat1;
+num_daug = op_relationship_cat2;
+num_son = op_relationship_cat3;
+num_oth_fam = op_relationship_cat4;
+num_paid_cg = op_relationship_cat5;
+num_other_nofam = op_relationship_cat6;
+end;
+if last.spid;
+log_hours_helped = log(hours_helped + 1);
+num_helper_cat = .;
+if count_helpers = 0 then num_helper_cat = 0;
+if count_helpers >= 1 and count_helpers <=3 then num_helper_cat = 1;
+if count_helpers >= 4 and count_helpers <=6 then num_helper_cat = 2;
+if count_helpers >= 7 then num_helper_cat = 3;
+
+if num_spouse = 0 then spouse_i = 0;
+if num_spouse >= 1 then spouse_i = 1;
+if num_daug = 0 then daug_i = 0;
+if num_daug >= 1 then daug_i = 1;
+if num_son = 0 then son_i = 0;
+if num_son >= 1 then son_i = 1;
+if num_oth_fam = 0 then oth_fam_i = 0;
+if num_oth_fam >= 1 then oth_fam_i = 1;
+if num_paid_cg = 0 then paid_cg_i = 0;
+if num_paid_cg >= 1 then paid_cg_i = 1;
+if num_other_nofam = 0 then oth_nofam_i = 0;
+if num_other_nofam >= 1 then oth_nofam_i = 1;
+run;
+
+proc freq data=helpers2;
+table hours_helped total_hours hours_helped_i;
+run;
+
+data test;
+set helpers2 (keep = spid opid count_helpers total_hours op1dhrsmth hours_helped);
+run;
+data test1;
+set helpers2 (keep = spid opid num_spouse num_daug num_son num_oth_fam num_paid_cg num_other_nofam op_relationship_cat1-op_relationship_cat6);
+run;
+proc freq data=helpers2;
+table num_spouse num_daug num_son num_oth_fam num_paid_cg num_other_nofam;
+run;
+proc freq data=helpers2;
+table spouse_i daug_i son_i oth_fam_i paid_cg_i oth_nofam_i;
+run;
+proc means data=helpers2;
+var hours_helped;
+run;
+
+proc sql;
+create table helpers1a
+as select a.*, b.hours_helped, b.hours_helped_i, b.hours_helped_wk, b.hours_helped_wk_i, b.count_helpers, b.num_spouse, b.num_daug, b.num_son, b.num_oth_fam, b.num_paid_cg, b.num_other_nofam,
+b.log_hours_helped, b.num_helper_cat, b.spouse_i, b.daug_i, b.son_i, b.oth_fam_i, b.paid_cg_i, b.oth_nofam_i
+from helpers1 a
+left join helpers2 b
+on a.spid = b.spid;
+quit;
+
+proc freq data=helpers1a;
+table hours_helped total_hours;
+run;
+
+proc export data=helpers1a outfile = "E:\nhats\data\Projects\Homebound\Helpers.dta" dbms = dta replace;
+run;
+data ko.helpers1a;
+set helpers1a;
+run;
+/*
+proc export data=helpers2 outfile = "E:\nhats\data\Projects\Caregivers\Helpers1.dta" dbms = dta replace;
+run;
+*/
+
+
+H="NSOC Setup (General Setup)"
+libname ko "E:\nhats\data\Projects\Caregivers";
+libname nhats "E:\nhats\data\NHATS working data";
+
+
+/************************** NSOC DATA SETUP ********************************/
+
+proc import out = RAW_NSOC
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_File_v2_old.dta"
+			replace;
+run;
+proc freq data=raw_nsoc;
+table c1dintdays;
+run;
+proc import out = RAW_OP
+			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta"
+			replace;
+run;
+proc import out = RAW_OP_SENSITIVE
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
+			replace;
+run;
+proc import out = NSOC_SP_Tracker
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta"
+			replace;
+run;
+proc import out = NSOC_OP_Tracker
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_OP_Tracker_File.dta"
+			replace;
+run;
+proc import out=raw_nhats_r1
+			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta"
+			replace;
+run; 
+proc import out=raw_nhats_r2_sens
+			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_SP_Sen_Dem_File.dta"
+			replace;
+run;
+
+/**Final NSOC Database**/
+data final_nhats;
+set nhats.Nhats_wave1_all_obs;
+run;
+proc freq data=final_nhats;
+table died cs1dreconcil;
+run;
+
+proc freq data = RAW_OP;
+table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp cs1dreconcil;
+run;
+proc freq data = raw_op_sensitive;
+table op1age op1catgryage;
+run;
+
+/*Adding in the OP Demographics to the NSOC dataset*/
+proc sql;
+create table raw_nsoc1
+as select a.*, b.op1prsninhh, b.op1martlstat, b.op1numchldrn, b.op1ishelper, b.op1sppayshlp, b.op1leveledu, b.op1prsninhh,
+c.op1age, c.op1catgryage, d.hh1livwthspo, d.cs1dreconcil, d.hh1martlstat, d.hh1dhshldnum, d.died, d.died_24, d.complete, d.ADL_IADL_ind
+from raw_nsoc a
+left join raw_op b
+on a.spid = b.spid
+and a.opid = b.opid
+left join raw_op_sensitive c
+on a.spid = c.spid
+and a.opid = c.opid
+left join final_nhats d
+on a.spid = d.spid;
+quit;
+
+proc freq data= raw_nsoc1;
+table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage op1leveledu cs1dreconcil hh1martlstat hh1dhshldnum chd1educ
+c1relatnshp chd1martstat chi1medicare cca1hwget2sp op1prsninhh hh1livwthspo cca1hlpothin;
+run;
+
+proc freq data=raw_nsoc1;
+
+table cec1wrk4pay;
+run;
+proc freq data=nsoc;
+table cg_spouse;
+run;
+data nsoc;
+set raw_nsoc1;
+
+/*** Drop the variations of the NSOC Weight Variable. Use primarily "w1cgfinwgt0" for full Sample ***/
+
+drop w1cgfinwgt1 - w1cgfinwgt56;
+
+/*female variable*/
+cg_female = .;
+if c1dgender = 1 then cg_female = 0;
+if c1dgender = 2 then cg_female = 1;
+
+/*Creating Spouse Variable */
+cg_spouse = .;
+if c1relatnshp = 2 then cg_spouse = 1;
+if c1relatnshp ~= 2 then cg_spouse = 0;
+/*Relationship Categorical Variable. If Spouse then Cat = 1, if any form of their child (bio, in-law, step) then cat = 2 others are equal to 0*/
+cg_relationship_cat = 3;
+if c1relatnshp = 2 then cg_relationship_cat = 1;
+if c1relatnshp >= 3 and c1relatnshp <= 8 then cg_relationship_cat = 2;
+/*antoher categorical: 1 = spouse, 2 = daughter (any), 3 = son (any), 4 = any relative, 5 = other non-relative*/
+cg_relationship_cat1 = .;
+if c1relatnshp = 2 then cg_relationship_cat1 = 1;
+if c1relatnshp = 3 |  c1relatnshp = 5 | c1relatnshp = 7 then cg_relationship_cat1 = 2;
+if c1relatnshp = 4 |  c1relatnshp = 6 | c1relatnshp = 8 then cg_relationship_cat1 = 3;
+if (c1relatnshp >= 9 and c1relatnshp <= 29) OR c1relatnshp = 91 then cg_relationship_cat1 = 4;
+if (c1relatnshp >= 30 and c1relatnshp <= 39) OR c1relatnshp = 92 then cg_relationship_cat1 = 5;
+
+/*gathering total hours a day/week/month/other */
+total_hours_day = cdc1hlphrsdy + 0;
+if total_hours_day < 0 then total_hours_day = .;
+total_hours_week = cdc1hlpdyswk + 0;
+if total_hours_week < 0 then total_hours_week = .;
+total_days_month = cdc1hlpdysmt + 0;
+if total_days_month < 0 then total_days_month = .;
+total_hours_other = cdc1hlphrlmt + 0;
+if total_hours_other < 0 then total_hours_other = .;
+other_flag = 0;
+if cdc1hlphrmvf ~= 1 then other_flag=1;
+/*if the cargiver was a regular then you calculated it days a week per day and multiply that by 4*/
+if cdc1hlpsched = 1 then total_hours = total_hours_week * total_hours_day * 4;
+/*if they were not a regular than you calculated the total days in the month by total hours*/
+if cdc1hlpsched ~= 1 then total_hours = total_days_month * total_hours_day;
+if other_flag = 1 then total_hours = total_hours_other;
+
+/* LIVING CHILDREN MISSING DATA */
+Any_Living_Children_SP = 0;
+if cs1dreconcil ~= 3 then Any_Living_Children_SP = 1;
+Any_Living_Children_CG = .;
+if chd1chldlvng = 2 then Any_Living_Children_CG = 0;
+if chd1chldlvng = 1 then Any_Living_Children_CG = 1;
+if cg_spouse = 1 then cg_living_children = Any_Living_Children_SP;
+if cg_spouse = 0 then cg_living_children = Any_Living_Children_CG;
+drop Any_Living_Children_SP Any_Living_Children_CG;
+
+/*MARITAL STATUS MISSING DATA */
+if cg_spouse = 1 then cg_Marital_status = hh1martlstat;
+if cg_spouse = 0 then cg_marital_status = chd1martstat;
+if cg_marital_status = . then cg_Marital_Status =op1martlstat; 
+cg_marr_part_ind = .;
+if cg_marital_status = 1 or cg_marital_status = 2 then cg_marr_part_ind = 1;
+if cg_marital_status >= 3 then cg_marr_part_ind = 0;
+
+/*NUMBER IN HOUSEHOLD */
+if cg_spouse = 1 then cg_total_in_hh = hh1dhshldnum;
+if cg_spouse = 0 then cg_total_in_hh = chd1numinhh;
+if cg_total_in_hh < 0 then cg_total_in_hh = .;
+
+/*EDUCATION OF CAREGIVER */
+if cg_spouse = 1 then cg_educ = op1leveledu;
+if cg_spouse = 0 then cg_educ = chd1educ;
+if cg_educ < 0 then cg_educ = .;
+cg_gt_hs = .;
+if cg_educ >= 4 then cg_gt_hs = 1;
+if cg_educ < 4 and cg_educ >= 0 then cg_gt_hs = 0;
+
+/* Caregiver Medicare */
+cg_medicare = .;
+if chi1medicare = 1 then cg_medicare = 1;
+if chi1medicare = 2 then cg_medicare = 0;
+
+/* Lives with SP */
+if cg_spouse = 1 then cg_lives_with_SP = hh1livwthspo;
+if cg_spouse = 0 then cg_lives_with_sp = op1prsninhh;
+if cg_lives_with_SP < 0 then cg_lives_with_sp = .;
+
+run;
+proc freq data=nsoc;
+table cg_relationship_cat1 cpp1wrk4pay cec1wrk4pay;
+run;
+proc means data=nsoc;
+var total_hours;
+run;
+proc print data = nsoc (obs = 100);
+where cec1wrk4pay = 2;
+var cec1wrk4pay cec1ownbusns cec1unpdwrk cec1misswork cec1look4wrk cec1hrsweek cec1hrslstwk cec1hrslast;
+run;
+data test;
+set nsoc (keep = spid op1prsninhh hh1livwthspo c1relatnshp cg_spouse cg_lives_with_sp);
+run;
+proc freq data=nsoc;
+table
+che1hrtattck che1othheart che1arthrits che1diabetes che1lungdis
+che1cancer cca1hwoftpc cca1hwofthom cca1hwoftshp cca1hwoftchs
+cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd
+cca1hlpinsrn cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs
+cca1hlpteeth cca1hlpmdtk cca1hlpshot
+
+cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg
+cac1diffinc cac1diffemo cac1diffphy che1fltltin;
+run;
+
+proc format;
+value yesno_ 1 = "Yes"
+			 0 = "No"
+			 . = "Missing";
+value cat1_  1 = "Every Day"
+			 2 = "Most Days"
+			 3 = "Some Days"
+			 4 = "Rarely"
+			 5 = "Never";
+value cat1a_ 1 = "Every/Most/Some Days"
+			 0 = "Rarely/Never";
+value cat2_  1 = "Very Much"
+			 2 = "Somewhat"
+			 3 = "Not So Much";
+value cat2a_ 1 = "Very Much/Somewhat"
+			 0 = "Not So Much";
+value cat3_  1 = "Not At All"
+			 2 = "Several Days"
+			 3 = "More Than Half The Days"
+			 4 = "Nearly Every Day";
+value cat3a_ 0 = "Not At All"
+			 1 = "At least Sever Days";
+run;
+option nospool;
+proc freq data=nsoc;
+table che1sleeptrb trb_back_sleep;
+run;
+%let varlist = che1hrtattck che1othheart che1arthrits che1diabetes che1lungdis che1cancer che1pain che1brethprb che1lowenrgy  che1lost10lb che1highbld che1osteoprs che1seeing che1hearing;
+%let varlist1 = ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer ever_pain ever_breath_prob ever_low_enrgy  lost_10_lbs_yr ever_high_bp
+ever_osteoperosis ever_diff_seeing ever_diff_hearing;
+%macro ever_disease;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 0; 
+run;
+proc freq data=nsoc;
+table &var &var1;
+format &var1 yesno_.;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%ever_disease;
+
+%let varlist = che1fltltlin che1fltdown che1fltnervs che1fltworry;
+%let varlist1 = felt_lit_interest felt_depressed felt_nervous felt_worry;
+%macro ever_disease1;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 2;
+if &var = 3 then &var1 = 3;
+if &var = 4 then &var1 = 4;
+&var1._di = .;
+if &var = 2 or &var = 3 or &var = 4 then &var1._di = 1;
+if &var = 1 then &var1._di = 0;
+
+run;
+proc freq data=nsoc;
+table &var &var1 &var1._di;
+format &var1 cat3_. &var1._di cat3a_.;
+run;
+
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%ever_disease1;
+
+%let varlist = che1health che1painlmt che1brethlmt che1enrgylmt cca1hwoftpc cca1hwofthom cca1hwoftshp cca1hwoftchs che1sleeptrb;
+%let varlist1 =  self_health pain_lim_act breath_lim_act enrgy_lim_act help_personal_care help_get_around help_shopping help_chores trb_back_sleep;
+%macro help1;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 2;
+if &var = 3 then &var1 = 3;
+if &var = 4 then &var1 = 4;
+if &var = 5 then &var1 = 5;
+&var1._di = .;
+if &var = 1 or &var = 2 or &var = 3 then &var1._di = 1;
+if &var = 4 or &var = 5 then &var1._di = 0;
+
+run;
+proc freq data=nsoc;
+table &var &var1 &var1._di;
+format &var1 cat1_. &var1._di cat1a_.;
+run;
+
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%help1;
+
+%let varlist = cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd cca1hlpinsrn cca1hlpothin cse1hlpgtdev cse1homsafer cse1hlppdhlp cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs cca1hlpteeth cca1hlpmdtk cca1hlpshot cse1frfamhlp cpp1wrk4pay;
+%let varlist1 = help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_mob_dev help_home_safe help_paid_helpr help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help work_4_pay;
+%macro help2;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 0; 
+run;
+proc freq data=nsoc;
+table &var &var1;
+format &var1 yesno_.;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%help2;
+proc freq data=nsoc;
+table help_mob_dev help_home_safe help_paid_helpr;
+run;
+
+data nsoc;
+set nsoc;
+if help_insurance = 1 | help_insurance_oth = 1 then help_insurance_any = 1;
+if help_insurance = 0 and help_insurance_oth = 0 then help_insurance_any = 0;
+run;
+
+%let varlist = cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg;
+%let varlist1 = gain_more_conf gain_deal_better gain_closer2SP gain_more_satisfied neg_exhausted neg_too_much neg_no_time neg_no_routine;
+%macro gain_neg;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 2;
+if &var = 3 then &var1 = 3;
+&var1._di = .;
+if &var = 1 or &var = 2 then &var1._di = 1;
+if &var = 3 then &var1._di = 0;
+run;
+proc freq data=nsoc;
+table &var &var1 &var1._di;
+format &var1 cat2_. &var1._di cat2a_.;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%gain_neg;
+option spool;
+proc freq data=nsoc;
+table cac1diffinc cac1diffinlv;
+run;
+%let varlist = cac1diffinc cac1diffemo cac1diffphy;
+%let varlist1 = diff_financial diff_emotional diff_physical;
+%macro difficulty;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 0; 
+run;
+proc freq data=nsoc;
+table &var &var1;
+format &var1 yesno_.;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%difficulty;
+%let varlist = cac1diffinlv cac1diffemlv cac1diffphlv;
+%let varlist1 = diff_financial_lv diff_emotional_lv diff_physical_lv;
+%let varlist2 = cac1diffinc cac1diffemo cac1diffphy;
+ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\diffculty_levels.rtf";
+%macro difficulty1;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%let var2 = %scan(&varlist2, &i);
+%do %while(&var ne );
+
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var2 = 2 then &var1 = 0;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 2;
+if &var = 3 then &var1 = 3;
+if &var = 4 then &var1 = 4;
+if &var = 5 then &var1 = 5;
+&var1._di = .;
+if &var2 = 2 then &var1._di = 0;
+if &var = 1 or &var = 2 or &var = 3 then &var1._di = 0;
+if &var = 4 or &var = 5 then &var1._di = 1;
+run;
+proc freq data=nsoc;
+table &var &var1 &var1._di;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%let var2 = %scan(&varlist2, &i);
+%end;
+%mend;
+%difficulty1;
+ods rtf close;
+
+%let varlist = cdc1hlpsched cdc1hlpyrpls chi1medicaid;
+%let varlist1 = help_regular_sched help_longer_than_yr cg_medicaid;
+%macro misc_binary;
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%do %while(&var ne );
+data nsoc;
+set nsoc;
+&var1 = .;
+if &var = 1 then &var1 = 1;
+if &var = 2 then &var1 = 0; 
+run;
+proc freq data=nsoc;
+table &var &var1;
+format &var1 yesno_.;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%misc_binary;
+
+/*
+proc sql;
+create table nsoc1
+as select a.*, b.cg_age as age1, b.dem_3_cat, b.sr_gad2_anxiety, b.sr_phq2_depressed
+from nsoc a
+left join nsoc_rg b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=nsoc_rg;
+table dem_3_cat sr_gad2_anxiety sr_phq2_depressed;
+run;
+proc freq data=nsoc1;
+table dem_3_cat sr_gad2_anxiety sr_phq2_depressed;
+run; 
+*/
+data ko.nsoc_raw1;
+set nsoc;
+run;
+proc freq data=ko.nsoc_raw1;
+table diff_physical_lv_di;
+run;
+
+/*****AGE CATEGORIES********/
+
+
+/*Bringing in raw OP, but change to bring in the final OP: TO DO LATER*/
+proc import out = RAW_OP_SENS
+			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
+			replace;
+run;
+proc freq data=raw_op_sens;
+table op1catgryage;
+run;
+
+data nsoc;
+set ko.nsoc_raw1;
+run;
+proc freq data=nsoc;
+table chd1cgbrthyr;
+run;
+
+/*bring in variables regarding year and month of brith.*/
+proc sql;
+create table raw_op_sens1
+as select a.*, b.op1dage, b.op1dcatgryag, c.chd1cgbrthmt, c.chd1cgbrthyr
+from raw_op_sens a
+left join raw_op b
+on a.spid = b.spid and
+a.opid = b.opid
+left join nsoc c
+on a.spid = c.spid and
+a.opid = c.opid;
+quit;
+proc freq data=raw_op_sens1;
+where op1catgryage < 0;
+table op1dage;
+run;
+proc freq data=raw_op_sens1;
+where op1age<=0 and op1catgryage < 0;
+table chd1cgbrthyr;
+run;
+/*all op continuous variable have some sort of categorical variable*/
+proc means data=raw_op_sens1 n nmiss mean median min max std;
+where op1dage >0;
+var op1age;
+run;
+
+data test;
+set raw_op_sens1;
+if op1dage = 1;
+run;
+
+
+/*AGE CATEGORIES
+1 - UNDER 20
+2 - 20-24
+3 - 25-29
+4 - 30-34
+5 - 35-39
+6 - 40-44
+7 - 45-49
+8 - 50-54
+9 - 55-59
+10 - 60-64
+11 - 65-69
+12 - 70-74
+13 - 75-79
+14 - 80-84
+15 - 85-89
+16 - 90 +
+*/
+
+data raw_op_sens2;
+set raw_op_sens1;
+/*use the regular categorical variable and add in sensitive categories for the ones that are missing*/
+if op1dage < 0 and op1catgryage >0 then op1dage = op1catgryage;
+if op1dage <0 then op1dage = .;
+if op1dage >16 then op1dage = 16;
+
+
+if chd1cgbrthyr > 0 then cg_age_approx = 2011 - chd1cgbrthyr;
+
+/*based on categories*/
+
+if cg_age_approx < 20 and cg_age_approx > 0 and op1dage = . then op1dage = 1;
+if cg_age_approx >= 20 and cg_age_approx <=24 and op1dage = . then op1dage = 2;
+if cg_age_approx >= 25 and cg_age_approx <=29 and op1dage = .  then op1dage = 3;
+if cg_age_approx >= 30 and cg_age_approx <=34 and op1dage = .  then op1dage = 4;
+if cg_age_approx >= 35 and cg_age_approx <=39 and op1dage = .  then op1dage = 5;
+if cg_age_approx >= 40 and cg_age_approx <=44 and op1dage = .  then op1dage = 6;
+if cg_age_approx >= 45 and cg_age_approx <=49 and op1dage = .  then op1dage = 7;
+if cg_age_approx >= 50 and cg_age_approx <=54 and op1dage = .  then op1dage = 8;
+if cg_age_approx >= 55 and cg_age_approx <=59 and op1dage = .  then op1dage = 9;
+if cg_age_approx >= 60 and cg_age_approx <=64 and op1dage = .  then op1dage = 10;
+if cg_age_approx >= 65 and cg_age_approx <=69 and op1dage = .  then op1dage = 11;
+if cg_age_approx >= 70 and cg_age_approx <=74 and op1dage = .  then op1dage = 12;
+if cg_age_approx >= 75 and cg_age_approx <=79 and op1dage = .  then op1dage = 13;
+if cg_age_approx >= 80 and cg_age_approx <=84 and op1dage = .  then op1dage = 14;
+if cg_age_approx >= 85 and cg_age_approx <=89 and op1dage = .  then op1dage = 15;
+if cg_age_approx >= 90 and op1dage = .  then op1dage = 16;
+
+
+rename op1dage = cg_age_cat;
+run;
+proc freq data=raw_op_sens2;
+table cg_age_cat ;
+run;
+
+
+proc sql;
+create table nsoc_w_age
+as select a.*, b.cg_age_cat
+from nsoc a
+left join raw_op_sens2 b
+on a.spid = b.spid
+and a.opid = b.opid;
+quit;
+proc freq data=nsoc_w_age;
+table cg_age_cat ;
+run;
+proc freq data=nsoc_w_age;
+where cg_age_cat = .;
+table cg_spouse;
+run;
+
+data nsoc1;
+set nsoc_w_age;
+run;
+
+/**Age in Continuous Form (non-intervals)**/
+
+
+data nsoc_age;
+set nsoc1 (keep = spid opid chd1cgbrthyr chd1cgbrthmt c1intmonth);
+run;
+proc sql;
+create table nsoc_age1
+as select a.*, b.op1age
+from nsoc_age a
+left join raw_op_sens b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=nsoc_age1;
+table op1age;
+run;
+data nsoc_age1;
+set nsoc_age1;
+cg_age = op1age;
+if cg_age = -1|cg_age=-7|cg_age=-8 then cg_age = .;
+if op1age < 0 and chd1cgbrthyr >0 and c1intmonth >= chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr;
+if op1age < 0 and chd1cgbrthyr >0 and c1intmonth < chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr-1;
+run;
+proc means data=nsoc_age1;
+var cg_age;
+run;
+
+proc sql;
+create table nsoc_age2
+as select a.*, b.cg_age
+from nsoc1 a
+left join nsoc_age1 b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc means data=nsoc_age2;
+var cg_age;
+run;
+
+data nsoc1;
+set nsoc_age2;
+run;
+
+proc means data=nsoc_pay;
+var cec1hrsweek cec1hrslstwk;
+run;
+
+data nsoc_pay;
+set nsoc1 ;
+/*paid last week variable binary 1/0*/
+paid_last_week = cec1wrk4pay;
+if cec1wrk4pay < 0 then paid_last_week = .;
+if cec1wrk4pay = 2 | cec1wrk4pay = 3 then paid_last_week = 0;
+
+if cec1hrslstwk < 0 then cec1hrslstwk = .;
+if cec1wrk4pay = 1 then paid_hours = cec1hrslstwk;
+
+
+if paid_hours <=20 and paid_hours~= . then paid_hours_cat = 0;
+if paid_hours >=21 and paid_hours<=39 then paid_hours_cat = 1;
+if paid_hours >=40 then paid_hours_cat = 2;
+/*if they didn't work last week then their paid hours is 0 and their category is zero*/
+if paid_last_week = 0 then paid_hours = 0;
+if paid_last_week = 0 then paid_hours_cat = 0;
+run;
+/*
+ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\Pay_Hours.rtf";
+proc freq data=nsoc_pay;
+table cec1wrk4pay paid_last_week paid_hours_cat paid_hours;
+run;
+proc means data=nsoc_pay;
+var paid_hours;
+run;
+ods rtf close;
+*/
+data nsoc1;
+set nsoc_pay;
+run;
+
+
+
+proc freq data=nsoc1;
+table che1fltltlin;
+run;
+data nsoc_phq_gad;
+set nsoc1;
+if che1fltltlin >= 0 then cg_depr_pqq1 = che1fltltlin;
+if che1fltdown >= 0 then cg_depr_pqq2 = che1fltdown;
+if che1fltnervs >= 0 then cg_depr_gad1 = che1fltnervs;
+if che1fltworry >= 0 then cg_depr_gad2 = che1fltworry;
+cg_depr_pqq1 = cg_depr_pqq1-1;
+cg_depr_pqq2 = cg_depr_pqq2-1;
+cg_depr_gad1 = cg_depr_gad1-1;
+cg_depr_gad2 = cg_depr_gad2-1;
+cg_phq2_score = sum(cg_depr_pqq1, cg_depr_pqq2);
+cg_gad2_score = sum(cg_depr_gad1, cg_depr_gad2);
+cg_phq2_depressed = .;
+if cg_phq2_score >= 3 then cg_phq2_depressed = 1;
+else if cg_phq2_score < 3 and cg_phq2_score ~= . then cg_phq2_depressed = 0;
+cg_gad2_anxiety = .;
+if cg_gad2_score >= 3 then cg_gad2_anxiety = 1;
+else if cg_gad2_score < 3 and cg_gad2_score ~= . then cg_gad2_anxiety = 0;
+run;
+/*
+ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\PHG_GAD.rtf";
+proc freq data=nsoc_phq_gad;
+table cg_depr_pqq1 cg_depr_pqq2 cg_depr_gad1 cg_depr_gad2 cg_phq2_score cg_gad2_score cg_phq2_depressed cg_gad2_anxiety;
+run;
+ods rtf close;
+*/
+data nsoc1;
+set nsoc_phq_gad;
+run;
+proc freq data=nsoc1;
+table diff_physical_lv_di;
+run;
+
+
+proc freq data=nsoc1;
+table cca1lstmhlpd;
+run;
+
+data flag_no_help_month;
+set nsoc1;
+if cca1hlplstyr = 1 then flag_no_help_mth = 1;
+run;
+proc freq data=flag_no_help_month;
+table flag_no_help_mth;
+run;
+
+data nsoc1;
+set flag_no_help_month;
+run;
+proc freq data=nsoc1;
+table diff_physical_lv_di;
+run;
+
+/*************************** HALF WAY POINT SAVE **********************************/
+
+data nhats.nsoc1_half;
+set nsoc1;
+run;
+
+/*************************** HALF WAY POINT SAVE **********************************/
+
+proc freq data=nhats.nhats_wave1_all_obs;
+table died;
+run;
+proc sql;
+create table raw_op_sp_dies
+as select a.*, b.died, c.op1dnsoc as nsoc_eligible
+from raw_op a
+left join  nhats.nhats_wave1_all_obs b
+on a.spid = b.spid
+left join nsoc_op_tracker c
+on a.spid = c.spid and a.opid = c.opid;
+quit;
+proc freq data=raw_op_sp_dies;
+table died nsoc_eligible;
+run;
+data raw_op_sp_dies1;
+set raw_op_sp_dies;
+if died ~= .;
+run;
+proc freq data=raw_op_sp_dies1;
+table died nsoc_eligible;
+run;
+proc sort data=nsoc1 out=nsoc1a;
+by spid opid;
+run;
+data nsoc_helper_num;
+set nsoc1a;
+if died ~= .;
+by spid opid;
+retain informal_nsoc_comp informal_nsoc_comp_i;
+informal_nsoc_comp = informal_nsoc_comp + 1;
+if first.spid then do ;
+informal_nsoc_comp = 1;
+informal_nsoc_comp_i = 1;
+end;
+run;
+
+data test;
+set nsoc_helper_num (keep = spid opid informal_nsoc_comp informal_nsoc_comp_i);
+run;
+proc freq data = nsoc_helper_num;
+table informal_nsoc_comp informal_nsoc_comp_i;
+run;
+data nsoc_helper_num1;
+set nsoc_helper_num;
+by spid opid;
+if last.spid;
+run;
+proc freq data = nsoc_helper_num1;
+table informal_nsoc_comp informal_nsoc_comp_i;
+run; 
+
+proc sql;
+create table raw_op_inf_cg
+as select a.*, b.informal_nsoc_comp, c.informal_nsoc_comp_i
+from raw_op_sp_dies1 a
+left join nsoc_helper_num1 b
+on a.spid = b.spid
+left join nsoc_helper_num c
+on a.spid = c.spid and a.opid = c.opid;
+quit;
+proc freq data=raw_op_inf_cg;
+table op1relatnshp informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible;
+run;
+data test;
+set raw_op_inf_cg (keep = spid opid nsoc_eligible informal_nsoc_comp informal_nsoc_comp_i);
+run;
+data raw_op_inf_cg1;
+set raw_op_inf_cg;
+/*if they did not complete the NSOC then set them as "0"*/
+if informal_nsoc_comp_i = . then informal_nsoc_comp_i = 0;
+/*Only include the SPs that had at least one of the caregivers that completed the NSOC interview*/
+if informal_nsoc_comp ~= .;
+/*helpers who were NSOC eligible but were not interviewed*/
+if nsoc_eligible >= 1 and nsoc_eligible <=5 then nsoc_eligible_i = 1;
+if nsoc_eligible_i ~= 1 then nsoc_eligible_i = 0;
+/*Note which person is a qualified "helper"*/
+all_helpers = .;
+if op1ishelper = 1 then all_helpers = 1;
+if all_helpers ~= 1 then all_helpers = 0;
+/*Is any family*/
+is_family = .;
+if (op1relatnshp >=1 and op1relatnshp <= 29 )|op1relatnshp=91 then is_family = 1;
+if is_family ~= 1 then is_family = 0;
+/*paid indicator*/
+helper_informal = .;
+/*if it's -1 then it's bc of the spouse. Check Box HL5. Spouse is considered as Unpaid Helper. */
+if all_helpers = 0 then helper_informal = 0;
+if all_helpers = 1 and is_family = 1 then helper_informal = 1;
+if all_helpers = 1 and op1paidhelpr = -1 then helper_informal = 1;
+if all_helpers = 1 and is_family = 0 and op1paidhelpr = 2 /*(answered No)*/ then helper_informal = 1;
+if all_helpers = 1 and is_family = 0 and (op1paidhelpr = 1) then helper_informal = 0;
+/*helper family CHANGED in 12/10/2015 from being actual family to indication of them being unpaid. */
+all_helper_family = .;
+if all_helpers = 1 and helper_informal = 1 then all_helper_family = 1;
+if all_helper_family ~= 1 then all_helper_family = 0;
+run;
+proc freq data=raw_op_inf_cg1;
+table all_helpers all_helper_family helper_informal ;
+run;
+proc freq data=raw_op_inf_cg1;
+table helper_informal*op1relatnshp;
+run;
+proc freq data=raw_op_inf_cg1;
+where helper_informal = .;
+table all_helpers is_family op1paidhelpr op1relatnshp;
+run;
+/*
+data test;
+set raw_op_inf_cg1 (keep = spid opid op1ishelper op1paidhelpr op1relatnshp);
+run;
+proc freq data=test;
+table op1relatnshp op1ishelper op1paidhelpr;
+run;
+data test1;
+set test;
+if op1ishelper = 1;
+run;
+proc freq data=test1;
+table op1relatnshp op1paidhelpr;
+run;
+proc freq data=raw_op_inf_cg1;
+table op1relatnshp is_family informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible all_helpers all_helper_family is_imm_family all_helper_imm_family;
+run;
+data test;
+set raw_op_inf_cg1 (keep = spid opid nsoc_eligible informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers all_helper_family);
+run;
+proc sort data=test;
+by spid opid;
+run;
+proc sort data=raw_op_inf_cg1;
+by spid opid;
+run;
+*/
+data raw_op_inf_cg2;
+set raw_op_inf_cg1;
+by spid opid;
+retain informal_nsoc_elig all_helper_tot all_helper_family_tot ;
+informal_nsoc_elig = informal_nsoc_elig + nsoc_eligible_i;
+all_helper_tot = all_helper_tot + all_helpers;
+all_helper_family_tot = all_helper_family_tot + all_helper_family;
+if first.spid then do;
+informal_nsoc_elig = nsoc_eligible_i;
+all_helper_tot=all_helpers;
+all_helper_family_tot = all_helper_family;
+end;
+run;
+proc freq data=raw_op_inf_cg2;
+table all_helper_family_tot;
+run;
+data test1;
+set raw_op_inf_cg2 (keep = spid opid nsoc_eligible helper_informal informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers informal_nsoc_elig all_helper_tot all_helper_family_tot);
+run;
+data raw_op_inf_cg3;
+set raw_op_inf_cg2;
+by spid opid;
+if last.spid;
+diff_helper = all_helper_tot - informal_nsoc_comp;
+run;
+proc freq data=raw_op_inf_cg3;
+table diff_helper;
+run;
+data test3;
+set raw_op_inf_cg3 (keep = spid opid nsoc_eligible helper_informal informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers informal_nsoc_elig all_helper_tot all_helper_family_tot );
+run;
+/*
+ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Total_Helper.rtf";
+proc freq data=raw_op_inf_cg3;
+table informal_nsoc_comp  all_helper_tot diff_helper all_helper_family_tot;
+run;
+ods rtf close;
+*/
+proc sql;
+create table nsoc_helpers
+as select a.*, b.informal_nsoc_comp, b.informal_nsoc_elig, b.all_helper_tot, b.all_helper_family_tot
+from nsoc1 a 
+left join raw_op_inf_cg3 b
+on a.spid = b.spid;
+quit;
+
+proc freq data=nsoc_helpers;
+table informal_nsoc_comp informal_nsoc_elig all_helper_tot all_helper_family_tot ;
+run;
+proc sql;
+create table nsoc_helpers0
+as select a.*, b.helper_informal
+from nsoc_helpers a
+left join raw_op_inf_cg1 b
+on a.spid = b.spid and
+a.opid = b.opid;
+quit;
+proc freq data=nsoc_helpers0;
+table helper_informal;
+run;
+
+data test(keep = spid);
+set nsoc_helpers ;
+if all_helper_tot = 1;
+run;
+data nsoc_helpers1;
+set nsoc_helpers0;
+/*solo CG in da houuuuuse*/
+solo_cg = 0;
+if all_helper_tot = 1 then solo_cg = 1;
+/*No Other Family Member*/
+solo_cg_fam = .;
+if helper_informal = 1 and all_helper_family_tot = 1 then solo_cg_fam = 1;
+if helper_informal = 1 and all_helper_family_tot > 1 then solo_cg_fam = 0;
+if helper_informal = 0 and all_helper_family_tot = 0 then solo_cg_fam = 1;
+if helper_informal = 0 and all_helper_family_tot > 0 then solo_cg_fam = 0;
+run;
+
+proc freq data=nsoc_helpers1;
+table helper_informal is_imm_family solo_cg solo_cg_fam ;
+run;
+proc freq data=nsoc_helpers1;
+where helper_informal = 1;
+table all_helper_family_tot;
+run;
+proc freq data=nsoc_helpers1;
+table informal_nsoc_comp all_helper_tot;
+run;
+
+/************* ONLY EOL Helpers *****************/
+
+data nsoc_helpers2;
+set nsoc_helpers1;
+if died = 1;
+run;
+/*
+ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Solo_Caregiver_Numbers.rtf";
+proc freq data=nsoc_helpers2;
+table solo_cg_fam  ;
+run;
+proc freq data=nsoc_helpers2;
+where solo_cg_fam = 1;
+table all_helper_tot all_helper_family_tot;
+run;
+proc freq data=nsoc_helpers2;
+table solo_cg  ;
+run;
+proc freq data=nsoc_helpers2;
+where solo_cg = 1;
+table all_helper_tot;
+run;
+ods rtf close;
+*/
+/************* ONLY EOL Helpers *****************/
+
+proc sql;
+create table nsoc1
+as select *
+from nhats.Nsoc1_half a
+left join nsoc_helpers1 b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+
+proc freq data=nsoc1;
+table diff_physical_lv_di;
+run;
+
+/*********** Interview Date **************/
+
+data nsoc_int_date;
+set nsoc1;
+int_month = c1intmonth;
+if int_month >=5 then int_year = 2011;
+run;
+
+proc freq data=nsoc_int_date;
+table c1intmonth int_month int_year;
+run;
+
+data raw_nhats_r2_death_dates;
+set raw_nhats_r2_sens (keep = spid pd2mthdied pd2yrdied);
+run;
+
+proc sql;
+create table nsoc_int2death
+as select a.*, b.pd2mthdied as month_died, b.pd2yrdied as year_died
+from nsoc_int_date a
+left join raw_nhats_r2_death_dates b
+on a.spid = b.spid;
+quit;
+data nsoc_int2death;
+set nsoc_int2death;
+if month_died = -1 then month_died = .;
+if year_died = -1 then year_died = .;
+run;
+proc freq data=nsoc_int2death;
+table died month_died year_died;
+run;
+
+
+/*Interview to Death*/
+data nsoc_int2death1;
+set nsoc_int2death;
+if year_died = 1 then year_died = 2011;
+if year_died = 2 then year_died = 2012;
+if year_died ~= . then year_sep = year_died - int_year;
+if month_died ~= . then month_sep = month_died - int_month;
+if year_sep = 1 then year_sep_months = 12;
+if year_sep = 0 then year_sep_months = 0;
+
+months_to_death = year_sep_months + month_sep;
+/*take out the dates that are negative. Confirmed with Katherine, we are assuming they are a fluke*/
+if months_to_death < 0 then months_to_death = .;
+run;
+proc freq data=nsoc_int2death1;
+table c1intmonth   month_died year_died year_sep month_sep year_sep_months months_to_death;
+run;
+data test;
+set nsoc_int2death1 (keep = spid opid c1intmonth month_died year_died year_sep month_sep year_sep_months months_to_death);
+if months_to_death < 0 and months_to_death ~= .;
+run;
+data nsoc1;
+set nsoc_int2death1;
+run;
+
+/*Hours of Care additions. Could be more efficient I know. */
+data dc_additions;
+set nsoc1;
+total_hours_month = total_hours;
+if total_hours = . and cdc1hlpsched = 1 then total_hours_month = total_hours_day * total_hours_week * 4;
+
+if cdc1hlpyrs ~= -1 then helper_num_yrs = cdc1hlpyrs;
+if helper_num_yrs = . & cdc1hlpyrpls = 2 then helper_num_yrs = 0;
+if helper_num_yrs = . & cdc1hlpyrst ~= -1 then helper_num_yrs = 2011 - cdc1hlpyrst;
+
+run;
+proc freq data=dc_additions;
+table helper_num_yrs;
+run;
+proc freq data=dc_additions;
+table  total_hours total_hours_month helper_num_yrs;
+run;
+
+data nsoc1;
+set dc_additions;
+run;
+
+proc freq data=nsoc1;
+where all_helper_tot = 1;
+table  informal_nsoc_comp;
+run;
+proc freq data=nsoc1;
+where died = 1;
+table all_helper_tot cg_spouse;
+run;
+
+data indicators;
+set nsoc1;
+run;
+data nsoc1;
+set indicators;
+run;
+
+proc freq data=nsoc1;
+table diff_emotional_lv_di ;
+run;
+
+
+
+/****** Living in household **********/
+/****** OP1PRSNINHH is the variable for if the person is in the household ******/
+/****** This is answered they answer three questions in the the NHATS Questionnaire ******/
+/****** hh1livwthspo hh1proxlivsp hh1othlvhere if they answer yes or no (particularly if ******/
+/****** the person also has an opid (spouse: hh1dspouseid, proxy: is1dproxyid)) then ******/
+/****** then they will appear in the OP File. For those that didn't answer these questions, ******/
+/****** then we can probably assume that these people don't live in the household ******/
+
+proc sql;
+create table opfile_hh1
+as select a.*, b.hh1livwthspo, c.hh1proxlivsp, d.hh1othlvhere, d.hh1dlvngarrg, d.hh1livwthspo as SP_answered_spo, d.hh1proxlivsp as SP_ans_prox,d.hh1othlvhere as SP_ans_oth, d.r1dresid
+from raw_op a
+left join raw_nhats_r1 b
+on a.spid = b.spid and a.opid = b.hh1dspouseid
+left join raw_nhats_r1 c
+on a.spid = c.spid and a.opid = c.is1dproxyid
+left join raw_nhats_r1 d
+on a.spid = d.spid;
+quit;
+proc freq data= opfile_hh1;
+table op1prsninhh;
+run;
+proc freq data=opfile_hh1;
+table in_hh;
+run;
+data opfile_hh_final;
+set opfile_hh1;
+lives_in_hh = .;
+/*if the living arrangement says that they live with spouse and the person is the spouse then that person should be coded as a person in the hh*/
+if (hh1dlvngarrg = 2 | hh1dlvngarrg = 3) and op1relatnshp = 2 then op1prsninhh = 1;
+if op1prsninhh = 1 and lives_in_hh = . then lives_in_hh = 1;
+if op1prsninhh = 0 and lives_in_hh = . then lives_in_hh = 0;
+if op1chnotinhh = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1soclntwrk = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1contctflg = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1spcaredfr = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1ishelper = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1dflmiss = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1dsocwrkfl = 1 and lives_in_hh = . then lives_in_hh = 0;
+if op1relatnshp = 37 and lives_in_hh = . then lives_in_hh = 0;
+if hh1dlvngarrg = 1 and lives_in_hh = . then lives_in_hh = 0;
+run;
+proc freq data=opfile_hh_final;
+table op1prsninhh lives_in_hh;
+run;
+data nsoc1;
+set nsoc1;
+drop lives_in_hh;
+run;
+proc sql; 
+create table nsoc_w_hh
+as select a.*, b.lives_in_hh
+from nsoc1 a
+left join opfile_hh_final b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=nsoc_w_hh;
+table lives_in_hh;
+run;
+
+data nsoc1;
+set nsoc_w_hh;
+run;
+
+proc freq data=nsoc1;
+table diff_emotional_lv_di ;
+run;
+/*
+ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\solo_cg_fam_xtab_spouse.rtf";
+proc freq data=nsoc1;
+where died = 1;
+table cg_spouse*solo_cg;
+run;
+proc freq data=nsoc1;
+where solo_cg = 1 and died = 1;
+table cg_relationship_cat;
+run;
+proc freq data=nsoc1;
+where died = 1;
+table cg_spouse*solo_cg_fam;
+run;
+proc freq data=nsoc1;
+where solo_cg_fam = 1 and died = 1;
+table cg_relationship_cat;
+run;
+ods rtf close;
+*/
+
+data nhats_op;
+set ko.helpers1a;
+if op1dochlp = -1 then op1dochlp = 0;
+run;
+proc freq data=nhats_op;
+table op1dochlp;
+run;
+proc sql;
+create table op_additions
+as select a.*, b.op1dochlp
+from nsoc1 a
+left join nhats_op b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=op_additions;
+table op1dochlp;
+run;
+data nsoc1;
+set op_additions;
+run;
+data ko.nsoc_full;
+set nsoc1;
+run;
+proc export data=nsoc1 outfile = "E:\nhats\data\Projects\Caregivers\nsoc_FULL.dta" dbms = dta replace;
+run;
+
+/*no lfu*/
+data no_lfu;
+set nsoc1;
+if died = . then delete;
+run;
+data nsoc1;
+set no_lfu;
+run;
+
+data ko.nsoc_final;
+set nsoc1;
+run;
+
+
+H="NSOC Setup (Specific Tables)"
+option nofmterr;
+
+data nsoc1;
+set ko.nsoc_full;
+run;
+
+proc sql;
+create table nsoc1a
+as select a.*, b.homebound_cat, b.homebound_cat1
+from nsoc1 a
+left join nhats.nhats_wave1_trunc b
+on a.spid = b.spid;
+quit;
+
+
+data nsoc_ko;
+set nsoc1a (keep = spid opid w1cgfinwgt0 died died_24 ADL_IADL_ind total_hours cg_medicare cg_spouse cg_living_children lives_in_hh cg_age cg_age_cat cg_relationship_cat cg_relationship_cat1 cg_gt_hs cg_female cg_Marital_status cg_educ 
+ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer help_personal_care_di help_get_around_di help_shopping_di help_chores_di 
+ever_pain ever_breath_prob ever_low_enrgy trb_back_sleep lost_10_lbs_yr pain_lim_act_di breath_lim_act_di enrgy_lim_act_di felt_depressed_di felt_nervous_di felt_lit_interest_di felt_worry_di
+help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help
+gain_more_conf_di gain_deal_better_di gain_closer2SP_di gain_more_satisfied_di neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di 
+diff_financial diff_emotional diff_physical diff_financial_lv_di diff_emotional_lv_di diff_physical_lv_di c1relatnshp cdc1hlphrsdy op1age w1cgfinwgt0 work_4_pay self_health_di ever_high_bp ever_osteoperosis ever_diff_seeing ever_diff_hearing 
+cg_phq2_depressed cg_gad2_anxiety paid_hours_cat paid_last_week lives_in_hh cg_age_cat flag_no_help_mth informal_nsoc_comp informal_nsoc_elig all_helper_tot months_to_death total_hours_month
+helper_num_yrs solo_cg  all_helper_family_tot  solo_cg_fam homebound_cat homebound_cat1 help_mob_dev help_home_safe help_paid_helpr help_insurance_any cg_medicaid op1dochlp);
+/*for creating primary caregiver*/
+relationship_sort = 0;
+if cg_relationship_cat = 2 then relationship_sort = 1;
+if cg_relationship_cat = 1 then relationship_sort = 2;
+/*Pain/Breathing/Energy: Follow-up question. If the person has no problems breathing it shouldn't limit his activities*/
+if ever_breath_prob = 0 then breath_lim_act_di = 0;
+if ever_low_enrgy = 0 then enrgy_lim_act_di = 0;
+if ever_pain = 0 then pain_lim_act_di = 0;
+/*NLTCS Criteria*/
+*if ADL_IADL_ind = 1;
+/*if flag_no_help_mth = 1 then delete;*/
+
+run;
+proc freq data=nsoc_ko;
+table help_mob_dev;
+run;
+proc sort data=nsoc_ko out=test nodupkey;
+by spid;
+run;
+proc freq data=test;
+table months_to_death;
+run;
+
+/*
+proc freq data=nsoc_ko;
+table died cg_relationship_cat relationship_sort;
+run;*/
+proc sort data=nsoc_ko;
+by spid descending total_hours cg_relationship_cat;
+run;
+data nsoc_ko;
+set nsoc_ko;
+retain diff i level2; 
+by spid descending total_hours cg_relationship_cat;
+i = i + 1;
+diff = total_hours - lag(total_hours);
+if diff = 0 and i = 2 then level2 = 1;
+if first.spid then do;
+diff = .;
+i = 1;
+level2 = 0;
+end;
+run;
+proc freq data=nsoc_ko;
+table level2;
+run;
+data nsoc_ko_last;
+set nsoc_ko;
+by spid descending total_hours cg_relationship_cat;
+if last.spid;
+run;
+proc freq data=nsoc_ko_last;
+table level2 i;
+run;
+
+proc sort data=nsoc_ko out=nsoc_ko1a nodupkey;
+by spid;
+run;
+proc sql;
+create table nsoc_ko1b
+as select a.*, b.i as num_cg, b.level2 as level2_1
+from nsoc_ko1a a
+left join nsoc_ko_last b
+on a.spid = b.spid;
+quit;
+proc freq data=nsoc_ko1b;
+table level2_1 num_cg;
+run;
+
+/*putting primary caregiver into the main database*/
+data nsoc_ko1b;
+set nsoc_ko1b;
+prim_caregiver = 1;
+prim_caregiver_source = .;
+if total_hours ~= . then prim_caregiver_source = 1;
+if prim_caregiver_source = 1 and level2_1 = 1 then prim_caregiver_source = 2;
+if total_hours = . and num_cg = 1 then prim_caregiver_source = 3;
+if total_hours = . and num_cg ~= 1 then prim_caregiver_source = 4;
+
+run;
+proc freq data=nsoc_ko1b;
+table prim_caregiver_source;
+run;
+proc sql;
+create table nsoc_ko2
+as select a.*, b.prim_caregiver, b.prim_caregiver_source
+from nsoc_ko a
+left join nsoc_ko1b b
+on a.spid = b.spid
+and a.opid = b.opid;
+quit;
+proc freq data=nsoc_ko1a;
+table prim_caregiver;
+run;
+proc freq data=nsoc_ko2;
+table prim_caregiver;
+run;
+data nsoc_ko2;
+set nsoc_ko2;
+if prim_caregiver = . then prim_caregiver = 0;
+run;
+
+/*
+proc sql;
+create table test
+as select a.spid, a.opid, b.opid as opid1
+from nsoc_ko1 a
+left join nsoc_ko1a b
+on a.spid = b.spid;
+quit;
+data test1;
+set test;
+opid_1 = opid + 0;
+opid1_1 = opid1 + 0;
+diff = opid_1 - opid1_1;
+run;
+proc freq data=test1;
+table diff;
+run;
+*/
+/*
+
+data test_ko;
+set nsoc_ko (keep = spid opid total_hours cg_spouse c1relatnshp cdc1hlphrsdy);
+run;
+data test_ko1;
+set nsoc_ko1 (keep = spid opid total_hours cg_spouse c1relatnshp cdc1hlphrsdy);
+run;
+
+proc freq data=nsoc_ko1;
+table died*cg_female /  missing;
+weight w1cgfinwgt0;
+run;
+
+ods html close;
+ods html;
+%let varlist = cg_female cg_relationship_cat cg_lives_with_SP cg_living_children cg_medicare  cg_gt_hs ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer help_personal_care_di help_get_around_di help_shopping_di help_chores_di
+help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection
+gain_more_conf_di gain_deal_better_di gain_closer2SP_di gain_more_satisfied_di neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di 
+diff_finanicial diff_emotional diff_physical ;
+%macro freq();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+proc freq data=nsoc_ko1;
+table died*&var/missing;
+weight w1cgfinwgt0;
+run;
+proc freq data=nsoc_ko1;
+table died*&var/missing;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist,&i);
+%end;
+%mend;
+%freq();
+*/
+data ko.nsoc_prim_caregiver;
+set nsoc_ko2;
+run;
+proc export data=nsoc_ko1a outfile = "E:\nhats\data\Projects\Homebound\nsoc_121615_noNLTCS.dta" replace dbms = dta;
+run;
+proc export data=nsoc_ko2 outfile = "E:\nhats\data\Projects\Homebound\nsoc_121615_all_noNLTCS.dta" replace dbms = dta;
+run;
+proc freq data=nsoc_ko2;
+where died = 1;
+table solo_cg_fam;
+run;
+
+
+H="*******************TABLES******************"
+
+
+H="Table 1 (Demographics)"
+use "E:\nhats\data\NHATS working data\NHATS_Table1_Caregiver_Project.dta", clear
+set more off
+gen n=1
+gen n1 = 1
+
+gen data_grp1=community_dwelling==1
+gen data_grp2=eligible==1
+gen data_grp3=sum_adl_cat==1 | sum_adl_cat==2
+
+drop if data_grp1 == 0
+
+tab sum_adl_cat, gen(sum_adl_cat)
+
+replace medicaid = . if medicaid < 0
+
+local ivars female white gt_hs_edu married medicaid livealone srh_fp sr_ami_ever sr_heart_dis_ever sr_ra_ever sr_diabetes_ever sr_lung_dis_ever sr_stroke_ever sr_cancer_ever  sr_phq2_depressed dem_2_cat sum_adl_cat1 sum_adl_cat2 sum_adl_cat3 ///
+fall_last_month reg_doc_seen reg_doc_homevisit sr_hosp_ind meals_wheels restrnt_takeout noone_talk
+local cvars sr_numconditions1 age sr_hosp_stays
+
+foreach x in `ivars'{
+replace `x' = . if `x' < 0
+}
+
+label var female "Female"
+label var white "White"
+label var gt_hs_edu "> HS Education"
+label var married "Married"
+label var medicaid "Covered by Medicaid"
+label var livealone "Lives Alone?"
+label var srh_fp "Self-Rated Health (Fair/Poor)"
+label var sr_ami_ever "Self-Reported Heart Attack"
+label var sr_ra_ever "Self-Reported Arthritis"
+label var sr_diabetes_ever "Self-Reported Diabetes"
+label var sr_lung_dis_ever "Self-Reported Lung Disease"
+label var sr_stroke_ever "Self-Reported Stroke"
+label var sr_cancer_ever "Self-Reported Cancer"
+label var sr_phq2_depressed "PHQ-2 Depression: Score > 3"
+label var dem_2_cat "Dementia Classification: Possible/Probable Dementia"
+label var fall_last_month "Fall Last Month"
+label var sum_adl_cat1 "Disability: 0 ADLs"
+label var sum_adl_cat2 "Disability: 1-2 ADLs"
+label var sum_adl_cat3 "Disability: >= 3 ADLs"
+label var reg_doc_seen "Regular Doctor Seen"
+label var reg_doc_homevisit "Regular Doctor was Home Visit?"
+label var sr_hosp_ind "Hospital Stay in the last 12 months"
+label var sr_hosp_stays "Number of Hospital Stays"
+label var age "Age"
+label var n1 "Weighted N"
+label var meals_wheels "Meals on Wheels"
+label var restrnt_takeout "Restaurant Takeout"
+label var noone_talk "SP No one to Talk To"
+
+
+ svyset [pw=w1anfinwgt0]
+
+local rn : word count `cvars' `ivars' n n1
+
+
+local r=1
+local c=1
+tab died
+
+
+foreach weight in  "[aw=w1anfinwgt0]" {
+	foreach d in 1 2 3 {
+	mat test`d'=J(`rn',20,.)
+	preserve
+	keep if data_grp`d' ==1 
+	foreach x in `cvars' {
+		foreach i in 1 2 3 4 {
+			sum `x' `weight' if homebound_cat1==`i'
+			mat test`d'[`r',`c']=r(mean)
+			mat test`d'[`r',`c'+1]=r(sd)
+			svy: regress `x' i.homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+		    mat test`d'[`r',`c'+2]=e(p) 
+			local c=`c'+3
+
+	}
+	local r=`r'+1
+	local c=1
+	}
+	foreach x in `ivars' {
+		foreach i in 1 2 3 4 {
+			sum `x'`weight' if homebound_cat1==`i'
+			mat test`d'[`r',`c']=r(sum)
+			mat test`d'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+			mat test`d'[`r',`c'+2]=e(p_Pear)
+			local c=`c'+3
+	}
+	local r=`r'+1
+	local c=1
+	}
+
+
+	foreach i in 1 2 3 4 {
+		sum n`weight' if homebound_cat1==`i'
+			mat test`d'[`r',`c']=r(N)
+			mat test`d'[`r'+1,`c'] = r(sum_w)
+			local c=`c'+3
+	}
+restore
+local r = 1
+local c = 1
+}
+
+mat rownames test1=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+mat rownames test2=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+mat rownames test3=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_1", ///
+statmat(test1) ctitles("" "Mean/N Homebound" "SD/%" "" ///
+"Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+"SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test1) sdec(2)  varlabels replace title("Community Dwelling Sample")
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_2", ///
+statmat(test2) ctitles("" "Mean/N Homebound" "SD/%" ///
+"" "Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+"SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test2) sdec(2)  varlabels replace title("NSOC Eligible Homebound Sample")
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_3", ///
+ statmat(test3) ctitles("" "Mean/N Homebound" "SD/%" "" ///
+ "Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+ "SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test3) sdec(2)  varlabels replace ///
+title("Community Dwelling Sample w/ 1+ ADL Impairment")
+
+}
+
+// if you do weights. Change the test type in the loop, change "replace" to "addtable", change the title from Unweighted to Weighted, change the loop to put in [aw=w1cgfinwgt0] in the quotes.
+
+
+H="Table 2 (Helpers)"
+use "E:\nhats\data\Projects\Homebound\Helpers.dta", clear
+set more off
+
+replace homebound_cat1= 3 if  spid == 10009011
+
+gen tot=1 
+gen homebound_cat_1=homebound_cat1==1
+gen homebound_cat_2=homebound_cat1==2
+gen homebound_cat_3=homebound_cat1==3
+gen homebound_cat_4=homebound_cat1==4
+
+tab num_helper_cat, gen(num_helper_cat)
+by spid, sort: gen unique=_n==1
+
+svyset [pw=w1anfinwgt0]
+
+mat test1=J(40,18,.)
+local r=2
+local c=1
+
+preserve
+keep if unique==1
+duplicates drop spid, force
+
+foreach g in 1 2 3 4 {
+sum count_helpers if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[1,`c']=r(sum_w)
+mat test1[`r',`c']=r(sum)
+mat test1[`r'+1,`c']=r(mean)
+mat test1[`r'+1,`c'+1]=r(sd)
+mat test1[`r'+2,`c']=r(p50)
+svy: regress count_helpers homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+1,`c'+2]=e(p)
+sum count_helpers if homebound_cat_`g' == 1, detail
+mat test1[`r'+3,`c']=r(sum_w)
+sum num_helper_cat1 if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[`r'+4,`c']=r(sum)
+mat test1[`r'+4,`c'+1]=r(mean)*100
+svy: tab num_helper_cat1 homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+4,`c'+2]=e(p_Pear)
+sum num_helper_cat2 if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[`r'+5,`c']=r(sum)
+mat test1[`r'+5,`c'+1]=r(mean)*100
+svy: tab num_helper_cat2 homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+5,`c'+2]=e(p_Pear)
+sum num_helper_cat3 if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[`r'+6,`c']=r(sum)
+mat test1[`r'+6,`c'+1]=r(mean)*100
+svy: tab num_helper_cat3 homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+6,`c'+2]=e(p_Pear)
+sum num_helper_cat4 if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[`r'+7,`c']=r(sum)
+mat test1[`r'+7,`c'+1]=r(mean)*100
+svy: tab num_helper_cat3 homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+7,`c'+2]=e(p_Pear)
+sum hours_helped_wk_i if homebound_cat_`g'==1 [aw=w1anfinwgt0], detail
+mat test1[`r'+8,`c']=r(mean)
+mat test1[`r'+8,`c'+1]=r(sd)
+mat test1[`r'+9,`c']=r(p50)
+svy: regress hours_helped_wk_i i.homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `g'
+mat test1[`r'+8,`c'+2]=e(p)
+local c = `c' + 3
+
+}
+
+
+
+local r = 14
+local c = 1
+
+foreach w in spouse_i daug_i son_i oth_fam_i paid_cg_i oth_nofam_i {
+
+svy: tab `w' homebound_cat1 
+mat test1[`r',`c'+9] = e(p_Pear)
+
+
+foreach i in 1 2 3 4{
+
+sum `w' [aw=w1anfinwgt0] if homebound_cat1 == `i', detail
+mat test1[`r',`c'] = r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab `w' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+
+local r = `r' + 1
+local c = 1
+
+
+}
+local r = 22
+local c = 1
+foreach w in eat bath toil dres insd bed  {
+
+foreach i in 1 2 3 4{
+
+sum op_adl_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab op_adl_`w' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+
+local r = `r' + 1
+local c = 1
+
+}
+
+local r = 30
+local c = 1
+
+foreach w in laun shop meal bank  meds {
+
+foreach i in 1 2 3 4{
+
+sum op_iadl_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab op_iadl_`w' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+
+}
+
+local r = `r' + 1
+local c = 1
+
+}
+local r = 36
+local c = 1
+
+foreach w in adl iadl{
+
+
+
+foreach i in 1 2 3 4{
+
+sum any_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab any_`w' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+local r = `r' + 1
+local c = 1
+}
+
+restore
+
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Helper_Table_2_9_16(community_dwelling)", ///
+statmat(test1) rtitles ("Total Number of SPs"\"Total Number of Helpers"\ ///
+"Mean Number of Helpers mean(sd)"\"Median number of helpers per SP"\"Total Number of SPs (Unweighted)"\ ///
+"Category: Number of Helpers (0) n(%)"\"Category: Number of Helpers (1-3) n(%)"\"Category: Number of Helpers (4-6) n(%)"\ ///
+"Category: Number of Helpers (7+) n(%)"\"Mean total hours of help per SP per Week"\ ///
+"Median total hours of help per SP per Week"\""\"Helper Prevalence per SP:"\ ///
+"Spouse/Partner"\"Daughter"\"Son"\"Other Relatives"\"Paid Caregiver"\"Other non-relatives"\""\ ///
+"Type of Help received by Older Adults (ADL):"\"Eating"\"Bathing"\"Toileting"\ ///
+"Dressing"\"Walking Inside"\"Getting out of Bed"\""\"Type of Help Received by Older Adults (IADL):" ///
+\"Laundry"\"Shopping"\"Meals"\"Banking"\"Medicine"\""\"Any ADL"\"Any IADL") ///
+ctitles("" "Homebound" "" "" "Semi-HB: Never by Self" "" "" "Semi-HB: Needs Help/Diffculty" "" "" "Not Homebound" ""  \ "" "Mean/N" "SD/%" "" "Mean/N" "SD/%" "P-Value" "Mean/N" "SD/%" "P-Value" "Mean/N" "SD/%" "P-value" ) ///
+store(test1) sdec(2) replace ///
+title("SPs and their Helpers, all NSOC Eligible SPs, by Homebound status")
+
+ 
+mat test1=J(36,18,.)
+local r = 3
+local c = 1
+
+sum op1ishelp if homebound_cat1 == 1 [aw=w1anfinwgt0]
+mat test1[1,`c']=r(sum)
+sum op1ishelp if homebound_cat1 == 2 [aw=w1anfinwgt0]
+mat test1[1,`c'+3]=r(sum)
+sum op1ishelp if homebound_cat1 == 3 [aw=w1anfinwgt0]
+mat test1[1,`c'+6]=r(sum)
+sum op1ishelp if homebound_cat1 == 4 [aw=w1anfinwgt0]
+mat test1[1,`c'+9]=r(sum)
+sum op1ishelp if homebound_cat1 == 1
+mat test1[2,`c']=r(sum)
+sum op1ishelp if homebound_cat1 == 2
+mat test1[2,`c'+3]=r(sum)
+sum op1ishelp if homebound_cat1 == 3 
+mat test1[2,`c'+6]=r(sum)
+sum op1ishelp if homebound_cat1 == 4 
+mat test1[2,`c'+9]=r(sum)
+
+foreach  w in 1 2 3 4 5 6 {
+foreach i in 1 2 3 4{
+
+sum op_relationship_cat`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c'] = r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab op_relationship_cat`w' homebound_cat1 if homebound_cat1 == `i' | homebound_cat1 == 1
+mat test1[`r',`c'+2] = e(p_Pear)
+
+sum total_hours_wk_i if op_relationship_cat`w' == 1 & homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r'+8,`c'] = r(mean)
+mat test1[`r'+8,`c'+1] = r(sd)
+svy: regress total_hours_wk_i i.homebound_cat1 if op_relationship_cat`w' == 1 & (homebound_cat1 == 1 | homebound_cat1 == `i')
+mat test1[`r'+8,`c'+2] = e(p)
+
+local c = `c' + 3
+}
+
+local r = `r' + 1
+local c = 1
+}
+
+local r = 19
+local c = 1
+foreach w in eat bath toil dres insd bed  {
+foreach i in 1 2 3 4{
+
+sum op_adl_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab op_adl_`w' homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `i'
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+
+local r = `r' + 1
+local c = 1
+
+}
+
+local r = 27
+local c = 1
+
+foreach w in laun shop meal bank  meds {
+foreach i in 1 2 3 4{
+
+sum op_iadl_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab op_iadl_`w' homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `i'
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+
+local r = `r' + 1
+local c = 1
+
+}
+local r = 33
+local c = 1
+
+foreach w in adl iadl{
+foreach i in 1 2 3 4{
+
+sum any_`w' if homebound_cat1 == `i' [aw=w1anfinwgt0], detail
+mat test1[`r',`c']=r(sum)
+mat test1[`r',`c'+1] = r(mean)*100
+svy: tab any_`w' homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `i'
+mat test1[`r',`c'+2] = e(p_Pear)
+local c = `c' + 3
+}
+local r = `r' + 1
+local c = 1
+}
+matlist test1
+
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Helper_Table_2_9_16(community_dwelling)", ///
+statmat(test1) rtitles ("Total Number of Helpers"\ ///
+"Helper Prevalence :"\"Spouse/Partner"\"Daughter"\"Son"\"Other Relatives"\"Paid Caregiver"\ ///
+"Other non-relatives"\""\"Mean Number of Hours of care per type of Helper:"\ ///
+"Spouse/Partner"\"Daughter"\"Son"\"Other Relatives"\"Paid Caregiver"\"Other non-relatives"\ ///
+""\"Type of Help provided (ADL):"\"Eating"\"Bathing"\"Toileting"\ ///
+"Dressing"\"Walking Inside"\"Getting out of Bed"\""\"Type of Help provided(IADL):" ///
+\"Laundry"\"Shopping"\"Meals"\"Banking"\"Medicine"\""\"Any ADL"\"Any IADL") ///
+ctitles("" "Homebound" "" "" "Semi-HB: Never by Self" "" "" "Semi-HB: Needs Help/Diffculty" "" "" "Not Homebound" ""  \ "" "Mean/N" "SD/%" "" "Mean/N" "SD/%" "P-Value" "Mean/N" "SD/%" "P-Value" "Mean/N" "SD/%" "P-value" ) ///
+store(test1) sdec(2) addtable ///
+title("Helpers, all NSOC Eligible SPs, by Homebound status")
+
+
+H="Table 3 (CG Homebound Table)"
+use "E:\nhats\data\Projects\Homebound\nsoc_121615_all_noNLTCS.dta", clear
+
+replace homebound_cat1= 3 if  spid == 10009011
+by spid, sort: gen unique=_n==1
+//log using "E:\nhats\data\Projects\Caregivers\logs\Tables1.txt", text replace
+
+tab cg_relationship_cat1, gen(cg_rel_cat)
+gen cg_age_cat_di = .
+replace cg_age_cat_di = 1 if cg_age_cat >= 11
+replace cg_age_cat_di = 0 if cg_age_cat < 11 & cg_age_cat != .
+replace cg_age_cat_di = . if cg_age_cat == .
+tab cg_age_cat_di
+tab paid_hours_cat, gen(paid_hours_cat)
+
+replace flag_no_help_mth = 0 if flag_no_help_mth == .
+replace months_to_death = 0 if died == 0 & months_to_death == .
+
+gen total_hours_week = total_hours_month / ((52/12))
+gen trb_back_sleep_di = .
+replace trb_back_sleep_di = 1 if trb_back_sleep == 1 | trb_back_sleep == 2 | trb_back_sleep == 3
+replace trb_back_sleep_di = 0 if trb_back_sleep == 4 | trb_back_sleep == 5
+
+//drop if prim_caregiver == 0
+
+local ivars cg_female cg_age_cat_di cg_spouse cg_rel_cat1 cg_rel_cat2 cg_rel_cat3 cg_rel_cat4 cg_rel_cat5 /*cg_lives_with_sp*/ cg_gt_hs cg_living_children cg_medicare cg_medicaid work_4_pay died self_health_di ever_high_bp ever_osteoperosis ever_diff_seeing ever_diff_hearing ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer ///
+ever_pain pain_lim_act_di ever_breath_prob breath_lim_act_di ever_low_enrgy enrgy_lim_act_di trb_back_sleep_di lost_10_lbs_yr felt_depressed_di felt_nervous_di felt_lit_interest_di felt_worry_di ///
+help_personal_care_di help_get_around_di help_shopping_di help_chores_di help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_mob_dev help_home_safe help_paid_helpr help_insurance help_insurance_oth help_insurance_any help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help op1dochlp ///
+gain_more_conf_di gain_deal_better_di gain_closer2sp_di gain_more_satisfied_di neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di ///
+diff_financial diff_emotional diff_physical diff_financial_lv_di diff_emotional_lv_di diff_physical_lv_di cg_phq2_depressed cg_gad2_anxiety paid_last_week paid_hours_cat1 paid_hours_cat2 paid_hours_cat3 paid_last_week lives_in_hh flag_no_help_mth    
+   
+local cvars cg_age helper_num_yrs total_hours_month total_hours_week all_helper_tot all_helper_family_tot months_to_death
+
+foreach x in `ivars'{
+replace `x' = . if `x' < 0
+}
+label define homebound_cat1 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat1 homebound_cat1
+gen hb_nr=homebound_cat1==1
+gen hb_nbs=homebound_cat1==2
+gen hb_nhhd=homebound_cat1==3
+gen hb_indep=homebound_cat1==4
+label var hb_nr "Never/Rarely leaves home"
+label var hb_nbs "Never leaves home by self"
+label var hb_nhhd "Needs  help/has diff. leaving home"
+label var hb_indep "Independent, not homebound"
+label var diff_financial_lv_di "Financially Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_emotional_lv_di "Emotionally Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_physical_lv_di "Physically Difficult Level (3-5) on 1-5 scale (5=Very Difficult))"
+label var cg_age_cat_di "Caregiver Age >=65"
+label var cg_rel_cat1 "Caregiver Rel: Spouse"
+label var cg_rel_cat2 "Caregiver Rel: Daughter"
+label var cg_rel_cat3 "Caregiver Rel: Son"
+label var cg_rel_cat4 "Caregiver Rel: Other Relatives"
+label var cg_rel_cat5 "Caregiver Rel: Other non-Relatives"
+label var cg_female "Female Yes/No"
+label var cg_spouse "Caregiver is Spouse/Adult"
+label var cg_gt_hs "Caregiver Education"
+label var cg_living_children "Any Children Missing Yes/No"
+label var cg_medicare "Medicare Yes/No"
+label var cg_medicaid "Medicaid Yes/No"
+label var work_4_pay "Work for Pay?"
+label var self_health_di "Self-Reported Health (Good/V.Good/Excellent)"
+label var ever_high_bp "Ever High Blood Pressure"
+label var ever_osteoperosis "Ever Osteoperosis"
+label var ever_diff_seeing "Ever Difficult Seeing"
+label var ever_diff_hearing "Ever Difficult Hearing"
+label var ever_heart_attack "Ever Heart Attack"
+label var ever_heart_disease "Ever Heart Disease"
+label var ever_arthritis "Ever Arthritis"
+label var ever_diabetes "Ever Diabetes"
+label var ever_lung_dis "Ever Lung Disease"
+label var ever_cancer "Ever Cancer"
+label var ever_pain "Ever Pain Last Month?"
+label var pain_lim_act_di "Pain Limit Activities (Yes/No)?"
+label var ever_breath_prob "Ever Breathing Problem?"
+label var breath_lim_act_di "Breathing Limit Activities (Yes/No)?"
+label var ever_low_enrgy "Ever Low Evergy?"
+label var enrgy_lim_act_di "Low Energy Limit Activities (Yes/No)?"
+label var trb_back_sleep_di "Trouble Going back to Sleep"
+label var lost_10_lbs_yr "Lost 10 pounds over year"
+label var felt_lit_interest_di "Felt Little Interest (Yes/No)?"
+label var felt_nervous_di "Felt Nervous/Anxious (Yes/No)?"
+label var felt_depressed_di "Felt Depressed (Yes/No)?"
+label var felt_worry_di "Felt Worried (Yes/No)?"
+label var diff_financial "Financially Difficult (Yes/No)"
+label var diff_emotional "Emotionally Difficult (Yes/No)"
+label var diff_physical "Physically Difficult (Yes/No)"
+label var help_make_appts "Help Make Appointments (Yes/No)"
+label var help_speak_doc "Help Speak to Doctors (Yes/No)"
+label var help_order_med "Help Order Medicine (Yes/No)"
+label var help_insurance "Help Add/Change Insurance (Yes/No)"
+label var help_insurance_oth "Help Other Insurance Issues (Yes/No)"
+label var help_diet "Help Diet"
+label var help_foot "Help Foot Care"
+label var help_skin "Help Skin Care"
+label var help_exercise "Help Exercises"
+label var help_teeth "Help Dental Care"
+label var help_medical_task "Help Manage Medical Tasks"
+label var help_shots_injection "Help with Shots/Injections"
+label var help_bills "Help with Bills/Manage $"
+label var help_track_meds "Help Keep Track of Meds"
+label var help_personal_care_di "Help with Personal Care (Every/Most/Some)"
+label var help_get_around_di "Help Getting Around (Every/Most/Some)"
+label var help_chores_di "Help with Housework Chores (Every/Most/Some)"
+label var help_shopping_di "Help with Shopping (Every/Most/Some)"
+label var friend_help "Friends of Family help?"
+label var gain_more_conf_di "More Confident in Abilities (Very/Somewhat)"
+label var gain_deal_better_di "Deal with Diff Situations (Very/Somewhat)"
+label var gain_closer2sp_di "Closer to SP (Very/Somewhat)"
+label var gain_more_satisfied_di "Satisfaction Recipient is Cared for (Very/Somewhat)"
+label var neg_exhausted_di "Exhausted when you go to bed (Very/Somewhat)"
+label var neg_too_much_di "More than you can handle (Very/Somewhat)"
+label var neg_no_time_di "No Time for yourself (Very/Somewhat)"
+label var neg_no_routine_di "No Routine (Very/Somewhat)"
+label var all_helper_tot "Total Helpers for SP"
+label var lives_in_hh "CG Lives in HH"
+label var paid_last_week "CG Got Paid Last Week (Yes/No)"
+label var paid_hours_cat "CG Number of Hours Worked for Pay Last Week"
+label var cg_phq2_depressed "CG PHQ-2 Depressed (Yes/No)"
+label var cg_gad2_anxiety "CG GAD-2 Anxiety (Yes/No)"
+label var flag_no_help_mth "Flag: No Help last Month, but in the last Year"
+label var informal_nsoc_comp "Number of Informal Caregivers Completed"
+label var informal_nsoc_elig "Number of NSOC Eligible"
+label var all_helper_tot "Total Number of Helpers"
+label var all_helper_family_tot "Total Number of Family  Helpers"
+label var solo_cg "Only Caregiver for SP"
+label var solo_cg_fam "CG has no other Family helper"
+label var months_to_death "Number of Months to Death"
+label var total_hours_month "Total Number of Hours worked in Month"
+label var total_hours_week "Total Number of Hours worked in Week"
+label var helper_num_yrs "Number of years helped"
+label var prim_caregiver "Primary Caregiver Status"
+label var paid_hours_cat1 "Paid Hours: <= 20"
+label var paid_hours_cat2 "Paid Hours: 21 - 39"
+label var paid_hours_cat3 "Paid Hours: >= 40"
+label var cg_age "Average Age of Caregivers (Continuous)"
+label var died "Died within 12 months"
+label var help_mob_dev "Help with Mobility Devices"
+label var help_home_safe "Help made SP Home safe"
+label var help_paid_helpr "Help find a Paid Helper"
+label var help_insurance_any "Help with any Insurance issues/adjustments"
+label var op1dochlp "Sits with SP at Doctor's appt"
+
+ svyset [pw=w1cgfinwgt0]
+ svy: regress cg_age i.homebound_cat1
+ svy: tab cg_spouse homebound_cat1 
+
+local rn : word count `cvars' `ivars' one two three four
+
+
+local r=1
+local c=1
+tab died
+
+//Evan: if you end up looking at this. I added some (working!) inefficient code for p-values.
+//Getting p-values differed based on whether or not there was weight or non-weight. I wasn't
+//sure how to account for that. So I had it so I changed the code around (like I normally
+//would have done anyway). If you know of something better let me know!
+
+foreach weight in  "[aw=w1cgfinwgt0]" {
+	forvalues i=1/4 {
+		mat test`i'=J(`rn',3,.)	
+		foreach x in `cvars' {
+			sum `x'`weight' if homebound_cat1 ==`i'
+			mat test`i'[`r',`c']=r(mean)
+			mat test`i'[`r',`c'+1]=r(sd)
+			svy: regress `x' homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `i'
+			mat test`i'[`r',`c'+2]=e(p) 
+			local r=`r'+1
+}
+		foreach x in `ivars' {
+			sum `x'`weight' if homebound_cat1 ==`i'
+			mat test`i'[`r',`c']=r(sum)
+			mat test`i'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' homebound_cat1 if homebound_cat1 == 1 | homebound_cat1 == `i'
+			mat test`i'[`r',`c'+2]=e(p_Pear)
+			local r=`r'+1	
+}
+	 	sum c1relatnshp`weight' if homebound_cat1==`i'
+		mat test`i'[`r',`c']=r(N)
+		mat test`i'[`r'+1,`c']=r(sum_w)
+		preserve 
+		keep if unique==1
+		sum c1relatnshp`weight' if homebound_cat1==`i'
+		mat test`i'[`r'+2,`c']=r(N)
+		mat test`i'[`r'+3,`c']=r(sum_w)
+		restore
+		mat rownames test`i'=`cvars' `ivars' "Sample N" "Sample N Weighted" "Sample Unique SP" "Sample Unique SP Weighted"
+		mat colnames test`i'="Mean/N `:label homebound_cat1 `i''" "SD/%" "P"
+		local r=1
+		frmttable, statmat(test`i') title("Sample Characteristics by 1 year Death Weighted (Full NSOC Sample)") varlabels store(tab`i') ///
+		note("all p values diff btwn Never/Rarely and other Category")
+}
+}
+
+frmttable using "E:\nhats\data\Projects\Homebound\logs\CG_Homebound_Table_NSOC_2_26", replay(tab1) merge(tab2) replace
+frmttable using "E:\nhats\data\Projects\Homebound\logs\CG_Homebound_Table_NSOC_2_26", replay(tab3) merge(tab4) addtable
+
+/*
+frmttable using "E:\nhats\data\Projects\Homebound\logs\CG_Homebound_Table_NSOC_2_11", statmat(test`i') ctitles("" "Mean/N Homebound" "SD/%" "" "Mean/N Semi (Never by Self)" "SD/%" "P-value" "Mean/N Semi: Needs Help/Diffculty" "SD/%" "P-Value" "Mean/N Not Homebound" "SD/%" "P-value") ///
+store(tab`i') sdec(2) replace varlabels  title("Sample Characteristics by 1 year Death Weighted (Full NSOC Sample)")
+
+
+// if you do weights. Change the test type in the loop, change "replace" to "addtable", change the title from Unweighted to Weighted, change the loop to put in [aw=w1cgfinwgt0] in the quotes.
+

@@ -1,0 +1,3912 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="NHATS Serious Illness"
+/*HRS variables are processed in file HRS_Processing.txt
+1998-2012 Core interviews
+2002-2012 Exit interviews
+Restricted data received in March 2015
+
+Note elixhauser comorbidities diagnosis lists are modified for the 
+purposes of this project, do not copy and paste this Elixhauser code 
+for use in other projects!!
+
+******************************************************************
+
+/*nhats cleaned path*/
+libname nhats 'E:\nhats\data\NHATS cleaned';
+
+/*medicare xwalk and claims path*/
+libname medi 'E:\nhats\data\cms_DUA_28016\merged';
+
+/*project data paths*/
+libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
+libname proj_fin 'E:\nhats\data\projects\serious_ill\final_data';
+libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
+
+
+H="get index date"
+/*Import NHATS Cleaned Dataset for Rounds 1-4*/
+proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_4.dta" out=proj_int.nhats replace; run;
+
+
+data index1;
+set proj_int.nhats (keep=spid ivw_date ivw_month ivw_year);
+index_date=ivw_date;
+index_month=ivw_month;
+index_year=ivw_year;
+run;
+
+proc import out=xwalka
+	    datafile = "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta" replace;
+run;
+
+data xwalkb;
+set medi.nhats2bene_xwalk_11;
+run;
+
+proc sql;
+create table xwalk as select * from
+xwalka a inner join 
+xwalkb b
+on a.nhats_cms_num=b.nhats_cms_num;
+quit;
+ 
+proc sql;
+create table index as select a.spid, a.ivw_date as index_date, a.ivw_month as index_month, a.ivw_year as index_year, b.bene_id
+from index1 a left join
+xwalk b 
+on a.spid=b.spid;
+quit;
+
+proc sort data=index out=proj_int.index nodupkey;
+by spid bene_id index_year;
+run;
+
+H="get continuous ffs before index date"
+/*determine Spouse ffs medicare before R's death using the 
+claims denominator files
+
+Several sets of variables created, looking back 6m, 12m, 18m, 24m from R's death
+
+Also pulls in spouse date of death where available in the claims s_claims_dod*/
+
+/*sort claims denominator file*/
+
+proc sort data=medi.mbsf_06_12 out=mbsf  nodupkey;
+by bene_id year;
+run;
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/*get mbsf just for interview year*/
+
+proc sql; 
+create table mbsf_index_year as select
+a.*,b.buyin12,b.year,b.hmoind12
+from index1 a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) 
+and a.index_year=b.year;
+quit;
+
+
+proc sql;
+select count(distinct bene_id) from mbsf_index_year;
+quit;
+
+
+
+data mbsf_index_year2;
+set mbsf_index_year;
+if length(trim(left(buyin12)))=12 and index_month>0 then do;
+buyin_iy=substr(trim(left(buyin12)),1,index_month);
+hmo_iy=substr(trim(left(HMOIND12)),1,index_month);
+end;
+else do;
+buyin_iy=trim(left(buyin12));
+hmo_iy=trim(left(HMOIND12));
+end;
+format index_date date9.;
+run;
+proc means n;
+var index_month;
+run;
+
+proc sql;
+create table mbsf_index_year_bef as select
+a.bene_id,a.year as index_year,
+b.year as index_year_bef,
+b.year, b.buyin12,b.HMOIND12
+from mbsf_index_year a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and 0<a.year-b.year<=1 order by bene_id,year;
+quit;
+
+
+/* and the year before... 1922 have the -2 year dn file*/
+proc sql;
+create table mbsf_index_year_2bef as select
+a.bene_id,a.bene_id,a.index_year,a.index_year_bef,
+b.year as index_year_2bef,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year_bef a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and 0<a.index_year_bef-b.year<=1 order by bene_id,year;
+quit;
+
+/*merge the insurance data for death year, -1 and -2 years into single dataset*/
+proc sql;
+create table all_insurance as select a.*,b.buyin12 as buyin_bef,b.HMOIND12 as hmo_bef from
+mbsf_index_year2 a
+left join
+mbsf_index_year_bef b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table all_insurance2 as select a.*,b.buyin12 as buyin_2bef,b.HMOIND12 as hmo_2bef from
+all_insurance a
+left join
+mbsf_index_year_2bef b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year; 
+quit;
+
+
+/*merge death year and year before death buy-in and hmo variables
+Trim so the final variable _6m is 6 months pre-death
+Note: indicator variables for parts a and b and hmo are null if don't
+have information for full 6 months pre-death*/
+data all_insurance3;
+set all_insurance2;
+buyin_2y=trimn(left(buyin_2bef))||trimn(left(buyin_bef))||trimn(left(buyin_iy));
+hmo_2y=trimn(left(hmo_2bef))||trimn(left(hmo_bef))||trimn(left(hmo_iy));
+
+buyin_2y_r=reverse(trim(buyin_2y));
+hmo_2y_r=reverse(trim(hmo_2y));
+
+
+/*create length of continous a&b and non-hmo coverage vars*/
+if indexc(buyin_2y_r,"0","1","2","A","B")=0 then part_ab_n_mos=length(buyin_2y_r)-1;
+if indexc(buyin_2y_r,"0","1","2","A","B") then part_ab_n_mos=indexc(buyin_2y_r,"0","1","2","A","B")-1;
+if indexc(hmo_2y_r,"1","2","4","A","B","C")=0 then non_hmo_d_n_mos=length(hmo_2y_r)-1;
+if indexc(hmo_2y_r,"1","2","4","A","B","C") then non_hmo_d_n_mos=indexc(hmo_2y_r,"1","2","4","A","B","C")-1;
+if part_ab_n_mos<=non_hmo_d_n_mos then cont_ffs_n_mos=part_ab_n_mos;
+if non_hmo_d_n_mos<part_ab_n_mos then cont_ffs_n_mos=non_hmo_d_n_mos;
+run;
+
+
+data proj_int.ffs_before;
+set all_insurance3;
+run;
+
+
+H="get continuous ffs after index date"
+/*determine Spouse ffs medicare before R's death using the 
+claims denominator files
+
+Several sets of variables created, looking back 6m, 12m, 18m, 24m from R's death
+
+Also pulls in spouse date of death where available in the claims s_claims_dod*/
+
+/*sort claims denominator file*/
+
+proc sort data=medi.mbsf_06_12 out=mbsf  nodupkey;
+by bene_id year;
+run;
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/*get mbsf just for interview year*/
+
+proc sql; 
+create table mbsf_index_year as select
+a.*,b.buyin12,b.year,b.hmoind12
+from index1 a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) 
+and a.index_year=b.year;
+quit;
+
+
+proc sql;
+select count(distinct bene_id) from mbsf_index_year;
+quit;
+
+
+
+data mbsf_index_year2;
+set mbsf_index_year;
+if length(trim(left(buyin12)))=12 and index_month>0 then do;
+buyin_iy=substr(trim(left(buyin12)),index_month,13-index_month);
+hmo_dy=substr(trim(left(HMOIND12)),index_month,13-index_month);
+buyin_at_death=substr(trim(left(buyin12)),index_month,1);
+hmo_at_death=substr(trim(left(HMOIND12)),index_month,1);
+end;
+else do;
+buyin_iy=trim(left(buyin12));
+hmo_iy=trim(left(HMOIND12));
+end;
+format index_date date9.;
+run;
+proc means n;
+var index_month;
+run;
+
+
+proc sql;
+create table mbsf_index_year_aft as select
+a.bene_id,a.bene_id,a.year as index_year,
+b.year as index_year_aft,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and a.year-b.year=-1 order by bene_id,year;
+quit;
+
+
+/* and the year aftore... 1790 have the +2 year dn file*/
+proc sql;
+create table mbsf_index_year_2aft as select
+a.bene_id,a.bene_id,a.index_year,a.index_year_aft,
+b.year as index_year_2aft,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year_aft a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and a.index_year_aft-b.year=-1 order by bene_id,year;
+quit;
+
+/*merge the insurance data for death year, +1 and +2 years into single dataset*/
+proc sql;
+create table all_insurance as select a.*,b.buyin12 as buyin_aft,b.HMOIND12 as hmo_aft from
+mbsf_index_year2 a
+left join
+mbsf_index_year_aft b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table all_insurance2 as select a.*,b.buyin12 as buyin_2aft,b.HMOIND12 as hmo_2aft from
+all_insurance a
+left join
+mbsf_index_year_2aft b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+/*merge death year and year aftore death buy-in and hmo variables
+Trim so the final variable _p6m is 6 months post-death
+Note: indicator variables for parts a and b and hmo are null if don't
+have information for full 6 months post-death*/
+data all_insurance3;
+set all_insurance2;
+buyin_2y=trimn(left(buyin_iy))||trimn(left(buyin_aft))||trimn(left(buyin_2aft));
+hmo_2y=trimn(left(hmo_dy))||trimn(left(hmo_aft))||trimn(left(hmo_2aft));
+
+/*create length of continous a&b and non-hmo coverage vars*/
+if indexc(buyin_2y,"0","1","2","A","B")=0 then part_ab_p_mos=length(buyin_2y);
+if indexc(buyin_2y,"0","1","2","A","B") then part_ab_p_mos=indexc(buyin_2y,"0","1","2","A","B");
+if indexc(hmo_2y,"1","2","4","A","B","C")=0 then non_hmo_d_p_mos=length(hmo_2y);
+if indexc(hmo_2y,"1","2","4","A","B","C") then non_hmo_d_p_mos=indexc(hmo_2y,"1","2","4","A","B","C");
+if indexc(buyin_at_death,"0","1","2","A","B")=1 then part_ab_at_death=0;
+if indexc(buyin_at_death,"0","1","2","A","B")=0 then part_ab_at_death=1;
+if indexc(hmo_at_death,"1","2","4","A","B","C")=1 then hmo_d_at_death=1;
+if indexc(hmo_at_death,"1","2","4","A","B","C")=0 then hmo_d_at_death=0;
+
+if part_ab_p_mos<=non_hmo_d_p_mos then cont_ffs_p_mos=part_ab_p_mos;
+if non_hmo_d_p_mos<part_ab_p_mos then cont_ffs_p_mos=non_hmo_d_p_mos;
+run;
+
+data proj_int.ffs_after;
+set all_insurance3;
+run;
+
+H="get claims before index date"
+/*Get claims 1 year and 2 year before each interview*/
+/*Step 2: pull claims lists using xwalk and ivw date*/
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/****************************************************************************/
+/* Macro to pull claims lists, saves lists to int_data folder               */
+/****************************************************************************/
+%macro claims_pre(days_start=,days_bef_index=,yrs=,source=);
+
+proc sql;
+create table &source._meet_&days_bef_index. as select a.index_date,a.index_year,b.*
+from proj_int.index a inner join
+medi.&source._&yrs. b 
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and &days_start<=a.index_date-b.disch_date<=&days_bef_index;
+quit;
+
+%mend;
+
+/*run to get claims list 6 mo pre-ivw for ip*/
+%claims_pre(days_start=0,days_bef_index=183,yrs=06_12,source=ip);
+
+/*1yr*/
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=ip);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=snf);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=op);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=pb);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=hh);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=hs);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=dm);
+
+/*2yrs*/
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=ip);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=snf);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=op);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=pb);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=hh);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=hs);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=dm);
+
+%macro ip_drop(days_bef_index=);
+data proj_int.ip_meet_&days_bef_index.;
+set ip_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 icarecnt crnrydaycnt erdaycnt clm_ip_admsn_type_cd
+  PRCDR_DT1-PRCDR_DT25 hcpcscd1-hcpcscd49);
+run;
+%mend ip_drop;
+
+%macro snf_drop(days_bef_index=);
+data proj_int.snf_meet_&days_bef_index.;
+set snf_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
+ PRCDR_DT1-PRCDR_DT25 );
+run;
+%mend snf_drop;
+
+
+/*hh*/
+%macro hh_drop(days_bef_index=);
+data proj_int.hh_meet_&days_bef_index.;
+set hh_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+run;
+%mend hh_drop;
+
+/*hs*/
+%macro hs_drop(days_bef_index=);
+data proj_int.hs_meet_&days_bef_index.;
+set hs_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+run;
+%mend hs_drop;
+
+/*dme*/
+%macro dm_drop(days_bef_index=);
+data proj_int.dm_meet_&days_bef_index.;
+set dm_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date 
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 h_o2);
+run;
+%mend dm_drop;
+
+/*op*/
+%macro op_drop(days_bef_index=);
+data proj_int.op_meet_&days_bef_index.;
+set op_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt);
+run;
+%mend op_drop;
+
+/*carrier*/
+%macro pb_drop(days_bef_index=);
+data proj_int.pb_meet_&days_bef_index.;
+set pb_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+run;
+%mend pb_drop;
+
+%ip_drop(days_bef_index=183);
+%ip_drop(days_bef_index=365);
+%ip_drop(days_bef_index=730);
+%snf_drop(days_bef_index=365);
+%snf_drop(days_bef_index=730);
+%hh_drop(days_bef_index=365);
+%hh_drop(days_bef_index=730);
+%hs_drop(days_bef_index=365);
+%hs_drop(days_bef_index=730);
+%dm_drop(days_bef_index=365);
+%dm_drop(days_bef_index=730);
+%op_drop(days_bef_index=365);
+%op_drop(days_bef_index=730);
+%pb_drop(days_bef_index=365);
+%pb_drop(days_bef_index=730);
+
+
+
+/****************************************************************************/
+/****************************************************************************/
+/* Macro to pull dx from claims lists, saves dx lists to int_data folder    */
+/****************************************************************************/
+
+%macro dx_time_range(range1=, range2=, days_bef_core=);
+
+/*Process carrier medicare claims to pull out dx codes
+Multiple lines per each BID*/
+data pb_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.pb_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+/*check for and remove duplicates, note this doesn't remove blanks*/
+proc sort data=pb_last_&range2._dx out=pb_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*Process outpatient medicare claims to pull out dx codes
+Dataset being created: op_last_&range2._dx2*/
+data op_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.op_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25  );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=op_last_&range2._dx out=op_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+proc contents data=proj_int.ip_meet_365; run;
+
+
+/*Dataset being created: ip_last_&range2._dx2*/
+data ip_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.ip_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 hcpcscd1-hcpcscd49);
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=ip_last_&range2._dx out=ip_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Dataset being created: snf_last_&range2._dx2*/
+data snf_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.snf_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=snf_last_&range2._dx out=snf_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process dme medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data dm_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.dm_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=dm_last_&range2._dx out=dm_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hh medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hh_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.hh_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hh_last_&range2._dx out=hh_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hs medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hs_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.hs_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hs_last_&range2._dx out=hs_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*set diag variable length = 7 chars since that's the max length from the mc claims
+Need to do this because length varies across the different mc claim types*/
+data hs_last_&range2._dx3;
+length diag $7;
+set hs_last_&range2._dx2;
+run;
+data hh_last_&range2._dx3;
+length diag $7;
+set hh_last_&range2._dx2;
+run;
+data ip_last_&range2._dx3;
+length diag $7;
+set ip_last_&range2._dx2;
+run;
+data snf_last_&range2._dx3;
+length diag $7;
+set snf_last_&range2._dx2;
+run;
+data dm_last_&range2._dx3;
+length diag $7;
+set dm_last_&range2._dx2;
+run;
+data op_last_&range2._dx3;
+length diag $7;
+set op_last_&range2._dx2;
+run;
+data pb_last_&range2._dx3;
+length diag $7;
+set pb_last_&range2._dx2;
+run;
+
+
+/*merge diagnoses from each claim type into single dataset*/
+data dx_all_last_1&range2.;
+set hs_last_&range2._dx3
+hh_last_&range2._dx3
+ip_last_&range2._dx3
+snf_last_&range2._dx3
+dm_last_&range2._dx3
+op_last_&range2._dx3
+pb_last_&range2._dx3;
+run;
+
+proc sql;
+create table dx_all_last_&range2. as select * from
+proj_int.index a 
+left join 
+dx_all_last_1&range2. b
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit; 
+
+proc sort data=dx_all_last_&range2.(where=(diag~="")) out=proj_int.dx_&range1._&range2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+%mend;
+
+/*1 and 2 years pre-interview: proj_int.dx_0_1yr, proj_int.dx_0_2yr */
+%dx_time_range(range1=0, range2=1yr, days_bef_core=365);
+%dx_time_range(range1=0, range2=2yr, days_bef_core=730);
+
+
+
+data dx_all_last_1yr_w_dups;
+set hs_last_1yr_dx
+hh_last_1yr_dx
+ip_last_1yr_dx
+snf_last_1yr_dx
+dm_last_1yr_dx
+op_last_1yr_dx
+pb_last_1yr_dx;
+if diag~='.';
+run;
+
+proc sort data=dx_all_last_1yr_w_dups;
+by bene_id index_year diag;
+run;
+
+/*****************************************/
+/*check dementia diagnosis frequencies, need to pull this into main dataset
+dx list is from Elixhauser code*/
+data proj_int.dem_dx_freq;
+set dx_all_last_1yr_w_dups;
+	dementia=0;
+	if (substr(diag,1,4) in ('3310','3311','3312','2900','2901',
+             '2902','2903','2912','2948','2949') or
+		substr(diag,1,5) in ('29410','29411','29040','29041','29042','29043')) 
+		and dementia=0 
+          then dementia=1;
+run;
+
+
+
+H="get claims after index date"
+/*Get claims 1 year and 2 year before each interview*/
+/*Step 2: pull claims lists using xwalk and ivw date*/
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/****************************************************************************/
+/* Macro to pull claims lists, saves lists to int_data folder               */
+/****************************************************************************/
+%macro claims_post(days_start=,days_aft_index=,yrs=,source=);
+
+proc sql;
+create table &source._meet_&days_aft_index.p as select a.*,b.index_date,b.index_year
+from medi.&source._&yrs. a inner join
+proj_int.index b 
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and &days_start<=a.admit_date-b.index_date<=&days_aft_index;
+quit;
+
+%mend;
+
+/*run to get claims list 6 mo pre-ivw for ip*/
+%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=ip);
+
+/*1yr*/
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=ip);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=snf);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=op);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=pb);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=hh);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=hs);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_12,source=dm);
+
+/*2yrs*/
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=ip);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=snf);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=op);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=pb);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=hh);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=hs);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_12,source=dm);
+
+%macro ip_drop(days_aft_index=);
+data proj_int.ip_meet_&days_aft_index.p;
+set ip_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 crnrydaycnt icarecnt erdaycnt clm_ip_admsn_type_cd
+  PRCDR_DT1-PRCDR_DT25);
+run;
+%mend ip_drop;
+
+%macro snf_drop(days_aft_index=);
+data proj_int.snf_meet_&days_aft_index.p;
+set snf_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
+ PRCDR_DT1-PRCDR_DT25 );
+run;
+%mend snf_drop;
+
+
+/*hh*/
+%macro hh_drop(days_aft_index=);
+data proj_int.hh_meet_&days_aft_index.p;
+set hh_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+run;
+%mend hh_drop;
+
+/*hs*/
+%macro hs_drop(days_aft_index=);
+data proj_int.hs_meet_&days_aft_index.p;
+set hs_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+run;
+%mend hs_drop;
+
+/*dme*/
+%macro dm_drop(days_aft_index=);
+data proj_int.dm_meet_&days_aft_index.p;
+set dm_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date BETOS_CD
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+run;
+%mend dm_drop;
+
+/*op*/
+%macro op_drop(days_aft_index=);
+data proj_int.op_meet_&days_aft_index.p;
+set op_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+run;
+%mend op_drop;
+
+/*carrier*/
+%macro pb_drop(days_aft_index=);
+data proj_int.pb_meet_&days_aft_index.p;
+set pb_meet_&days_aft_index.p(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+run;
+%mend pb_drop;
+
+%ip_drop(days_aft_index=183);
+%ip_drop(days_aft_index=365);
+%ip_drop(days_aft_index=730);
+%snf_drop(days_aft_index=365);
+%snf_drop(days_aft_index=730);
+%hh_drop(days_aft_index=365);
+%hh_drop(days_aft_index=730);
+%hs_drop(days_aft_index=365);
+%hs_drop(days_aft_index=730);
+%dm_drop(days_aft_index=365);
+%dm_drop(days_aft_index=730);
+%op_drop(days_aft_index=365);
+%op_drop(days_aft_index=730);
+%pb_drop(days_aft_index=365);
+%pb_drop(days_aft_index=730);
+
+
+H="Elixhauser comorbidities"
+/*Note elixhauser comorbidities diagnosis lists are modified for the 
+purposes of this project, do not copy and paste this Elixhauser code 
+for use in other projects!!
+*/
+
+/****************************************************************************/
+/* Rename variables macro                                                   */
+/****************************************************************************/
+
+%macro rename(lib,dsn,pre);
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "Before Renaming All Variables";
+run;
+proc sql noprint;
+select nvar into :num_vars
+from dictionary.tables
+where libname="&LIB" and
+memname="&DSN";
+select distinct(name) into :var1-
+:var%TRIM(%LEFT(&num_vars))
+from dictionary.columns
+where libname="&LIB" and
+memname="&DSN";
+quit;
+run;
+proc datasets library=&LIB;
+modify &DSN;
+rename
+%do i=1 %to &num_vars;
+&&var&i=&&var&i.._&pre 
+%end;
+;
+quit;
+run;
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "After Renaming All Variables";
+run;
+%mend rename;
+
+
+
+
+/****************************************************************************/
+/* Elixhauser comorbidities macro                                           */
+/****************************************************************************/
+/*Note elixhauser comorbidities diagnosis lists are modified for the 
+purposes of this project, do not copy and paste this Elixhauser code 
+for use in other projects!!*/
+
+%macro elixhauser(range1=, range2=);
+
+data dx_31_comor;
+set proj_int.dx_&range1._&range2(rename=(diag=dx_0));
+dx=trim(left(dx_0));
+
+if dx~="" then do;
+
+comorbi_1=0;
+comorbi_2=0;
+comorbi_3=0;
+comorbi_4=0;
+comorbi_5=0;
+comorbi_6=0;
+comorbi_7=0;
+comorbi_8=0;
+comorbi_9=0;
+comorbi_10=0;
+comorbi_11=0;
+comorbi_12=0;
+comorbi_13=0;
+comorbi_14=0;
+comorbi_15=0;
+comorbi_16=0;
+comorbi_17=0;
+comorbi_18=0;
+comorbi_19=0;
+comorbi_20=0;
+comorbi_21=0;
+comorbi_22=0;
+comorbi_23=0;
+comorbi_24=0;
+comorbi_25=0;
+comorbi_26=0;
+comorbi_27=0;
+comorbi_28=0;
+comorbi_29=0;
+comorbi_30=0;
+*end of intialize of 30 binary variables;
+*add dementia and CAD and ALS;
+dementia=0;
+cad=0;
+als=0;
+renal_dis=0;
+
+*do over dx;
+	*Congestive Heart Failure;
+	if (substr(dx,1,5)='39891' or
+		substr(dx,1,5)='40211' or
+		substr(dx,1,5)='40291' or
+		substr(dx,1,5)='40411' or
+		substr(dx,1,5)='40413' or
+		substr(dx,1,5)='40491' or
+		substr(dx,1,5)='40493' or
+		substr(dx,1,3)='428') 
+		and comorbi_1=0 
+		then comorbi_1=1;*add one binary variables here.;
+	*Cariac Arrhythmias;
+	if (substr(dx,1,5)='42610' or
+		substr(dx,1,5)='42611' or
+		substr(dx,1,5)='42613' or
+		substr(dx,1,4)='4262' or
+		substr(dx,1,4)='4263' or
+		substr(dx,1,4)='4264' or
+		substr(dx,1,5)='42650' or
+		substr(dx,1,5)='42651' or
+		substr(dx,1,5)='42652' or
+		substr(dx,1,5)='42653' or
+		substr(dx,1,4)='4266' or
+		substr(dx,1,4)='4267' or
+		substr(dx,1,4)='4268' or
+		substr(dx,1,4)='4270' or
+		substr(dx,1,4)='4272' or
+		substr(dx,1,5)='42731' or
+		substr(dx,1,5)='42760' or
+		substr(dx,1,4)='4279' or
+		substr(dx,1,4)='7850' or
+		substr(dx,1,4)='V450' or
+		substr(dx,1,4)='V533')
+			and comorbi_2=0 
+		then comorbi_2=1;
+	* Valvular Disease ;
+	if (substr(dx,1,5)='09320' or
+		substr(dx,1,5)='09321' or
+		substr(dx,1,5)='09322' or
+		substr(dx,1,5)='09323' or
+		substr(dx,1,5)='09324' or
+		substr(dx,1,3)='394' or
+		substr(dx,1,3)='395' or
+		substr(dx,1,3)='396' or
+		substr(dx,1,4)='3970' or
+		substr(dx,1,4)='3971' or
+		substr(dx,1,4)='4240' or
+		substr(dx,1,4)='4241' or
+		substr(dx,1,4)='4242' or
+		substr(dx,1,4)='4243' or
+		substr(dx,1,4)='4244' or
+		substr(dx,1,4)='4245' or
+		substr(dx,1,4)='4246' or
+		substr(dx,1,4)='4247' or
+		substr(dx,1,4)='4248' or
+		substr(dx,1,5)='42490' or
+		substr(dx,1,5)='42491' or
+		substr(dx,1,4)='7463' or
+		substr(dx,1,4)='7464' or
+		substr(dx,1,4)='7465' or
+		substr(dx,1,4)='7466' or
+		substr(dx,1,4)='V422' or
+		substr(dx,1,5)='V433')
+			and comorbi_3=0 
+		then comorbi_3=1;
+	*Pulmonary Circulation Disorders;
+	if (substr(dx,1,3)='416' or
+		substr(dx,1,4)='4179')
+			and comorbi_4=0 
+		then comorbi_4=1;
+	*Peripheral Vascular Disorders;
+	if (substr(dx,1,3)='440' or
+		substr(dx,1,4)='4412' or
+		substr(dx,1,4)='4414' or
+		substr(dx,1,4)='4417' or
+		substr(dx,1,4)='4419' or
+		substr(dx,1,4)='4431' or
+		substr(dx,1,4)='4432' or
+		substr(dx,1,4)='4438' or
+		substr(dx,1,4)='4439' or
+		substr(dx,1,4)='4471' or
+		substr(dx,1,4)='5571' or
+		substr(dx,1,4)='5579' or
+		substr(dx,1,4)='V434')
+			and comorbi_5=0 
+		then comorbi_5=1;
+	*Hypertension;
+	if ((substr(dx,1,4)='4011' or
+		substr(dx,1,4)='4019')) or
+	   ((substr(dx,1,5)='40210' or
+		substr(dx,1,5)='40290' or
+		substr(dx,1,5)='40410' or
+		substr(dx,1,5)='40490' or
+		substr(dx,1,5)='40511' or
+		substr(dx,1,5)='40519' or
+		substr(dx,1,5)='40591' or
+		substr(dx,1,5)='40599')) 
+			and comorbi_6=0 
+		then comorbi_6=1;
+	*Paralysis;	
+	if (substr(dx,1,4)='3420' or
+		substr(dx,1,5)='34210' or
+		substr(dx,1,5)='34211' or
+		substr(dx,1,5)='34212' or
+		substr(dx,1,4)='3429' or
+		substr(dx,1,3)='343' or
+		substr(dx,1,3)='344')
+			and comorbi_7=0 
+		then comorbi_7=1;
+	*Other Neurological Disorders;
+	if (substr(dx,1,4)='3319' or
+		substr(dx,1,4)='3320' or
+		substr(dx,1,4)='3334' or
+		substr(dx,1,4)='3335' or
+		substr(dx,1,3)='334' or
+		substr(dx,1,3)='335' or
+		substr(dx,1,3)='340' or
+		substr(dx,1,4)='3411' or
+		substr(dx,1,4)='3418' or
+		substr(dx,1,4)='3419' or
+		substr(dx,1,5)='34500' or
+		substr(dx,1,5)='34501' or
+		substr(dx,1,5)='34510' or
+		substr(dx,1,5)='34511' or
+		substr(dx,1,4)='3454' or
+		substr(dx,1,5)='34550' or
+		substr(dx,1,5)='34551' or
+		substr(dx,1,4)='3458' or
+		substr(dx,1,5)='34590' or
+		substr(dx,1,5)='34591' or
+		substr(dx,1,4)='3481' or
+		substr(dx,1,4)='3483' or
+		substr(dx,1,4)='7803' or
+		substr(dx,1,4)='7843') 
+			and comorbi_8=0 
+		then comorbi_8=1;	
+	*Chronic Pulmonary Disease;
+	if (substr(dx,1,3)='490' or
+		substr(dx,1,3)='491' or
+		substr(dx,1,3)='492' or
+		substr(dx,1,4)='4930' or
+		substr(dx,1,4)='4931' or
+		substr(dx,1,4)='4932' or
+		substr(dx,1,4)='4938' or
+		substr(dx,1,5)='49390' or
+		substr(dx,1,5)='49391' or
+		substr(dx,1,3)='494' or
+		substr(dx,1,3)='495' or
+		substr(dx,1,3)='496' or
+		substr(dx,1,3)='497' or
+		substr(dx,1,3)='498' or
+		substr(dx,1,3)='499' or
+		substr(dx,1,3)='500' or
+		substr(dx,1,3)='501' or
+		substr(dx,1,3)='502' or
+		substr(dx,1,3)='503' or
+		substr(dx,1,3)='504' or
+		substr(dx,1,3)='505' or
+		substr(dx,1,4)='5064') 
+			and comorbi_9=0 
+		then comorbi_9=1;	
+	*Diabetes, uncomplicated;
+	if (substr(dx,1,4)='2500' or
+		substr(dx,1,4)='2501' or
+		substr(dx,1,4)='2502' or
+		substr(dx,1,4)='2503') 
+			and comorbi_10=0 
+		then comorbi_10=1;
+	*Diabetes, complicated;
+	if (substr(dx,1,4)='2504' or
+		substr(dx,1,4)='2505' or
+		substr(dx,1,4)='2506' or
+		substr(dx,1,4)='2507' or
+		substr(dx,1,4)='2509') 
+			and comorbi_11=0 
+		then comorbi_11=1;
+	*Hypothyroidism;
+	if (substr(dx,1,3)='243' or
+		substr(dx,1,4)='2440' or
+		substr(dx,1,4)='2441' or
+		substr(dx,1,4)='2442' or
+		substr(dx,1,4)='2448' or
+		substr(dx,1,4)='2449') 	
+			and comorbi_12=0 
+		then comorbi_12=1;
+	*Renal Failure;
+	*Original list modified to drop 2 codes  585 and V568;
+	if (substr(dx,1,5)='40311' or
+		substr(dx,1,5)='40391' or
+		substr(dx,1,5)='40412' or
+		substr(dx,1,5)='40492' or
+		substr(dx,1,3)='586' or
+		substr(dx,1,4)='V420' or
+		substr(dx,1,4)='V451' or
+		substr(dx,1,4)='V560') 
+			and comorbi_13=0 
+		then comorbi_13=1;
+	*Advanced Liver Disease or Cirrhosis;
+	*Code list modified from orig Elix;
+	*572.4 hepatorenal syndrome must be added; 
+	*Remove '07032' or – chronic hep B, '07033' or – chronic hep B, '07054' or – chronic hep C, '5713' or – alcoholic liver damage, '5714' or – chronic hepatitis;
+	if (substr(dx,1,4)='4560' or
+		substr(dx,1,4)='4561' or
+		substr(dx,1,5)='45620' or
+		substr(dx,1,5)='45621' or
+		substr(dx,1,4)='5710' or
+		substr(dx,1,4)='5712' or
+		substr(dx,1,4)='5715' or
+		substr(dx,1,4)='5716' or
+		substr(dx,1,4)='5718' or
+		substr(dx,1,4)='5719' or
+		substr(dx,1,4)='5723' or
+		substr(dx,1,4)='5724' or
+		substr(dx,1,4)='5728' or
+		substr(dx,1,4)='V427') 
+			and comorbi_14=0 
+		then comorbi_14=1;
+	*Peptic Ulcer Disease excluding bleeding;
+	if (substr(dx,1,5)='53170' or
+		substr(dx,1,5)='53190' or
+		substr(dx,1,5)='53270' or
+		substr(dx,1,5)='53290' or
+		substr(dx,1,5)='53370' or
+		substr(dx,1,5)='53390' or
+		substr(dx,1,5)='53470' or
+		substr(dx,1,5)='53490' or
+		substr(dx,1,5)='V1271') 
+			and comorbi_15=0 
+		then comorbi_15=1;
+	*AIDS;
+	if (substr(dx,1,3)='042' or
+		substr(dx,1,3)='043' or
+		substr(dx,1,3)='044') 
+			and comorbi_16=0 
+		then comorbi_16=1;
+	*Lymphoma;
+	if (substr(dx,1,3)='200' or
+		substr(dx,1,4)='201' or
+		substr(dx,1,4)='2020' or
+		substr(dx,1,4)='2021' or
+		substr(dx,1,4)='2022' or
+		substr(dx,1,4)='2023' or
+		substr(dx,1,4)='2025' or
+		substr(dx,1,4)='2026' or
+		substr(dx,1,4)='2027' or
+		substr(dx,1,4)='2028' or
+		substr(dx,1,4)='2029' or
+		substr(dx,1,4)='2030' or
+		substr(dx,1,4)='2038' or
+		substr(dx,1,4)='2386' or
+		substr(dx,1,4)='2733' or
+		substr(dx,1,5)='V1071' or
+		substr(dx,1,5)='V1072' or
+		substr(dx,1,5)='V1079')
+			and comorbi_17=0 
+		then comorbi_17=1;
+	*Metastatic Cancer or Hematologic Cancer;
+	*Modified to add lukemias;
+	if (substr(dx,1,3)='196' or
+		substr(dx,1,3)='197' or
+		substr(dx,1,3)='198' or
+		substr(dx,1,3)='199' or
+		substr(dx,1,3)='204' or
+		substr(dx,1,3)='205' or
+		substr(dx,1,3)='206' or
+		substr(dx,1,3)='207' or
+		substr(dx,1,3)='208') 
+			and comorbi_18=0 
+		then comorbi_18=1;	
+	*Solid Tumor without Metastisis;
+	if (substr(dx,1,2)='14' or
+		substr(dx,1,2)='15' or
+		substr(dx,1,2)='16' or
+		substr(dx,1,3)='170' or
+		substr(dx,1,3)='171' or
+		substr(dx,1,3)='172' or
+		substr(dx,1,3)='174' or
+		substr(dx,1,3)='175' or
+		substr(dx,1,3)='179' or
+		substr(dx,1,2)='18' or
+		substr(dx,1,3)='190' or
+		substr(dx,1,3)='191' or
+		substr(dx,1,3)='192' or
+		substr(dx,1,3)='193' or
+		substr(dx,1,3)='194' or
+		substr(dx,1,3)='195' or
+		substr(dx,1,3)='V10')
+			and comorbi_19=0 
+		then comorbi_19=1;
+	*Rheumatoid Arthritis/Collagen Vascular Diseases;
+	if (substr(dx,1,4)='7010' or
+		substr(dx,1,3)='710' or
+		substr(dx,1,3)='714' or
+		substr(dx,1,3)='720' or
+		substr(dx,1,3)='725') 
+			and comorbi_20=0 
+		then comorbi_20=1;
+	*Coagulopathy;
+	if (substr(dx,1,3)='286' or
+		substr(dx,1,4)='2871' or
+		substr(dx,1,4)='2873' or
+		substr(dx,1,4)='2874' or
+		substr(dx,1,4)='2875') 
+			and comorbi_21=0 
+		then comorbi_21=1;
+	*Obesity;
+	if (substr(dx,1,4)='2780')  
+			and comorbi_22=0 
+		then comorbi_22=1;
+	*Weight Loss;
+	if (substr(dx,1,3)='260' or
+		substr(dx,1,3)='261' or
+		substr(dx,1,3)='262' or
+		substr(dx,1,3)='263') 
+			and comorbi_23=0 
+		then comorbi_23=1;	
+	*Fluid and Electrolyte Disorders;
+	if (substr(dx,1,3)='276') 
+			and comorbi_24=0 
+		then comorbi_24=1;
+	*Blood Loss Anemia;
+	if (substr(dx,1,4)='2800') 
+			and comorbi_25=0 
+		then comorbi_25=1;
+	*Deficiency Anemias;
+	if (substr(dx,1,4)='2801' or
+		substr(dx,1,4)='2808' or
+		substr(dx,1,4)='2809' or
+		substr(dx,1,4)='2859') 
+			and comorbi_26=0 
+		then comorbi_26=1;
+	*Alcohol Abuse;
+	if (substr(dx,1,4)='2911' or
+		substr(dx,1,4)='2912' or
+		substr(dx,1,4)='2915' or
+		substr(dx,1,4)='2918' or
+		substr(dx,1,4)='2919' or
+		substr(dx,1,4)='3039' or
+		substr(dx,1,4)='3050' or
+		substr(dx,1,4)='V113') 
+			and comorbi_27=0 
+		then comorbi_27=1;
+	*Drug Abuse;
+	if (substr(dx,1,4)='2920' or
+		substr(dx,1,5)='29282' or
+		substr(dx,1,5)='29283' or
+		substr(dx,1,5)='29284' or
+		substr(dx,1,5)='29289' or
+		substr(dx,1,4)='2929' or
+		substr(dx,1,3)='304' or
+		substr(dx,1,4)='3052' or
+		substr(dx,1,4)='3053' or
+		substr(dx,1,4)='3054' or
+		substr(dx,1,4)='3055' or
+		substr(dx,1,4)='3056' or
+		substr(dx,1,4)='3057' or
+		substr(dx,1,4)='3058' or
+		substr(dx,1,4)='3059')
+			and comorbi_28=0 
+		then comorbi_28=1;	
+	*Psychoses;
+	if (substr(dx,1,3)='295' or
+		substr(dx,1,3)='296' or
+		substr(dx,1,3)='297' or
+		substr(dx,1,3)='298' or
+		substr(dx,1,4)='2991') 
+			and comorbi_29=0 
+		then comorbi_29=1;
+	*Depression;
+	if (substr(dx,1,4)='3004' or
+		substr(dx,1,5)='30112' or
+		substr(dx,1,4)='3090' or
+		substr(dx,1,4)='3091' or
+		substr(dx,1,3)='311')
+			and comorbi_30=0 
+		then comorbi_30=1;
+
+	*Dementia;
+	if (substr(dx,1,4) in ('3310','3311','3312','2900','2901',
+             '2902','2903','2912','2948','2949') or
+		substr(dx,1,5) in ('29410','29411','29040','29041','29042','29043')) 
+		and dementia=0 
+          then dementia=1;
+
+	*CAD coronary artery disease;
+	if (substr(dx,1,4) in ('4140','4142','4143','4148','4149') or 
+		substr(dx,1,3) in ('410','411','412','413') or
+		substr(dx,1,5) in ('V4581','V4582'))
+		and cad=0 
+          then cad=1;
+
+	*ALS Amyotrophic lateral sclerosis;
+	if (substr(dx,1,5)='33520') and als=0 
+		then als=1;
+
+*Renal Disease, new variable;
+	*To identify diabetese with complications;
+	if (substr(dx,1,5)='40311' or
+		substr(dx,1,5)='40391' or
+		substr(dx,1,5)='40412' or
+		substr(dx,1,5)='40492' or
+		substr(dx,1,3)='585' or
+		substr(dx,1,3)='586' or
+		substr(dx,1,4)='V420' or
+		substr(dx,1,4)='V451' or
+		substr(dx,1,4)='V560' or
+		substr(dx,1,4)='V568') 
+			and renal_dis=0 
+		then renal_dis=1;
+
+end;
+
+run;
+
+/*get count of each comorbidity for each id-core year combination*/
+proc sql;
+create table com_test1 as
+select distinct bene_id,index_year,
+sum(comorbi_1) as com_1,
+sum(comorbi_2) as com_2,
+sum(comorbi_3) as com_3,
+sum(comorbi_4) as com_4,
+sum(comorbi_5) as com_5,
+sum(comorbi_6) as com_6,
+sum(comorbi_7) as com_7,
+sum(comorbi_8) as com_8,
+sum(comorbi_9) as com_9,
+sum(comorbi_10) as com_10,
+sum(comorbi_11) as com_11,
+sum(comorbi_12) as com_12,
+sum(comorbi_13) as com_13,
+sum(comorbi_14) as com_14,
+sum(comorbi_15) as com_15,
+sum(comorbi_16) as com_16,
+sum(comorbi_17) as com_17,
+sum(comorbi_18) as com_18,
+sum(comorbi_19) as com_19,
+sum(comorbi_20) as com_20,
+sum(comorbi_21) as com_21,
+sum(comorbi_22) as com_22,
+sum(comorbi_23) as com_23,
+sum(comorbi_24) as com_24,
+sum(comorbi_25) as com_25,
+sum(comorbi_26) as com_26,
+sum(comorbi_27) as com_27,
+sum(comorbi_28) as com_28,
+sum(comorbi_29) as com_29,
+sum(comorbi_30) as com_30,
+sum(dementia) as dementia,
+sum(cad) as cad,
+sum(als) as als,
+sum(renal_dis) as renal_dis
+from dx_31_comor
+group by bene_id,index_year;
+quit;
+
+/*convert counts of diagnoses for each comorbidity to indicator variables*/ 
+data comorbidity_1(keep=bene_id index_year comorb_1-comorb_34 comorb_all);
+set com_test1;
+array list_com com_1-com_30 dementia cad als renal_dis;
+array list_com_bin comorb_1-comorb_34 ;
+
+do over list_com;
+  list_com_bin=0;
+
+  if list_com>0 then do;
+    list_com_bin=1;
+   end;
+
+end;
+/*note this comorb_all count does not include CAD or ALS or Renal disease*/
+comorb_all=comorb_1+comorb_2+comorb_3+comorb_4+comorb_5+comorb_6+comorb_7+comorb_8+comorb_9+comorb_10
++comorb_11+comorb_12+comorb_13+comorb_14+comorb_15+comorb_16+comorb_17+comorb_18+comorb_19+comorb_20
++comorb_21+comorb_22+comorb_23+comorb_24+comorb_25+comorb_26+comorb_27+comorb_28+comorb_29+comorb_30
++comorb_31;
+
+run;
+
+/*merge in to list of core ivw dates for those with ffs mc, age=65+ */
+proc sort data=comorbidity_1 nodupkey;
+by bene_id index_year;
+run;
+
+data proj_int.elix_&range1._&range2;
+set comorbidity_1 ;
+
+label comorb_1 ="Congestive Heart Failure";
+label comorb_2 ="Cardiac Arrhythmias";
+label comorb_3 ="Valvular Disease";
+label comorb_4 ="Pulmonary Circulation Disorders";
+label comorb_5 ="Peripheral Vascular Disorders";
+label comorb_6 ="Hypertension";
+label comorb_7 ="Paralysis";
+label comorb_8 ="Other Neurological Disorders";
+label comorb_9 ="Chronic Pulmonary Disease";
+label comorb_10 ="Diabetes, uncomplicated";
+label comorb_11 ="Diabetes, complicated";
+label comorb_12 ="Hypothyroidism";
+label comorb_13 ="Renal Failure";
+label comorb_14 ="Advanced Liver Disease or Cirrhosis";
+label comorb_15 ="Peptic Ulcer Disease excluding bleeding";
+label comorb_16 ="AIDS";
+label comorb_17 ="Lymphoma";
+label comorb_18 ="Metastatic or Hematologic Cancer";
+label comorb_19 ="Solid Tumor without Metastisis";
+label comorb_20 ="Rheumatoid Arthritis/Collagen Vascular Diseases";
+label comorb_21 ="Coagulopathy";
+label comorb_22 ="Obesity";
+label comorb_23 ="Weight Loss";
+label comorb_24 ="Fluid and Electrolyte Disorders";
+label comorb_25 ="Blood Loss Anemia";
+label comorb_26 ="Deficiency Anemias";
+label comorb_27 ="Alcohol Abuse";
+label comorb_28 ="Drug Abuse";
+label comorb_29 ="Psychoses";
+label comorb_30 ="Depression";
+label comorb_31 ="Dementia";
+label comorb_32 ="CAD";
+label comorb_33 ="ALS";
+label comorb_34 ="Renal Disease";
+label comorb_all ="Count of Elix comorbidities";
+run;
+
+data test;
+set proj_int.elix_&range1._&range2;
+run;
+
+%rename(WORK,TEST,&range1._&range2);
+
+data proj_int.elix_&range1._&range2._2(rename =(bene_id_&range1._&range2=bene_id
+index_year_&range1._&range2=index_year));
+set test;
+keep bene_id_&range1._&range2 comorb: index_year:;
+run;
+proc sort data=proj_int.elix_&range1._&range2._2;
+by bene_id index_year;
+run;
+
+%mend;
+
+/*Run for 1 year, 2 year datasets, resulting datasets are proj_int.elix_0_1yr_2, proj_int.elix_0_2yr_2*/
+%elixhauser(range1=0, range2=1yr);
+%elixhauser(range1=0, range2=2yr);
+
+proc freq data=proj_int.elix_0_1yr_2;
+table comorb:;
+run;
+
+proc freq data=proj_int.elix_0_2yr_2;
+table comorb:;
+run;
+
+
+
+
+/*this is merged into the main dataset when the elixhauser indicator variables 
+in the next section*/
+proc sql;
+create table dem_dx_freq_2 as select distinct bene_id,index_year,
+sum(dementia) as dem_dx_1yr label="count dementia dx 1yr pre core ivw"
+ from proj_int.dem_dx_freq group by bene_id,index_year;
+quit;
+
+/* merge in the 1 year count of dementia diagnoses from the previous section*/
+proc sql;
+create table elix_1yr_dm_dx_count as select a.*,b.dem_dx_1yr from
+proj_int.elix_0_1yr_2 a left join
+dem_dx_freq_2 b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+/*overwrite the previously saved dataset with one with the additional dementia variable added*/
+data proj_int.elix_0_1yr_2;
+set elix_1yr_dm_dx_count;
+if comorb_31_0_1yr=0 then dem_dx_1yr=0;
+run;
+
+proc freq data=proj_int.elix_0_1yr_2;
+table comorb:;
+run;
+
+
+
+H="Charlson comorbidities"
+/*Add indicator variables for the Charlson comorbidities
+and Charlson weighted and unweighted index */
+
+/*Charlson code
+
+This program reads through the diagnosis codes of patient abstract records in a hospital
+    file and identifies whether the record belongs to one (or more) of 17 different Charlson
+    Comorbidity Index (CCI) groups.  The groups are identified by using the Enhanced ICD-9-CM
+    diagnosis codes listed in Quan et al., "Coding Algorithms for Defining Comorbidities
+    in ICD-9-CM and ICD-10 Administrative Data", Medical Care:43(11), Nov. 2005 p1130-1139.*/
+
+/*final datasets to be merged are proj_int.charls_0_1yr and proj_int.charls_0_2yr*/
+
+/****************************************************************************/
+/* Rename variables macro                                                   */
+/****************************************************************************/
+
+%macro rename(lib,dsn,pre);
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "Before Renaming All Variables";
+run;
+proc sql noprint;
+select nvar into :num_vars
+from dictionary.tables
+where libname="&LIB" and
+memname="&DSN";
+select distinct(name) into :var1-
+:var%TRIM(%LEFT(&num_vars))
+from dictionary.columns
+where libname="&LIB" and
+memname="&DSN";
+quit;
+run;
+proc datasets library=&LIB;
+modify &DSN;
+rename
+%do i=1 %to &num_vars;
+&&var&i=&&var&i.._&pre 
+%end;
+;
+quit;
+run;
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "After Renaming All Variables";
+run;
+%mend rename;
+
+
+%macro charlson(range1=,range2=);
+
+data dx_charlson;
+set proj_int.dx_&range1._&range2.(rename=(diag=dx_0));
+dx=trim(left(dx_0));
+
+if dx~="" then do;
+
+*initialize variables;
+   charlson_1=0;
+   charlson_2=0;
+   charlson_3=0;
+   charlson_4=0;
+   charlson_5=0;
+   charlson_6=0;
+      charlson_7=0;
+	     charlson_8=0;
+		    charlson_9=0;
+			   charlson_10=0;
+			      charlson_11=0;
+				     charlson_12=0;
+					    charlson_13=0;
+						   charlson_14=0;
+						      charlson_15=0;
+							     charlson_16=0;
+								    charlson_17=0;
+
+*do over dx;
+   *Myocardial Infarction;
+   if(substr(dx,1,3)='410' or
+               substr(dx,1,3)='412')
+               and charlson_1=0
+               then charlson_1=1;
+   *Congestive heart failure;
+   if(substr(dx,1,5)='39891' or
+               substr(dx,1,5)='40201' or
+               substr(dx,1,5)='40211' or
+               substr(dx,1,5)='40291' or
+               substr(dx,1,5)='40401' or
+               substr(dx,1,5)='40403' or
+               substr(dx,1,5)='40411' or
+               substr(dx,1,5)='40413' or
+               substr(dx,1,5)='40491' or
+               substr(dx,1,5)='40493' or
+               substr(dx,1,4)='4254' or
+               substr(dx,1,4)='4255' or
+               substr(dx,1,4)='4256' or
+               substr(dx,1,4)='4257' or
+               substr(dx,1,4)='4258' or
+               substr(dx,1,4)='4259' or
+               substr(dx,1,3)='428')
+               and charlson_2=0
+               then charlson_2=1;
+   *Periphral Vascular Disease;
+    if(substr(dx,1,4)='0930' or
+               substr(dx,1,4)='4373' or
+               substr(dx,1,3)='440' or
+               substr(dx,1,3)='441' or
+               substr(dx,1,4)='4431' or
+               substr(dx,1,4)='4432' or
+               substr(dx,1,4)='4438' or
+               substr(dx,1,4)='4439' or
+               substr(dx,1,4)='4471' or
+               substr(dx,1,4)='5571' or
+               substr(dx,1,4)='5579' or
+               substr(dx,1,4)='V434')
+               and charlson_3=0
+               then charlson_3=1;
+    *Cerebrovascular Disease ;
+        if(substr(dx,1,5)='36234' or
+               substr(dx,1,3)='430' or
+               substr(dx,1,3)='431' or
+               substr(dx,1,3)='432' or
+               substr(dx,1,3)='433' or
+               substr(dx,1,3)='434' or
+               substr(dx,1,3)='435' or
+               substr(dx,1,3)='436' or
+               substr(dx,1,3)='437' or
+               substr(dx,1,3)='438')
+               and charlson_4=0
+               then charlson_4=1;
+    *Dementia ;
+       if(substr(dx,1,3)='290' or
+               substr(dx,1,4)='2941' or
+               substr(dx,1,4)='3312')
+               and charlson_5=0
+               then charlson_5=1;
+   *Chronic Pulmonary Disease ;
+        if(substr(dx,1,5)='4168' or
+               substr(dx,1,4)='4169' or
+               substr(dx,1,3)='490' or
+               substr(dx,1,3)='491' or
+               substr(dx,1,3)='492' or
+               substr(dx,1,3)='493' or
+               substr(dx,1,3)='494' or
+               substr(dx,1,3)='495' or
+               substr(dx,1,3)='496' or
+               substr(dx,1,3)='500' or
+               substr(dx,1,3)='501' or
+               substr(dx,1,3)='502' or
+               substr(dx,1,3)='503' or
+               substr(dx,1,3)='504' or
+               substr(dx,1,3)='505' or
+               substr(dx,1,4)='5064' or
+               substr(dx,1,4)='5081' or
+               substr(dx,1,4)='5088')
+               and charlson_6=0
+               then charlson_6=1;
+*Connective Tissue Disease-Rheumatic Disease;
+         if(substr(dx,1,4)='4465' or
+               substr(dx,1,4)='7100' or
+               substr(dx,1,4)='7101' or
+               substr(dx,1,4)='7102' or
+               substr(dx,1,4)='7103' or
+               substr(dx,1,4)='7104' or
+               substr(dx,1,4)='7140' or
+               substr(dx,1,4)='7141' or
+               substr(dx,1,4)='7142' or
+               substr(dx,1,4)='7148' or
+               substr(dx,1,3)='725')
+               and charlson_7=0
+               then charlson_7=1;
+ *Peptic Ulcer Disease;
+         if(substr(dx,1,3)='531' or
+               substr(dx,1,3)='532' or
+               substr(dx,1,3)='533' or
+               substr(dx,1,3)='534')
+               and charlson_8=0
+               then charlson_8=1;
+*Mild Liver Disease ;
+         if(substr(dx,1,5)='07022' or
+               substr(dx,1,5)='07023' or
+               substr(dx,1,5)='07032' or
+               substr(dx,1,5)='07033' or
+               substr(dx,1,5)='07044' or
+               substr(dx,1,5)='07054' or
+               substr(dx,1,4)='0706' or
+               substr(dx,1,4)='0709' or
+               substr(dx,1,3)='570' or
+               substr(dx,1,3)='571' or
+               substr(dx,1,4)='5733' or
+               substr(dx,1,4)='5734' or
+               substr(dx,1,4)='5738' or
+               substr(dx,1,4)='5739' or
+               substr(dx,1,4)='V427')
+               and charlson_9=0
+               then charlson_9=1;
+*Diabetes without complications ;
+         if(substr(dx,1,4)='2500' or
+               substr(dx,1,4)='2501' or
+               substr(dx,1,4)='2502' or
+               substr(dx,1,4)='2503' or
+               substr(dx,1,4)='2508' or
+               substr(dx,1,4)='2509')
+               and charlson_10=0
+               then charlson_10=1;
+*Diabetes, complicated;
+	if (substr(dx,1,4)='2504' or
+		substr(dx,1,4)='2505' or
+		substr(dx,1,4)='2506' or
+		substr(dx,1,4)='2507')
+		and charlson_11=0
+                then charlson_11=1;
+*Paraplegia and Hemiplegia ;
+	if (substr(dx,1,4)='3341' or
+		substr(dx,1,3)='342' or
+		substr(dx,1,3)='343' or
+		substr(dx,1,4)='3440' or
+		substr(dx,1,4)='3441' or
+		substr(dx,1,4)='3442' or
+		substr(dx,1,4)='3443' or
+                substr(dx,1,4)='3444' or
+		substr(dx,1,4)='3445' or
+		substr(dx,1,4)='3446' or
+		substr(dx,1,4)='3449')
+		and charlson_12=0
+                then charlson_12=1;
+* Renal Disease ;
+	if (substr(dx,1,5)='40301' or
+		substr(dx,1,5)='40311' or
+		substr(dx,1,5)='40391' or
+		substr(dx,1,5)='40402' or
+		substr(dx,1,5)='40403' or
+		substr(dx,1,5)='40412' or
+		substr(dx,1,5)='40413' or
+                substr(dx,1,5)='40492' or
+		substr(dx,1,5)='40493' or
+		substr(dx,1,3)='582' or
+		substr(dx,1,4)='5830' or
+                substr(dx,1,4)='5831' or
+                substr(dx,1,4)='5832' or
+                substr(dx,1,4)='5834' or
+                substr(dx,1,4)='5836' or
+                substr(dx,1,4)='5837' or
+                substr(dx,1,3)='585' or
+                substr(dx,1,3)='586' or
+                substr(dx,1,4)='5880' or
+                substr(dx,1,4)='V420' or
+                substr(dx,1,4)='V451' or
+                substr(dx,1,3)='V56' )
+		and charlson_13=0
+                then charlson_13=1;
+*Cancer ;
+	if (substr(dx,1,2)='14' or
+		substr(dx,1,2)='15' or
+		substr(dx,1,2)='16' or
+		substr(dx,1,3)='170' or
+		substr(dx,1,3)='171' or
+		substr(dx,1,3)='172' or
+		substr(dx,1,3)='174' or
+		substr(dx,1,3)='175' or
+		substr(dx,1,3)='176' or
+		substr(dx,1,3)='179' or
+		substr(dx,1,2)='18' or
+		substr(dx,1,3)='190' or
+		substr(dx,1,3)='191' or
+		substr(dx,1,3)='192' or
+		substr(dx,1,3)='193' or
+		substr(dx,1,3)='194' or
+		substr(dx,1,3)='195' or
+                substr(dx,1,3)='200' or
+                substr(dx,1,3)='201' or
+                substr(dx,1,3)='202' or
+                substr(dx,1,3)='203' or
+                substr(dx,1,3)='204' or
+                substr(dx,1,3)='205' or
+                substr(dx,1,3)='206' or
+                substr(dx,1,3)='207' or
+                substr(dx,1,3)='208' or
+                substr(dx,1,3)='2386' )
+		and charlson_14=0
+                then charlson_14=1;
+* Moderate or Severe Liver Disease ;
+	if (substr(dx,1,4)='4560' or
+		substr(dx,1,4)='4561' or
+		substr(dx,1,4)='4562' or
+		substr(dx,1,4)='5722' or
+		substr(dx,1,4)='5723' or
+		substr(dx,1,4)='5724' or
+      		substr(dx,1,4)='5728' )
+		and charlson_15=0
+                then charlson_15=1;
+  * Metastatic Carcinoma ;
+	if (substr(dx,1,3)='196' or
+		substr(dx,1,3)='197' or
+		substr(dx,1,3)='198' or
+		substr(dx,1,3)='199' )
+		and charlson_16=0
+                then charlson_16=1;
+  * AIDS/HIV ;
+	if (substr(dx,1,3)='042' or
+		substr(dx,1,3)='043' or
+		substr(dx,1,3)='044' )
+		and charlson_17=0
+                then charlson_17=1;
+
+end;
+
+run;
+
+/*get count of each comorbidity for each id-core year combination*/
+proc sql;
+create table cha_test1 as
+select distinct bene_id,index_year,
+sum(charlson_1) as cha_1,
+sum(charlson_2) as cha_2,
+sum(charlson_3) as cha_3,
+sum(charlson_4) as cha_4,
+sum(charlson_5) as cha_5,
+sum(charlson_6) as cha_6,
+sum(charlson_7) as cha_7,
+sum(charlson_8) as cha_8,
+sum(charlson_9) as cha_9,
+sum(charlson_10) as cha_10,
+sum(charlson_11) as cha_11,
+sum(charlson_12) as cha_12,
+sum(charlson_13) as cha_13,
+sum(charlson_14) as cha_14,
+sum(charlson_15) as cha_15,
+sum(charlson_16) as cha_16,
+sum(charlson_17) as cha_17
+from dx_charlson
+group by bene_id,index_year;
+quit;
+
+/*convert counts of diagnoses for each comorbidity to indicator variables*/ 
+data charlson_1(keep=bene_id index_year charls_1-charls_17 charls_index charls_index_wt);
+set cha_test1;
+array list_cha cha_1-cha_17;
+array list_cha_bin charls_1-charls_17 ;
+
+do over list_cha;
+  list_cha_bin=0;
+
+  if list_cha>0 then do;
+    list_cha_bin=1;
+   end;
+
+end;
+/*note this charls_index count count is not weighted for morbidity*/
+charls_index=charls_1+charls_2+charls_3+charls_4+charls_5+charls_6+charls_7+charls_8+charls_9+charls_10
++charls_11+charls_12+charls_13+charls_14+charls_15+charls_16+charls_17;
+/*now morbidity weighted*/
+charls_index_wt=charls_1+charls_2+charls_3+charls_4+charls_5+charls_6+charls_7+charls_8+charls_9+charls_10
++2*charls_11+2*charls_12+2*charls_13+2*charls_14+3*charls_15+6*charls_16+6*charls_17;
+
+label charls_1 ="Myocardial infarction, Charlson";
+label charls_2 ="Congestive Heart Failure, Charlson";
+label charls_3 ="Peripheral Vascular Disease, Charlson";
+label charls_4 ="Cerebrovascular disease, Charlson";
+label charls_5 ="Dementia, Charlson";
+label charls_6 ="Chronic Pulmonary Disease, Charlson";
+label charls_7 ="Rheumatic disease, Charlson";
+label charls_8 ="Peptic ulcer disease, Charlson";
+label charls_9 ="Mild liver disease, Charlson";
+label charls_10 ="Diabetes, uncomplicated, Charlson";
+label charls_11 ="Diabetes, complicated, Charlson";
+label charls_12 ="Hemiplegia or paraplegia, Charlson";
+label charls_13 ="Renal disease, Charlson";
+label charls_14 ="Any malignancy except neoplasm of skin, Charlson";
+label charls_15 ="Mod or severe liver disease, Charlson";
+label charls_16 ="Metastatic solid tumor, Charlson";
+label charls_17 ="AIDS/HIV, Charlson";
+label charls_index ="Charlson score index, not weighted";
+label charls_index_wt ="Charlson score index, weighted";
+
+run;
+
+/*merge into list of obs with ffs mc 6m prior to ivw*/
+proc sort data=charlson_1 out=test nodupkey;
+by bene_id index_year;
+run;
+
+
+
+%rename(WORK,TEST,&range1._&range2);
+
+data proj_int.charls_&range1._&range2.(rename =(bene_id_&range1._&range2=bene_id
+index_year_&range1._&range2=index_year));
+set test;
+keep bene_id_&range1._&range2 charls: index_year:;
+run;
+proc sort data=proj_int.charls_&range1._&range2.;
+by bene_id index_year;
+run;
+
+%mend;
+
+%charlson(range1=0, range2=1yr);
+%charlson(range1=0, range2=2yr);
+
+proc freq data=proj_int.charls_0_1yr;
+table charls:;
+run;
+
+proc freq data=proj_int.charls_0_2yr;
+table charls:;
+run;
+
+
+
+H="DW chronic conditions"
+/*CMS Data Warehouse Chronic Conditions*/
+/*final datasets to merge are proj_int.chronic_21_1yr3_0 & proj_int.chronic_21_2yr3_0*/
+/****************************************************************************/
+/*First get the dx list into dot format using Stata*/
+/****************************************************************************/
+
+/*export to Stata*/
+proc export data=proj_int.dx_0_1yr
+outfile="E:\nhats\data\projects\serious_ill\int_data\dx_0_1yr.dta" replace;
+run;
+
+proc export data=proj_int.dx_0_2yr
+outfile="E:\nhats\data\projects\serious_ill\int_data\dx_0_2yr.dta" replace;
+run;
+
+/****************************************************************************/
+/****************************************************************************/
+/*SWITCH TO STATA HERE*/
+/****************************************************************************/
+/****************************************************************************/
+
+capture log close
+clear
+set more off
+local datapath E:\nhats\data\projects\serious_ill\int_data
+
+use `datapath'\dx_0_1yr.dta,clear
+
+// convert diagnosis codes to string variables, tostring diag,gen(icd9_c)
+gen new=ltrim(diag)
+icd9 check new,gen(icd9_c)
+replace new="" if icd9_c>0 
+// convert into dot format (ex 12.1 instead of 121)
+icd9 clean new,dots 
+
+replace diag=new
+drop icd9_c new
+
+save `datapath'\dx_0_1yr_2.dta,replace
+outsheet using `datapath'\dx_0_1yr_2.csv, comma replace
+
+
+clear all
+
+use `datapath'\dx_0_2yr.dta,clear
+
+// convert diagnosis codes to string variables, tostring diag,gen(icd9_c)
+gen new=ltrim(diag)
+icd9 check new,gen(icd9_c)
+replace new="" if icd9_c>0 
+// convert into dot format (ex 12.1 instead of 121)
+icd9 clean new,dots 
+
+replace diag=new
+drop icd9_c new
+
+save `datapath'\dx_0_2yr_2.dta,replace
+outsheet using `datapath'\dx_0_2yr_2.csv, comma replace
+
+/****************************************************************************/
+/****************************************************************************/
+/*SWITCH TO SAS HERE*/
+/****************************************************************************/
+/****************************************************************************/
+
+proc import 
+datafile="E:\nhats\data\projects\serious_ill\int_data\dx_0_1yr_2.csv" 
+out=dx_0_1yr_2 replace;
+run;
+
+proc import 
+datafile="E:\nhats\data\projects\serious_ill\int_data\dx_0_2yr_2.csv" 
+out=dx_0_2yr_2 replace;
+run;
+
+/*bring in excel list of dx codes associated with each chronic condition*/
+proc import 
+datafile='E:\nhats\data\projects\serious_ill\ref_data\chronic_21_condition_icd9.xls'
+out=icd9_21_chronic dbms=xls replace;
+run;
+
+proc contents data=icd9_21_chronic;
+run;
+
+/*creates macro variables of each of the chronic conditions listing of dx codes*/
+proc sql;
+select icd_9 into :chronic_desc1-:chronic_desc21 from icd9_21_chronic;
+quit;
+%put &chronic_desc10;
+%put &chronic_desc5;
+
+/*******************************************************************/
+/*Macro to generate chronic conditions indicators using dx codes   */
+/*******************************************************************/
+
+%macro cc(precore=);
+
+data list_&precore._dx;
+set dx_0_&precore._2;
+array list CC_1_AMI
+CC_2_ALZH
+CC_3_ALZHDMTA
+CC_4_ATRIALFB
+CC_5_CATARACT
+CC_6_CHRNKIDN
+CC_7_COPD
+CC_8_CHF
+CC_9_DIABETES
+CC_10_GLAUCOMA
+CC_11_HIPFRAC
+CC_12_ISCHMCHT
+CC_13_DEPRESSN
+CC_14_OSTEOPRS
+CC_15_RA_OA
+CC_16_STRKETIA
+CC_17_CNCRBRST
+CC_18_CNCRCLRC
+CC_19_CNCRPRST
+CC_20_CNCRLUNG
+CC_21_CNCREndM;
+do over list ;
+list=0;
+end;
+
+diag_string=diag;
+
+/* for dx codes that begin with numbers, process chronic cond variables*/
+if anydigit(substr(trim(left(diag_string)),1,1))=1 then do;
+diag=diag_string+0;
+
+if diag in (&chronic_desc1) then CC_1_AMI=1;
+if diag in (&chronic_desc2)  then CC_2_ALZH=1;
+if diag in (&chronic_desc3)  then CC_3_ALZHDMTA=1;
+if diag in (&chronic_desc4) then CC_4_ATRIALFB=1;
+if diag in (&chronic_desc5) then CC_5_CATARACT=1;
+if diag in (&chronic_desc6) then CC_6_CHRNKIDN=1;
+if diag in (&chronic_desc7) then CC_7_COPD=1;
+if diag in (&chronic_desc8) then CC_8_CHF=1;
+if diag in (&chronic_desc9) then CC_9_DIABETES=1;
+if diag in (&chronic_desc10) then CC_10_GLAUCOMA=1;
+if diag in (&chronic_desc11) then CC_11_HIPFRAC=1;
+if diag in (&chronic_desc12) then CC_12_ISCHMCHT=1;
+if diag in (&chronic_desc13) then CC_13_DEPRESSN=1;
+if diag in (&chronic_desc14) then CC_14_OSTEOPRS=1;
+if diag in (&chronic_desc15) then CC_15_RA_OA=1;
+if diag in (&chronic_desc16) then CC_16_STRKETIA=1;
+if diag in (&chronic_desc17) then CC_17_CNCRBRST=1;
+if diag in (&chronic_desc18) then CC_18_CNCRCLRC=1;
+if diag in (&chronic_desc19) then CC_19_CNCRPRST=1;
+if diag in (&chronic_desc20) then CC_20_CNCRLUNG=1;
+if diag in (&chronic_desc21) then CC_21_CNCREndM=1;
+end;
+
+/*Process with dx codes that start with letters
+Only two of them in the list*/
+if anydigit(substr(trim(left(diag_string)),1,1))=0 then do;
+if trim(left(diag_string)) in ("V431") then CC_5_CATARACT=1;
+if trim(left(diag_string)) in ("V801") then CC_10_GLAUCOMA=1;
+end;
+
+run;
+
+
+proc sql;
+create table bid_dx_0_&precore. as
+select distinct bene_id,index_year,
+sum(CC_1_AMI) as CC_1_AMI,
+sum(CC_2_ALZH) as CC_2_ALZH,
+sum(CC_3_ALZHDMTA) as CC_3_ALZHDMTA,
+sum(CC_4_ATRIALFB) as CC_4_ATRIALFB,
+sum(CC_5_CATARACT) as CC_5_CATARACT,
+sum(CC_6_CHRNKIDN) as CC_6_CHRNKIDN,
+sum(CC_7_COPD) as CC_7_COPD,
+sum(CC_8_CHF) as CC_8_CHF,
+sum(CC_9_DIABETES) as CC_9_DIABETES,
+sum(CC_10_GLAUCOMA) as CC_10_GLAUCOMA,
+sum(CC_11_HIPFRAC) as CC_11_HIPFRAC,
+sum(CC_12_ISCHMCHT) as CC_12_ISCHMCHT,
+sum(CC_13_DEPRESSN) as CC_13_DEPRESSN,
+sum(CC_14_OSTEOPRS) as CC_14_OSTEOPRS,
+sum(CC_15_RA_OA) as CC_15_RA_OA,
+sum(CC_16_STRKETIA) as CC_16_STRKETIA,
+sum(CC_17_CNCRBRST) as CC_17_CNCRBRST,
+sum(CC_18_CNCRCLRC) as CC_18_CNCRCLRC,
+sum(CC_19_CNCRPRST) as CC_19_CNCRPRST,
+sum(CC_20_CNCRLUNG) as CC_20_CNCRLUNG,
+sum(CC_21_CNCREndM) as CC_21_CNCREndM
+
+from list_&precore._dx group by bene_id,index_year;
+quit;
+
+proc sort data=bid_dx_0_&precore. nodupkey;
+by bene_id index_year;
+run;
+
+/*convert to chronic condition vars. to binary variables*/
+ data bid_dx_0_&precore.3;
+ set bid_dx_0_&precore.;
+ array list CC_1_AMI
+CC_2_ALZH
+CC_3_ALZHDMTA
+CC_4_ATRIALFB
+CC_5_CATARACT
+CC_6_CHRNKIDN
+CC_7_COPD
+CC_8_CHF
+CC_9_DIABETES
+CC_10_GLAUCOMA
+CC_11_HIPFRAC
+CC_12_ISCHMCHT
+CC_13_DEPRESSN
+CC_14_OSTEOPRS
+CC_15_RA_OA
+CC_16_STRKETIA
+CC_17_CNCRBRST
+CC_18_CNCRCLRC
+CC_19_CNCRPRST
+CC_20_CNCRLUNG
+CC_21_CNCREndM
+;
+do over list ;
+if list>0 then list=1;
+if list<=0 then list=0;
+end;
+
+/*create aggregated indicators*/
+CC_AMI_isch=CC_1_AMI|CC_12_ISCHMCHT;
+CC_alzheim=CC_2_ALZH|CC_3_ALZHDMTA;
+CC_cncr_chronic=CC_17_CNCRBRST | CC_18_CNCRCLRC | CC_19_CNCRPRST | CC_20_CNCRLUNG | 
+	CC_21_CNCREndM ;
+run;
+
+proc means;
+var CC_1_AMI
+CC_2_ALZH
+CC_3_ALZHDMTA
+CC_4_ATRIALFB
+CC_5_CATARACT
+CC_6_CHRNKIDN
+CC_7_COPD
+CC_8_CHF
+CC_9_DIABETES
+CC_10_GLAUCOMA
+CC_11_HIPFRAC
+CC_12_ISCHMCHT
+CC_13_DEPRESSN
+CC_14_OSTEOPRS
+CC_15_RA_OA
+CC_16_STRKETIA
+CC_17_CNCRBRST
+CC_18_CNCRCLRC
+CC_19_CNCRPRST
+CC_20_CNCRLUNG
+CC_21_CNCREndM;
+run;
+
+/*run rename macro*/
+data test;
+set bid_dx_0_&precore.3;
+run;
+
+%rename(WORK,TEST,&precore.);
+
+data proj_int.chronic_21_&precore.3_0;
+set test;
+bene_id=bene_id_&precore.;
+index_year=index_year_&precore.;
+drop bene_id_&precore. index_year_&precore.;
+run;
+
+%mend;
+
+/*2 datasets are proj_int.chronic_21_1yr_0 and proj_int.chronic_21_2yr_0*/
+%cc(precore=1yr);
+%cc(precore=2yr);
+
+proc freq data=proj_int.chronic_21_1yr3_0;
+table cc_:;
+run;
+
+proc freq data=proj_int.chronic_21_2yr3_0;
+table cc_:;
+run;
+
+proc contents data=proj_int.chronic_21_1yr3_0;
+run;
+
+
+H="get add'l utilization info from claims"
+/*These additional variables are just added to the dataset with the
+elixhauser and cc's 1 year preceeding the interview, can add them
+later when required to get the 2 year look-back dataset*/
+
+/****************************************************************************/
+/*Get indicator of any hospital admission 6 and 12 months pre-core interview*/
+/****************************************************************************/
+
+%macro admissions(days=,suffix=);
+
+/*pull list of ip claims from all medpar claims x days pre-interview*/
+data ip_meet_&days.;
+set proj_int.ip_meet_&days.;
+run;
+data ip_&days._2;
+set ip_meet_&days.;
+type_adm=clm_ip_admsn_type_cd;
+if icarecnt=. then icarecnt=0; /*medpar intensive care day count*/
+if CRNRYDAY=. then CRNRYDAY=0; /*medpar coronary day count*/
+icu_days=icarecnt+CRNRYDAY;
+em_urgent_admit=0; /*Urgent , emergent admissions from admission type*/
+if type_adm in (1,2) then em_urgent_admit=1;
+em_admit=0;
+if type_adm=1 then em_admit=1;
+urgent_admit=0;
+if type_adm=2 then urgent_admit=1;
+elect_admit=0;
+if type_adm=3 then elect_admit=1;
+ind_ed_charge=0; /*ED charges as another indicator of ED use*/
+if erdaycnt>0 & erdaycnt~=. then ind_ed_charge=1;
+if erdaycnt=0 | erdaycnt=. then ind_ed_charge=0;
+
+/*truncate stays where the admit is more than x days before interview
+or discharge is after the interview date so can get accurate LOS*/
+if index_date-admit_date>&days. then do;
+	admit_date=index_date-&days.;
+	admit_trunc=1;
+	end;
+if index_date<disch_date then do;
+	disch_date=index_date;
+	disch_trunc=1;	
+	end;
+adj_los=disch_date-admit_date;
+if disch_date-admit_date=0 then adj_los=1;
+run;
+
+proc sort data=ip_&days._2;
+by bene_id index_year;
+run;
+
+proc sql;
+create table ip_&days._3 as select distinct bene_id,index_year,
+/*total ICU days*/
+sum(icu_days) as icu_days_&suffix. label="total icu days &suffix. pre ivw ivw",
+/*count of IP admissions, all types*/
+count(*) as n_ip_admit_&suffix. label="total n of hospital admit &suffix. pre ivw ivw",
+/*total Hospital LOS*/
+sum(adj_los) as n_hospd_&suffix. label="total hospital days &suffix. pre ivw ivw",
+/*count urgent or emergency admissions*/
+count(case when em_urgent_admit=1 then em_urgent_admit else . end) as n_em_urgent_admit_&suffix. 
+	label="total n of urgent/emergent hospital admit &suffix. pre ivw ivw",
+/*count of emergency admissions, from admission type code*/
+count(case when em_admit=1 then em_admit else . end) as n_em_admit_&suffix. 
+	label="total n of emergent hospital admit &suffix. pre ivw ivw",
+/*count of urgent admissions, from admission type code*/
+count(case when urgent_admit=1 then urgent_admit else . end) as n_urgent_admit_&suffix. 
+	label="total n of urgent hospital admit &suffix. pre ivw ivw",
+/*count of elective admissions, from admission type code*/
+count(case when elect_admit=1 then elect_admit else . end) as n_elect_admit_&suffix. 
+	label="total n of elective hospital admit &suffix. pre ivw ivw",
+/*count of admissions with any ED charges*/
+count(case when ind_ed_charge=1 then ind_ed_charge else . end) as n_ED_ip_&suffix. 
+	label="total n of ED visits with subsequent admit &suffix. pre ivw ivw"
+
+ from ip_&days._2 group by bene_id,index_year;
+quit;
+
+data ip_&days._4;
+set ip_&days._3;
+if icu_days_&suffix.>n_hospd_&suffix. then icu_days_&suffix.=n_hospd_&suffix.;
+run;
+
+%mend;
+
+%admissions(days=183,suffix=6m);
+%admissions(days=365,suffix=12m);
+
+data elective_1;
+set ip_365_2;
+if elect_admit=1;
+run;
+
+
+
+proc sort data=ip_183_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_6m as select a.*,b.icu_days_6m,
+b.n_ip_admit_6m,b.n_hospd_6m,b.n_em_urgent_admit_6m,b.n_em_admit_6m,
+b.n_urgent_admit_6m,b.n_elect_admit_6m,b.n_ED_ip_6m
+from proj_int.index a
+left join
+ip_183_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_365_3 nodupkey;
+by bene_id index_year;
+run;
+
+proc sql;
+create table ip1 as select a.*,b.icu_days_12m,
+b.n_ip_admit_12m,b.n_hospd_12m,b.n_em_urgent_admit_12m,b.n_em_admit_12m,
+b.n_urgent_admit_12m,b.n_elect_admit_12m,b.n_ED_ip_12m
+from ip_6m a
+left join
+ip_365_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+/*Dataset just contains obs with ffs mc 1yr and age 65+
+So if missing, set var to 0*/
+ data ip ;
+ set ip1 ;
+ array list icu_days_6m n_ip_admit_6m n_hospd_6m n_em_urgent_admit_6m 
+	n_em_admit_6m n_urgent_admit_6m n_elect_admit_6m n_ED_ip_6m
+	icu_days_12m n_ip_admit_12m n_hospd_12m n_em_urgent_admit_12m
+	n_em_admit_12m n_urgent_admit_12m n_elect_admit_12m n_ED_ip_12m;
+ do over list;
+ if list=. then list=0;
+ end;
+
+ if n_ip_admit_6m=0 then ind_hosp_adm_6m=0;
+ if n_ip_admit_6m>0 & n_ip_admit_6m~=. then ind_hosp_adm_6m=1;
+ label ind_hosp_adm_6m="Indicator for any hospital admission 6m pre ivw";
+
+ if n_em_urgent_admit_6m=0 then ind_em_ur_adm_6m=0;
+ if n_em_urgent_admit_6m>0 & n_em_urgent_admit_6m~=. then ind_em_ur_adm_6m=1;
+ label ind_em_ur_adm_6m="Ind any urgent or emergent hospital admission 6m pre ivw";
+
+ if n_em_admit_6m=0 then ind_em_adm_6m=0;
+ if n_em_admit_6m>0 & n_em_admit_6m~=. then ind_em_adm_6m=1;
+ label ind_em_adm_6m="Ind any emergency hospital admission 6m pre ivw";
+
+ if n_urgent_admit_6m=0 then ind_ur_adm_6m=0;
+ if n_urgent_admit_6m>0 & n_urgent_admit_6m~=. then ind_ur_adm_6m=1;
+ label ind_ur_adm_6m="Ind any urgent hospital admission 6m pre ivw";
+
+ if n_elect_admit_6m =0 then ind_elect_adm_6m=0;
+ if n_elect_admit_6m >0 & n_elect_admit_6m ~=. then ind_elect_adm_6m=1;
+ label ind_elect_adm_6m="Ind any elective hospital admission 6m pre ivw";
+
+ if (n_ip_admit_6m - n_elect_admit_6m)=0 then ind_nonelect_adm_6m=0;
+ if (n_ip_admit_6m - n_elect_admit_6m)>0 & n_elect_admit_6m~=. then ind_nonelect_adm_6m=1;
+ label ind_nonelect_adm_6m="Ind any non-elective hospital admission 6m pre ivw";
+
+ n_nonelect_adm_6m=(n_ip_admit_6m - n_elect_admit_6m);
+ label n_nonelect_adm_6m="total n non-elective ip admit 6m pre ivw";
+
+ if n_ED_ip_6m=0 then ind_ED_adm_6m=0;
+ if n_ED_ip_6m>0 & n_ED_ip_6m~=. then ind_ED_adm_6m=1;
+ label ind_ED_adm_6m="Ind ED use with hospital admission 6m pre ivw, from charges";
+
+ if n_ip_admit_12m=0 then ind_hosp_adm_12m=0;
+ if n_ip_admit_12m>0 & n_ip_admit_12m~=. then ind_hosp_adm_12m=1;
+ label ind_hosp_adm_12m="Indicator for any hospital admission 12m pre ivw";
+
+ if n_em_urgent_admit_12m=0 then ind_em_ur_adm_12m=0;
+ if n_em_urgent_admit_12m>0 & n_em_urgent_admit_12m~=. then ind_em_ur_adm_12m=1;
+ label ind_em_ur_adm_12m="Ind any urgent or emergent hospital admission 12m pre ivw";
+
+ if n_em_admit_12m=0 then ind_em_adm_12m=0;
+ if n_em_admit_12m>0 & n_em_admit_12m~=. then ind_em_adm_12m=1;
+ label ind_em_adm_12m="Ind any emergency hospital admission 12m pre ivw";
+
+ if n_urgent_admit_12m=0 then ind_ur_adm_12m=0;
+ if n_urgent_admit_12m>0 & n_urgent_admit_12m~=. then ind_ur_adm_12m=1;
+ label ind_ur_adm_12m="Ind any urgent hospital admission 12m pre ivw";
+
+ if n_elect_admit_12m =0 then ind_elect_adm_12m=0;
+ if n_elect_admit_12m >0 & n_elect_admit_12m ~=. then ind_elect_adm_12m=1;
+ label ind_elect_adm_12m="Ind any elective hospital admission 12m pre ivw";
+
+ if (n_ip_admit_12m - n_elect_admit_12m)=0 then ind_nonelect_adm_12m=0;
+ if (n_ip_admit_12m - n_elect_admit_12m)>0 & n_elect_admit_12m~=. then ind_nonelect_adm_12m=1;
+ label ind_nonelect_adm_12m="Ind any non-elective hospital admission 12m pre ivw";
+
+ n_nonelect_adm_12m=(n_ip_admit_12m - n_elect_admit_12m);
+ label n_nonelect_adm_12m="total n non-elective ip admit 12m pre ivw";
+
+ if n_ED_ip_12m=0 then ind_ED_adm_12m=0;
+ if n_ED_ip_12m>0 & n_ED_ip_12m~=. then ind_ED_adm_12m=1;
+ label ind_ED_adm_12m="Ind ED use with hospital admission 12m pre ivw, from charges";
+
+run;
+
+ proc freq;
+ table icu_days_6m n_ip_admit_6m n_hospd_6m ind_hosp_adm_6m n_em_urgent_admit_6m ind_em_ur_adm_6m 
+	ind_em_adm_6m ind_ur_adm_6m ind_nonelect_adm_6m n_nonelect_adm_6m n_ED_ip_6m ind_ED_adm_6m 
+	ind_em_adm_6m*ind_ED_adm_6m /missprint;
+ run;
+
+proc freq;
+table icu_days_12m n_ip_admit_12m n_hospd_12m ind_hosp_adm_12m n_em_urgent_admit_12m ind_em_ur_adm_12m
+	ind_em_adm_12m ind_ur_adm_12m ind_nonelect_adm_12m n_nonelect_adm_12m n_ED_ip_12m ind_ED_adm_12m 
+	ind_em_adm_12m*ind_ED_adm_12m /missprint;
+run;
+
+/****************************************************************************/
+/****************************************************************************/
+/*Get SNF days, indicator for 12 months preceding the interview*/
+/****************************************************************************/
+/****************************************************************************/
+
+/*pull list of snf claims from all medpar claims 12 months pre-interview*/
+data snf_meet_365;
+set proj_int.snf_meet_365;
+run;
+
+proc sort data=snf_meet_365;
+by bene_id admit_date;
+run;
+
+data snf_meet_365_1a;
+set snf_meet_365;
+format admit_date date9. disch_date date9.;
+run;
+
+/*3 claim windows are present:
+1. SNF stays fully within the 1 year before interview
+2. Stays that begin before 1 year pre-core but end within 1 year pre-core
+3. Stays that begin within 1 year of core but end after core ivw
+4. Stays that begin before 1 year and end after interview, LOS=365!
+Get claims that meet 1 *1797*/
+proc sql;
+create table snf_meet1_pre_365 as select *
+from snf_meet_365_1a
+where (index_date - admit_date)<365 & (index_date - disch_date)>=0; 
+quit;
+
+
+/*meet time window 2 *152*/
+proc sql;
+create table snf_meet2_pre_365 as select *
+from snf_meet_365_1a
+where (index_date - admit_date)>=365 & (index_date - disch_date)>=0; 
+quit;
+
+/*For these claims that start > 1 year before core, truncate start date so 
+only count LOS days w/i 1 year
+create indicator variable that claim start date is truncated*/
+data snf_meet2_pre_365_1;
+set snf_meet2_pre_365;
+admit_date = index_date-365;
+snf_admit_date_mod = 1;
+label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
+run;
+
+proc freq;
+table snf_admit_date_mod ;
+run;
+
+/*meet time window 3 *135 */
+proc sql;
+create table snf_meet3_pre_365 as select *
+from snf_meet_365_1a
+where (index_date - admit_date)<365 & (index_date-disch_date)<0; 
+quit;
+
+/*For these claims that end after core, truncate end date so 
+only count LOS days 1 year before the core
+create indicator variable that claim end date is truncated*/
+data snf_meet3_pre_365_1;
+set snf_meet3_pre_365;
+disch_date = index_date;
+snf_disch_date_mod = 1;
+label snf_disch_date_mod = "Disch date mod; at ivw date";
+run;
+
+proc freq;
+table snf_disch_date_mod ;
+run;
+
+/*meet 4 , overlap both start and end dates n=7*/
+proc sql;
+create table snf_meet4_pre_365 as select *
+from snf_meet_365_1a
+where (index_date - admit_date)>=365 & (index_date - disch_date)<0; 
+quit;
+
+/*truncate both start and end dates so just count 1 year pre interview*/
+data snf_meet4_pre_365_1;
+set snf_meet4_pre_365;
+disch_date = index_date;
+snf_disch_date_mod = 1;
+label snf_disch_date_mod = "Disch date mod; at ivw date";
+admit_date = index_date-365;
+snf_admit_date_mod = 1;
+label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
+run;
+
+proc freq;
+table snf_disch_date_mod snf_admit_date_mod;
+run;
+
+
+data snf_meet_pre_365;
+set snf_meet1_pre_365 snf_meet2_pre_365_1 snf_meet3_pre_365_1 snf_meet4_pre_365_1;
+run;
+
+proc freq;
+table snf_admit_date_mod snf_disch_date_mod ;
+run;
+
+/*save final files to project int_data directory*/
+data proj_int.snf_meet_pre_365 ;
+set  snf_meet_pre_365;
+run;
+
+/*************************************************************/
+/*calculate total number of days spent in SNF by BID*/
+/*************************************************************/
+
+data pre_snf_days_1;
+set proj_int.snf_meet_pre_365;
+calc_snf_LOS=disch_date-admit_date;
+if calc_snf_LOS=0 then calc_snf_LOS=1;
+run;
+
+proc sort data=pre_snf_days_1;
+by bene_id index_date admit_date;
+run;
+
+proc sql;
+create table snf_days_pre as select distinct bene_id,index_year,
+sum(calc_snf_LOS)
+	as n_snf_days_12m
+	from pre_snf_days_1 group by bene_id,index_year;
+quit;
+
+
+/*merge into full ffs 1yr, age 65+ dataset*/
+proc sort data=snf_days_pre nodupkey;
+by bene_id index_year;
+run;
+
+
+
+ data snf ;
+ set snf_days_pre ;
+ array list n_snf_days_12m;
+ do over list;
+ if list=. then list=0;
+ end; 
+
+if n_snf_days_12m=0 then ind_snf_use_12m=0;
+ if n_snf_days_12m>0 & n_snf_days_12m~=. then ind_snf_use_12m=1;
+ label ind_snf_use_12m="Indicator for any SNF stay 12m pre ivw";
+ label n_snf_days_12m="SNF Days 12m pre ivw";
+
+run;
+
+/****************************************************************************/
+/****************************************************************************/
+/*Get indicator of ESRD codes from the denominator file the year of the interview*/
+/****************************************************************************/
+/****************************************************************************/
+proc sort data=medi.mbsf_06_12 out=dn_2000_20122  nodupkey;
+by bene_id year;
+run;
+
+/*pull ESRD status variable from dn file
+for the core interview years*/
+proc sql;
+create table esrd1 as select
+a.*,b.Bene_ESRD_IND from 
+proj_int.index a left join
+dn_2000_20122 b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and a.index_year=b.year;
+quit;
+
+proc freq;
+table bene_esrd_ind /missprint;
+run;
+
+data esrd;
+set esrd1 ;
+if bene_esrd_ind='Y' then esrd_ind_n=1;
+if bene_esrd_ind='0' then esrd_ind_n=0;
+label esrd_ind_n="ESRD indicator from claims denominator file";
+drop bene_esrd_ind;
+run;
+
+proc freq;
+table esrd_ind_n /missprint;
+run;
+
+/****************************************************************************/
+/*Get indicator of Home 02 use 12 months pre interview from DME claims*/
+/****************************************************************************/
+data oxygen1(keep=bene_id index_year oxygen);
+set proj_int.dm_meet_365;
+oxygen=0;
+if h_o2>0 then oxygen=1;
+run;
+
+proc sort data=oxygen1 out=oxygen nodupkey;
+by bene_id index_year;
+run;
+proc contents data=medi.op_06_12; run;
+data ed_op_1;
+set proj_int.op_meet_365(keep=bene_id admit_date disch_date index_date index_year erdaycnt);
+if erdaycnt>0 then ed_op=1;
+if erdaycnt=0 then ed_op=0;
+run;
+
+proc freq;
+table ed_op;
+run;
+
+proc sql;
+create table ed_op_2 as select distinct bene_id,index_year,
+count(case when ed_op=1 then ed_op else . end)
+	as n_ed_op_visits_12m
+	from ed_op_1 group by bene_id,index_year;
+quit;
+
+proc freq;
+table n_ed_op_visits_12m;
+run;
+
+
+proc sort data=ed_op_2 nodupkey;
+by bene_id index_year;
+run;
+
+
+data ed ;
+set ed_op_2;
+if n_ed_op_visits_12m=. and comorb_1_0_1yr~=. then n_ed_op_visits_12m=0;
+label n_ed_op_visits_12m="Count ED OP visits, 1yr pre ivw";
+
+if n_ed_op_visits_12m=0 then ind_ed_op_12m=0;
+if n_ed_op_visits_12m>0 & n_ed_op_visits_12m~=. then ind_ed_op_12m=1;
+label ind_ed_op_12m="Indicator any ED OP visits, 1 yr pre ivw";
+run;
+
+proc freq;
+table n_ed_op_visits_12m*ind_ed_op_12m;
+run;
+
+proc sql;
+create table proj_int.utilization_pre as select * 
+from proj_int.index a 
+left join
+ip b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join 
+snf c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year
+left join 
+esrd d
+on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_year
+left join
+oxygen e
+on trim(left(a.bene_id))=trim(left(e.bene_id)) and a.index_year=e.index_year
+left join 
+ed f
+on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_year;
+quit;
+
+proc contents data=proj_int.utilization_pre; 
+run;
+
+H="get contact days"
+note: this is the contact days template for 2012
+
+libname medi 'E:\nhats\data\CMS_DUA_28016\Merged';
+libname proj_int 'E:\data\Dartmouth_misc\contact days working data';
+
+data dna;
+set medi.mbsf_06_12(keep=bene_id hmoind12 buyin12 year bene_age_at_end_ref_yr birth_date);
+where year=2012 and bene_age_at_end_ref_yr>=65;
+if indexc(buyin12,"0","1","2","A","B") then part_ab=0;
+if indexc(buyin12,"0","1","2","A","B")=0 then part_ab=1;
+if indexc(hmoind12,"1","2","4","A","B","C")=0 then hmo=0;
+if indexc(hmoind12,"1","2","4","A","B","C") then hmo=1;
+run;
+
+data dn;
+set dna;
+where part_ab=1 and hmo=0;
+run;
+
+%macro mp(source=);
+proc sql;
+create table mpa as select * from
+dn a left join
+medi.&source._06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data mpb;
+set mpa(keep=bene_id admit_date disch_date);
+where (year(disch_date)=2012 | year(admit_date)=2012);
+if admit_date<'01jan2012'd then admit_date='01jan2012'd;
+if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
+los=disch_date-admit_date+1;
+run;
+
+proc sort data=mpb out=mpc nodupkey; 
+by bene_id admit_date disch_date; 
+run;
+
+
+%macro dates();
+data mpd;
+set mpc;
+%do i=1 %to 366;
+%let l=%eval(&i-1);
+if los>=&i. then date&i.=admit_date+&l.;
+format date&i. date9.;
+%end;
+run;
+%mend;
+
+%dates();
+
+data mpe;
+set mpd;
+array adate(1:366) date1-date366;
+do datenum = 1 to 366;
+date=adate(datenum);
+output;
+end;
+format date date9.;
+drop date1-date366;
+run;
+
+data mpf;
+set mpe;
+where date~=.;
+run;
+
+proc sort data=mpf out=mpg nodupkey;
+by bene_id date;
+run;
+
+data &source.;
+set mpg(keep= bene_id date admit_date);
+where date~=.;
+mp=1;
+run;
+
+proc sql;
+create table &source._cd as select distinct
+bene_id,
+count(date) as &source._contact_days
+from &source. group by bene_id;
+quit;
+
+%mend;
+
+%mp(source=ip);
+%mp(source=snf);
+
+proc sql;
+create table pba as select * from
+dn a left join
+medi.pb_06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data pba1;
+set pba;
+
+data pbb;
+set pba(keep=bene_id admit_date disch_date expnsdt11-expnsdt19 expnsdt110-expnsdt113 hcpcscd1-hcpcscd13);
+where year(admit_date)=2012;
+run;
+
+data pbc(keep=bene_id admit_date linedate1);
+set pbb;
+array adate(1:13) expnsdt11-expnsdt19 expnsdt110-expnsdt113;
+do datenum = 1 to 13;
+linedate1=adate(datenum);
+output;
+end;
+run;
+
+data pbc2(drop=linedate1);
+set pbc;
+where linedate1~=.;
+date=linedate1;
+format date date9.;
+run;
+
+proc sort data=pbc2 out=pbd nodupkey;
+by bene_id date;
+run;
+
+data pbe(keep=bene_id date);
+set pbb;
+date=admit_date;
+pb=1;
+run;
+
+proc sort data=pbe out=pbe2 nodupkey;
+by bene_id date; 
+run;
+
+proc sql;
+create table pb_adm as select distinct
+bene_id,
+count(date) as pb_adm_days
+from pbe2 group by bene_id;
+quit;
+
+data pbf;
+set pbe pbd;
+where date~=.; 
+format date date9.;
+if date<'01jan2012'd then date='01jan2012'd;
+if date>'31DEC2012'd then date='31DEC2012'd;
+pb=1;
+run;
+
+proc sort data=pbf out=pb nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table pb_cd as select distinct
+bene_id,
+count(date) as pb_contact_days
+from pb group by bene_id;
+quit;
+
+proc sql;
+create table opa as select * from
+dn a left join
+medi.op_06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data opb;
+set opa(keep=bene_id admit_date disch_date rev_dt1-rev_dt45);
+where year(admit_date)=2012;
+if admit_date<'01jan2012'd then admit_date='01jan2012'd;
+if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
+run;
+
+data opc(keep=bene_id admit_date linedate1);
+set opb;
+array adate(1:45) rev_dt01-rev_dt45;
+do datenum = 1 to 45;
+linedate1=adate(datenum);
+output;
+end;
+drop rev_dt01-rev_dt45;
+run;
+
+data opc2(drop=linedate1);
+set opc;
+where linedate1~=.;
+date=linedate1;
+format date date9.;
+run;
+
+proc sort data=opc2 out=opd nodupkey;
+by bene_id date;
+run;
+
+data ope(keep=bene_id date);
+set opb;
+date=admit_date;
+op=1;
+run;
+
+proc sort data=ope out=ope2 nodupkey;
+by bene_id date; 
+run;
+
+proc sql;
+create table op_adm as select distinct
+bene_id,
+count(date) as op_adm_days
+from ope2 group by bene_id;
+quit;
+
+data opf;
+set ope opd;
+where date~=.;
+if date<'01jan2012'd then date='01jan2012'd;
+if date>'31DEC2012'd then date='31DEC2012'd;
+op=1;
+run;
+
+proc sort data=opf out=op nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table op_cd as select distinct
+bene_id,
+count(date) as op_contact_days
+from op group by bene_id;
+quit;
+
+data alla;
+set ip snf pb op;
+where date~=.;
+format date date9.;
+run;
+
+proc sort data=alla out=allb nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table allc as select distinct
+bene_id,
+count(date) as contact_days
+from allb group by bene_id;
+quit;
+
+proc sql; 
+create table alld as select * from 
+dn a left join
+allc b
+on a.bene_id=b.bene_id
+left join ip_cd c
+on a.bene_id=c.bene_id
+left join op_adm d
+on a.bene_id=d.bene_id
+left join op_cd e
+on a.bene_id=e.bene_id
+left join pb_adm f
+on a.bene_id=f.bene_id
+left join pb_cd g
+on a.bene_id=g.bene_id
+left join snf_cd h
+on a.bene_id=h.bene_id;
+run;
+
+data all;
+set alld;
+array list ip_contact_days snf_contact_days op_adm_days op_contact_days pb_adm_days pb_contact_days contact_days;
+do over list;
+if list=. then list=0;
+end;
+run;
+
+proc export data=all outfile="E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_op_pb.dta" replace; run;
+
+
+H="classify SI based on primary dx"
+/*recoded as a macro and use either the primary diagnosis or admitting diagnoses AD_DGNS */
+
+/*start with IP claim list, 1 year before interview*/
+
+%macro singledx(dxvar=,name=);
+data dx_1_&name.;
+set proj_int.ip_meet_365;
+
+&name._dx=trim(left(&dxvar.));
+
+if &name._dx~="" then do;
+
+chf_&name._dx=0;
+copd_&name._dx=0;
+hip_&name._dx=0;
+
+/*CHF*/
+if (substr(&name._dx,1,5)='39891' or
+		substr(&name._dx,1,5)='40211' or
+		substr(&name._dx,1,5)='40291' or
+		substr(&name._dx,1,5)='40411' or
+		substr(&name._dx,1,5)='40413' or
+		substr(&name._dx,1,5)='40491' or
+		substr(&name._dx,1,5)='40493' or
+		substr(&name._dx,1,3)='428') 
+		and chf_&name._dx=0 
+		then chf_&name._dx=1;*add one binary variables here.;
+/*COPD*/
+	if (substr(&name._dx,1,3)='490' or
+		substr(&name._dx,1,3)='491' or
+		substr(&name._dx,1,3)='492' or
+		substr(&name._dx,1,4)='4930' or
+		substr(&name._dx,1,4)='4931' or
+		substr(&name._dx,1,4)='4932' or
+		substr(&name._dx,1,4)='4938' or
+		substr(&name._dx,1,5)='49390' or
+		substr(&name._dx,1,5)='49391' or
+		substr(&name._dx,1,3)='494' or
+		substr(&name._dx,1,3)='495' or
+		substr(&name._dx,1,3)='496' or
+		substr(&name._dx,1,3)='497' or
+		substr(&name._dx,1,3)='498' or
+		substr(&name._dx,1,3)='499' or
+		substr(&name._dx,1,3)='500' or
+		substr(&name._dx,1,3)='501' or
+		substr(&name._dx,1,3)='502' or
+		substr(&name._dx,1,3)='503' or
+		substr(&name._dx,1,3)='504' or
+		substr(&name._dx,1,3)='505' or
+		substr(&name._dx,1,4)='5064') 
+			and copd_&name._dx=0 
+		then copd_&name._dx=1;	
+*hip fracture;
+if (substr(&name._dx,1,3)='820' ) 
+		and hip_&name._dx=0 
+		then hip_&name._dx=1;*add one binary variables here.;
+end;
+run;
+
+proc sql;
+create table &name._dx_2 as
+select distinct bene_id,index_year,
+sum(chf_&name._dx) as chf_&name.,
+sum(copd_&name._dx) as copd_&name.,
+sum(hip_&name._dx) as hip_&name.
+from dx_1_&name.
+group by bene_id,index_year;
+quit;
+
+/*convert counts of diagnoses for each comorbidity to indicator variables*/ 
+data &name._dx_3(keep=bene_id index_year chf_&name._dx copd_&name._dx hip_&name._dx);
+set &name._dx_2 ;
+array list_com chf_&name. copd_&name. hip_&name.;
+array list_com_bin chf_&name._dx copd_&name._dx hip_&name._dx;
+
+do over list_com;
+  list_com_bin=0;
+
+  if list_com>0 then do;
+    list_com_bin=1;
+   end;
+
+end;
+
+run;
+
+proc freq;
+table chf_&name._dx copd_&name._dx hip_&name._dx;
+run;
+%mend;
+
+/*use primary diagnosis code*/
+%singledx(dxvar=icd_dgns_cd1,name=pri);
+/*use admitting diagnosis code*/
+%singledx(dxvar=ADmtg_DGNS_cd,name=adm);
+
+/*merge together*/
+
+proc sql;
+create table dx_both as select *
+from proj_int.index a 
+left join 
+pri_dx_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join
+adm_dx_3 c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year;
+quit;
+
+data dx_both2;
+set dx_both;
+
+array list chf_pri_dx copd_pri_dx hip_pri_dx chf_adm_dx copd_adm_dx hip_adm_dx;
+do over list;
+	if list = .  then list=0;
+end;
+label chf_pri_dx="CHF as primary dx from IP claim, 1yr pre ivw";
+label copd_pri_dx="COPD as primary dx from IP claim, 1yr pre ivw";
+label hip_pri_dx="Hip fracture as primary dx from IP claim, 1yr pre ivw";
+
+label chf_adm_dx="CHF as admitting dx from IP claim, 1yr pre ivw";
+label copd_adm_dx="COPD as admitting dx from IP claim, 1yr pre ivw";
+label hip_adm_dx="Hip fracture as admitting dx from IP claim, 1yr pre ivw";
+
+run;
+
+
+/*Hip fracture criteria, method  by Covinsky
+One of the (2) criteria met:
+(1) Subject was admitted to a hospital with admitting diagnosis of “820.xx”.
+(2) There is a physician record of “HF procedure” (defined by CPT code of 27230-27248) that is supported by either: 
+a. Another physician record within 2 days OR 2
+b. Relevant surgery during hospitalization. (Relevant surgery is defined by ICD9 codes 785.5, 790.5, 791.5, 792.5). 
+(1) variable hip_adm_dx defined in macro above
+(2) HF procedure: carrier claims 	(HCPCS_YR specifies the year of CPT coding used)
+					hcpcscd01-hcpcscd13 The level 1 HCPCS code is the CPT code
+Then a)from carrier claims or 
+     b) from IP claims
+	
+
+For item (2) checked inpatient claims variables hcpcscd01-45 but none had any of the CPT codes in the list
+Next step, try running with carrier files...
+*/
+
+/********************************************************************/
+/*Physican record of HF procedure, check IP claims
+There are no observations with the HF procedure codes in the IP claims, this method isn't
+used in creating the final variable*/
+data ip_meet_365;
+set proj_int.ip_meet_365;
+run;
+
+proc contents data=ip_meet_365;
+run;
+
+data testhf;
+set ip_meet_365;
+if HCPcSCD1~='';
+run;
+
+data hfproc_ip;
+set ip_meet_365;
+hf_proc_ind=0;
+array list hcpcscd1-hcpcscd45;
+do over list;
+if list~='' then do;
+	if (list='27230' or
+		list='27231' or
+		list='27232' or
+		list='27233' or
+		list='27234' or
+		list='27235' or
+		list='27236' or
+		list='27237' or
+		list='27238' or
+		list='27239' or
+		list='27240' or
+		list='27241' or
+		list='27242' or
+		list='27243' or
+		list='27244' or
+		list='27245' or
+		list='27246' or
+		list='27247' or
+		list='27248')
+		/*and hf_proc_ind=0*/
+		then hf_proc_ind=1;
+	end;
+end;
+
+
+run;
+
+proc freq; table hf_proc_ind;
+run;
+
+/********************************************************************/
+/*Physican record of HF procedure, check carrier claims*/
+/********************************************************************/
+
+data hfproc_carr;
+set proj_int.pb_meet_365;
+hf_proc_ind=0;
+array list hcpcscd1-hcpcscd13;
+do over list;
+if list~='' then do;
+	if (list='27230' or
+		list='27231' or
+		list='27232' or
+		list='27233' or
+		list='27234' or
+		list='27235' or
+		list='27236' or
+		list='27237' or
+		list='27238' or
+		list='27239' or
+		list='27240' or
+		list='27241' or
+		list='27242' or
+		list='27243' or
+		list='27244' or
+		list='27245' or
+		list='27246' or
+		list='27247' or
+		list='27248')
+		/*and hf_proc_ind=0*/
+		then hf_proc_ind=1;
+	end;
+end;
+
+run;
+
+proc freq; table hf_proc_ind;
+run;
+/********************************************************************/
+/*is there also a physican record within 2 days?*/
+proc sort data=hfproc_carr; by bene_id admit_date disch_date hf_proc_ind;
+run;
+
+data hfproc_carr_2;
+set hfproc_carr;
+if eof1=0 then
+	set hfproc_carr (firstobs=2 keep=admit_date disch_date rename=(admit_date=lead1admit disch_date=lead1disch)) end=eof1;
+else do; lead1admit=.;  lead1disch=.; end;
+run;
+
+data hfproc_carr_3;
+set hfproc_carr_2;
+days_next_visit=lead1admit-disch_date;
+days_next_disch=lead1disch-disch_date;
+if hf_proc_ind=1 and days_next_visit<=2 and days_next_visit~=. & days_next_disch>0 then hf_w_visit_2d=1;
+else hf_w_visit_2d=0;
+run;
+
+data hfproc_carr_4;
+set hfproc_carr_3;
+if hf_proc_ind=1;
+run;
+
+proc freq data=hfproc_carr_3;
+table hf_proc_ind hf_w_visit_2d index_year; run;
+
+/*if have hf CPT code from carrier, but no subsequent carrier claim,
+do they have a surgery code from the inpatient claims?*/
+data hfproc_carr_5;
+set hfproc_carr_4;
+if hf_proc_ind=1 and hf_w_visit_2d=0;
+run;
+
+
+
+
+/*for b) identify relevant surgeries from IP claims CPT codes and surgery dates*/
+
+/*This section of code for just checking For Surgeries*/
+data ip_meet_365;
+set proj_int.ip_meet_365;
+run;
+
+proc contents data=ip_meet_365;
+run;
+
+data proc_long(keep=bene_id CLM_IP_ADMSN_TYPE_CD procedure procedure_date date_imp_yes ADMTG_DGNS_CD icd_dgns_cd1-ICD_DGNS_CD25
+	 admit_date disch_date index_year);
+set ip_meet_365;
+array list ICD_PRCDR_CD1-ICD_PRCDR_CD25;
+array date PRCDR_DT1-PRCDR_DT25;
+do over list;
+if list~="" then do;
+	procedure=list;
+	if date=0000000 then do;
+		procedure_date=admit_date;
+		date_imp_yes=1;
+		end;
+	if date~=0000000 then do;
+	procedure_date=datejul(date);
+	end;
+	output;
+end;
+end;
+
+format procedure_date date10.;
+format admit_date date10.;
+format disch_date date10.;
+
+run;
+
+proc freq; table date_imp_yes; run;
+/* Identify surgeries that meet the criteria
+Indicator variable surgery_meet = 1 if yes, include in sample 
+79 surgeries meet the criteria*/
+data surgery_meet;
+set proc_long;
+if length(compress(procedure))>3 then do;
+
+if compress(procedure)+0 in (7855, 7905, 7915, 7925) then surgery_meet=1;
+
+end;
+/*only keep observations in work.surgery_meet that meet criteria*/
+if surgery_meet then output;
+
+run;
+/*End surgery section 1*/
+
+/*who has surgery that meets criteria AND hf CPT code from carrier?*/
+proc sql;
+create table cpt_and_surg as select a.*,b.admit_date as carr_hf_admit, b.disch_date as carr_hf_disch,
+b.hf_proc_ind, b.hf_w_visit_2d from 
+surgery_meet a inner join
+hfproc_carr_5 b
+on trim(left(a.bene_id))=trim(left(b.bene_id));
+quit;
+
+data cpt_and_surg_1;
+set cpt_and_surg;
+format carr_hf_admit carr_hf_disch date9.;
+hf_w_surgery=1;
+run;
+
+/*now merge in lists to get a list of bid's that meet criteria 1 or 2*/
+data cpt_and_surg_2;
+set cpt_and_surg_1;
+keep bene_id hf_proc_ind hf_w_surgery index_year;
+run;
+
+proc sort data=cpt_and_surg_2 nodupkey; by bene_id index_year ; run;
+
+data hfproc_carr_6;
+set hfproc_carr_4;
+keep bene_id hf_proc_ind hf_w_visit_2d index_year;
+if hf_proc_ind=1 and hf_w_visit_2d=1;
+run;
+
+proc sort data=hfproc_carr_6 nodupkey; by bene_id  index_year ; run;
+
+*merge the datasets;
+data hf_meet;
+merge hfproc_carr_6 cpt_and_surg_2 ;
+by bene_id index_year;
+run;
+
+proc sort data=hf_meet out=hf_meet2 nodupkey; by bene_id  index_year; run;
+
+proc sql;
+create table hf_meet3 as select* from
+proj_int.index a 
+left join 
+hf_meet2 b 
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit;
+
+data hf_meet4;
+set hf_meet3;
+
+array list hf_proc_ind hf_w_visit_2d hf_w_surgery ;
+do over list;
+	if list = .  then list=0;
+end;
+label hf_w_visit_2d ="HF CPT + Dr visit within 2 days, 1yr pre ivw";
+label hf_w_surgery ="HF CPT + Surgery, 1yr pre ivw";
+
+run;
+
+proc freq; table hf_w_visit_2d hf_w_surgery; run;
+
+/*Another idea is to check IP claims
+if CPT code (in fields proj_int-HCPCSCD45 in list then if PRCDRCD1-PRCDRCD25 in list = hip frature = yes*/
+
+/*merge new variables*/
+
+proc sql;
+create table proj_int.criteria as select * from
+dx_both2 a
+left join hf_meet4 b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+H="combine with interviews into one dataset"
+
+
+proc sql; 
+create table tomerge as select * from
+proj_int.index a left join
+proj_int.ffs_before b 
+on a.bene_id=b.bene_id and a.index_year=b.index_year
+left join 
+proj_int.ffs_after c
+on a.bene_id=c.bene_id and a.index_year=c.index_year
+left join 
+proj_int.elix_0_1yr_2 d
+on a.bene_id=d.bene_id and a.index_year=d.index_year
+left join 
+proj_int.charls_0_1yr e
+on a.bene_id=e.bene_id and a.index_year=e.index_year
+left join 
+proj_int.chronic_21_1yr3_0 f
+on a.bene_id=f.bene_id and a.index_year=f.index_year
+left join 
+proj_int.utilization_pre g
+on a.bene_id=g.bene_id and a.index_year=g.index_year
+left join 
+proj_int.criteria h
+on a.bene_id=h.bene_id and a.index_year=h.index_year;
+quit;
+
+proc sql;
+create table proj_int.serious_ill_int_dataset as select * from
+proj_int.nhats a 
+left join
+tomerge b 
+on a.spid=b.spid and a.ivw_year=b.index_year;
+quit;
+
+
+
+H="variable cleaning and check criteria"
+/*This section defines the serious medical illness indicators
+as well as the additional criteria for serious illness
+1. Serious medical illness
+2. ADL impairment
+3. Self report nursing home residence
+4. Urgent or emergent hospitalization 
+
+2 sets of criteria are used:
+Criteria A: Either serious medical illness or ADL impairment
+Criteria B: Critera A + either nursing home resident or hospitalization*/
+
+proc freq
+data=proj_int.serious_ill_int_dataset;
+table dem_dx_1yr*comorb_31_0_1yr;
+run;
+
+data proj_int.serious_ill_int_dataset1;
+set proj_int.serious_ill_int_dataset ;
+
+
+
+/*any elixhauser cancer dx*/
+if comorb_17_0_1yr=1 | comorb_18_0_1yr=1 | comorb_19_0_1yr=1 then el_cancer_1yr=1;
+if comorb_17_0_1yr=0 & comorb_18_0_1yr=0 & comorb_19_0_1yr=0 then el_cancer_1yr=0;
+
+/*3 or more Elixhauser comorbidities*/
+if comorb_all_0_1yr>2 then el_ge3_comorb_1yr=1;
+if 0=<comorb_all_0_1yr<=2 then el_ge3_comorb_1yr=0;
+
+/*4 or more comorbidities - needs to be reevaluated once other defs are defined!*/
+if comorb_all_0_1yr>3 then el_ge4_comorb_1yr=1;
+if 0=<comorb_all_0_1yr<=3 then el_ge4_comorb_1yr=0;
+
+cc_all_count_1yr = cc_1_ami_1yr + cc_2_alzh_1yr + cc_3_alzhdmta_1yr + 
+cc_4_atrialfb_1yr + cc_5_cataract_1yr + cc_6_chrnkidn_1yr + 
+cc_7_copd_1yr + cc_8_chf_1yr + cc_9_diabetes_1yr + cc_10_glaucoma_1yr + 
+cc_11_hipfrac_1yr + cc_12_ischmcht_1yr + cc_13_depressn_1yr + 
+cc_14_osteoprs_1yr + cc_15_ra_oa_1yr + cc_16_strketia_1yr + 
+cc_17_cncrbrst_1yr + cc_18_cncrclrc_1yr + cc_19_cncrprst_1yr + 
+cc_20_cncrlung_1yr + cc_21_cncrendm_1yr;
+
+if cc_all_count_1yr >3 then cc_ge4_comorb_1yr=1;
+if 0=<cc_all_count_1yr <=3 then cc_ge4_comorb_1yr=0;
+
+/*cc's excluding cataract and glaucoma*/
+cc_all_count_1yr_2 = cc_1_ami_1yr + cc_2_alzh_1yr + cc_3_alzhdmta_1yr + 
+cc_4_atrialfb_1yr + /*cc_5_cataract_1yr +*/ cc_6_chrnkidn_1yr + 
+cc_7_copd_1yr + cc_8_chf_1yr + cc_9_diabetes_1yr + /*cc_10_glaucoma_1yr +*/ 
+cc_11_hipfrac_1yr + cc_12_ischmcht_1yr + cc_13_depressn_1yr + 
+cc_14_osteoprs_1yr + cc_15_ra_oa_1yr + cc_16_strketia_1yr + 
+cc_17_cncrbrst_1yr + cc_18_cncrclrc_1yr + cc_19_cncrprst_1yr + 
+cc_20_cncrlung_1yr + cc_21_cncrendm_1yr;
+label cc_all_count_1yr_2="Count of cc's, excludes cataract and glaucoma";
+
+if cc_all_count_1yr_2>3 then cc2_ge4_comorb_1yr=1;
+if 0=<cc_all_count_1yr_2<=3 then cc2_ge4_comorb_1yr=0;
+
+label el_ge3_comorb_1yr="3+ Elixhauser comorbidities";
+label el_ge4_comorb_1yr="4+ Elixhauser comorbidities";
+label cc_ge4_comorb_1yr="4+ DW Chronic Conditions";
+label cc2_ge4_comorb_1yr="4+ DW Chronic Conditions, excl cataract and glaucoma";
+
+/***************************************************/
+/*create indicators for any indication of the serious medical illnesses across
+variables (cc's elix hrs survey) */
+/*dementia requires more than 1 dementia diagnosis 1 year before ivw*/
+if dem_dx_1yr>=2 and dem_dx_1yr~=. then smi_dem_ind=1;
+if dem_dx_1yr=0 or dem_dx_1yr=1 then smi_dem_ind=0;
+label smi_dem_ind="Indicator of Dementia 1yr, Elixhauser 2+dx req.";
+
+/*old def commented out
+if el_cancer_1yr=1 | CC_cncr_chronic_1yr=1 | cancer_hrs=1 then cancer_any_ind=1;
+if el_cancer_1yr=0 & CC_cncr_chronic_1yr=0 & cancer_hrs=0 then cancer_any_ind=0; */
+/*cancer flagged as serious medical illness if metastatic cancer 
+or blood cancers new def to be provided from Amy*/
+if comorb_18_0_1yr=1 then smi_cancer_ind=1;
+if comorb_18_0_1yr=0 then smi_cancer_ind=0;
+label smi_cancer_ind="Indicator of Metastatic Cancer 1yr";
+
+/*ESRD from either dx code per elixhauser or denominator file flag*/
+if comorb_13_0_1yr=1 | esrd_ind_n=1 then smi_esrd_ind=1;
+if comorb_13_0_1yr=0 & esrd_ind_n=0  then smi_esrd_ind=0;
+label smi_esrd_ind="Indicator of ESRD 1yr, Elix and claims DN file";
+
+/*chf, use dx list for Elixhauser, but as primary DX from a hospitalization only*/
+if chf_pri_dx=1  then smi_chf_ind=1;
+if chf_pri_dx=0  then smi_chf_ind=0;
+label smi_chf_ind="Indicator of CHF 1yr, Primary dx from IP claim";
+
+/*COPD indicator meets following criteria:
+1. COPD from Elix (any dx field) and Oxygen use from DME claims or
+2. COPD as a primary diagnosis from a hospitalization*/
+if (comorb_9_0_1yr=1 & oxygen=1) | copd_pri_dx=1 then smi_copd_ind=1;
+if (comorb_9_0_1yr=0 | oxygen=0) & copd_pri_dx=0 then smi_copd_ind=0;
+label smi_copd_ind="Indicator of COPD 1yr, copd any dx and home o2 use or copd as prim dx";
+
+/*diabetes, Elix 11 (diabetes with complications) if criteria for 
+renal disease (comorb 34), ischemic heart disease (cc 12) or 
+peripheral vascular disease (comorb 5) are present*/
+if comorb_11_0_1yr=1 & (comorb_5_0_1yr=1 | comorb_34_0_1yr=1 | CC_12_ISCHMCHT_1yr =1) then
+	smi_diab_compl_ind=1;
+if comorb_11_0_1yr=0 | (comorb_5_0_1yr=0 & comorb_34_0_1yr=0 & CC_12_ISCHMCHT_1yr =0) then
+	smi_diab_compl_ind=0;
+label smi_diab_compl_ind="Elix compl diabetes + peripheral vas, renal or ischem, 1yr";
+
+if comorb_14_0_1yr=1 then smi_liver_ind=1;
+if comorb_14_0_1yr=0 then smi_liver_ind=0;
+label smi_liver_ind="Indicator of Advanced liver disease/cirrhosis 1yr, elix";
+
+/*Update 6/9/14 - HIV not included in final list of serious medical illnesses for
+the criteria definition
+4/2/15 - Added HIV back into list*/
+if comorb_16_0_1yr=1 then smi_hiv_ind=1;
+if comorb_16_0_1yr=0 then smi_hiv_ind=0;
+label smi_hiv_ind="Indicator of HIV with and AIDS defining illness 1yr, elix";
+
+if comorb_33_0_1yr=1 then smi_als_ind=1;
+if comorb_33_0_1yr=0 then smi_als_ind=0;
+label smi_als_ind="Indicator of ALS 1yr, icd9 code";
+
+/*hip fracture, either admitting diagnosis or CPT from carrier claim AND
+surgery or follow up carrier claim within 2 days*/
+if hip_adm_dx=1 | hf_w_visit_2d=1 | hf_w_surgery=1 then smi_hip_ind=1;
+if hip_adm_dx=0 & hf_w_visit_2d=0 & hf_w_surgery=0 then smi_hip_ind=0;
+label smi_hip_ind="Indicator of Hip fracture 1yr, adm dx or from physician claims";
+/*******************************************************************/
+/*******************************************************************/
+
+/*doesn't use the cc definition excluding cataract,glaucoma cc2_ge4_comorb_1yr */
+if el_ge4_comorb_1yr=1 | cc_ge4_comorb_1yr=1 /*| comor_c_hrs=1*/ then multi_any_ind=1;
+if el_ge4_comorb_1yr=0 & cc_ge4_comorb_1yr=0 /*& comor_c_hrs=0*/ then multi_any_ind=0;
+label multi_any_ind="Any indicator of Multimorbidity 4+ chronic conditions 1yr";
+
+/*total number of serious medical illnesses per these definitions*/
+smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + smi_copd_ind + 
+ smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind;
+
+/*indicator for 3+serious medical illnesses*/
+if smi_count>=3 then smi_ge3_ind=1;
+if smi_count<3 then smi_ge3_ind=0;
+label smi_ge3_ind="3 or more serious medical illnesses";
+
+/*indicator for any serious medical illness
+Update 6/9/14 - HIV not included in list of serious medical illnesses*/
+if smi_dem_ind =1 | smi_cancer_ind =1 | smi_esrd_ind =1 | smi_chf_ind =1 | 
+ smi_copd_ind =1 | smi_diab_compl_ind =1 | smi_liver_ind =1 | smi_hiv_ind =1 | 
+ smi_als_ind =1 | smi_hip_ind=1
+ then ser_med_illness=1;
+if smi_dem_ind =0 & smi_cancer_ind =0 & smi_esrd_ind =0 & smi_chf_ind =0 & 
+ smi_copd_ind =0 & smi_diab_compl_ind =0 & smi_liver_ind =0 & smi_hiv_ind =0 & 
+ smi_als_ind =0 & smi_hip_ind=0
+ then ser_med_illness=0;
+label ser_med_illness="Any indicator of serious medical illness 1yr";
+
+/*Indicator for any SNF stays 12m prior to interview or current nh res
+Update 6/2/14 - nursing home use will be included only if current nh residence reported,
+not if any SNF claims found*/
+if /*ind_snf_use_12m=1 |*/ nhres=1 then smi_nh_ind=1;
+if /*ind_snf_use_12m=0 &*/ nhres=0 then smi_nh_ind=0;
+label smi_nh_ind="Nursing home resident self report in ivw";
+
+/*indicator for adl helper*/
+*if adl_helper_count>0 & adl_helper_count~=. then smi_helper_ind=1;
+*if adl_helper_count=0 then smi_helper_ind=0;
+*label smi_helper_ind="Indicator of having any helpers with ADL, core";
+
+/*backfill adl status if adl helper variable is complete*/
+adl_ind = adl_independent;
+*if adl_independent=. and smi_helper_ind=1 then adl_ind_core_n=0;
+*if adl_independent=. and smi_helper_ind=0 then adl_ind_core_n=1;
+label adl_ind = "ADL independent at interview";
+
+if adl_ind=1 then adl_impair = 0;
+if adl_ind=0 then adl_impair = 1;
+label adl_impair = "ADL impairment at core interview";
+
+/*indicator for any ED visit, either OP or IP*/
+if ind_ed_op_12m=1 | ind_ED_adm_12m=1 then ind_ed_op_or_ip_12m=1;
+if ind_ed_op_12m=0 & ind_ED_adm_12m=0 then ind_ed_op_or_ip_12m=0;
+label ind_ed_op_or_ip_12m="Indicator any ED use 12m pre ivw";
+
+/*criteria (A) serious medical illness and/or ADL impairment*/
+if (ser_med_illness=1 | adl_impair=1) then criteria_a=1;
+if (ser_med_illness=0 & adl_impair=0) then criteria_a=0;
+label criteria_a="Crit A SMI and/or ADL impair";
+
+/*indicator for serious medical illness and ADL impairment*/
+if (ser_med_illness=1 & adl_impair=1) then smi_and_adl=1;
+if (ser_med_illness=0 | adl_impair=0) then smi_and_adl=0;
+label smi_and_adl="SMI and ADL impairment";
+
+/*criteria (B) serious medical illness and/or ADL impairment AND nh res or urgent/emergent hosp*/
+if (ser_med_illness=1 | adl_impair=1) & (ind_em_ur_adm_12m=1 | smi_nh_ind=1) then criteria_b=1;
+if (ser_med_illness=0 & adl_impair=0) | (ind_em_ur_adm_12m=0 & smi_nh_ind=0) then criteria_b=0;
+label criteria_b="Crit B SMI or ADL impair and hospital admit or nh use";
+
+/*criteria (C) serious medical illness and adl impairment AND nh res or urgent/emergent hosp*/
+if (ser_med_illness=1 & adl_impair=1) & (ind_em_ur_adm_12m=1 | smi_nh_ind=1) then criteria_c=1;
+if (ser_med_illness=0 | adl_impair=0) | (ind_em_ur_adm_12m=0 & smi_nh_ind=0) then criteria_c=0;
+label criteria_c="Crit C SMI and ADL impair and hospital admit or nh use";
+
+/*serious medical illness criteria variable defined, so name matches format of other criteria indicators*/
+criteria_smi=ser_med_illness;
+label criteria_smi="Comparison criteria - SMI";
+
+run;
+/*
+ ods rtf body="E:\nhats\data\projects\serious_ill\logs\criteria_vars_before_coredate.rtf"
+
+title "Number of unique people in full cohort 2000-2012"
+proc sql
+select count(distinct spid) from proj_int.serious_ill_int_dataset
+where index_year in (2000,2002,2004,2006,2008,2010,2012)
+
+title "Unique R's w/ Age 65+"
+select count(distinct spid) from proj_int.serious_ill_int_dataset
+where age_ge_65=1 and index_year in (2000,2002,2004,2006,2008,2010,2012)
+
+title "Unique R's w/ Age 65+, With mc xwalk id"
+select count(distinct spid) from proj_int.serious_ill_int_dataset
+where  index_year in (2000,2002,2004,2006,2008,2010,2012)
+
+title "Unique R's w/ Age 65+, With mc xwalk id, and FFS 1yr pre-ivw"
+select count(distinct spid) from proj_int.serious_ill_int_dataset
+where  part_ab_12m=1 and hmo_d_12m=0 
+and index_year in (2000,2002,2004,2006,2008,2010,2012)
+
+create table age_ge_65_mc as 
+select * from proj_int.serious_ill_int_dataset
+where  part_ab_12m=1 and hmo_d_12m=0 
+and index_year in (2000,2002,2004,2006,2008,2010,2012)
+quit
+
+title "Dementia - elix, 2+ diagnoses required"
+proc freq data=age_ge_65_mc 
+table smi_dem_ind /missprint
+run
+
+title "Cancer - elix, metastatic or hematologic cancer"
+proc freq data=age_ge_65_mc 
+table smi_cancer_ind /missprint 
+run
+
+title "End Stage Renal Disease - elix, claims denominator file year of core ivw"
+proc freq data=age_ge_65_mc 
+table comorb_13_0_1yr esrd_ind_n comorb_13_0_1yr*esrd_ind_n ind_hosp_adm_12m*esrd_ind_n smi_esrd_ind /missprint
+run
+
+title "CHF+Indicator of more advanced disease - elix + some utilization measure TBD!"
+proc freq data=age_ge_65_mc 
+table smi_chf_ind chf_pri_dx chf_adm_dx /missprint
+run
+
+title "COPD, Either (1) ICD=9 code in any claim + DME claim for home O2 OR (2) COPD as primary dx in IP claim"
+proc freq data=age_ge_65_mc 
+table smi_copd_ind /missprint
+run
+
+*data o2_no_copd
+*set age_ge_65_mc 
+*if smi_lung_02_ind =0 and oxygen =1
+*run
+
+*title "Among interviews with home O2 use but no COPD, check to see if these are CHF patients?"
+*proc freq data=o2_no_copd
+*table  smi_chf_ind*oxygen /missprint
+*run
+
+title "Diabetes with severe complications (renal disease, ischemic hd or peripheral vascular disease)"
+proc freq data=age_ge_65_mc 
+table smi_diab_compl_ind /missprint
+run
+
+title "Advanced liver disease/cirrhosis - elix"
+proc freq data=age_ge_65_mc 
+table smi_liver_ind /missprint
+run
+
+title "HIV with and AIDS defining illness - elix"
+proc freq data=age_ge_65_mc 
+table smi_hiv_ind /missprint
+run
+
+title "ALS - just single dx code "
+proc freq data=age_ge_65_mc 
+table smi_als_ind /missprint
+run
+
+title "Hip fracture, CC"
+proc freq data=age_ge_65_mc 
+table smi_hip_ind /missprint
+run
+
+title "Multimorbidity, 3+serious medical illnesses as defined here"
+proc freq data=age_ge_65_mc 
+table smi_count smi_ge3_ind /missprint
+run
+
+title "Any ADL help, HRS"
+proc freq data=age_ge_65_mc 
+table adl_independent /missprint
+run
+
+title "Hospital admissions 6m, 12m before core interview"
+proc freq data=age_ge_65_mc  
+table ind_hosp_adm_6m*ind_em_ur_adm_6m ind_hosp_adm_12m*ind_em_ur_adm_12m 
+ind_em_adm_12m*ind_ED_adm_12m ind_em_ur_adm_12m*ind_ED_adm_12m /missprint
+run
+
+title "Elective vs non elective hospital admissions, 12m before core"
+proc freq data=age_ge_65_mc  
+table ind_nonelect_adm_12m n_nonelect_adm_12m ind_elect_adm_12m n_elect_admit_12m /missprint
+run
+
+title "ED visit without subsequent admission from OP claims, 12m pre interview"
+proc freq data=age_ge_65_mc  
+table ind_ed_op_12m n_ed_op_visits_12m ind_ed_op_or_ip_12m/missprint
+run
+
+title "Nursing home use 12m before core interview or self report NH resident at interview"
+proc freq data=age_ge_65_mc  
+table ind_snf_use_12m*nhres smi_nh_ind /missprint
+run
+
+title "Any helper with ADLs, core interview"
+proc freq data=age_ge_65_mc  
+table smi_helper_ind smi_helper_ind*adl_independent  /missprint
+run
+
+title "Number of R's that meet A)Any serious illness"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where ser_med_illness=1
+
+title "Number of R's that meet HIV"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where smi_hiv_ind=1
+
+title "Number of R's that meet B)Any ADL help"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where =1
+
+title "Number of R's that meet Criteria A: Serious medical illness and/or Any ADL help"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where (criteria_a=1)
+
+title "Number of R's that meet Criteria B: Serious medical illness and/or Any ADL help and NH use and/or Hospitalization"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where criteria_b=1
+
+title "Number of R's that meet Criteria C: Serious medical illness and Any ADL help and NH use and/or Hospitalization"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where criteria_c=1
+
+title "Number of R's that meet Any urgent or emergent hospital admission 12m preceding core interview"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where ind_em_ur_adm_12m=1
+
+title "Number of R's that meet NH resident at interview "
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where smi_nh_ind=1
+
+title "Number of R's that meet Any helper with ADLs core interview"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where smi_helper_ind=1
+
+title "Number of R's that meet Any serious illness and ADL help"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where (ser_med_illness=1 and =1) 
+
+title "Number of R's that meet Any serious illness and Urgent or Emergency hospital admission"
+proc sql
+select count(distinct spid) from age_ge_65_mc  
+where (ser_med_illness=1 and ind_em_ur_adm_12m=1) 
+
+ods rtf close 
+
+/*******************************************************************************/
+/*17 observations where esrd flag in denominator file = 1 but no esrd comorbidity
+what are these peoples diagnoses?*/
+/*
+data esrd_check_1
+set age_ge_65_mc
+if esrd_ind_n=1 and comorb_13_0_1yr=0
+run
+
+proc freq data=esrd_check_1 table part_ab_12m hmo_d_12m run
+
+proc sql
+create table esrd_check_2 as select a.* from 
+dx_all_last_1yr a join
+esrd_check_1 b
+on a.bene_id=b.bene_id and a.index_year=b.index_year
+quit
+
+ods rtf body="E:\nhats\data\projects\serious_ill\logs\check_esrd_2012.rtf"
+title "n=17 with esrd flag in denominator file but not from elixhauser comorb definition"
+proc freq data=esrd_check_2 order=freq table diag run
+quit
+ods rtf close
+*/
+/*export full dataset to Stata*/
+proc export data=proj_int.serious_ill_int_dataset1
+outfile="E:\nhats\data\projects\serious_ill\int_data\serious_ill_int_dataset1.dta" replace;
+run;
+
+
+H="stata compare to hrs"
+clear all
+set more off
+capture log close
+
+local datapath "E:\nhats\data\projects\serious_ill\int_data"
+local logpath "E:\nhats\data\projects\serious_ill\logs"
+
+log using "`logpath'\comparison_nhats_hrs", replace
+
+cd `datapath'
+
+use serious_ill_int_dataset1
+keep if sp_ivw_yes==1
+keep if wave==1 | wave==2
+gen ffs_12m=cont_ffs_n_mos>=12
+
+drop if lml_ivw==1
+
+foreach x of varlist smi_* criteria_* ser_med_illness {
+replace `x'=0 if `x'==.
+}
+local cvars age
+
+replace white=race==1
+replace black=race==2
+replace other_race=race==3
+replace hisp=race==4
+
+local ivars female white black hisp other_race married proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+smi_hiv_ind smi_als_ind smi_hip_ind ser_med_illness smi_ge3_ind nhres ///
+criteria_a criteria_b criteria_c
+
+foreach x of local ivars {
+drop if `x'==.
+}
+
+local rn : word count `cvars' `ivars' 1
+local r=1
+local c=1
+
+mat tab=J(`rn',7,.)
+svyset [pw=anfinwgt]
+sum ffs_12m
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+sum ffs_12m [aw=anfinwgt]
+mat tab[`r',`c'+2]=r(mean)*100
+
+keep if ffs_12m==1
+foreach x of local cvars {
+	local r=`r'+1
+	sum `x' 
+	mat tab[`r',`c']=r(mean)
+	mat tab[`r',`c'+1]=r(sd)
+	sum `x' [aw=anfinwgt]
+	mat tab[`r',`c'+2]=r(mean)
+}
+foreach x of local ivars {
+	local r=`r'+1
+	sum `x' 
+	mat tab[`r',`c']=r(N)*r(mean)
+	mat tab[`r',`c'+1]=r(mean)*100
+	sum `x' [aw=anfinwgt]
+	mat tab[`r',`c'+2]=r(mean)*100
+}
+
+use "E:\data\serious_ill\int_data\core_ids_1yr_criteria_5.dta", clear
+
+svyset [pw=wgtr]
+keep if core_year==2010 | core_year==2012
+keep if age_ge_65==1 & xwalk_yes==1
+local cvars age_at_core 
+
+label var age_at_core "Age at ivw (mean,sd)"
+
+local ivars female white black hisp_eth other_race married proxy  ///
+medicaid medigap srh_pf adl_e_core adl_bh_core adl_t_core adl_dr_core ///
+adl_wk_core adl_tx_core  adl_independent_core smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+smi_hiv_ind smi_als_ind smi_hip_ind ser_med_illness smi_ge3_ind nhres ///
+criteria_a criteria_b criteria_c
+
+gen ffs_12m=part_ab_12m==1 & hmo_d_12m==0
+local c=4
+local r=1
+foreach x in `ivars' {
+drop if `x'==.
+}
+sum ffs_12m
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+sum ffs_12m [aw=wgtr]
+mat tab[`r',`c'+2]=r(mean)*100
+preserve
+keep if ffs_12m==1
+
+foreach x of local cvars {
+	local r=`r'+1
+	sum `x' 
+	mat tab[`r',`c']=r(mean)
+	mat tab[`r',`c'+1]=r(sd)
+	sum `x' [aw=wgtr]
+	mat tab[`r',`c'+2]=r(mean)
+}
+foreach x of local ivars {
+	local r=`r'+1
+	sum `x' 
+	mat tab[`r',`c']=r(N)*r(mean)
+	mat tab[`r',`c'+1]=r(mean)*100
+	sum `x' [aw=wgtr]
+	mat tab[`r',`c'+2]=r(mean)*100
+}
+
+mat rownames tab = "FFS 12m pre-ivw" `cvars' `ivars' 
+
+frmttable using `logpath'\serious_ill_nhats_hrs, statmat(tab) replace ///
+title("Comparison of SMI & function, NHATS & HRS") ///
+ctitles("" "N Yes" "% Yes" "Weighted %" "N Yes" "% Yes" "Weighted %") ///
+note("Restricted to those alive at ivw with FFS MC 12+ months before" ///
+"NHATS ivw years 2010 & 2011; HRS ivw years 2010 & 2012" ///
+"Weighted values with person-level weights, NHATS anfinwgt, HRS wgtr") ///
+varlabels sdec(0,2,2,0,2,2) 
+/*restore
+append using serious_ill_int_dataset1
+
+keep if sp_ivw_yes==1 | sp_ivw_yes==.
+keep if wave==1 | wave==2 | wave==.
+replace ffs_12m=cont_ffs_n_mos>=12 if ffs_12m==.
+
+drop if lml_ivw==1
+
+foreach x of varlist smi_* criteria_* ser_med_illness {
+replace `x'=0 if `x'==.
+}
+
+replace age_at_core=age if age_at_core==.
+replace srh_pf=srh_fp if srh_pf==.
+replace adl_e_core=adl_eat_help if adl_e_core==.
+replace adl_wk_core=adl_ins_help if adl_wk_core==.
+replace adl_tx_core=adl_bed_help if adl_tx_core==.
+replace adl_dr_core=adl_dres_help if adl_dr_core==.
+replace adl_t_core=adl_toil_help if adl_t_core==.
+replace adl_bh_core=adl_bath_help if adl_bh_core==.
+
+gen nhats=sp_ivw_yes==1
+
+gen weight=wgtr
+replace weight=anfinwgt if weight==.
+
+svyset [pw=weight]
+
+svy: tab ffs_12m nhats
+mat tab[`r',7]=r(p_Pear)
+local r=`r'+1
+svy: mean age_at_core, over(nhats)
+test [age_at_core]0=[age_at_core]1
+mat tab[`r',7]=r(p)
+
+foreach x of local ivars {
+local r=`r'+1
+svy: tab `x' nhats 
+mat tab[`r',7]=r(p_Pear)
+}
+
+
