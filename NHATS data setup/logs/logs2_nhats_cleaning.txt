@@ -1,0 +1,578 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
+  log type:  text
+ opened on:  30 Mar 2016, 14:23:54
+
+. 
+. local work "E:\nhats\data\NHATS working data\"
+
+. //local work /Users/rebeccagorges/Documents/data/nhats/working
+. 
+. cd "`work'"
+E:\nhats\data\NHATS working data
+
+. use round_1_to_4.dta
+
+. *********************************************
+. tab wave, missing
+
+Survey wave |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |      8,245       31.89       31.89
+          2 |      7,075       27.36       59.25
+          3 |      5,799       22.43       81.68
+          4 |      4,737       18.32      100.00
+------------+-----------------------------------
+      Total |     25,856      100.00
+
+. 
+. *********************************************
+. //interview type, varies by wave, use tracker status variables
+. 
+. tab r3spstat if wave==3
+
+          R3 SUBJECT PERSON INTRVW STAT |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                               11 Ready |         68        1.17        1.17
+                             12 Started |          8        0.14        1.31
+                               20 Final |      5,407       93.24       94.55
+                        24 Not Required |        316        5.45      100.00
+----------------------------------------+-----------------------------------
+                                  Total |      5,799      100.00
+
+. tab r3status if wave==3
+
+                 R3 OVERALL CASE STATUS |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                            60 Complete |      4,838       83.43       83.43
+               61 Complete, NH facility |        213        3.67       87.10
+    62 Complete SP Deceased, Proxy Intv |        523        9.02       96.12
+        63 Complete SP, FQ not complete |         46        0.79       96.91
+       64 Complete FQ, SP not complete  |        179        3.09      100.00
+----------------------------------------+-----------------------------------
+                                  Total |      5,799      100.00
+
+. 
+. gen ivw_type=3
+
+. replace ivw_type=1 if r1spstat==20 & wave==1 
+(7609 real changes made)
+
+. 
+. foreach w in 2 3 4{
+  2.         replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w'
+  3.         replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w'
+  4. }
+(6056 real changes made)
+(503 real changes made)
+(4884 real changes made)
+(523 real changes made)
+(4037 real changes made)
+(404 real changes made)
+
+. 
+. la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interview completed" ///
+>         3"SP interview not completed"
+
+. la val ivw_type ivw_type
+
+. tab ivw_type wave, missing
+
+                      |                 Survey wave
+             ivw_type |         1          2          3          4 |     Total
+----------------------+--------------------------------------------+----------
+Alive, SP interview c |     7,609      6,056      4,884      4,037 |    22,586 
+Died, proxy SP LML in |         0        503        523        404 |     1,430 
+SP interview not comp |       636        516        392        296 |     1,840 
+----------------------+--------------------------------------------+----------
+                Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. 
+. tab r1status r1spstat if wave==1, missing
+
+      R1 OVERALL CASE |  R1 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready   20 Final  24 Not Re |     Total
+----------------------+---------------------------------+----------
+          60 Complete |         0      7,550          0 |     7,550 
+61 Complete, NH facil |         1          0        467 |       468 
+63 Complete SP, FQ no |         0         59          0 |        59 
+64 Complete FQ, SP no |       168          0          0 |       168 
+----------------------+---------------------------------+----------
+                Total |       169      7,609        467 |     8,245 
+
+
+. tab r1dresid r1spstat if wave==1, missing
+
+R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready   20 Final  24 Not Re |     Total
+----------------------+---------------------------------+----------
+         1 Community  |         0      7,197          0 |     7,197 
+2 Residential Care Re |         0        412          0 |       412 
+3 Residential Care Re |       168          0          0 |       168 
+4 Nursing Home Reside |         1          0        467 |       468 
+----------------------+---------------------------------+----------
+                Total |       169      7,609        467 |     8,245 
+
+
+. //compare to old code, if r1dresid=1 or 2, then include in homebound paper
+. //so use ivw type=1 is the same thing for r1
+. 
+. gen sp_ivw_yes=1 if r1spstat==20 & wave==1
+(18247 missing values generated)
+
+. replace sp_ivw_yes=0 if inlist(r1spstat,11,24) & wave==1
+(636 real changes made)
+
+. 
+. foreach w in 2 3 4{
+  2.         tab r`w'status r`w'spstat if wave==`w', missing
+  3.         replace sp_ivw_yes=1 if r`w'spstat==20 & wave==`w'
+  4.         replace sp_ivw_yes=0 if inlist(r`w'spstat,11,12,24) & wave==`w'
+  5. }
+
+      R2 OVERALL CASE |        R2 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready  12 Starte   20 Final  24 Not Re |     Total
+----------------------+--------------------------------------------+----------
+          60 Complete |         0          0      5,992          0 |     5,992 
+61 Complete, NH facil |         0          0          0        326 |       326 
+62 Complete SP Deceas |         0          0        503          0 |       503 
+63 Complete SP, FQ no |         0          0         64          0 |        64 
+64 Complete FQ, SP no |        56          1          0        133 |       190 
+----------------------+--------------------------------------------+----------
+                Total |        56          1      6,559        459 |     7,075 
+
+(6559 real changes made)
+(516 real changes made)
+
+      R3 OVERALL CASE |        R3 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready  12 Starte   20 Final  24 Not Re |     Total
+----------------------+--------------------------------------------+----------
+          60 Complete |         0          0      4,838          0 |     4,838 
+61 Complete, NH facil |         0          0          0        213 |       213 
+62 Complete SP Deceas |         0          0        523          0 |       523 
+63 Complete SP, FQ no |         0          0         46          0 |        46 
+64 Complete FQ, SP no |        68          8          0        103 |       179 
+----------------------+--------------------------------------------+----------
+                Total |        68          8      5,407        316 |     5,799 
+
+(5407 real changes made)
+(392 real changes made)
+
+      R4 OVERALL CASE |        R4 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready  12 Starte   20 Final  24 Not Re |     Total
+----------------------+--------------------------------------------+----------
+          60 Complete |         0          0      4,007          0 |     4,007 
+61 Complete, NH facil |         0          0          0        140 |       140 
+62 Complete SP Deceas |         0          0        404          0 |       404 
+63 Complete SP, FQ no |         0          0         30          0 |        30 
+64 Complete FQ, SP no |        79          6          0         71 |       156 
+----------------------+--------------------------------------------+----------
+                Total |        79          6      4,441        211 |     4,737 
+
+(4441 real changes made)
+(296 real changes made)
+
+. la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml interviews
+
+. tab sp_ivw_yes wave, missing
+
+        SP |
+ interview |
+conducted? |                 Survey wave
+     yes=1 |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |       636        516        392        296 |     1,840 
+         1 |     7,609      6,559      5,407      4,441 |    24,016 
+-----------+--------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. 
+. gen lml_ivw_yes = 0
+
+. foreach w in 2 3 4{
+  2.         replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`w'
+  3. }
+(503 real changes made)
+(523 real changes made)
+(404 real changes made)
+
+. la var lml_ivw_yes "LWL interview? yes=1"
+
+. 
+. tab sp_ivw_yes lml_ivw_yes, missing
+
+        SP |
+ interview |
+conducted? | LWL interview? yes=1
+     yes=1 |         0          1 |     Total
+-----------+----------------------+----------
+         0 |     1,840          0 |     1,840 
+         1 |    22,586      1,430 |    24,016 
+-----------+----------------------+----------
+     Total |    24,426      1,430 |    25,856 
+
+
+. tab lml_ivw_yes wave, missing
+
+       LWL |
+interview? |                 Survey wave
+     yes=1 |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     8,245      6,572      5,276      4,333 |    24,426 
+         1 |         0        503        523        404 |     1,430 
+-----------+--------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. 
+. tab mo2outoft r2status if wave==2, missing
+
+      R2 MO1 OFTEN GO |                 R2 OVERALL CASE STATUS
+              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple  64 Comple |     Total
+----------------------+-------------------------------------------------------+----------
+           -9 Missing |         0          0          0          0        190 |       190 
+                -8 DK |         2          0          8          0          0 |        10 
+                -7 RF |         1          0          1          0          0 |         2 
+      -1 Inapplicable |         0        326        127          0          0 |       453 
+1 EVERY DAY (7 DAYS A |     3,753          0         42         38          0 |     3,833 
+2 MOST DAYS (5-6 DAYS |       995          0         43          9          0 |     1,047 
+3 SOME DAYS (2-4 DAYS |       743          0         78          9          0 |       830 
+4 RARELY (ONCE A WEEK |       371          0         88          5          0 |       464 
+              5 NEVER |       127          0        116          3          0 |       246 
+----------------------+-------------------------------------------------------+----------
+                Total |     5,992        326        503         64        190 |     7,075 
+
+
+. tab mo3outoft r3status if wave==3, missing
+
+      R3 MO1 OFTEN GO |                 R3 OVERALL CASE STATUS
+              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple  64 Comple |     Total
+----------------------+-------------------------------------------------------+----------
+           -9 Missing |         0          0          0          0        179 |       179 
+                -8 DK |         5          0         14          0          0 |        19 
+                -7 RF |         1          0          0          0          0 |         1 
+      -1 Inapplicable |         0        213        117          0          0 |       330 
+1 EVERY DAY (7 DAYS A |     2,971          0         38         20          0 |     3,029 
+2 MOST DAYS (5-6 DAYS |       816          0         39         10          0 |       865 
+3 SOME DAYS (2-4 DAYS |       630          0         87          8          0 |       725 
+4 RARELY (ONCE A WEEK |       314          0        130          5          0 |       449 
+              5 NEVER |       101          0         98          3          0 |       202 
+----------------------+-------------------------------------------------------+----------
+                Total |     4,838        213        523         46        179 |     5,799 
+
+
+. 
+. //identify proxy SP interviews
+. gen proxy_ivw=.
+(25856 missing values generated)
+
+. foreach w in 1 2 3 4{
+  2. replace proxy_ivw=1 if is`w'resptype==2
+  3. replace proxy_ivw=0 if is`w'resptype==1
+  4. }
+(583 real changes made)
+(7026 real changes made)
+(964 real changes made)
+(5595 real changes made)
+(897 real changes made)
+(4510 real changes made)
+(722 real changes made)
+(3719 real changes made)
+
+. la var proxy_ivw "Interview via proxy"
+
+. tab proxy_ivw wave, missing
+
+ Interview |                 Survey wave
+ via proxy |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719 |    20,850 
+         1 |       583        964        897        722 |     3,166 
+         . |       636        516        392        296 |     1,840 
+-----------+--------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737 |    25,856 
+
+
+. tab proxy_ivw wave if ivw_type==1, missing
+
+ Interview |                 Survey wave
+ via proxy |         1          2          3          4 |     Total
+-----------+--------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719 |    20,850 
+         1 |       583        461        374        318 |     1,736 
+-----------+--------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037 |    22,586 
+
+
+. tab proxy_ivw wave if ivw_type==2, missing
+
+ Interview |           Survey wave
+ via proxy |         2          3          4 |     Total
+-----------+---------------------------------+----------
+         1 |       503        523        404 |     1,430 
+-----------+---------------------------------+----------
+     Total |       503        523        404 |     1,430 
+
+
+. 
+. /*missing data convention per user guide
+> For our purposes, code all as missing
+> The following codes were used at the item level for missing data of different types:
+> -7 = Refusal
+> -8 = Don’t Know
+> -1 = Inapplicable
+> -9 = Not Ascertained*/
+. local miss -9,-1
+
+. 
+. *********************************************
+. *********************************************
+. //definitions of homebound
+. *********************************************
+. *********************************************
+. //how often go out of the house?
+. gen freq_go_out=.
+(25856 missing values generated)
+
+. foreach w in 1 2 3 4{
+  2.         tab mo`w'outoft, missing
+  3.         replace freq_go_out=mo`w'outoft if wave==`w'
+  4. }
+
+        R1 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+--------------------------------+-----------------------------------
+                     -9 Missing |        168        0.65        0.65
+                          -8 DK |          5        0.02        0.67
+                          -7 RF |          1        0.00        0.67
+                -1 Inapplicable |        468        1.81        2.48
+    1 EVERY DAY (7 DAYS A WEEK) |      4,854       18.77       21.26
+  2 MOST DAYS (5-6 DAYS A WEEK) |      1,226        4.74       26.00
+  3 SOME DAYS (2-4 DAYS A WEEK) |        962        3.72       29.72
+ 4 RARELY (ONCE A WEEK OR LESS) |        428        1.66       31.37
+                        5 NEVER |        133        0.51       31.89
+                              . |     17,611       68.11      100.00
+--------------------------------+-----------------------------------
+                          Total |     25,856      100.00
+(8245 real changes made)
+
+       R2 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+-------------------------------+-----------------------------------
+                    -9 Missing |        190        0.73        0.73
+                         -8 DK |         10        0.04        0.77
+                         -7 RF |          2        0.01        0.78
+               -1 Inapplicable |        453        1.75        2.53
+   1 EVERY DAY (7 DAYS A WEEK) |      3,833       14.82       17.36
+ 2 MOST DAYS (5-6 DAYS A WEEK) |      1,047        4.05       21.41
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        830        3.21       24.62
+4 RARELY (ONCE A WEEK OR LESS) |        464        1.79       26.41
+                       5 NEVER |        246        0.95       27.36
+                             . |     18,781       72.64      100.00
+-------------------------------+-----------------------------------
+                         Total |     25,856      100.00
+(7075 real changes made)
+
+       R3 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+-------------------------------+-----------------------------------
+                    -9 Missing |        179        0.69        0.69
+                         -8 DK |         19        0.07        0.77
+                         -7 RF |          1        0.00        0.77
+               -1 Inapplicable |        330        1.28        2.05
+   1 EVERY DAY (7 DAYS A WEEK) |      3,029       11.71       13.76
+ 2 MOST DAYS (5-6 DAYS A WEEK) |        865        3.35       17.11
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        725        2.80       19.91
+4 RARELY (ONCE A WEEK OR LESS) |        449        1.74       21.65
+                       5 NEVER |        202        0.78       22.43
+                             . |     20,057       77.57      100.00
+-------------------------------+-----------------------------------
+                         Total |     25,856      100.00
+(5799 real changes made)
+
+       R4 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+-------------------------------+-----------------------------------
+                    -9 Missing |        156        0.60        0.60
+                         -8 DK |          6        0.02        0.63
+               -1 Inapplicable |        159        0.61        1.24
+   1 EVERY DAY (7 DAYS A WEEK) |      2,423        9.37       10.61
+ 2 MOST DAYS (5-6 DAYS A WEEK) |        773        2.99       13.60
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        621        2.40       16.00
+4 RARELY (ONCE A WEEK OR LESS) |        369        1.43       17.43
+                       5 NEVER |        230        0.89       18.32
+                             . |     21,119       81.68      100.00
+-------------------------------+-----------------------------------
+                         Total |     25,856      100.00
+(4737 real changes made)
+
+. 
+. replace freq_go_out=. if inlist(freq_go_out,`miss')
+(2103 real changes made, 2103 to missing)
+
+. la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
+>         3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
+
+. la val  freq_go_out freq_go_out
+
+. la var freq_go_out "How often go outside"
+
+. tab freq_go_out sp_ivw_yes, missing
+
+                     |     SP interview
+                     |   conducted? yes=1
+How often go outside |         0          1 |     Total
+---------------------+----------------------+----------
+                  -8 |         0         40 |        40 
+                  -7 |         0          4 |         4 
+           Every day |         0     14,139 |    14,139 
+Most days (5-6/week) |         0      3,911 |     3,911 
+Some days (2-4/week) |         0      3,138 |     3,138 
+              Rarely |         0      1,710 |     1,710 
+               Never |         0        811 |       811 
+                   . |     1,840        263 |     2,103 
+---------------------+----------------------+----------
+               Total |     1,840     24,016 |    25,856 
+
+
+. tab freq_go_out sp_ivw_yes if wave==1, missing
+
+                     |     SP interview
+                     |   conducted? yes=1
+How often go outside |         0          1 |     Total
+---------------------+----------------------+----------
+                  -8 |         0          5 |         5 
+                  -7 |         0          1 |         1 
+           Every day |         0      4,854 |     4,854 
+Most days (5-6/week) |         0      1,226 |     1,226 
+Some days (2-4/week) |         0        962 |       962 
+              Rarely |         0        428 |       428 
+               Never |         0        133 |       133 
+                   . |       636          0 |       636 
+---------------------+----------------------+----------
+               Total |       636      7,609 |     8,245 
+
+
+. tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==0, missing
+
+                     |     SP interview
+                     |   conducted? yes=1
+How often go outside |         0          1 |     Total
+---------------------+----------------------+----------
+                  -8 |         0          2 |         2 
+                  -7 |         0          1 |         1 
+           Every day |         0      3,791 |     3,791 
+Most days (5-6/week) |         0      1,004 |     1,004 
+Some days (2-4/week) |         0        752 |       752 
+              Rarely |         0        376 |       376 
+               Never |         0        130 |       130 
+                   . |       516          0 |       516 
+---------------------+----------------------+----------
+               Total |       516      6,056 |     6,572 
+
+
+. tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==1, missing
+
+                     |     SP
+                     | interview
+                     | conducted?
+                     |   yes=1
+How often go outside |         1 |     Total
+---------------------+-----------+----------
+                  -8 |         8 |         8 
+                  -7 |         1 |         1 
+           Every day |        42 |        42 
+Most days (5-6/week) |        43 |        43 
+Some days (2-4/week) |        78 |        78 
+              Rarely |        88 |        88 
+               Never |       116 |       116 
+                   . |       127 |       127 
+---------------------+-----------+----------
+               Total |       503 |       503 
+
+
+. tab freq_go_out sp_ivw_yes if wave==3 & lml_ivw_yes==0, missing
+
+                     |     SP interview
+                     |   conducted? yes=1
+How often go outside |         0          1 |     Total
+---------------------+----------------------+----------
+                  -8 |         0          5 |         5 
+                  -7 |         0          1 |         1 
+           Every day |         0      2,991 |     2,991 
+Most days (5-6/week) |         0        826 |       826 
+Some days (2-4/week) |         0        638 |       638 
+              Rarely |         0        319 |       319 
+               Never |         0        104 |       104 
+                   . |       392          0 |       392 
+---------------------+----------------------+----------
+               Total |       392      4,884 |     5,276 
+
+
+. 
+. 
+end of do-file
+
+. preserve
+already preserved
+r(621);
+
+. tab sp_ivw
+
+         SP |
+  interview |
+ conducted? |
+      yes=1 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      1,840        7.12        7.12
+          1 |     24,016       92.88      100.00
+------------+-----------------------------------
+      Total |     25,856      100.00
+
+. keep if sp_ivw==1
+(1840 observations deleted)
+
+. tab sp_ivw sp_ivw_yes
+
+           |     SP
+        SP | interview
+ interview | conducted?
+conducted? |   yes=1
+     yes=1 |         1 |     Total
+-----------+-----------+----------
+         1 |    24,016 |    24,016 
+-----------+-----------+----------
+     Total |    24,016 |    24,016 
+
+
+. tab mo1outoft
+
+        R1 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+--------------------------------+-----------------------------------
+                          -8 DK |          5        0.07        0.07
+                          -7 RF |          1        0.01        0.08
+    1 EVERY DAY (7 DAYS A WEEK) |      4,854       63.79       63.87
+  2 MOST DAYS (5-6 DAYS A WEEK) |      1,226       16.11       79.98
+  3 SOME DAYS (2-4 DAYS A WEEK) |        962       12.64       92.63
+ 4 RARELY (ONCE A WEEK OR LESS) |        428        5.62       98.25
+                        5 NEVER |        133        1.75      100.00
+--------------------------------+-----------------------------------
+                          Total |      7,609      100.00
+
+. tab mo2outoft
+
+       R2 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+-------------------------------+-----------------------------------
+                         -8 DK |         10        0.15        0.15
+                         -7 RF |          2        0.03        0.18
+               -1 Inapplicable |        127        1.94        2.12
+   1 EVERY DAY (7 DAYS A WEEK) |      3,833       58.44       60.56
+ 2 MOST DAYS (5-6 DAYS A WEEK) |      1,047       15.96       76.52
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        830       12.65       89.18
+4 RARELY (ONCE A WEEK OR LESS) |        464        7.07       96.25
+                       5 NEVER |        246        3.75      100.00
+-------------------------------+-----------------------------------
+                         Total |      6,559      100.00
+
+. do "C:\Users\bollee01\AppData\Local\Temp\7\STD02000000.tmp"
+
+. capture log close

@@ -105,7 +105,6 @@ table mc1hwgtregd8;
 run;
 ods rtf close;
 
-
 /********** PHQ/GAD Questions **********/
 
 ods rtf body = "E:\nhats\data\Logs - NHATS setup\PHQ_GAD_Missing.rtf";

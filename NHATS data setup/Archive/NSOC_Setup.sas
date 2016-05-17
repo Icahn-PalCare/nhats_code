@@ -160,10 +160,14 @@ cg_medicare = .;
 if chi1medicare = 1 then cg_medicare = 1;
 if chi1medicare = 2 then cg_medicare = 0;
 
+/* Lives with SP */
+if cg_spouse = 1 then cg_lives_with_SP = hh1livwthspo;
+if cg_spouse = 0 then cg_lives_with_sp = op1prsninhh;
+if cg_lives_with_SP < 0 then cg_lives_with_sp = .;
+
 run;
-/*
 proc freq data=nsoc;
-table hh1livwthspo op1prsninhh cg_lives_with_sp ;
+table cg_relationship_cat1 cpp1wrk4pay cec1wrk4pay;
 run;
 proc means data=nsoc;
 var total_hours;
@@ -186,7 +190,7 @@ cca1hlpteeth cca1hlpmdtk cca1hlpshot
 cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg
 cac1diffinc cac1diffemo cac1diffphy che1fltltin;
 run;
-*/
+
 proc format;
 value yesno_ 1 = "Yes"
 			 0 = "No"
@@ -364,8 +368,8 @@ run;
 %mend;
 %gain_neg;
 option spool;
-proc freq data=ko.Nsoc_final;
-table cac1dealbetr gain_deal_better gain_deal_better_di;
+proc freq data=nsoc;
+table cac1diffinc cac1diffinlv;
 run;
 %let varlist = cac1diffinc cac1diffemo cac1diffphy;
 %let varlist1 = diff_financial diff_emotional diff_physical;

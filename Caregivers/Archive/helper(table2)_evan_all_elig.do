@@ -177,7 +177,7 @@ local c = 1
 restore
 
 
-frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table_all_elig", ///
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table_all_eliga", ///
 statmat(test1) rtitles ("Total Number of SPs"\"Total Number of Helpers"\ ///
 "Mean Number of Helpers mean(sd)"\"Median number of helpers per SP"\ ///
 "Category: Number of Helpers (1-3) n(%)"\"Category: Number of Helpers (4-6) n(%)"\ ///
@@ -301,7 +301,7 @@ local c = 1
 }
 matlist test1
 
-frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table_all_elig", ///
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table_all_eliga", ///
 statmat(test1) rtitles ("Total Number of Helpers"\ ///
 "Helper Prevalence :"\"Spouse/Partner"\"Daughter"\"Son"\"Other Relatives"\"Paid Caregiver"\ ///
 "Other non-relatives"\""\"Mean Number of Hours of care per type of Helper:"\ ///

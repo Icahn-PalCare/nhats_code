@@ -1,6 +1,6 @@
 libname ko "E:\nhats\data\Projects\Caregivers";
 libname nhats "E:\nhats\data\NHATS working data";
-options nofmterr;
+
 /*imported raw OP database from round 1*/
 
 proc import out=nhats_r1_OP
@@ -158,6 +158,7 @@ if op_iadl_laun = 1 | op_iadl_shop = 1 | op_iadl_meal = 1 | op_iadl_bank = 1 |  
 if any_iadl = . then any_iadl = 0;
 run;
 
+
 proc freq data=helpers1;
 table total_hours op_relationship_cat op_relationship_cat*op_is_paid /  missing;
 run;
@@ -188,9 +189,7 @@ proc freq data=helpers1;
 table w1anfinwgt0 ;
 run;
 
-proc freq data=helpers1 ;
-table op1ishelper;
-run;
+
 data helpers2;
 set helpers1;
 retain hours_helped hours_helped_i hours_helped_wk hours_helped_wk_i count_helpers num_spouse num_daug num_son num_oth_fam num_paid_cg num_other_nofam;

@@ -166,8 +166,12 @@ if cg_spouse = 0 then cg_lives_with_sp = op1prsninhh;
 if cg_lives_with_SP < 0 then cg_lives_with_sp = .;
 
 run;
+/*
 proc freq data=nsoc;
-table cg_relationship_cat1 cpp1wrk4pay cec1wrk4pay;
+table c1relatnshp  ;
+run;
+proc means data=nsoc;
+var total_hours;
 run;
 proc print data = nsoc (obs = 100);
 where cec1wrk4pay = 2;
@@ -187,7 +191,7 @@ cca1hlpteeth cca1hlpmdtk cca1hlpshot
 cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg
 cac1diffinc cac1diffemo cac1diffphy che1fltltin;
 run;
-
+*/
 proc format;
 value yesno_ 1 = "Yes"
 			 0 = "No"
@@ -304,8 +308,8 @@ run;
 %mend;
 %help1;
 
-%let varlist = cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd cca1hlpinsrn cca1hlpothin cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs cca1hlpteeth cca1hlpmdtk cca1hlpshot cse1frfamhlp cpp1wrk4pay;
-%let varlist1 = help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help work_4_pay;
+%let varlist = cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd cca1hlpinsrn cca1hlpothin cse1hlpgtdev cse1homsafer cse1hlppdhlp cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs cca1hlpteeth cca1hlpmdtk cca1hlpshot cse1frfamhlp cpp1wrk4pay;
+%let varlist1 = help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_mob_dev help_home_safe help_paid_helpr help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help work_4_pay;
 %macro help2;
 %let i = 1;
 %let var = %scan(&varlist,&i);
@@ -327,8 +331,17 @@ run;
 %end;
 %mend;
 %help2;
+proc freq data=nsoc;
+table help_mob_dev help_home_safe help_paid_helpr;
+run;
 
-%let varlist = cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg;
+data nsoc;
+set nsoc;
+if help_insurance = 1 | help_insurance_oth = 1 then help_insurance_any = 1;
+if help_insurance = 0 and help_insurance_oth = 0 then help_insurance_any = 0;
+run;
+
+%let varlist = gain_more_conf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg;
 %let varlist1 = gain_more_conf gain_deal_better gain_closer2SP gain_more_satisfied neg_exhausted neg_too_much neg_no_time neg_no_routine;
 %macro gain_neg;
 %let i = 1;
@@ -357,7 +370,7 @@ run;
 %gain_neg;
 option spool;
 proc freq data=nsoc;
-table cac1diffinc cac1diffinlv;
+table gain_more_conf gain_more_conf;
 run;
 %let varlist = cac1diffinc cac1diffemo cac1diffphy;
 %let varlist1 = diff_financial diff_emotional diff_physical;
@@ -419,8 +432,8 @@ run;
 %difficulty1;
 ods rtf close;
 
-%let varlist = cdc1hlpsched cdc1hlpyrpls;
-%let varlist1 = help_regular_sched help_longer_than_yr;
+%let varlist = cdc1hlpsched cdc1hlpyrpls chi1medicaid;
+%let varlist1 = help_regular_sched help_longer_than_yr cg_medicaid;
 %macro misc_binary;
 %let i = 1;
 %let var = %scan(&varlist,&i);
@@ -592,6 +605,48 @@ data nsoc1;
 set nsoc_w_age;
 run;
 
+/**Age in Continuous Form (non-intervals)**/
+
+
+data nsoc_age;
+set nsoc1 (keep = spid opid chd1cgbrthyr chd1cgbrthmt c1intmonth);
+run;
+proc sql;
+create table nsoc_age1
+as select a.*, b.op1age
+from nsoc_age a
+left join raw_op_sens b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=nsoc_age1;
+table op1age;
+run;
+data nsoc_age1;
+set nsoc_age1;
+cg_age = op1age;
+if cg_age = -1|cg_age=-7|cg_age=-8 then cg_age = .;
+if op1age < 0 and chd1cgbrthyr >0 and c1intmonth >= chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr;
+if op1age < 0 and chd1cgbrthyr >0 and c1intmonth < chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr-1;
+run;
+proc means data=nsoc_age1;
+var cg_age;
+run;
+
+proc sql;
+create table nsoc_age2
+as select a.*, b.cg_age
+from nsoc1 a
+left join nsoc_age1 b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc means data=nsoc_age2;
+var cg_age;
+run;
+
+data nsoc1;
+set nsoc_age2;
+run;
+
 proc means data=nsoc_pay;
 var cec1hrsweek cec1hrslstwk;
 run;
@@ -614,6 +669,7 @@ if paid_hours >=40 then paid_hours_cat = 2;
 if paid_last_week = 0 then paid_hours = 0;
 if paid_last_week = 0 then paid_hours_cat = 0;
 run;
+/*
 ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\Pay_Hours.rtf";
 proc freq data=nsoc_pay;
 table cec1wrk4pay paid_last_week paid_hours_cat paid_hours;
@@ -622,6 +678,7 @@ proc means data=nsoc_pay;
 var paid_hours;
 run;
 ods rtf close;
+*/
 data nsoc1;
 set nsoc_pay;
 run;
@@ -650,12 +707,13 @@ cg_gad2_anxiety = .;
 if cg_gad2_score >= 3 then cg_gad2_anxiety = 1;
 else if cg_gad2_score < 3 and cg_gad2_score ~= . then cg_gad2_anxiety = 0;
 run;
+/*
 ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\PHG_GAD.rtf";
 proc freq data=nsoc_phq_gad;
 table cg_depr_pqq1 cg_depr_pqq2 cg_depr_gad1 cg_depr_gad2 cg_phq2_score cg_gad2_score cg_phq2_depressed cg_gad2_anxiety;
 run;
 ods rtf close;
-
+*/
 data nsoc1;
 set nsoc_phq_gad;
 run;
@@ -856,12 +914,13 @@ run;
 data test3;
 set raw_op_inf_cg3 (keep = spid opid nsoc_eligible helper_informal informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers informal_nsoc_elig all_helper_tot all_helper_family_tot );
 run;
+/*
 ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Total_Helper.rtf";
 proc freq data=raw_op_inf_cg3;
 table informal_nsoc_comp  all_helper_tot diff_helper all_helper_family_tot;
 run;
 ods rtf close;
-
+*/
 proc sql;
 create table nsoc_helpers
 as select a.*, b.informal_nsoc_comp, b.informal_nsoc_elig, b.all_helper_tot, b.all_helper_family_tot
@@ -919,6 +978,7 @@ data nsoc_helpers2;
 set nsoc_helpers1;
 if died = 1;
 run;
+/*
 ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Solo_Caregiver_Numbers.rtf";
 proc freq data=nsoc_helpers2;
 table solo_cg_fam  ;
@@ -935,6 +995,7 @@ where solo_cg = 1;
 table all_helper_tot;
 run;
 ods rtf close;
+*/
 /************* ONLY EOL Helpers *****************/
 
 proc sql;
@@ -948,8 +1009,6 @@ quit;
 proc freq data=nsoc1;
 table diff_physical_lv_di;
 run;
-
-
 
 /*********** Interview Date **************/
 
@@ -1113,16 +1172,14 @@ proc freq data=nsoc_w_hh;
 table lives_in_hh;
 run;
 
-
 data nsoc1;
 set nsoc_w_hh;
 run;
 
-
 proc freq data=nsoc1;
 table diff_emotional_lv_di ;
 run;
-
+/*
 ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\solo_cg_fam_xtab_spouse.rtf";
 proc freq data=nsoc1;
 where died = 1;
@@ -1141,7 +1198,28 @@ where solo_cg_fam = 1 and died = 1;
 table cg_relationship_cat;
 run;
 ods rtf close;
+*/
 
+data nhats_op;
+set ko.helpers1a;
+if op1dochlp = -1 then op1dochlp = 0;
+run;
+proc freq data=nhats_op;
+table op1dochlp;
+run;
+proc sql;
+create table op_additions
+as select a.*, b.op1dochlp
+from nsoc1 a
+left join nhats_op b
+on a.spid = b.spid and a.opid = b.opid;
+quit;
+proc freq data=op_additions;
+table op1dochlp;
+run;
+data nsoc1;
+set op_additions;
+run;
 data ko.nsoc_full;
 set nsoc1;
 run;
@@ -1159,12 +1237,4 @@ run;
 
 data ko.nsoc_final;
 set nsoc1;
-run;
-
-proc freq data=nsoc1;
-table helper_informal*c1relatnshp;
-run;
-proc freq data=nsoc1;
-where died = 1;
-table solo_cg_fam;
 run;
