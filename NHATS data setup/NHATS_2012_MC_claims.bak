@@ -1,6 +1,48 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
-H="initial processing"
+H="merge multiple years"
+libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname merged 'E:\nhats\data\CMS_DUA_28016\Merged';
+libname cumu 'E:\nhats\data\CMS_DUA_28016\Cumulative Years';
+
+data mbsf_ab_summary_06_12;
+set mbsf_ab_summary_06 mbsf_ab_summary_07 mbsf_ab_summary_08 mbsf_ab_summary_09 
+ mbsf_ab_summary_10 mbsf_ab_summary_11 mbsf_ab_summary_12;
+
+/************************************************************************
+*************************************************************************
+Clean birth_date, death_date in date format from denominator file
+*************************************************************************
+************************************************************************/
+
+/*note we can't use dob dod from CMS denominator file since a lot of them are missing,they should come from restricted file*/
+death_date = BENE_DEATH_DT;
+birth_date = BENE_BIRTH_DT;
+format death_date date9. birth_date date9.;
+drop BENE_DEATH_DT BENE_BIRTH_DT;
+run;
+
+data medi_raw.Mbsf_cc_summary_06_12;
+set medi_raw.Mbsf_cc_summary_06 medi_raw.Mbsf_cc_summary_07 medi_raw.Mbsf_cc_summary_08 
+medi_raw.Mbsf_cc_summary_09 medi_raw.Mbsf_cc_summary_10 medi_raw.Mbsf_cc_summary_11
+medi_raw.Mbsf_cc_summary_12;
+run;
+
+data medi_raw.Mbsf_costuse_06_12;
+set medi_raw.Mbsf_costuse_06 medi_raw.Mbsf_costuse_07 medi_raw.Mbsf_costuse_08 medi_raw.Mbsf_costuse_09
+medi_raw.Mbsf_costuse_10 medi_raw.Mbsf_costuse_11 medi_raw.Mbsf_costuse_12;
+run;
+
+data medi_raw.Mbsf_d_cmpnts_06_12;
+set medi_raw.Mbsf_d_cmpnts_06 medi_raw.Mbsf_d_cmpnts_07 medi_raw.Mbsf_d_cmpnts_08 
+medi_raw.Mbsf_d_cmpnts_09 medi_raw.Mbsf_d_cmpnts_10 medi_raw.Mbsf_d_cmpnts_11
+medi_raw.Mbsf_d_cmpnts_12;
+run;
+
+data medi_raw.Mds_asmt_summary_3_10_12;
+set medi_raw.Mds_asmt_summary_3_10 medi_raw.Mds_asmt_summary_3_11
+medi_raw.Mds_asmt_summary_3_12;
+run;
 
 
 H="NHATS Medicare claims processing"
@@ -73,7 +115,7 @@ set cumu.bcarrier_claims_j_09_12;
 run;
 
 data pb_line;
-set cumu.bcarrier_line_j_09_12 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt);
+set cumu.bcarrier_line_j_09_12 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd);
 run;
 
 proc sort data=pb_line;
@@ -90,13 +132,20 @@ by bene_id clm_id;
 var line_1st_expns_dt;
 run;
 
+proc transpose data=pb_line out=pb_line_wide3 prefix=betos;
+by bene_id clm_id;
+var betos_cd;
+run;
+
 proc sql;
 create table merged.pb_06_12 as select *
 from pb_06_12 a 
 left join pb_line_wide1 b
 on a.bene_id=b.bene_id and a.clm_id=b.clm_id
 left join pb_line_wide2 c
-on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join pb_line_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
 quit;
 
 /*hh*/

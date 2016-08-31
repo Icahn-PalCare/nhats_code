@@ -1,13 +1,183 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
-H="initial processing"
+H="merge multiple years"
+libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname merged 'E:\nhats\data\CMS_DUA_28016\Merged';
+libname cumu 'E:\nhats\data\CMS_DUA_28016\Cumulative Years';
+
+data mbsf_ab_summary_06_12;
+set mbsf_ab_summary_06 mbsf_ab_summary_07 mbsf_ab_summary_08 mbsf_ab_summary_09 
+ mbsf_ab_summary_10 mbsf_ab_summary_11 mbsf_ab_summary_12;
+
+/************************************************************************
+*************************************************************************
+Clean birth_date, death_date in date format from denominator file
+*************************************************************************
+************************************************************************/
+
+/*note we can't use dob dod from CMS denominator file since a lot of them are missing,they should come from restricted file*/
+death_date = BENE_DEATH_DT;
+birth_date = BENE_BIRTH_DT;
+format death_date date9. birth_date date9.;
+drop BENE_DEATH_DT BENE_BIRTH_DT;
+run;
+
+data medi_raw.Mbsf_cc_summary_06_12;
+set medi_raw.Mbsf_cc_summary_06 medi_raw.Mbsf_cc_summary_07 medi_raw.Mbsf_cc_summary_08 
+medi_raw.Mbsf_cc_summary_09 medi_raw.Mbsf_cc_summary_10 medi_raw.Mbsf_cc_summary_11
+medi_raw.Mbsf_cc_summary_12;
+run;
+
+data medi_raw.Mbsf_costuse_06_12;
+set medi_raw.Mbsf_costuse_06 medi_raw.Mbsf_costuse_07 medi_raw.Mbsf_costuse_08 medi_raw.Mbsf_costuse_09
+medi_raw.Mbsf_costuse_10 medi_raw.Mbsf_costuse_11 medi_raw.Mbsf_costuse_12;
+run;
+
+data medi_raw.Mbsf_d_cmpnts_06_12;
+set medi_raw.Mbsf_d_cmpnts_06 medi_raw.Mbsf_d_cmpnts_07 medi_raw.Mbsf_d_cmpnts_08 
+medi_raw.Mbsf_d_cmpnts_09 medi_raw.Mbsf_d_cmpnts_10 medi_raw.Mbsf_d_cmpnts_11
+medi_raw.Mbsf_d_cmpnts_12;
+run;
+
+data medi_raw.Mds_asmt_summary_3_10_12;
+set medi_raw.Mds_asmt_summary_3_10 medi_raw.Mds_asmt_summary_3_11
+medi_raw.Mds_asmt_summary_3_12;
+run;
 
 
 H="NHATS Medicare claims processing"
 
-libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname medi_raw 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
 libname merged 'E:\nhats\data\CMS_DUA_28016\Merged';
 libname cumu 'E:\nhats\data\CMS_DUA_28016\Cumulative Years';
+
+/*inpatient*/
+data cumu.Inpatient_base_claims_j_06_12;
+set medi_raw.Inpatient_base_claims_j_06 medi_raw.Inpatient_base_claims_j_07 medi_raw.Inpatient_base_claims_j_08 medi_raw.Inpatient_base_claims_j_09 
+medi_raw.Inpatient_base_claims_j_10 medi_raw.Inpatient_base_claims_j_11 medi_raw.Inpatient_base_claims_j_12;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+
+data cumu.Inpatient_condition_codes_06_12;
+set medi_raw.Inpatient_condition_codes_06 medi_raw.Inpatient_condition_codes_07 medi_raw.Inpatient_condition_codes_08
+medi_raw.Inpatient_condition_codes_09 medi_raw.Inpatient_condition_codes_10 medi_raw.Inpatient_condition_codes_11
+medi_raw.Inpatient_condition_codes_12;
+run;
+data cumu.Inpatient_occurrnce_codes_06_12;
+set medi_raw.Inpatient_occurrnce_codes_06 medi_raw.Inpatient_occurrnce_codes_07 medi_raw.Inpatient_occurrnce_codes_08 medi_raw.Inpatient_occurrnce_codes_09
+medi_raw.Inpatient_occurrnce_codes_10 medi_raw.Inpatient_occurrnce_codes_11 medi_raw.Inpatient_occurrnce_codes_12;
+run;
+data cumu.Inpatient_revenue_center_j_06_12;
+set medi_raw.Inpatient_revenue_center_j_06 medi_raw.Inpatient_revenue_center_j_07 medi_raw.Inpatient_revenue_center_j_08 medi_raw.Inpatient_revenue_center_j_09
+medi_raw.Inpatient_revenue_center_j_10 medi_raw.Inpatient_revenue_center_j_11 medi_raw.Inpatient_revenue_center_j_12;
+run;
+data cumu.Inpatient_span_codes_06_12;
+set medi_raw.Inpatient_span_codes_06 medi_raw.Inpatient_span_codes_07 medi_raw.Inpatient_span_codes_08 medi_raw.Inpatient_span_codes_09 
+medi_raw.Inpatient_span_codes_10 medi_raw.Inpatient_span_codes_11 medi_raw.Inpatient_span_codes_12;
+run;
+data cumu.Inpatient_value_codes_06_12;
+set medi_raw.Inpatient_value_codes_06 medi_raw.Inpatient_value_codes_07 medi_raw.Inpatient_value_codes_08 medi_raw.Inpatient_value_codes_09
+medi_raw.Inpatient_value_codes_10 medi_raw.Inpatient_value_codes_11 medi_raw.Inpatient_value_codes_12;
+run;
+
+/*hospice & outpatient*/
+
+%let varlist = Hospice Outpatient;
+%macro datastep();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_12;
+set medi_raw.&var._base_claims_j_09 medi_raw.&var._base_claims_j_10 medi_raw.&var._base_claims_j_11 medi_raw.&var._base_claims_j_12;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var._condition_codes_09_12;
+set medi_raw.&var._condition_codes_09 medi_raw.&var._condition_codes_10 medi_raw.&var._condition_codes_11
+medi_raw.&var._condition_codes_12;
+run;
+data cumu.&var._occur_codes_09_12;
+set medi_raw.&var._occurrnce_codes_09 medi_raw.&var._occurrnce_codes_10 medi_raw.&var._occurrnce_codes_11 medi_raw.&var._occurrnce_codes_12;
+run;
+data cumu.&var._rev_center_j_09_12;
+set medi_raw.&var._revenue_center_j_09 medi_raw.&var._revenue_center_j_10 medi_raw.&var._revenue_center_j_11 medi_raw.&var._revenue_center_j_12;
+run;
+data cumu.&var._span_codes_09_12;
+set medi_raw.&var._span_codes_09 medi_raw.&var._span_codes_10 medi_raw.&var._span_codes_11 medi_raw.&var._span_codes_12;
+run;
+data cumu.&var._value_codes_09_12;
+set medi_raw.&var._value_codes_09 medi_raw.&var._value_codes_10 medi_raw.&var._value_codes_11 medi_raw.&var._value_codes_12;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+%datastep();
+
+/*hha & snf*/
+%let varlist = Hha Snf;
+%macro datastep();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_12;
+set medi_raw.&var._base_claims_j_09 medi_raw.&var._base_claims_j_10 medi_raw.&var._base_claims_j_11 medi_raw.&var._base_claims_j_12;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+%if &var = Hha %then %do;
+data cumu.&var._assess_summary_09_12;
+set medi_raw.&var._assessment_summary_09 medi_raw.&var._assessment_summary_10 medi_raw.&var._assessment_summary_11
+medi_raw.&var._assessment_summary_12;
+run;
+%end;
+data cumu.&var._condition_codes_09_12;
+set medi_raw.&var._condition_codes_09 medi_raw.&var._condition_codes_10 medi_raw.&var._condition_codes_11
+medi_raw.&var._condition_codes_12;
+run;
+data cumu.&var._occur_codes_09_12;
+set medi_raw.&var._occurrnce_codes_09 medi_raw.&var._occurrnce_codes_10 medi_raw.&var._occurrnce_codes_11 medi_raw.&var._occurrnce_codes_12;
+run;
+data cumu.&var._rev_center_j_09_12;
+set medi_raw.&var._revenue_center_j_09 medi_raw.&var._revenue_center_j_10 medi_raw.&var._revenue_center_j_11 medi_raw.&var._revenue_center_j_12;
+run;
+data cumu.&var._span_codes_09_12;
+set medi_raw.&var._span_codes_09 medi_raw.&var._span_codes_10 medi_raw.&var._span_codes_11 medi_raw.&var._span_codes_12;
+run;
+data cumu.&var._value_codes_09_12;
+set medi_raw.&var._value_codes_09 medi_raw.&var._value_codes_10 medi_raw.&var._value_codes_11 medi_raw.&var._value_codes_12;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+%datastep();
+
+/*pb & dme*/
+%let varlist1 = Bcarrier Dme;
+%macro datastep1();
+%let i = 1;
+%let var1 = %scan(&varlist1,&i);
+%do %while(&var1 ne );
+data cumu.&var1._claims_j_09_12;
+set medi_raw.&var1._claims_j_09 medi_raw.&var1._claims_j_10 medi_raw.&var1._claims_j_11 medi_raw.&var1._claims_j_12;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var1._line_j_09_12;
+set medi_raw.&var1._line_j_09 medi_raw.&var1._line_j_10 medi_raw.&var1._line_j_11
+medi_raw.&var1._line_j_12;
+run;
+%let i = %eval(&i + 1);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%datastep1();
 
 
 /*ip*/

@@ -2757,3 +2757,1013 @@ store(test) sdec(2,2,2,2,2,2,2,3) replace varlabels  title("Sample Characteristi
 
 // if you do weights. Change the test type in the loop, change "replace" to "addtable", change the title from Unweighted to Weighted, change the loop to put in [aw=w1cgfinwgt0] in the quotes.
 
+
+
+H="Using main cross-wave dataset"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_4.dta", clear
+set more off
+gen n=1
+gen n1 = 1
+keep if wave==1
+
+svyset [pw=anfin]
+gen data_grp1=community_dwelling==1
+gen data_grp2=eligible==1
+gen data_grp3=adl_index>=1			
+gen nores=sp_status==1
+label var nores "Non-res care community"
+drop if data_grp1 == 0
+
+gen sum_adl_cat=0
+replace sum_adl_cat=1 if adl_index>=1
+replace sum_adl_cat=2 if adl_index>=3
+
+tab sum_adl_cat, gen(sum_adl_cat)
+
+replace medicaid = . if medicaid < 0
+local adls adl_eat_help adl_dres_help adl_bath_help adl_toil_help adl_bed_help ///
+ adl_ins_help
+
+local ivars female white educ_hs_ind married medicaid livealone nores rcfres nhres ///
+srh_fp sr_ami_ever ///
+ sr_heart_dis_ever sr_ra_ever sr_diabetes_ever sr_lung_dis_ever sr_stroke_ever ///
+ sr_cancer_ever  sr_phq2_depressed dem_2_cat sum_adl_cat1 sum_adl_cat2 sum_adl_cat3 ///
+ `adls' fall_last_month reg_doc_seen reg_doc_homevisit sr_hosp_ind meals_wheels ///
+ restrnt_takeout noone_talk
+local cvars sr_numconditions1 age sr_hosp_stays
+
+foreach x in `ivars'{
+replace `x' = . if `x' < 0
+}
+
+label var female "Female"
+label var white "White"
+label var educ_hs_ind "> HS Education"
+label var married "Married"
+label var medicaid "Covered by Medicaid"
+label var livealone "Lives Alone?"
+label var srh_fp "Self-Rated Health (Fair/Poor)"
+label var sr_ami_ever "Self-Reported Heart Attack"
+label var sr_ra_ever "Self-Reported Arthritis"
+label var sr_diabetes_ever "Self-Reported Diabetes"
+label var sr_lung_dis_ever "Self-Reported Lung Disease"
+label var sr_stroke_ever "Self-Reported Stroke"
+label var sr_cancer_ever "Self-Reported Cancer"
+label var sr_phq2_depressed "PHQ-2 Depression: Score > 3"
+label var dem_2_cat "Dementia Classification: Possible/Probable Dementia"
+label var fall_last_month "Fall Last Month"
+label var sum_adl_cat1 "Disability: 0 ADLs"
+label var sum_adl_cat2 "Disability: 1-2 ADLs"
+label var sum_adl_cat3 "Disability: >= 3 ADLs"
+label var reg_doc_seen "Regular Doctor Seen"
+label var reg_doc_homevisit "Regular Doctor was Home Visit?"
+label var sr_hosp_ind "Hospital Stay in the last 12 months"
+label var sr_hosp_stays "Number of Hospital Stays"
+label var age "Age"
+label var n1 "Weighted N"
+label var meals_wheels "Meals on Wheels"
+label var restrnt_takeout "Restaurant Takeout"
+label var noone_talk "SP No one to Talk To"
+
+local rn : word count `cvars' `ivars' n n1
+
+
+local r=1
+local c=1
+
+
+foreach weight in  "[aw=anfinwgt]" {
+	foreach d in 1 2 3 {
+	mat test`d'=J(`rn',20,.)
+	preserve
+	keep if data_grp`d' ==1 
+	foreach x in `cvars' {
+		foreach i in 1 2 3 4 {
+			sum `x' `weight' if homebound_cat==`i'
+			mat test`d'[`r',`c']=r(mean)
+			mat test`d'[`r',`c'+1]=r(sd)
+			svy: regress `x' i.homebound_cat if homebound_cat == `i' | homebound_cat == 1
+		    mat test`d'[`r',`c'+2]=e(p) 
+			local c=`c'+3
+
+	}
+	local r=`r'+1
+	local c=1
+	}
+	foreach x in `ivars' {
+		foreach i in 1 2 3 4 {
+			sum `x'`weight' if homebound_cat==`i'
+			mat test`d'[`r',`c']=r(sum)
+			mat test`d'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' homebound_cat if homebound_cat == `i' | homebound_cat == 1
+			mat test`d'[`r',`c'+2]=e(p_Pear)
+			local c=`c'+3
+	}
+	local r=`r'+1
+	local c=1
+	}
+
+
+	foreach i in 1 2 3 4 {
+		sum n`weight' if homebound_cat==`i'
+			mat test`d'[`r',`c']=r(N)
+			mat test`d'[`r'+1,`c'] = r(sum_w)
+			local c=`c'+3
+	}
+restore
+local r = 1
+local c = 1
+}
+
+mat rownames test1=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+mat rownames test2=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+mat rownames test3=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_1_comm_dwel", ///
+statmat(test1) ctitles("" "Mean/N Homebound" "SD/%" "" ///
+"Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+"SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test1) sdec(2)  varlabels replace title("Community Dwelling Sample") ///
+note("ADL assistance includes those with help from non-helpers (staff)")
+
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_2_nsoc_el", ///
+statmat(test2) ctitles("" "Mean/N Homebound" "SD/%" ///
+"" "Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+"SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test2) sdec(2)  varlabels replace title("NSOC Eligible Homebound Sample") ///
+note("ADL assistance includes those with help from non-helpers (staff)")
+
+frmttable using "E:\nhats\data\Projects\Homebound\logs\Table1_Homebound_3_ADL", ///
+ statmat(test3) ctitles("" "Mean/N Homebound" "SD/%" "" ///
+ "Mean/N Semi-HB: Never by Self" "SD/%" "P-value" "Semi-HB: Needs Help/Has Diff" ///
+ "SD/%" "P-value" "Not Homebound" "SD/%" "P-value") ///
+store(test3) sdec(2)  varlabels replace ///
+title("Community Dwelling Sample w/ 1+ ADL Impairment") ///
+note("ADL assistance includes those with help from non-helpers (staff)")
+
+}
+
+// if you do weights. Change the test type in the loop, change "replace" to "addtable", change the title from Unweighted to Weighted, change the loop to put in [aw=w1cgfinwgt0] in the quotes.
+
+
+H="Sample"
+clear all
+set more off
+capture log close
+
+local datapath "E:\nhats\data\NHATS Cleaned\"
+local logpath "E:\nhats\data\projects\Caregivers\logs"
+
+cd "`datapath'"
+
+use sp_round_1_4, clear
+gen n=1
+label var n "NHATS Sample, Wave 1"
+gen n_informal=n_helpers-n_paid_helpers
+keep if wave==1
+gen lost_to_followup=r2status==79
+gen notlost=(!lost | died_12 | (!died_12 & !missing(death_date))) & sp_ivw_yes==1
+label var notlost "Not lost to follow-up"
+gen eligible=eligible & notlost
+gen died_12_eligible= died_12 & eligible & notlost & sp_ivw
+gen died_12_nsoc=died_12 & completed_nsoc==1 & notlost & sp_ivw
+gen nsoc=eligible & completed_nsoc & notlost
+label var died_12_e "Died within 12 months of SP ivw(all eligible)"
+label var died_12_n "Died within 12 months of SP ivw(NSOC completed)"
+label var nsoc "1+ Helper completed NSOC"
+label var eligible "NSOC eligible"
+local samp n sp_ivw_yes notlost eligible died_12_eligible nsoc died_12_nsoc
+
+local rn : word count `samp'
+local r=1
+local c=1
+
+mat samp=J(`rn',5,.)
+
+foreach x of local samp {
+	preserve
+	keep if `x'==1
+	sum n 
+	mat samp[`r',1]=r(N)
+	sum n_helpers
+	mat samp[`r',2]=r(sum)
+	sum n_informal
+	mat samp[`r',3]=r(sum)
+	local r=`r'+1
+	restore 
+}
+
+keep if nsoc==1
+merge 1:m spid using nsoc_round_1, keep(match)
+by spid, sort: gen uni0=_n==1
+gen eolcg=mofd(death_date)-mofd(cg_ivw_date)<=12
+by spid eolcg, sort: gen uni1=_n==1
+foreach cg in 0 1 {
+mat nsoc`cg'=J(3,6,.)
+local r=1
+local c=3
+
+foreach x in "0,1" 0 1 {
+	sum uni`cg' if inlist(died_12,`x')
+	mat nsoc`cg'[`r',1]=r(sum)
+	foreach x2 in cg_spouse solo_cg solo_cg_f solo_cg_i {
+		sum `x2' if inlist(died_12,`x')
+		mat nsoc`cg'[`r',2]=r(N)
+		mat nsoc`cg'[`r',`c']=r(N)*r(mean)
+		local c=`c'+1
+}
+	local c=3
+	local r=`r'+1
+}
+replace died_12=mofd(death_date)-mofd(cg_ivw_date)<=12
+mat rownames nsoc`cg'="NSOC Sample (12m status known)" "12m Survivors" "12m Decedents"
+}
+mat rownames samp=`samp'
+
+frmttable using "`logpath'\CG_sample", statmat(samp) ///
+ctitles("" "N SPs" "N Helpers" "N Unpaid Helpers") ///
+title("End of Life Caregivers Sample Derivation") varlabels sdec(0) replace ///
+note("12m LFU includes those with r2status=Unable to locate & no death date info from claims" ///
+"12m death status is month of death-month of ivw<=12, due to unspecified ivw day of month")
+
+frmttable using "`logpath'\CG_sample", addtable statmat(nsoc0) sdec(0) ///
+ctitles("" "SPs" "NSOC Caregivers" "Spouse" "Solo" "Solo Family" "Solo Informal") ///
+note("Solo status only helper in OP file" ///
+"Solo Family only family member helper in OP file" "Solo Informal only unpaid helper in OP file" ///
+"last 12m CG determined by SP ivw date")
+	
+frmttable using "`logpath'\CG_sample", addtable statmat(nsoc1) sdec(0) ///
+ctitles("" "SPs" "NSOC Caregivers" "Spouse" "Solo" "Solo Family" "Solo Informal") ///
+note("Solo status only helper in OP file" ///
+"Solo Family only family member helper in OP file" "Solo Informal only unpaid helper in OP file" ///
+"last 12m CG determined by CG ivw date rather than SP" ///
+"note: 1364 SPs, represented as 1369 because 5 have CGs with interviews on either side of 12m from death")
+
+
+H="table 1"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_4.dta", clear
+set more off
+gen n=1
+gen n1 = 1
+keep if wave==1
+
+svyset [pw=anfin]
+gen data_grp1=community_dwelling==1
+gen data_grp2=eligible==1
+gen nores=sp_status==1
+label var nores "Non-res care community"
+drop if data_grp1 == 0
+
+gen sum_adl_cat=0 if !missing(adl_index)
+replace sum_adl_cat=1 if adl_index>=1 & !missing(adl_index)
+replace sum_adl_cat=2 if adl_index>=3 & !missing(adl_index)
+
+*replace died_12=r2status==86 | death_year<=ivw_year | (death_year==ivw_year+1 & death_month<=ivw_month)
+tab sum_adl_cat, gen(sum_adl_cat)
+
+replace medicaid = . if medicaid < 0
+local adls adl_eat_help adl_dres_help adl_bath_help adl_toil_help adl_bed_help ///
+ adl_ins_help
+
+local ivars female white educ_hs_ind married medicaid livealone srh_fp sr_ami_ever ///
+ sr_heart_dis_ever sr_ra_ever sr_diabetes_ever sr_lung_dis_ever sr_stroke_ever ///
+ sr_cancer_ever  sr_phq2_depressed dem_2_cat sum_adl_cat1 sum_adl_cat2 sum_adl_cat3 ///
+ fall_last_month reg_doc_seen reg_doc_homevisit sr_hosp_ind
+ 
+local cvars sr_numconditions1 age sr_hosp_stays
+
+foreach x in `ivars'{
+replace `x' = . if `x' < 0
+}
+
+label var female "Female"
+label var white "White"
+label var educ_hs_ind "> HS Education"
+label var married "Married"
+label var medicaid "Covered by Medicaid"
+label var livealone "Lives Alone?"
+label var srh_fp "Self-Rated Health (Fair/Poor)"
+label var sr_ami_ever "Self-Reported Heart Attack"
+label var sr_ra_ever "Self-Reported Arthritis"
+label var sr_diabetes_ever "Self-Reported Diabetes"
+label var sr_lung_dis_ever "Self-Reported Lung Disease"
+label var sr_stroke_ever "Self-Reported Stroke"
+label var sr_cancer_ever "Self-Reported Cancer"
+label var sr_phq2_depressed "PHQ-2 Depression: Score > 3"
+label var dem_2_cat "Dementia Classification: Possible/Probable Dementia"
+label var fall_last_month "Fall Last Month"
+label var sum_adl_cat1 "Disability: 0 ADLs"
+label var sum_adl_cat2 "Disability: 1-2 ADLs"
+label var sum_adl_cat3 "Disability: >= 3 ADLs"
+label var reg_doc_seen "Regular Doctor Seen"
+label var reg_doc_homevisit "Regular Doctor was Home Visit?"
+label var sr_hosp_ind "Hospital Stay in the last 12 months"
+label var sr_hosp_stays "Number of Hospital Stays"
+label var age "Age"
+label var n1 "Weighted N"
+label var meals_wheels "Meals on Wheels"
+label var restrnt_takeout "Restaurant Takeout"
+label var noone_talk "SP No one to Talk To"
+
+local rn : word count `cvars' `ivars' n n1
+
+
+
+
+
+foreach weight in  "[aw=anfinwgt]" {
+	foreach d in 1 2  {
+	mat test`d'=J(`rn',6,.)
+	local r=1
+	local c=1
+	preserve
+	keep if data_grp`d' ==1
+	foreach x in `cvars' {
+		forvalues i=0/1 {
+			sum `x' `weight' if died_12==`i'
+			mat test`d'[`r',`c']=r(mean)
+			mat test`d'[`r',`c'+1]=r(sd)
+			svy: regress `x' died_12
+		    mat test`d'[`r',`c'+2]=e(p) 
+			local c=`c'+2
+
+}
+	local r=`r'+1
+	local c=1
+}
+	foreach x in `ivars' {
+		forvalues i=0/1 {
+			sum `x'`weight' if died_12==`i'
+			mat test`d'[`r',`c']=r(sum)
+			mat test`d'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' died_12
+			mat test`d'[`r',`c'+2]=e(p_Pear)
+			local c=`c'+2
+}
+	local r=`r'+1
+	local c=1
+}
+
+
+	forvalues i=0/1 {
+		sum n`weight' if died_12==`i'
+			mat test`d'[`r',`c']=r(N)
+			mat test`d'[`r'+1,`c'] = r(sum_w)
+			local c=`c'+2
+}
+	local r = 1
+	local c = 1
+	sum female
+	local tot=r(N)
+	foreach x in `cvars' `ivars' {
+		sum `x'
+		mat test`d'[`r',6]=`tot'-r(N)
+		local r=`r'+1
+}
+	restore
+	mat rownames test`d'=`cvars' `ivars' "Sample N" "Sample N (Weighted)"
+}
+}
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Table1_CG", ///
+statmat(test1) ctitles("" "Mean/N Survived" "SD/%" "Mean/N Died" "SD/%" "P-value" "Missing") ///
+store(test1)  varlabels replace title("Community Dwelling Sample by One Year Survival") ///
+note("ADL assistance includes those with help from non-helpers (staff)") ///
+sdec(2,2,2,2,2,0\2,2,2,2,2,0\2,2,2,2,2,0\0,2,0,2,2,0\0,2,0,2,2,0)
+
+
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Table1_CG", ///
+statmat(test2) ctitles("" "Mean/N Survived" "SD/%" "Mean/N Died" "SD/%" "P-value" "Missing") ///
+store(test2) varlabels addtable title("NSOC Eligible Sample by One Year Survival") ///
+note("ADL assistance includes those with help from non-helpers (staff)") ///
+sdec(2,2,2,2,2,0\2,2,2,2,2,0\2,2,2,2,2,0\0,2,0,2,2,0\0,2,0,2,2,0)
+
+
+H="table 2"
+use "E:\nhats\data\NHATS cleaned\op_round_1_4.dta" if opishelp==1 & wave==1, clear
+merge m:1 spid  wave using "E:\nhats\data\NHATS cleaned\sp_round_1_4.dta"
+keep if wave==1 & sp_ivw==1
+gen n=1
+
+by spid, sort: gen unique=_n==1
+svyset [pw=anfinwgt]
+tab num_helpers_cat, gen(num_helpers_cat)
+mat test1=J(40,18,.)
+local r=2
+local c=1
+gen group1=1
+gen group2=died_12==0
+gen group3=died_12==1
+gen ind_any_helpers=n_helpers>0 if n_helpers!=.
+
+foreach x of varlist op_adl_* op_iadl_* {
+replace `x'=0 if `x'==.
+}
+gen tot_hrswk_inf_i=tot_hrswk_help_i-tot_hrswk_paid
+label var tot_hrswk_inf "Total Hours of informal care"
+replace tot_hrswk_paid=. if ind_paid==0
+
+replace op_relationship_cat=7 if rc_staff==1 & op_relationship_cat==6
+tab op_relationship_cat, gen(rel)
+forvalues i=1/6 {
+	gen hrs`i'=tot_hrswk_help_i if op_relationship_cat==`i'
+	gen ophrs`i'=op_hrswk_i if op_relationship_cat==`i'
+}
+gen nonres=res_care==0
+
+forvalues i=10(10)40 {
+	gen ind_gt_`i'hrs_paid=tot_hrswk_paid>`i' & !missing(tot_hrswk_paid)
+	label var ind_gt_`i'hrs_paid ">`i' hours paid help per week"
+	gen ind_gt_`i'hrs_inf=tot_hrswk_inf>`i' 
+	label var ind_gt_`i'hrs_inf ">`i' hours unpaid help per week" 
+	
+}
+
+local liv nonres rcf nhres
+local inds ind_any_helpers ind_paid_helper ind_gt_10hrs_inf ind_gt_20hrs_inf ///
+ind_gt_30hrs_inf ind_gt_40hrs_inf ind_gt_10hrs_paid ind_gt_20hrs_paid ///
+ind_gt_30hrs_paid ind_gt_40hrs_paid ind_rc_staff
+local rel rel1 rel2 rel3 rel4 rel5 rel6
+local adl op_adl_eat op_adl_bath op_adl_toil op_adl_dres op_adl_ins op_adl_bed 
+local iadl op_iadl_laun op_iadl_shop op_iadl_meal op_iadl_bank op_iadl_meds
+local hrs hrs1 hrs2 hrs3 hrs4 hrs5 hrs6
+local hrs2 ophrs1 ophrs2 ophrs3 ophrs4 ophrs5 ophrs6
+local any any_adl any_iadl
+gen any_adl=0
+gen any_iadl=0 
+gen any_adl_iadl=0
+
+foreach g in adl iadl {
+foreach x of local `g' {
+	replace any_`g'=1 if `x'==1
+	replace any_adl_iadl=1 if `x'==1
+}
+}
+local any any_adl any_iadl any_adl_iadl
+
+foreach x in `liv' `inds' `rel' `adl' `iadl' `any' {
+	by spid, sort: egen sp_`x'=max(`x')
+}
+
+*keep if sp_any_adl==1
+keep if eligible==1
+
+local rn : word count `liv' `inds' `rel' `adl' `iadl' `any'
+local rn=`rn'+22
+local rn2 : word count `rel' `hrs' `adl' `iadl' `any'
+local rn2=`rn2'+7
+
+mat tabsp=J(`rn',11,.)
+local c=1
+mat tabop=J(`rn2',11,.)
+
+preserve
+duplicates drop spid, force
+	
+forvalues i=1/3 {
+
+	local r=1
+	sum n_helpers if group`i'==1 [aw=anfinw],d
+	mat tabsp[`r',`c']=r(sum_w)
+	mat tabsp[`r'+1,`c']=r(mean)*r(sum_w)
+	mat tabsp[`r'+2,`c']=r(mean)
+	mat tabsp[`r'+2,`c'+1]=r(sd)
+	mat tabsp[`r'+3,`c']=r(p50)
+	mat tabsp[`r'+4,`c']=r(N)
+	svy: regress n_helpers died_12
+	mat tabsp[`r'+2,`c'+2]=e(p)
+	local r=`r'+6
+	foreach x in `liv' {
+		sum `x' if group`i'==1 [aw=anfinw]
+		mat tabsp[`r',`c']=r(mean)*r(sum_w)
+		mat tabsp[`r',`c'+1]=r(mean)*100
+		svy: tab `x' homebound if inlist(homebound,`i',1)
+		mat tabsp[`r',`c'+2]=e(p_Pear)
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `inds' {
+		qui sum `x' if group`i'==1 [aw=anfinw]
+		mat tabsp[`r',`c']=r(mean)*r(sum_w)
+		mat tabsp[`r',`c'+1]=r(mean)*100
+		svy: tab `x' homebound if inlist(homebound,`i',1)
+		mat tabsp[`r',`c'+2]=e(p_Pear)
+		local r=`r'+1
+}
+
+	forvalues j =1/4 {
+		qui sum num_helpers_cat`j' if group`i'==1 [aw=anfinw]
+		mat tabsp[`r',`c']=r(mean)*r(sum_w)
+		mat tabsp[`r',`c'+1]=r(mean)*100
+		svy: tab num_helpers_cat`j' homebound if inlist(homebound,`i',1)
+		mat tabsp[`r',`c'+2]=e(p_Pear)
+		local r=`r'+1
+}
+	foreach x in help inf paid {
+		qui sum tot_hrswk_`x'_i if group`i'==1 [aw=anfinw],d
+		mat tabsp[`r',`c']=r(mean)
+		mat tabsp[`r',`c'+1]=r(sd)
+		mat tabsp[`r'+1,`c']=r(p50)
+		svy: regress tot_hrswk_`x'_i died_12
+		mat tabsp[`r',`c'+2]=e(p)
+		local r=`r'+2
+}
+	
+	foreach x in rel adl iadl any {
+		foreach y of local `x' {
+			local r=`r'+1	
+			qui sum sp_`y' if group`i'==1 [aw=anfin]
+			mat tabsp[`r',`c']=r(mean)*r(sum_w)
+			mat tabsp[`r',`c'+1]=r(mean)*100
+			svy: tab `y' homebound if inlist(homebound,`i',1)
+			mat tabsp[`r',`c'+2]=e(p_Pear)
+}
+		local r=`r'+1
+}
+	local c=`c'+2
+}
+restore
+local c=1
+keep if n_helpers>0
+forvalues i=1/3 {
+
+	local r=1
+	sum n if group`i'==1 [aw=anfinw],d
+	mat tabop[`r',`c']=r(sum_w)
+	mat tabop[`r'+1,`c']=r(N)
+	local r=`r'+2
+	foreach x in rel hrs2 adl iadl any {
+		foreach y of local `x' {
+			local r=`r'+1	
+			qui sum `y' if group`i'==1 [aw=anfin]
+			if "`x'"=="hrs2" {
+				mat tabop[`r',`c']=r(mean)
+				mat tabop[`r',`c'+1]=r(sd)
+				svy: regress `y' homebound if inlist(homebound,`i',1)
+				mat tabop[`r',`c'+2]=e(p)
+}
+			else {
+				mat tabop[`r',`c']=r(mean)*r(sum_w)
+				mat tabop[`r',`c'+1]=r(mean)*100
+				svy: tab `y' homebound if inlist(homebound,`i',1)
+				mat tabop[`r',`c'+2]=e(p_Pear)
+}
+}
+		local r=`r'+1
+}
+	local c=`c'+2
+}
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table(NSOC)", ///
+statmat(tabsp) rtitles ("Total Number of SPs"\"Total Number of Helpers"\ ///
+"Mean Number of Helpers mean(sd)"\"Median number of helpers per SP"\"Total Number of SPs (Unweighted)"\ ///
+""\"Not in Residential Care Facility" \"In Residential Care Facility (Excl. NH)"\"NH Resident"\ ///
+""\"Indicator Any Helpers" \ "Indicator Any Paid Helpers"\">10 hours unpaid help per week" ///
+\">20 hours unpaid help per week"\">30 hours unpaid help per week"\">40 hours unpaid help per week" \ ///
+">10 hours paid help per week" \">20 hours paid help per week"\">30 hours paid help per week"\ ///
+">40 hours paid help per week" \ "Indicator Any FacilityStaff"\ ///
+"Category: Number of Helpers (0) n(%)"\"Category: Number of Helpers (1-3) n(%)"\"Category: Number of Helpers (4-6) n(%)"\ ///
+"Category: Number of Helpers (7+) n(%)"\"Mean total hours of help per SP per Week"\ ///
+"Median total hours of help per SP per Week"\"Mean hours unpaid help per SP per Week"\ ///
+"Median unpaid hours of help per SP per Week"\"Mean hours paid help per SP per Week"\ ///
+"Median paid hours of help per SP per Week"\"Helper Prevalence per SP:"\ ///
+"   Spouse/Partner"\"   Daughter"\"   Son"\"   Other Relatives"\"   Paid Caregiver"\"   Other non-relatives"\ ///
+"Type of Help received by Older Adults (ADL):"\"   Eating"\"   Bathing"\"   Toileting"\ ///
+"   Dressing"\"   Walking Inside"\"   Getting out of Bed"\"Type of Help Received by Older Adults (IADL):" ///
+\"   Laundry"\"   Shopping"\"   Meals"\"   Banking"\"   Medicine"\""\"Any ADL"\"Any IADL"\"Any ADL or IADL") ///
+ctitles("" "Total" "" "Survivors" "" "Decedents"""\"" "Mean/N" "SD/%" "Mean/N" "SD/%" "Mean/N" "SD/%" "P-value" ) ///
+store(test1) sdec(2) replace ///
+title("SPs and their Helpers, all NSOC eligible SPs, by survival status")
+
+
+frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table(NSOC)", ///
+statmat(tabop) rtitles ("Total Number of Helpers"\ "Unweighted N"\ ///
+"Helper Prevalence :"\"   Spouse/Partner"\"   Daughter"\"   Son"\"   Other Relatives"\"   Paid Caregiver"\ ///
+"   Other non-relatives"\"Mean Number of Hours of care per type of Helper:"\ ///
+"   Spouse/Partner"\"   Daughter"\"   Son"\"   Other Relatives"\"   Paid Caregiver"\"   Other non-relatives"\ ///
+"Type of Help provided (ADL):"\"   Eating"\"   Bathing"\"   Toileting"\ ///
+"   Dressing"\"   Walking Inside"\"   Getting out of Bed"\"Type of Help provided(IADL):" ///
+\"   Laundry"\"   Shopping"\"   Meals"\"   Banking"\"   Medicine"\""\"Any ADL"\"Any IADL"\"Any ADL or IADL") ///
+ctitles("" "Total" "" "Survivors" "" "Decedents"""\"" "Mean/N" "SD/%" "Mean/N" "SD/%" "Mean/N" "SD/%" "P-value" ) ///
+store(test1) sdec(2) addtable ///
+title("Helpers, all NSOC eligible SPs, by survival status")
+
+
+H="table 3"
+clear all 
+set more off
+capture log close
+use "E:\nhats\data\CMS_DUA_28016\mbsf", clear
+drop if death_da==.
+gen death_year=year(death_d)
+tempfile this
+save `this'
+
+
+local logpath "E:\nhats\data\Projects\Caregivers\logs"
+cd "E:\nhats\data\NHATS cleaned"
+use nsoc_round_1.dta, clear
+gen wave=1
+tostring opid, replace
+merge 1:1 spid opid wave using op_round_1_4.dta, gen(opmerge) keep(match master)
+merge m:1 spid wave using sp_round_1_4.dta, gen(spmerge) keep(match master)
+rename death_date death_date_nhats
+merge m:1 spid using `this', nogen
+keep if wave==1 & sp_ivw==1
+gen n=1
+replace died_12=death_date-ivw_date<=365
+
+by spid, sort: gen unique=1 if _n==1
+gen cg_65 = cg_age_cat>=11 
+label var cg_65 "Caregiver Age >=65"
+gen died=cg_ivw_to_sp_death_mos<=12
+replace n_family=n_helpers-n_paid_helpers
+
+gen op_adl_any=0
+foreach x of varlist op_adl_* {
+replace op_adl_any=1 if `x'==1
+}
+replace op_doc_help=0 if op_doc_help==-1
+gen help_doc_coordination=op_doc_help==1 | help_speak_doc==1
+gen help_meds_management=help_track_meds==1 | help_shots_injection==1
+
+local cgcvars cg_age num_help_years total_hours total_hours_week cg_ivw_to_sp_death_mos
+
+tab paid_hours_cat, gen(paid_hours_cat)
+
+local spcvars n_helpers n_family_helpers
+
+
+local cgivars cg_female cg_65 spouse daughter son oth_fam nonrel cg_gt_hs ///
+cg_living_children cg_medicare cg_medicaid work_4_pay self_health_di ever_high_bp ///
+ever_osteoperosis ever_diff_seeing ever_diff_hearing ever_heart_attack ///
+ever_arthritis ever_diabetes ever_lung_dis ever_cancer ever_pain pain_lim_act_di ///
+ever_breath breath_lim_act_di ever_low_enrgy enrgy_lim_act_di trb_back_sleep_di ///
+lost_10_lbs_yr felt_depressed felt_nervous felt_lit_interest ///
+felt_worry help_personal_care_di help_get_around_di help_shopping_di ///
+help_chores_di help_bills help_track_meds help_shots_injection help_meds_management ///
+help_make_appts help_speak_doc op_doc_help help_doc_coordination ///
+help_order_med help_mob_dev help_home_safe help_paid_helpr ///
+help_insurance help_insurance_oth help_insurance_any help_diet help_foot help_skin ///
+help_exercise help_teeth help_medical_task cg_drive_sp friend_help ///
+gain_more_conf_di gain_deal_better_di gain_closer2sp_di gain_more_satisfied_di ///
+neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di ///
+diff_financial_lv diff_emotional_lv diff_physical_lv diff_financial_lv_di ///
+diff_emotional_lv_di diff_physical_lv_di cg_phq2_depressed cg_gad2_anxiety ///
+paid_last_week paid_hours_cat1 paid_hours_cat2 paid_hours_cat3 paid_last_week ///
+lives_in_hh flag_no_help_mth    
+
+label var help_meds_management "Help track meds or with shots & injection"
+label var help_doc_coordination "Sits with or helps speak with doctor"
+label var op_doc_help "Sits with SP at Dr's visits"   
+label var total_hours "Total Number of Hours worked in Month" 
+label var total_hours_week "Total Number of Hours worked in Week"   
+label var diff_financial_lv_di "Financially Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_emotional_lv_di "Emotionally Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_physical_lv_di "Physically Difficult Level (3-5) on 1-5 scale (5=Very Difficult))"
+label var cg_female "Female Yes/No"
+label var cg_spouse "Caregiver is Spouse/Adult"
+label var cg_gt_hs "Caregiver >=HS Education"
+label var cg_living_children "Any Children Missing Yes/No"
+label var cg_medicare "Medicare Yes/No"
+label var cg_medicaid "Medicaid Yes/No"
+label var work_4_pay "Work for Pay?"
+label var self_health_di "Self-Reported Health (Good/V.Good/Excellent)"
+label var ever_high_bp "Ever High Blood Pressure"
+label var ever_osteoperosis "Ever Osteoperosis"
+label var ever_diff_seeing "Ever Difficult Seeing"
+label var ever_diff_hearing "Ever Difficult Hearing"
+label var ever_heart_attack "Ever Heart Attack"
+label var ever_heart_disease "Ever Heart Disease"
+label var ever_arthritis "Ever Arthritis"
+label var ever_diabetes "Ever Diabetes"
+label var ever_lung_dis "Ever Lung Disease"
+label var ever_cancer "Ever Cancer"
+label var ever_pain "Ever Pain Last Month?"
+label var pain_lim_act_di "Pain Limit Activities (Yes/No)?"
+label var ever_breath_prob "Ever Breathing Problem?"
+label var breath_lim_act_di "Breathing Limit Activities (Yes/No)?"
+label var ever_low_enrgy "Ever Low Evergy?"
+label var enrgy_lim_act_di "Low Energy Limit Activities (Yes/No)?"
+label var trb_back_sleep_di "Trouble Going back to Sleep"
+label var lost_10_lbs_yr "Lost 10 pounds over year"
+label var felt_lit_interest "Felt Little Interest (Yes/No)?"
+label var felt_nervous "Felt Nervous/Anxious (Yes/No)?"
+label var felt_depressed "Felt Depressed (Yes/No)?"
+label var felt_worry "Felt Worried (Yes/No)?"
+label var diff_financial_lv "Financially Difficult (Yes/No)"
+label var diff_emotional_lv "Emotionally Difficult (Yes/No)"
+label var diff_physical_lv "Physically Difficult (Yes/No)"
+label var help_make_appts "Help Make Appointments (Yes/No)"
+label var help_speak_doc "Help Speak to Doctors (Yes/No)"
+label var help_order_med "Help Order Medicine (Yes/No)"
+label var help_insurance "Help Add/Change Insurance (Yes/No)"
+label var help_insurance_oth "Help Other Insurance Issues (Yes/No)"
+label var help_diet "Help Diet"
+label var help_foot "Help Foot Care"
+label var help_skin "Help Skin Care"
+label var help_exercise "Help Exercises"
+label var help_teeth "Help Dental Care"
+label var help_medical_task "Help Manage Medical Tasks"
+label var help_shots_injection "Help with Shots/Injections"
+label var help_bills "Help with Bills/Manage $"
+label var help_track_meds "Help Keep Track of Meds"
+label var help_personal_care_di "Help with Personal Care (Every/Most/Some)"
+label var help_get_around_di "Help Getting Around (Every/Most/Some)"
+label var help_chores_di "Help with Housework Chores (Every/Most/Some)"
+label var help_shopping_di "Help with Shopping (Every/Most/Some)"
+label var friend_help "Friends of Family help?"
+label var gain_more_conf_di "More Confident in Abilities (Very/Somewhat)"
+label var gain_deal_better_di "Deal with Diff Situations (Very/Somewhat)"
+label var gain_closer2sp_di "Closer to SP (Very/Somewhat)"
+label var gain_more_satisfied_di "Satisfaction Recipient is Cared for (Very/Somewhat)"
+label var neg_exhausted_di "Exhausted when you go to bed (Very/Somewhat)"
+label var neg_too_much_di "More than you can handle (Very/Somewhat)"
+label var neg_no_time_di "No Time for yourself (Very/Somewhat)"
+label var neg_no_routine_di "No Routine (Very/Somewhat)"
+label var lives_in_hh "CG Lives in HH"
+label var paid_last_week "CG Got Paid Last Week (Yes/No)"
+label var paid_hours_cat "CG Number of Hours Worked for Pay Last Week"
+label var cg_phq2_depressed "CG PHQ-2 Depressed (Yes/No)"
+label var cg_gad2_anxiety "CG GAD-2 Anxiety (Yes/No)"
+label var flag_no_help_mth "Flag: No Help last Month, but in the last Year"
+label var solo_cg "Only Caregiver for SP"
+label var solo_cg_fam "CG has no other Family helper"
+label var cg_ivw_to_sp_death_mos "Number of Months to Death"
+label var num_help_years "Number of years helped"
+label var primary_cg "Primary Caregiver Status"
+label var paid_hours_cat1 "Paid Hours: <= 20"
+label var paid_hours_cat2 "Paid Hours: 21 - 39"
+label var paid_hours_cat3 "Paid Hours: >= 40"
+label var cg_age "Average Age of Caregivers (Continuous)"
+label var help_mob_dev "Help with Mobility Devices"
+label var help_home_safe "Help made SP Home safe"
+label var help_paid_helpr "Help find a Paid Helper"
+label var help_insurance_any "Help with any Insurance issues/adjustments"
+
+*svyset cgvarunit [pw=cgfinwgt], strat(varstrat)
+svyset [pw=cgfinwgt]
+
+local rn : word count `cgcvars' `spcvars' `cgivars'
+
+forvalues g=1/4 {
+	if "`g'"=="2" {
+		keep if died_12==1
+		replace died_12=solo_cg_fam
+		by spid solo_cg_fam, sort: replace unique=_n==1
+}
+	if "`g'"=="3" {
+		by spid solo_cg_i, sort: replace unique=_n==1
+		replace died_12=solo_cg_i
+}
+	if "`g'"=="4" {
+		by spid cg_spouse, sort: replace unique=_n==1
+		replace died_12=cg_spouse
+}
+	forvalues i=0/1 {
+		local r=1
+		local c=1
+		mat tab`i'`g'=J(`rn'+4,3,.)
+		foreach x in `cgcvars' `spcvars' {
+			sum `x' if died_12==`i' [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(mean)
+			mat tab`i'`g'[`r',`c'+1]=r(sd)
+			svy: regress `x' died_12
+			mat tab`i'`g'[`r',`c'+2]=e(p)
+			local r=`r'+1
+}
+		foreach x in `cgivars' {
+			sum `x' if died_12==`i' [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(sum)
+			mat tab`i'`g'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' died_12
+			mat tab`i'`g'[`r',`c'+2]=e(p_Pear)
+			local r=`r'+1	
+}
+		foreach x in n unique {
+			sum `x' if died_12==`i' & `x'==1 [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(sum)
+			mat tab`i'`g'[`r'+1,`c']=r(mean)*r(N)
+			local r=`r'+2
+}
+		mat rownames tab`i'`g'=`cgcvars' `spcvars' `cgivars' "N Weighted" ///
+		 "N Unweighted" "Unique SPs, Weighted" "Unique SPs, Unweighted"
+		local hb0="Survivors"
+		local hb1="Decedents"
+		if "`g'"=="2" {
+			local hb0="Not Solo"
+			local hb1="Solo"
+}
+		frmttable, statmat(tab`i'`g') sdec(2) store(stab`i'`g') ///
+		title("Sample Characteristics NSOC Caregivers by SP Survival Status") ///
+		ctitles("" "" "`hb`i''" "" \"" "Mean/N" "SD/%" "P") varlabels
+}
+}
+frmttable using "`logpath'\cg_table_nsoc.rtf", replay(stab01) ///
+merge(stab11) replace
+
+frmttable using "`logpath'\cg_table_nsoc.rtf", replay(stab02) ///
+merge(stab12) addtable  title("EOL NSOC Caregivers by Solo Fam Caregiver Status")
+
+frmttable using "`logpath'\cg_table_nsoc.rtf", replay(stab03) ///
+merge(stab13) addtable title("EOL NSOC Caregivers by Solo Informal Caregiver Status") ///
+note("Includes family and non-family caregivers")
+
+frmttable using "`logpath'\cg_table_nsoc.rtf", replay(stab04) ///
+merge(stab14) addtable title("EOL NSOC Caregivers by Caregiver Spouse Status") 
+
+
+H="restricted to primary caregivers"
+clear all 
+set more off
+capture log close
+
+local logpath "E:\nhats\data\Projects\Caregivers\logs"
+cd "E:\nhats\data\NHATS cleaned"
+use nsoc_round_1.dta
+gen wave=1
+merge 1:1 spid opid wave using op_round_1_4.dta, gen(opmerge) keep(match master)
+merge m:1 spid wave using sp_round_1_4.dta, gen(spmerge) keep(match master)
+gen n=1
+gsort spid -cg_primary_nsoc
+by spid: gen unique=1 if _n==1
+gen cg_65 = cg_age_cat>=11 
+label var cg_65 "Caregiver Age >=65"
+gen died=cg_ivw_to_sp_death_mos<=12
+replace n_family=n_helpers-n_paid_helpers
+
+gen op_adl_any=0
+foreach x of varlist op_adl_* {
+replace op_adl_any=1 if `x'==1
+}
+replace op_doc_help=0 if op_doc_help==-1
+gen help_doc_coordination=op_doc_help==1 | help_speak_doc==1
+gen help_meds_management=help_track_meds==1 | help_shots_injection==1
+
+local cgcvars cg_age num_help_years total_hours total_hours_week cg_ivw_to_sp_death_mos
+
+tab paid_hours_cat, gen(paid_hours_cat)
+
+local spcvars n_helpers n_family_helpers
+
+
+local cgivars cg_female cg_65 spouse daughter son oth_fam nonrel cg_gt_hs ///
+cg_living_children cg_medicare cg_medicaid work_4_pay self_health_di ever_high_bp ///
+ever_osteoperosis ever_diff_seeing ever_diff_hearing ever_heart_attack ///
+ever_arthritis ever_diabetes ever_lung_dis ever_cancer ever_pain pain_lim_act_di ///
+ever_breath breath_lim_act_di ever_low_enrgy enrgy_lim_act_di trb_back_sleep_di ///
+lost_10_lbs_yr felt_depressed felt_nervous felt_lit_interest ///
+felt_worry help_personal_care_di help_get_around_di help_shopping_di ///
+help_chores_di help_bills help_track_meds help_shots_injection help_meds_management ///
+help_make_appts help_speak_doc op_doc_help help_doc_coordination ///
+help_order_med help_mob_dev help_home_safe help_paid_helpr ///
+help_insurance help_insurance_oth help_insurance_any help_diet help_foot help_skin ///
+help_exercise help_teeth help_medical_task cg_drive_sp friend_help ///
+gain_more_conf_di gain_deal_better_di gain_closer2sp_di gain_more_satisfied_di ///
+neg_exhausted_di neg_too_much_di neg_no_time_di neg_no_routine_di ///
+diff_financial_lv diff_emotional_lv diff_physical_lv diff_financial_lv_di ///
+diff_emotional_lv_di diff_physical_lv_di cg_phq2_depressed cg_gad2_anxiety ///
+paid_last_week paid_hours_cat1 paid_hours_cat2 paid_hours_cat3 paid_last_week ///
+lives_in_hh flag_no_help_mth    
+
+label var help_meds_management "Help track meds or with shots & injection"
+label var help_doc_coordination "Sits with or helps speak with doctor"
+label var op_doc_help "Sits with SP at Dr's visits"   
+label var total_hours "Total Number of Hours worked in Month" 
+label var total_hours_week "Total Number of Hours worked in Week"   
+label var diff_financial_lv_di "Financially Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_emotional_lv_di "Emotionally Difficult Level (3-5) on 1-5 scale (5=Very Difficult)"
+label var diff_physical_lv_di "Physically Difficult Level (3-5) on 1-5 scale (5=Very Difficult))"
+label var cg_female "Female Yes/No"
+label var cg_spouse "Caregiver is Spouse/Adult"
+label var cg_gt_hs "Caregiver >=HS Education"
+label var cg_living_children "Any Children Missing Yes/No"
+label var cg_medicare "Medicare Yes/No"
+label var cg_medicaid "Medicaid Yes/No"
+label var work_4_pay "Work for Pay?"
+label var self_health_di "Self-Reported Health (Good/V.Good/Excellent)"
+label var ever_high_bp "Ever High Blood Pressure"
+label var ever_osteoperosis "Ever Osteoperosis"
+label var ever_diff_seeing "Ever Difficult Seeing"
+label var ever_diff_hearing "Ever Difficult Hearing"
+label var ever_heart_attack "Ever Heart Attack"
+label var ever_heart_disease "Ever Heart Disease"
+label var ever_arthritis "Ever Arthritis"
+label var ever_diabetes "Ever Diabetes"
+label var ever_lung_dis "Ever Lung Disease"
+label var ever_cancer "Ever Cancer"
+label var ever_pain "Ever Pain Last Month?"
+label var pain_lim_act_di "Pain Limit Activities (Yes/No)?"
+label var ever_breath_prob "Ever Breathing Problem?"
+label var breath_lim_act_di "Breathing Limit Activities (Yes/No)?"
+label var ever_low_enrgy "Ever Low Evergy?"
+label var enrgy_lim_act_di "Low Energy Limit Activities (Yes/No)?"
+label var trb_back_sleep_di "Trouble Going back to Sleep"
+label var lost_10_lbs_yr "Lost 10 pounds over year"
+label var felt_lit_interest "Felt Little Interest (Yes/No)?"
+label var felt_nervous "Felt Nervous/Anxious (Yes/No)?"
+label var felt_depressed "Felt Depressed (Yes/No)?"
+label var felt_worry "Felt Worried (Yes/No)?"
+label var diff_financial_lv "Financially Difficult (Yes/No)"
+label var diff_emotional_lv "Emotionally Difficult (Yes/No)"
+label var diff_physical_lv "Physically Difficult (Yes/No)"
+label var help_make_appts "Help Make Appointments (Yes/No)"
+label var help_speak_doc "Help Speak to Doctors (Yes/No)"
+label var help_order_med "Help Order Medicine (Yes/No)"
+label var help_insurance "Help Add/Change Insurance (Yes/No)"
+label var help_insurance_oth "Help Other Insurance Issues (Yes/No)"
+label var help_diet "Help Diet"
+label var help_foot "Help Foot Care"
+label var help_skin "Help Skin Care"
+label var help_exercise "Help Exercises"
+label var help_teeth "Help Dental Care"
+label var help_medical_task "Help Manage Medical Tasks"
+label var help_shots_injection "Help with Shots/Injections"
+label var help_bills "Help with Bills/Manage $"
+label var help_track_meds "Help Keep Track of Meds"
+label var help_personal_care_di "Help with Personal Care (Every/Most/Some)"
+label var help_get_around_di "Help Getting Around (Every/Most/Some)"
+label var help_chores_di "Help with Housework Chores (Every/Most/Some)"
+label var help_shopping_di "Help with Shopping (Every/Most/Some)"
+label var friend_help "Friends of Family help?"
+label var gain_more_conf_di "More Confident in Abilities (Very/Somewhat)"
+label var gain_deal_better_di "Deal with Diff Situations (Very/Somewhat)"
+label var gain_closer2sp_di "Closer to SP (Very/Somewhat)"
+label var gain_more_satisfied_di "Satisfaction Recipient is Cared for (Very/Somewhat)"
+label var neg_exhausted_di "Exhausted when you go to bed (Very/Somewhat)"
+label var neg_too_much_di "More than you can handle (Very/Somewhat)"
+label var neg_no_time_di "No Time for yourself (Very/Somewhat)"
+label var neg_no_routine_di "No Routine (Very/Somewhat)"
+label var lives_in_hh "CG Lives in HH"
+label var paid_last_week "CG Got Paid Last Week (Yes/No)"
+label var paid_hours_cat "CG Number of Hours Worked for Pay Last Week"
+label var cg_phq2_depressed "CG PHQ-2 Depressed (Yes/No)"
+label var cg_gad2_anxiety "CG GAD-2 Anxiety (Yes/No)"
+label var flag_no_help_mth "Flag: No Help last Month, but in the last Year"
+label var solo_cg "Only Caregiver for SP"
+label var solo_cg_fam "CG has no other Family helper"
+label var cg_ivw_to_sp_death_mos "Number of Months to Death"
+label var num_help_years "Number of years helped"
+label var primary_cg "Primary Caregiver Status"
+label var paid_hours_cat1 "Paid Hours: <= 20"
+label var paid_hours_cat2 "Paid Hours: 21 - 39"
+label var paid_hours_cat3 "Paid Hours: >= 40"
+label var cg_age "Average Age of Caregivers (Continuous)"
+label var help_mob_dev "Help with Mobility Devices"
+label var help_home_safe "Help made SP Home safe"
+label var help_paid_helpr "Help find a Paid Helper"
+label var help_insurance_any "Help with any Insurance issues/adjustments"
+
+*svyset cgvarunit [pw=cgfinwgt], strat(varstrat)
+svyset [pw=cgfinwgt]
+
+local rn : word count `cgcvars' `spcvars' `cgivars'
+keep if cg_primary_nsoc==1
+foreach g in 1 2 3 {
+	if "`g'"=="2" {
+		gen d12=died_12
+		replace died_12=solo_cg_fam
+}
+	if "`g'"=="3" {
+		keep if d12==1
+}
+		forvalues i=0/1 {
+		local r=1
+		local c=1
+		mat tab`i'`g'=J(`rn'+4,3,.)
+		foreach x in `cgcvars' `spcvars' {
+			sum `x' if died_12==`i' [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(mean)
+			mat tab`i'`g'[`r',`c'+1]=r(sd)
+			svy: regress `x' died_12
+			mat tab`i'`g'[`r',`c'+2]=e(p)
+			local r=`r'+1
+}
+		foreach x in `cgivars' {
+			sum `x' if died_12==`i' [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(sum)
+			mat tab`i'`g'[`r',`c'+1]=r(mean)*100
+			svy: tab `x' died_12
+			mat tab`i'`g'[`r',`c'+2]=e(p_Pear)
+			local r=`r'+1	
+}
+		foreach x in n unique {
+			sum `x' if died_12==`i' [aw=cgfinwgt]
+			mat tab`i'`g'[`r',`c']=r(sum)
+			mat tab`i'`g'[`r'+1,`c']=r(mean)*r(N)
+			local r=`r'+2
+}
+		mat rownames tab`i'`g'=`cgcvars' `spcvars' `cgivars' "N Weighted" ///
+		 "N Unweighted" "Unique SPs, Weighted" "Unique SPs, Unweighted"
+		local hb0="Survivors"
+		local hb1="Decedents"
+		if "`g'"=="2" {
+			local hb0="Not Solo"
+			local hb1="Solo"
+}
+		frmttable, statmat(tab`i'`g') sdec(2) store(stab`i'`g') ///
+		title("Sample Characteristics NSOC Caregivers by SP Survival Status") ///
+		ctitles("" "" "`hb`i''" "" \"" "Mean/N" "SD/%" "P") varlabels
+}
+}
+
+frmttable using "`logpath'\cg_table_nsoc_prim_cg_only.rtf", replay(stab01) ///
+merge(stab11) replace note(Restricted to Primary Caregivers only)
+

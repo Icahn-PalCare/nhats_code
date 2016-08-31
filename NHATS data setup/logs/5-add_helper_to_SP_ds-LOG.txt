@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\5-add_helper_to_SP_ds-LOG.txt
   log type:  text
- opened on:  12 Apr 2016, 11:30:23
+ opened on:  29 Jul 2016, 17:21:18
 
 . 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
@@ -36,7 +36,7 @@ E:\nhats\data\NHATS working data
 . 
 . local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
 >  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw paid ///
->  op_adl* op_iadl* son daughter oth_fam rc_staff
+>  op_adl* op_iadl* son daughter oth_fam rc_staff op_doc_help
 
 . 
 . qui append using R2_hrs_imputed_added.dta
@@ -471,7 +471,9 @@ Other, not relative |    32,130     33,280     32,033     29,936 |   127,379
               Total |    38,097     37,944     35,745     33,016 |   144,802 
 
 
-. 
+. destring opid, replace
+opid has all characters numeric; replaced as byte
+
 . //save as op file before dropping down to one obs per spid
 . saveold "E:/nhats/data/NHATS cleaned/op_round_1_4.dta", replace
 file E:/nhats/data/NHATS cleaned/op_round_1_4.dta saved
@@ -678,8 +680,7 @@ Other, not relative |       815        792        692        587 |     2,886
 . rename opid prim_helper_opid
 
 . destring prim_helper_opid, replace
-prim_helper_opid has all characters numeric; replaced as byte
-(6415 missing values generated)
+prim_helper_opid already numeric; no replace
 
 . la var prim_helper_opid "Primary helper OPID"
 
@@ -700,5 +701,5 @@ file round_1_4_clean_helper_added_old.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\5-add_helper_to_SP_ds-LOG.txt
   log type:  text
- closed on:  12 Apr 2016, 11:30:33
---------------------------------------------------------------------------------------------------------
+ closed on:  29 Jul 2016, 17:21:30
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
