@@ -685,7 +685,7 @@ quit;
 data proj_int.ip_meet_&days_aft_index.p;
 set ip_meet_&days_aft_index.p(keep=clm_pmt_amt clm_pass_thru_per_diem_amt bene_id index_year index_date admit_date disch_date 
   ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 crnrydaycnt icarecnt erdaycnt clm_ip_admsn_type_cd
-  PRCDR_DT1-PRCDR_DT25);
+  PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
 run;
 %mend ip_drop;
 
@@ -693,7 +693,7 @@ run;
 data proj_int.snf_meet_&days_aft_index.p;
 set snf_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date 
   ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
- PRCDR_DT1-PRCDR_DT25 );
+ PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
 run;
 %mend snf_drop;
 
@@ -2620,288 +2620,6 @@ quit;
 proc contents data=proj_int.utilization_pre; 
 run;
 
-H="get contact days"
-note: this is the contact days template for 2012
-
-libname medi 'E:\nhats\data\CMS_DUA_28016\Merged';
-libname proj_int 'E:\data\Dartmouth_misc\contact days working data';
-
-data dna;
-set medi.mbsf_06_12(keep=bene_id hmoind12 buyin12 year bene_age_at_end_ref_yr birth_date);
-where year=2012 and bene_age_at_end_ref_yr>=65;
-if indexc(buyin12,"0","1","2","A","B") then part_ab=0;
-if indexc(buyin12,"0","1","2","A","B")=0 then part_ab=1;
-if indexc(hmoind12,"1","2","4","A","B","C")=0 then hmo=0;
-if indexc(hmoind12,"1","2","4","A","B","C") then hmo=1;
-run;
-
-data dn;
-set dna;
-where part_ab=1 and hmo=0;
-run;
-
-%macro mp(source=);
-proc sql;
-create table mpa as select * from
-dn a left join
-medi.&source._06_12 b
-on a.bene_id=b.bene_id;
-quit;
-
-data mpb;
-set mpa(keep=bene_id admit_date disch_date);
-where (year(disch_date)=2012 | year(admit_date)=2012);
-if admit_date<'01jan2012'd then admit_date='01jan2012'd;
-if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
-los=disch_date-admit_date+1;
-run;
-
-proc sort data=mpb out=mpc nodupkey; 
-by bene_id admit_date disch_date; 
-run;
-
-
-%macro dates();
-data mpd;
-set mpc;
-%do i=1 %to 366;
-%let l=%eval(&i-1);
-if los>=&i. then date&i.=admit_date+&l.;
-format date&i. date9.;
-%end;
-run;
-%mend;
-
-%dates();
-
-data mpe;
-set mpd;
-array adate(1:366) date1-date366;
-do datenum = 1 to 366;
-date=adate(datenum);
-output;
-end;
-format date date9.;
-drop date1-date366;
-run;
-
-data mpf;
-set mpe;
-where date~=.;
-run;
-
-proc sort data=mpf out=mpg nodupkey;
-by bene_id date;
-run;
-
-data &source.;
-set mpg(keep= bene_id date admit_date);
-where date~=.;
-mp=1;
-run;
-
-proc sql;
-create table &source._cd as select distinct
-bene_id,
-count(date) as &source._contact_days
-from &source. group by bene_id;
-quit;
-
-%mend;
-
-%mp(source=ip);
-%mp(source=snf);
-
-proc sql;
-create table pba as select * from
-dn a left join
-medi.pb_06_12 b
-on a.bene_id=b.bene_id;
-quit;
-
-data pba1;
-set pba;
-
-data pbb;
-set pba(keep=bene_id admit_date disch_date expnsdt11-expnsdt19 expnsdt110-expnsdt113 hcpcscd1-hcpcscd13);
-where year(admit_date)=2012;
-run;
-
-data pbc(keep=bene_id admit_date linedate1);
-set pbb;
-array adate(1:13) expnsdt11-expnsdt19 expnsdt110-expnsdt113;
-do datenum = 1 to 13;
-linedate1=adate(datenum);
-output;
-end;
-run;
-
-data pbc2(drop=linedate1);
-set pbc;
-where linedate1~=.;
-date=linedate1;
-format date date9.;
-run;
-
-proc sort data=pbc2 out=pbd nodupkey;
-by bene_id date;
-run;
-
-data pbe(keep=bene_id date);
-set pbb;
-date=admit_date;
-pb=1;
-run;
-
-proc sort data=pbe out=pbe2 nodupkey;
-by bene_id date; 
-run;
-
-proc sql;
-create table pb_adm as select distinct
-bene_id,
-count(date) as pb_adm_days
-from pbe2 group by bene_id;
-quit;
-
-data pbf;
-set pbe pbd;
-where date~=.; 
-format date date9.;
-if date<'01jan2012'd then date='01jan2012'd;
-if date>'31DEC2012'd then date='31DEC2012'd;
-pb=1;
-run;
-
-proc sort data=pbf out=pb nodupkey;
-by bene_id date;
-run;
-
-proc sql;
-create table pb_cd as select distinct
-bene_id,
-count(date) as pb_contact_days
-from pb group by bene_id;
-quit;
-
-proc sql;
-create table opa as select * from
-dn a left join
-medi.op_06_12 b
-on a.bene_id=b.bene_id;
-quit;
-
-data opb;
-set opa(keep=bene_id admit_date disch_date rev_dt1-rev_dt45);
-where year(admit_date)=2012;
-if admit_date<'01jan2012'd then admit_date='01jan2012'd;
-if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
-run;
-
-data opc(keep=bene_id admit_date linedate1);
-set opb;
-array adate(1:45) rev_dt01-rev_dt45;
-do datenum = 1 to 45;
-linedate1=adate(datenum);
-output;
-end;
-drop rev_dt01-rev_dt45;
-run;
-
-data opc2(drop=linedate1);
-set opc;
-where linedate1~=.;
-date=linedate1;
-format date date9.;
-run;
-
-proc sort data=opc2 out=opd nodupkey;
-by bene_id date;
-run;
-
-data ope(keep=bene_id date);
-set opb;
-date=admit_date;
-op=1;
-run;
-
-proc sort data=ope out=ope2 nodupkey;
-by bene_id date; 
-run;
-
-proc sql;
-create table op_adm as select distinct
-bene_id,
-count(date) as op_adm_days
-from ope2 group by bene_id;
-quit;
-
-data opf;
-set ope opd;
-where date~=.;
-if date<'01jan2012'd then date='01jan2012'd;
-if date>'31DEC2012'd then date='31DEC2012'd;
-op=1;
-run;
-
-proc sort data=opf out=op nodupkey;
-by bene_id date;
-run;
-
-proc sql;
-create table op_cd as select distinct
-bene_id,
-count(date) as op_contact_days
-from op group by bene_id;
-quit;
-
-data alla;
-set ip snf pb op;
-where date~=.;
-format date date9.;
-run;
-
-proc sort data=alla out=allb nodupkey;
-by bene_id date;
-run;
-
-proc sql;
-create table allc as select distinct
-bene_id,
-count(date) as contact_days
-from allb group by bene_id;
-quit;
-
-proc sql; 
-create table alld as select * from 
-dn a left join
-allc b
-on a.bene_id=b.bene_id
-left join ip_cd c
-on a.bene_id=c.bene_id
-left join op_adm d
-on a.bene_id=d.bene_id
-left join op_cd e
-on a.bene_id=e.bene_id
-left join pb_adm f
-on a.bene_id=f.bene_id
-left join pb_cd g
-on a.bene_id=g.bene_id
-left join snf_cd h
-on a.bene_id=h.bene_id;
-run;
-
-data all;
-set alld;
-array list ip_contact_days snf_contact_days op_adm_days op_contact_days pb_adm_days pb_contact_days contact_days;
-do over list;
-if list=. then list=0;
-end;
-run;
-
-proc export data=all outfile="E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_op_pb.dta" replace; run;
-
-
 H="classify SI based on primary dx"
 /*recoded as a macro and use either the primary diagnosis or admitting diagnoses AD_DGNS */
 
@@ -4467,6 +4185,696 @@ outfile="E:\nhats\data\projects\serious_ill\int_data\serious_ill_int_dataset1.dt
 run;
 
 
+H="compare outcomes"
+use "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta", clear
+local logpath E:\nhats\data\Projects\serious_ill\logs
+use "E:\data\serious_ill\final_data\n0_n1_p1_p2_x_criteria_2010_v1.dta", clear
+drop if nhres_n0==1
+drop if hmo_d_12m_n0==1
+drop if part_ab_12m_n0==0
+gen criteria_all_n0=1
+gen criteria_none_n0=criteria_a_n0==0
+
+gen mult_ip_adm_p12m_n0=n_ip_admit_p12m_n0>1 if !missing(n_ip_admit_p12m_n0)
+gen n_ed_vis_12m_n0=n_ed_op_visits_12m_n0+n_ed_ip_12m_n0
+gen ind_ed_vis_p12m_n0=n_ed_vis_12m_n0>0 if !missing(n_ed_vis_12m_n0)
+gen mult_ed_vis_p12m_n0=n_ed_vis_12m_n0>1 if !missing(n_ed_vis_12m_n0)
+gen ind_icu_p12m_n0=icu_days_12m_n0>0 if !missing(icu_days_12m_n0)
+gen ind_hs_p12m_n0=hs_paid_by_mc_12m_n0!=0 if !missing(hs_paid_by_mc_12m_n0)
+*/
+local outcomes3 ind_hosp_adm_p12m_n0 mult_ip_adm_p12m_n0 ind_ed_vis_p12m_n0 mult_ed_vis_p12m_n0 ///
+ind_icu_p12m_n0 ind_hs_p12m_n0 core_to_dod_1yr_n0
+
+local outcomes2 n_hospd_p12m_n0
+
+local outcomes1 ip_paid_by_mc_12m_n0 snf_paid_by_mc_12m_n0 hh_paid_by_mc_12m_n0 ///
+ hs_paid_by_mc_12m_n0 pb_paid_by_mc_12m_n0 op_paid_by_mc_12m_n0 ///
+ dm_paid_by_mc_12m_n0 tot_paid_by_mc_12m_n0
+local rn : word count `outcomes1' `outcomes1' `outcomes2' `outcomes2' `outcomes3' 1
+foreach x in `outcomes1' `outcomes2' `outcomes3' {
+drop if `x'==.
+}
+
+mat tab1=J(`rn',10,.)
+local r=1
+local c=1
+
+foreach i in all none a b c {
+	foreach x in `outcomes1' `outcomes2' {
+		sum `x' if criteria_`i'_n0==1 [aw=wgtr_n0],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		mat tab1[`r'+1,`c']=r(p50)
+		local r=`r'+2
+}
+	foreach x in `outcomes3' {
+		qui sum `x' if criteria_`i'_n0==1 [aw=wgtr_n0]
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+2
+}
+mat rownames tab1="IP MC payments 12m post ivw" ///
+"	Median" "SNF MC payments 12m post ivw" ///
+"	Median" "HH MC payments 12m post ivw" ///
+"	Median" "HS MC payments 12m post ivw" ///
+"	Median" "PB MC payments 12m post ivw" ///
+"	Median" "OP MC payments 12m post ivw" ///
+"	Median" "DME MC payments 12m post ivw" ///
+"	Median" "Total MC payments 12m post ivw" ///
+"	Median" "n hospital nights 12m post ivw" ///
+"	Median"  `outcomes3' N
+
+frmttable using "`logpath'\compare_hrs_nhats_outcomes.doc",  replace ///
+statmat(tab1) varlabels  title("One Year Outcomes by Propensity 1 yr Mortality,HRS") ///
+ ctitles("" "Full Sample Mean/N" "SD/%" "Criteria A " "SD/%" "B" "SD/%" "C" "SD/%") ///
+ sdec(2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
+ 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
+ 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\0,2,0,2,0,2,0,2) ///
+ /*rtitles("IP MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"SNF MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"HH MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"HS MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"PB MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"OP MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"DME MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"Total MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"n hospital nights 12m post ivw (mean,SD)" \ ///
+"	Median" ind_hosp_adm_p12m_n0\ ///
+ mult_ip_adm_p12m_n0\ mult_ed_vis_p12m_n0\ ///
+ ind_icu_vis_p12m_n0\ hs_admit_p12m_n0\ ///
+ core_to_dod_1yr_n0\ loc_hosp_x\ N) ///
+*/ note("All costs WI adjusted 2012$"\"P-values compared to baseline of low probability group") 
+use "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta", clear
+local logpath E:\nhats\data\Projects\serious_ill\logs
+keep if cont_ffs_n_mos>=12 & wave==1 //& sp_ivw==1
+gen criteria_all=1
+gen criteria_none=criteria_a==0
+gen tot_paid_by_mc_12m=0
+foreach x in ip snf hh hs pb op dm {
+replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
+}
+gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
+gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
+gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
+gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
+gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
+gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
+
+local outcomes3 ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_vis_p12m mult_ed_vis_p12m ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local outcomes2 n_hospd_p12m
+
+local outcomes1 ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m
+local rn : word count `outcomes1' `outcomes1' `outcomes2' `outcomes2' `outcomes3' 1
+foreach x in `outcomes1' `outcomes2' `outcomes3' {
+drop if `x'==.
+}
+
+mat tab1=J(`rn',10,.)
+local r=1
+local c=1
+
+foreach i in all none a b c {
+	foreach x in `outcomes1' `outcomes2' {
+		sum `x' if criteria_`i'==1 [aw=anfinwgt],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		mat tab1[`r'+1,`c']=r(p50)
+		local r=`r'+2
+}
+	foreach x in `outcomes3' {
+		qui sum `x' if criteria_`i'==1 [aw=anfinwgt]
+		mat tab1[`r',`c']=r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+2
+}
+mat rownames tab1="IP MC payments 12m post ivw" ///
+"	Median" "SNF MC payments 12m post ivw" ///
+"	Median" "HH MC payments 12m post ivw" ///
+"	Median" "HS MC payments 12m post ivw" ///
+"	Median" "PB MC payments 12m post ivw" ///
+"	Median" "OP MC payments 12m post ivw" ///
+"	Median" "DME MC payments 12m post ivw" ///
+"	Median" "Total MC payments 12m post ivw" ///
+"	Median" "n hospital nights 12m post ivw" ///
+"	Median"  `outcomes3' N
+
+frmttable using "`logpath'\compare_hrs_nhats_outcomes.doc",  addtable ///
+statmat(tab1) varlabels  title("One Year Outcomes by Propensity 1 yr Mortality, NHATS") ///
+ ctitles("" "Full Sample" "SD/%" "Criteria A" "SD/%" "B" "SD/%" "C" "SD/%") ///
+ sdec(2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
+ 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
+ 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\0,2,0,2,0,2,0,2) ///
+ /*rtitles("IP MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"SNF MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"HH MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"HS MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"PB MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"OP MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"DME MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"Total MC payments 12m post ivw (mean,SD)" \ ///
+"	Median"\"n hospital nights 12m post ivw (mean,SD)" \ ///
+"	Median" ind_hosp_adm_p12m_n0\ ///
+ mult_ip_adm_p12m_n0\ mult_ed_vis_p12m_n0\ ///
+ ind_icu_vis_p12m_n0\ hs_admit_p12m_n0\ ///
+ core_to_dod_1yr_n0\ loc_hosp_x\ N) ///
+*/ note("All costs WI adjusted 2012$"\"P-values compared to baseline of low probability group") 
+
+
+H="dataset cleaning and sample derivation"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+log using `logpath'\sample_derivation.txt, text replace
+
+use `intpath'\serious_ill_int_dataset1.dta if wave==1, clear
+
+*****************************************
+//variable cleaning and construction
+*****************************************
+
+//set comorb/serill to zero if missing (because no entry in the pb file)
+foreach x of varlist comorb* cc* smi* {
+	replace `x'=0 if `x'==. & cont_ffs_n_mos>=12
+}
+
+replace el_ge3=comorb_all>3 if !missing(comorb_all)
+
+replace smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + ///
+smi_copd_ind + smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind
+replace ser_med_illness=smi_count>0 if missing(ser_med_illness) & !missing(smi_count)
+replace criteria_a=smi_count>0 if !missing(smi_count) & missing(criteria_a)
+replace criteria_b=criteria_a==1 & (ind_em_ur_adm_12m==1 | smi_nh_ind==1) if missing(criteria_b)
+replace criteria_c=ser_med_illness==1 & adl_impair==1 & (ind_em_ur_adm_12m==1 | ///
+smi_nh_ind==1) if missing(criteria_c)
+
+gen criteria_all=1
+gen criteria_none=criteria_a==0
+gen tot_paid_by_mc_12m=0
+foreach x in ip snf hh hs pb op dm {
+replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
+}
+gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
+foreach x of varlist *_op_* *icu_* {
+replace `x'=0 if missing(`x')
+}
+
+gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
+gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
+gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
+gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
+gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
+
+foreach x of varlist adl*help {
+	replace `x'=0 if missing(`x')
+}
+*****************************************
+//sample derivation
+*****************************************
+gen wave1=wave==1
+gen ffs_12m=cont_ffs_n_mos>=12 if !missing(cont_ffs_n_mos)
+gen ab_12m=part_ab_n_mos>=12
+gen hmo_12m=non_hmo_d_n_mos>=12
+label var ab_12m "12m AB Medicare before ivw"
+label var hmo_12m "12m w/o HMO before ivw"
+label var wave1 "Wave 1 Interview"
+label var ffs_12m "12m continuous FFS before ivw"
+*local samplevars wave1 sp_ivw_yes ab_12m hmo_12m ffs_12m 
+local samplevars wave1 ab_12m hmo_12m ffs_12m 
+
+local rn : word count `samplevars'
+local r=1
+local c=1
+mat samp=J(`rn',2,.)
+
+foreach x in `samplevars' {
+	keep if `x'==1
+	sum `x'
+	mat samp[`r',`c']=r(N)
+	local r=`r'+1
+}
+
+mat rownames samp=`samplevars'
+
+frmttable, statmat(samp) ctitles("" "N") title("Sample Derivation") sdec(0) ///
+varlabels
+
+save serious_ill_nhats_sample, replace
+
+foreach x of varlist comorb* cc* ser_med *smi* criteria* {
+	replace `x'=0 if `x'==.
+}
+
+
+H="characteristics and outcomes"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+log using `logpath'\table1.txt, text replace
+
+use serious_ill_nhats_sample, clear
+gen criteria_group=criteria_a
+replace criteria_group=2 if criteria_b==1
+replace criteria_group=3 if criteria_c==1
+gen cgroupa=criteria_a
+gen cgroupb=criteria_b
+gen cgroupc=criteria_c
+gen ind=1
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married 
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+criteria_a criteria_b criteria_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+qui sum ind if missing(`x')
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+qui replace missingany=1 if `x'==.
+}
+
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+sum `x' 
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+sum ind if missing(`x')
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+sum ind
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles("" "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all none a b c {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if criteria_`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","a","b","c") {
+				ttest `x' if criteria_`i'==1 | criteria_none==1, by(cgroup`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if criteria_`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				tab `x' cgroup`i' if criteria_`i'==1 | criteria_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		sum `x' if criteria_`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","a","b","c") {
+			ttest `x' if criteria_`i'==1 | criteria_none==1, by(cgroup`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			sum `x' if criteria_`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if criteria_`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				tab `x' cgroup`i' if criteria_`i'==1 | criteria_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	sum ind if criteria_`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\formatted_tables.doc, replace statmat(tab1) ///
+ title("Sample Characteristics by Ser Illness criteria") ///
+ ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note(*p<.05 difference between x and no criteria met groups, t-test or chi2)
+
+log close
+
+H="HCC"
+
+
+
+H="get contact days"
+note: this is the contact days template for 2012
+
+libname medi 'E:\nhats\data\CMS_DUA_28016\Merged';
+libname proj_int 'E:\data\Dartmouth_misc\contact days working data';
+
+data dna;
+set medi.mbsf_06_12(keep=bene_id hmoind12 buyin12 year bene_age_at_end_ref_yr birth_date);
+where year=2012 and bene_age_at_end_ref_yr>=65;
+if indexc(buyin12,"0","1","2","A","B") then part_ab=0;
+if indexc(buyin12,"0","1","2","A","B")=0 then part_ab=1;
+if indexc(hmoind12,"1","2","4","A","B","C")=0 then hmo=0;
+if indexc(hmoind12,"1","2","4","A","B","C") then hmo=1;
+run;
+
+data dn;
+set dna;
+where part_ab=1 and hmo=0;
+run;
+
+%macro mp(source=);
+proc sql;
+create table mpa as select * from
+dn a left join
+medi.&source._06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data mpb;
+set mpa(keep=bene_id admit_date disch_date);
+where (year(disch_date)=2012 | year(admit_date)=2012);
+if admit_date<'01jan2012'd then admit_date='01jan2012'd;
+if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
+los=disch_date-admit_date+1;
+run;
+
+proc sort data=mpb out=mpc nodupkey; 
+by bene_id admit_date disch_date; 
+run;
+
+
+%macro dates();
+data mpd;
+set mpc;
+%do i=1 %to 366;
+%let l=%eval(&i-1);
+if los>=&i. then date&i.=admit_date+&l.;
+format date&i. date9.;
+%end;
+run;
+%mend;
+
+%dates();
+
+data mpe;
+set mpd;
+array adate(1:366) date1-date366;
+do datenum = 1 to 366;
+date=adate(datenum);
+output;
+end;
+format date date9.;
+drop date1-date366;
+run;
+
+data mpf;
+set mpe;
+where date~=.;
+run;
+
+proc sort data=mpf out=mpg nodupkey;
+by bene_id date;
+run;
+
+data &source.;
+set mpg(keep= bene_id date admit_date);
+where date~=.;
+mp=1;
+run;
+
+proc sql;
+create table &source._cd as select distinct
+bene_id,
+count(date) as &source._contact_days
+from &source. group by bene_id;
+quit;
+
+%mend;
+
+%mp(source=ip);
+%mp(source=snf);
+
+proc sql;
+create table pba as select * from
+dn a left join
+medi.pb_06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data pba1;
+set pba;
+
+data pbb;
+set pba(keep=bene_id admit_date disch_date expnsdt11-expnsdt19 expnsdt110-expnsdt113 hcpcscd1-hcpcscd13);
+where year(admit_date)=2012;
+run;
+
+data pbc(keep=bene_id admit_date linedate1);
+set pbb;
+array adate(1:13) expnsdt11-expnsdt19 expnsdt110-expnsdt113;
+do datenum = 1 to 13;
+linedate1=adate(datenum);
+output;
+end;
+run;
+
+data pbc2(drop=linedate1);
+set pbc;
+where linedate1~=.;
+date=linedate1;
+format date date9.;
+run;
+
+proc sort data=pbc2 out=pbd nodupkey;
+by bene_id date;
+run;
+
+data pbe(keep=bene_id date);
+set pbb;
+date=admit_date;
+pb=1;
+run;
+
+proc sort data=pbe out=pbe2 nodupkey;
+by bene_id date; 
+run;
+
+proc sql;
+create table pb_adm as select distinct
+bene_id,
+count(date) as pb_adm_days
+from pbe2 group by bene_id;
+quit;
+
+data pbf;
+set pbe pbd;
+where date~=.; 
+format date date9.;
+if date<'01jan2012'd then date='01jan2012'd;
+if date>'31DEC2012'd then date='31DEC2012'd;
+pb=1;
+run;
+
+proc sort data=pbf out=pb nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table pb_cd as select distinct
+bene_id,
+count(date) as pb_contact_days
+from pb group by bene_id;
+quit;
+
+proc sql;
+create table opa as select * from
+dn a left join
+medi.op_06_12 b
+on a.bene_id=b.bene_id;
+quit;
+
+data opb;
+set opa(keep=bene_id admit_date disch_date rev_dt1-rev_dt45);
+where year(admit_date)=2012;
+if admit_date<'01jan2012'd then admit_date='01jan2012'd;
+if disch_date>'31DEC2012'd then disch_date='31DEC2012'd;
+run;
+
+data opc(keep=bene_id admit_date linedate1);
+set opb;
+array adate(1:45) rev_dt01-rev_dt45;
+do datenum = 1 to 45;
+linedate1=adate(datenum);
+output;
+end;
+drop rev_dt01-rev_dt45;
+run;
+
+data opc2(drop=linedate1);
+set opc;
+where linedate1~=.;
+date=linedate1;
+format date date9.;
+run;
+
+proc sort data=opc2 out=opd nodupkey;
+by bene_id date;
+run;
+
+data ope(keep=bene_id date);
+set opb;
+date=admit_date;
+op=1;
+run;
+
+proc sort data=ope out=ope2 nodupkey;
+by bene_id date; 
+run;
+
+proc sql;
+create table op_adm as select distinct
+bene_id,
+count(date) as op_adm_days
+from ope2 group by bene_id;
+quit;
+
+data opf;
+set ope opd;
+where date~=.;
+if date<'01jan2012'd then date='01jan2012'd;
+if date>'31DEC2012'd then date='31DEC2012'd;
+op=1;
+run;
+
+proc sort data=opf out=op nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table op_cd as select distinct
+bene_id,
+count(date) as op_contact_days
+from op group by bene_id;
+quit;
+
+data alla;
+set ip snf pb op;
+where date~=.;
+format date date9.;
+run;
+
+proc sort data=alla out=allb nodupkey;
+by bene_id date;
+run;
+
+proc sql;
+create table allc as select distinct
+bene_id,
+count(date) as contact_days
+from allb group by bene_id;
+quit;
+
+proc sql; 
+create table alld as select * from 
+dn a left join
+allc b
+on a.bene_id=b.bene_id
+left join ip_cd c
+on a.bene_id=c.bene_id
+left join op_adm d
+on a.bene_id=d.bene_id
+left join op_cd e
+on a.bene_id=e.bene_id
+left join pb_adm f
+on a.bene_id=f.bene_id
+left join pb_cd g
+on a.bene_id=g.bene_id
+left join snf_cd h
+on a.bene_id=h.bene_id;
+run;
+
+data all;
+set alld;
+array list ip_contact_days snf_contact_days op_adm_days op_contact_days pb_adm_days pb_contact_days contact_days;
+do over list;
+if list=. then list=0;
+end;
+run;
+
+proc export data=all outfile="E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_op_pb.dta" replace; run;
+
+
 H="stata compare to hrs"
 clear all
 set more off
@@ -4640,295 +5048,33 @@ mat tab[`r',7]=r(p_Pear)
 
 
 
-H="compare outcomes"
-use "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta", clear
-local logpath E:\nhats\data\Projects\serious_ill\logs
-use "E:\data\serious_ill\final_data\n0_n1_p1_p2_x_criteria_2010_v1.dta", clear
-drop if nhres_n0==1
-drop if hmo_d_12m_n0==1
-drop if part_ab_12m_n0==0
-gen criteria_all_n0=1
-gen criteria_none_n0=criteria_a_n0==0
-
-gen mult_ip_adm_p12m_n0=n_ip_admit_p12m_n0>1 if !missing(n_ip_admit_p12m_n0)
-gen n_ed_vis_12m_n0=n_ed_op_visits_12m_n0+n_ed_ip_12m_n0
-gen ind_ed_vis_p12m_n0=n_ed_vis_12m_n0>0 if !missing(n_ed_vis_12m_n0)
-gen mult_ed_vis_p12m_n0=n_ed_vis_12m_n0>1 if !missing(n_ed_vis_12m_n0)
-gen ind_icu_p12m_n0=icu_days_12m_n0>0 if !missing(icu_days_12m_n0)
-gen ind_hs_p12m_n0=hs_paid_by_mc_12m_n0!=0 if !missing(hs_paid_by_mc_12m_n0)
-*/
-local outcomes3 ind_hosp_adm_p12m_n0 mult_ip_adm_p12m_n0 ind_ed_vis_p12m_n0 mult_ed_vis_p12m_n0 ///
-ind_icu_p12m_n0 ind_hs_p12m_n0 core_to_dod_1yr_n0
-
-local outcomes2 n_hospd_p12m_n0
-
-local outcomes1 ip_paid_by_mc_12m_n0 snf_paid_by_mc_12m_n0 hh_paid_by_mc_12m_n0 ///
- hs_paid_by_mc_12m_n0 pb_paid_by_mc_12m_n0 op_paid_by_mc_12m_n0 ///
- dm_paid_by_mc_12m_n0 tot_paid_by_mc_12m_n0
-local rn : word count `outcomes1' `outcomes1' `outcomes2' `outcomes2' `outcomes3' 1
-foreach x in `outcomes1' `outcomes2' `outcomes3' {
-drop if `x'==.
-}
-
-mat tab1=J(`rn',10,.)
-local r=1
-local c=1
-
-foreach i in all none a b c {
-	foreach x in `outcomes1' `outcomes2' {
-		sum `x' if criteria_`i'_n0==1 [aw=wgtr_n0],d
-		mat tab1[`r',`c']=r(mean)
-		mat tab1[`r',`c'+1]=r(sd)
-		mat tab1[`r'+1,`c']=r(p50)
-		local r=`r'+2
-}
-	foreach x in `outcomes3' {
-		qui sum `x' if criteria_`i'_n0==1 [aw=wgtr_n0]
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-	mat tab1[`r',`c']=r(N)
-	local r=1
-	local c=`c'+2
-}
-mat rownames tab1="IP MC payments 12m post ivw" ///
-"	Median" "SNF MC payments 12m post ivw" ///
-"	Median" "HH MC payments 12m post ivw" ///
-"	Median" "HS MC payments 12m post ivw" ///
-"	Median" "PB MC payments 12m post ivw" ///
-"	Median" "OP MC payments 12m post ivw" ///
-"	Median" "DME MC payments 12m post ivw" ///
-"	Median" "Total MC payments 12m post ivw" ///
-"	Median" "n hospital nights 12m post ivw" ///
-"	Median"  `outcomes3' N
-
-frmttable using "`logpath'\table_1_and_outcomes_hrs2010.doc",  replace ///
-statmat(tab1) varlabels  title("One Year Outcomes by Propensity 1 yr Mortality") ///
- ctitles("" "Full Sample Mean/N" "SD/%" "Criteria A " "SD/%" "B" "SD/%" "C" "SD/%") ///
- sdec(2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
- 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
- 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\0,2,0,2,0,2,0,2) ///
- /*rtitles("IP MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"SNF MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"HH MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"HS MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"PB MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"OP MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"DME MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"Total MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"n hospital nights 12m post ivw (mean,SD)" \ ///
-"	Median" ind_hosp_adm_p12m_n0\ ///
- mult_ip_adm_p12m_n0\ mult_ed_vis_p12m_n0\ ///
- ind_icu_vis_p12m_n0\ hs_admit_p12m_n0\ ///
- core_to_dod_1yr_n0\ loc_hosp_x\ N) ///
-*/ note("All costs WI adjusted 2012$"\"P-values compared to baseline of low probability group") 
-use "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta", clear
-local logpath E:\nhats\data\Projects\serious_ill\logs
-keep if cont_ffs_n_mos>=12 & wave==1 & sp_ivw==1
-gen criteria_all=1
-gen criteria_none=criteria_a==0
-gen tot_paid_by_mc_12m=0
-foreach x in ip snf hh hs pb op dm {
-replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
-}
-gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
-gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
-gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
-gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
-gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
-gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
-
-local outcomes3 ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_vis_p12m mult_ed_vis_p12m ///
-ind_icu_p12m ind_hs_p12m died_12
-
-local outcomes2 n_hospd_p12m
-
-local outcomes1 ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
- hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
- dm_paid_by_mc_12m tot_paid_by_mc_12m
-local rn : word count `outcomes1' `outcomes1' `outcomes2' `outcomes2' `outcomes3' 1
-foreach x in `outcomes1' `outcomes2' `outcomes3' {
-drop if `x'==.
-}
-
-mat tab1=J(`rn',10,.)
-local r=1
-local c=1
-
-foreach i in all none a b c {
-	foreach x in `outcomes1' `outcomes2' {
-		sum `x' if criteria_`i'==1 [aw=anfinwgt],d
-		mat tab1[`r',`c']=r(mean)
-		mat tab1[`r',`c'+1]=r(sd)
-		mat tab1[`r'+1,`c']=r(p50)
-		local r=`r'+2
-}
-	foreach x in `outcomes3' {
-		qui sum `x' if criteria_`i'==1 [aw=anfinwgt]
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-	mat tab1[`r',`c']=r(N)
-	local r=1
-	local c=`c'+2
-}
-mat rownames tab1="IP MC payments 12m post ivw" ///
-"	Median" "SNF MC payments 12m post ivw" ///
-"	Median" "HH MC payments 12m post ivw" ///
-"	Median" "HS MC payments 12m post ivw" ///
-"	Median" "PB MC payments 12m post ivw" ///
-"	Median" "OP MC payments 12m post ivw" ///
-"	Median" "DME MC payments 12m post ivw" ///
-"	Median" "Total MC payments 12m post ivw" ///
-"	Median" "n hospital nights 12m post ivw" ///
-"	Median"  `outcomes3' N
-
-frmttable using "`logpath'\table_1_and_outcomes.doc",  replace ///
-statmat(tab1) varlabels  title("One Year Outcomes by Propensity 1 yr Mortality") ///
- ctitles("" "Full Sample" "SD/%" "Criteria A" "SD/%" "B" "SD/%" "C" "SD/%") ///
- sdec(2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
- 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\ ///
- 2,2,2,2,2,2,2,2\2,2,2,2,2,2,2,2\0,2,0,2,0,2,0,2) ///
- /*rtitles("IP MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"SNF MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"HH MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"HS MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"PB MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"OP MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"DME MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"Total MC payments 12m post ivw (mean,SD)" \ ///
-"	Median"\"n hospital nights 12m post ivw (mean,SD)" \ ///
-"	Median" ind_hosp_adm_p12m_n0\ ///
- mult_ip_adm_p12m_n0\ mult_ed_vis_p12m_n0\ ///
- ind_icu_vis_p12m_n0\ hs_admit_p12m_n0\ ///
- core_to_dod_1yr_n0\ loc_hosp_x\ N) ///
-*/ note("All costs WI adjusted 2012$"\"P-values compared to baseline of low probability group") 
-
-
-H="dataset cleaning and sample derivation"
-clear all 
-set more off
-capture log close
-
-local intpath "E:\nhats\data\Projects\serious_ill\int_data"
-local datapath "E:\nhats\data\Projects\serious_ill\final_data"
-local logpath "E:\nhats\data\Projects\serious_ill\logs"
-
-cd `datapath'
-log using `logpath'\sample_derivation.txt, text replace
-
-use `intpath'\serious_ill_int_dataset1.dta if wave==1, clear
-
-*****************************************
-//variable cleaning and construction
-*****************************************
-
-//set comorb/serill to zero if missing (because no entry in the pb file)
-foreach x of varlist comorb* cc* smi* {
-	replace `x'=0 if `x'==. & cont_ffs_n_mos>=12
-}
-
-replace el_ge3=comorb_all>3 if !missing(comorb_all)
-
-replace smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + ///
-smi_copd_ind + smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind
-replace ser_med_illness=smi_count>0 if missing(ser_med_illness) & !missing(smi_count)
-replace criteria_a=smi_count>0 if !missing(smi_count) & missing(criteria_a)
-replace criteria_b=criteria_a==1 & (ind_em_ur_adm_12m==1 | smi_nh_ind==1) if missing(criteria_b)
-replace criteria_c=ser_med_illness==1 & adl_impair==1 & (ind_em_ur_adm_12m==1 | ///
-smi_nh_ind==1) if missing(criteria_c)
-
-gen criteria_all=1
-gen criteria_none=criteria_a==0
-gen tot_paid_by_mc_12m=0
-foreach x in ip snf hh hs pb op dm {
-replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
-}
-gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
-foreach x of varlist *_op_* *icu_* {
-replace `x'=0 if missing(`x')
-}
-
-gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
-gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
-gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
-gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
-gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
-
-*****************************************
-//sample derivation
-*****************************************
-gen wave1=wave==1
-gen ffs_12m=cont_ffs_n_mos>=12 if !missing(cont_ffs_n_mos)
-gen ab_12m=part_ab_n_mos>=12
-gen hmo_12m=non_hmo_d_n_mos>=12
-label var ab_12m "12m AB Medicare before ivw"
-label var hmo_12m "12m w/o HMO before ivw"
-label var wave1 "Wave 1 Interview"
-label var ffs_12m "12m continuous FFS before ivw"
-local samplevars wave1 sp_ivw_yes ab_12m hmo_12m ffs_12m 
-
-local rn : word count `samplevars'
-local r=1
-local c=1
-mat samp=J(`rn',2,.)
-
-foreach x in `samplevars' {
-	keep if `x'==1
-	sum `x'
-	mat samp[`r',`c']=r(N)
-	local r=`r'+1
-}
-
-mat rownames samp=`samplevars'
-
-frmttable, statmat(samp) ctitles("" "N") title("Sample Derivation") sdec(0) ///
-varlabels
-
-save serious_ill_nhats_sample, replace
-
-foreach x of varlist comorb* cc* ser_med *smi* criteria* {
-	replace `x'=0 if `x'==.
-}
-
-
-H="characteristics and outcomes"
-clear all 
-set more off
-capture log close
-
-local intpath "E:\nhats\data\Projects\serious_ill\int_data"
-local datapath "E:\nhats\data\Projects\serious_ill\final_data"
-local logpath "E:\nhats\data\Projects\serious_ill\logs"
-
-cd `datapath'
-log using `logpath'\table1.txt, text replace
-
-use serious_ill_nhats_sample, clear
-gen criteria_group=criteria_a
-replace criteria_group=2 if criteria_b==1
-replace criteria_group=3 if criteria_c==1
-gen cgroupnone=criteria_none
-gen cgroupb=criteria_b
-gen cgroupc=criteria_c
+H="treatment burden info"
+use "E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_pb.dta", clear
+gen wave=index_y-2010
+keep if wave==2
+by spid, sort: gen dup=_N>1
+drop if dup
+merge 1:1 spid wave using sp_round_1_4, keep(match master)
+drop _m
+merge 1:1 spid wave using "E:\nhats\data\projects\serious_ill\int_data\treatment_burden.dta"
+tab _m group
+sum contact
+sum contact, d
+sum pb_con
+sum ip_con
+merge 1:m spid wave using "E:\nhats\data\projects\serious_ill\int_data\serious_ill_int_dataset1.dta", keep(match master) gen(thism)
+gen ffs_12=cont_ffs_n>=12
+sum contact if ffs_12
+sum pb_contact if ffs_12
+sum ip_contact if ffs_12
+keep if !lml & sp_ivw_yes==1
+tab ind_t ind_meds_pr, chi2
+tab group, gen(criteria_)
+gen cgroup1=criteria_1
+gen cgroup2=criteria_2
+gen cgroup3=criteria_3
 gen ind=1
-local cvars1 age
-local cvars2 aveincome
-local ivars1 female white black hisp other_race married 
-local ivars2 proxy  ///
-medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
-adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
-smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
-/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
-criteria_a criteria_b criteria_c
-local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_vis_p12m mult_ed_vis_p12m ///
-ind_icu_p12m ind_hs_p12m died_12
-
-local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
- hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
- dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+local coutcomes 
 gen missingany=0
 foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
 qui sum ind if missing(`x')
@@ -4938,15 +5084,43 @@ di r(N)
 }
 qui replace missingany=1 if `x'==.
 }
+local cvars1 age
+local cvars2 n_helpers
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy ffs_12 ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+criteria_a criteria_b criteria_c
+local cvars3 contact_days
+local ivars3 ind_treatment_burden ind_meds_problem
+local ioutcomes 
 
 
-local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+capture log close
 
+log using "E:\nhats\data\projects\serious_ill\logs\treatment_burden_xtabs.txt", text replace
+
+local mod meddif medfamdif meddelay medtoomch
+foreach now in 0 1 {
+foreach x in `mod' {
+	tab `x'
+}
+tab ind_t
+tab group
+tab1 ind_meds_diff ind_meds_mi ind_meds_pr
+tab ind_meds_pr ind_trea, chi2
+keep if ffs_12
+}
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `cvars3' `ivars3' n `coutcomes' `ioutcomes'
+/*
 local r=1
 local c=1
 mat miss=J(`rn',3,.)
 
-foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `cvars3' `ivars3' `coutcomes' `ioutcomes' {
 sum `x' 
 mat miss[`r',1]=r(mean)
 mat miss[`r',2]=r(N)
@@ -4961,63 +5135,41 @@ mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
 
 frmttable, statmat(miss) varlabels title("Missing values") ///
 ctitles("" "Variable" "mean" "N" "N missing") sdec(2,0,0)
-tab missingany
-drop if missingany
+tab missingany*/
+*drop if missingany
 local r=1
 local c=1
 
-local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `cvars3' `ivars3' `coutcomes' `coutcomes' `ioutcomes' a
 di `rn'
-mat tab1=J(`rn',5,.)
-mat stars=J(`rn',5,0)
+mat tab1=J(`rn',3,.)
+mat stars=J(`rn',3,0)
 local r=1
 local c=1
-foreach i in all none a b c {
-	foreach round in 1 2 {
+foreach i in 1 2 3 {
+	foreach round in 1 2 3 {
 		foreach x of local cvars`round' {
 			qui sum `x' if criteria_`i'==1 
 			mat tab1[`r',`c']=r(mean)
-			if inlist("`i'","none","b","c") {
-				ttest `x' if criteria_`i'==1 | criteria_a==1, by(cgroup`i')
+/*			if inlist("`i'","2","3") {
+				ttest `x' ,by(ind_t)//if criteria_`i'==1 | criteria_none==1, by(cgroup`i')
 				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-}
+}*/
+qui ttest `x', by(ind_t)
+mat stars[`r',3]=(r(p)<.01) + (r(p)<.05)
 			local r=`r'+1
 }
 		foreach x of local ivars`round' {
 			qui sum `x' if criteria_`i'==1
 			mat tab1[`r',`c']=r(mean)*100
-			if inlist("`i'","none","b","c") {
-				tab `x' cgroup`i' if criteria_`i'==1 | criteria_a==1, chi2
+	/*		if inlist("`i'","a","b","c") {
+				tab `x' cgroup`i' if !missing(ind_t)/*if criteria_`i'==1 | criteria_none==1*/, chi2
 				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-}
+}*/
+qui tab `x' ind_t, chi2
+mat stars[`r',3]=(r(p)<.01) + (r(p)<.05)
 			local r=`r'+1
 }
-}
-	local r=`r'+1
-
-	
-	foreach x of local coutcomes {
-		sum `x' if criteria_`i'==1,d
-		mat tab1[`r',`c']=r(mean)
-		if inlist("`i'","none","b","c") {
-			ttest `x' if criteria_`i'==1 | criteria_a==1, by(cgroup`i')
-			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-}
-		local r=`r'+1
-*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
-			sum `x' if criteria_`i'==1,d
-			mat tab1[`r',`c']=r(p50)
-			local r=`r'+1
-*}
-}
-	foreach x of local ioutcomes {
-		qui sum `x' if criteria_`i'==1
-		mat tab1[`r',`c']=r(mean)*100
-			if inlist("`i'","none","b","c") {
-				tab `x' cgroup`i' if criteria_`i'==1 | criteria_a==1, chi2
-				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-}
-			local r=`r'+1
 }
 	sum ind if criteria_`i'==1
 	mat tab1[`r',`c']=r(N)
@@ -5025,19 +5177,14 @@ foreach i in all none a b c {
 	local c=`c'+1
 }
 
-foreach x in `coutcomes' {
-local rnames `rnames' "`x'" "Median"
-}
 
-mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
-`rnames' `ioutcomes' N
 
-frmttable using `logpath'\formatted_tables.doc, replace statmat(tab1) ///
- title("Sample Characteristics by Ser Illness criteria") ///
- ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' N
+
+frmttable using "E:\nhats\data\projects\serious_ill\logs\treatment_burden.doc", replace statmat(tab1) ///
+ title("Sample Characteristics by Treatment Burden group, 2nd wave") ///
+ ctitles("" "Did not receive module" "No burden" "Burden" ) ///
  sdec(1) annotate(stars) asymbol(*,*) ///
- varlabels
+ varlabels note(*p<.05 difference by treatment burden, t-test or chi2)
 
-
-
-H="HCC"
+log close

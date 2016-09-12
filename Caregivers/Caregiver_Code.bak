@@ -3012,7 +3012,8 @@ gen data_grp2=eligible==1
 gen nores=sp_status==1
 label var nores "Non-res care community"
 drop if data_grp1 == 0
-
+gen n_unpaid_helpers=n_helpers-n_paid_helpers
+label var n_unpaid_helpers "Number unpaid helpers"
 gen sum_adl_cat=0 if !missing(adl_index)
 replace sum_adl_cat=1 if adl_index>=1 & !missing(adl_index)
 replace sum_adl_cat=2 if adl_index>=3 & !missing(adl_index)
@@ -3153,7 +3154,8 @@ gen group1=1
 gen group2=died_12==0
 gen group3=died_12==1
 gen ind_any_helpers=n_helpers>0 if n_helpers!=.
-
+gen n_unpaid_helpers=n_helpers-n_paid_helpers
+label var n_unpaid_helpers "Number unpaid helpers"
 foreach x of varlist op_adl_* op_iadl_* {
 replace `x'=0 if `x'==.
 }
@@ -3207,7 +3209,7 @@ foreach x in `liv' `inds' `rel' `adl' `iadl' `any' {
 keep if eligible==1
 
 local rn : word count `liv' `inds' `rel' `adl' `iadl' `any'
-local rn=`rn'+22
+local rn=`rn'+28
 local rn2 : word count `rel' `hrs' `adl' `iadl' `any'
 local rn2=`rn2'+7
 
@@ -3221,16 +3223,20 @@ duplicates drop spid, force
 forvalues i=1/3 {
 
 	local r=1
+	foreach x in n_helpers n_paid_helpers n_unpaid_helpers {
 	sum n_helpers if group`i'==1 [aw=anfinw],d
-	mat tabsp[`r',`c']=r(sum_w)
+	mat tabsp[1,`c']=r(sum_w)
+	sum `x' if group`i'==1 [aw=anfinw],d
 	mat tabsp[`r'+1,`c']=r(mean)*r(sum_w)
 	mat tabsp[`r'+2,`c']=r(mean)
 	mat tabsp[`r'+2,`c'+1]=r(sd)
 	mat tabsp[`r'+3,`c']=r(p50)
 	mat tabsp[`r'+4,`c']=r(N)
-	svy: regress n_helpers died_12
+	svy: regress `x' died_12
 	mat tabsp[`r'+2,`c'+2]=e(p)
-	local r=`r'+6
+	local r=`r'+3
+}
+	local r=`r'+3
 	foreach x in `liv' {
 		sum `x' if group`i'==1 [aw=anfinw]
 		mat tabsp[`r',`c']=r(mean)*r(sum_w)
@@ -3313,7 +3319,9 @@ forvalues i=1/3 {
 }
 frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table(NSOC)", ///
 statmat(tabsp) rtitles ("Total Number of SPs"\"Total Number of Helpers"\ ///
-"Mean Number of Helpers mean(sd)"\"Median number of helpers per SP"\"Total Number of SPs (Unweighted)"\ ///
+"Mean Number of Helpers mean(sd)"\"Median number of helpers per SP"\"Total Number of Paid Helpers"\ ///
+"Mean Number of Paid Helpers mean(sd)"\"Median number of paidhelpers per SP"\"Total Number of Unpaid Helpers"\ ///
+"Mean Number of Unpaid Helpers mean(sd)"\"Median number of unpaid helpers per SP"\"Total Number of SPs (Unweighted)"\ ///
 ""\"Not in Residential Care Facility" \"In Residential Care Facility (Excl. NH)"\"NH Resident"\ ///
 ""\"Indicator Any Helpers" \ "Indicator Any Paid Helpers"\">10 hours unpaid help per week" ///
 \">20 hours unpaid help per week"\">30 hours unpaid help per week"\">40 hours unpaid help per week" \ ///
@@ -3330,7 +3338,9 @@ statmat(tabsp) rtitles ("Total Number of SPs"\"Total Number of Helpers"\ ///
 \"   Laundry"\"   Shopping"\"   Meals"\"   Banking"\"   Medicine"\""\"Any ADL"\"Any IADL"\"Any ADL or IADL") ///
 ctitles("" "Total" "" "Survivors" "" "Decedents"""\"" "Mean/N" "SD/%" "Mean/N" "SD/%" "Mean/N" "SD/%" "P-value" ) ///
 store(test1) sdec(2) replace ///
-title("SPs and their Helpers, all NSOC eligible SPs, by survival status")
+title("SPs and their Helpers, all NSOC eligible SPs, by survival status") ///
+note("Helper hours include imputations as outlined in NHATS Technical Paper #7," ///
+ "Paid hours among those with paid help only; Counts of helpers among all eligible SPs" )
 
 
 frmttable using "E:\nhats\data\Projects\Caregivers\logs\Helper_Table(NSOC)", ///
@@ -3347,21 +3357,32 @@ title("Helpers, all NSOC eligible SPs, by survival status")
 
 
 H="table 3"
-clear all 
+/*clear all 
 set more off
 capture log close
+use "E:\nhats\data\CMS_DUA_28016\mbsf", clear
+drop if death_da==.
+gen death_year=year(death_d)
+tempfile this
+save `this'
+*/
 
 local logpath "E:\nhats\data\Projects\Caregivers\logs"
 cd "E:\nhats\data\NHATS cleaned"
-use nsoc_round_1.dta
+use nsoc_round_1.dta, clear
 gen wave=1
 merge 1:1 spid opid wave using op_round_1_4.dta, gen(opmerge) keep(match master)
 merge m:1 spid wave using sp_round_1_4.dta, gen(spmerge) keep(match master)
+*rename death_date death_date_nhats
+*merge m:1 spid using `this', nogen
+keep if wave==1 & sp_ivw==1
 gen n=1
+
 by spid, sort: gen unique=1 if _n==1
 gen cg_65 = cg_age_cat>=11 
 label var cg_65 "Caregiver Age >=65"
-gen died=cg_ivw_to_sp_death_mos<=12
+*gen died=cg_ivw_to_sp_death_mos<=12
+gen died=died_12
 replace n_family=n_helpers-n_paid_helpers
 
 gen op_adl_any=0

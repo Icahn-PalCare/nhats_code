@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- opened on:  31 May 2016, 11:12:18
+ opened on:   7 Sep 2016, 13:59:12
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -631,7 +631,46 @@ medication |
 
 
 . 
-. 
+. //other meds questions, for treatment burden
+. gen ind_meds_diff=.
+(25856 missing values generated)
+
+. gen ind_meds_mistake=.
+(25856 missing values generated)
+
+. forvalues w=1/4 {
+  2. replace ind_meds_diff=inlist(mc`w'medsdif,2,3,4) if mc`w'medsdif>0 & !missing(mc`w'medsdif)
+  3. replace ind_meds_diff=0 if mc`w'meds==2
+  4. replace ind_meds_diff=0 if mc`w'dmedsrea==2 & inlist(mc`w'medstrk,2,3)
+  5. replace ind_meds_mistake=mc`w'medsmis==1 if mc`w'medsmis>0 & !missing(mc`w'medsmis)
+  6. }
+(5734 real changes made)
+(640 real changes made)
+(292 real changes made)
+(1482 real changes made)
+(4485 real changes made)
+(486 real changes made)
+(214 real changes made)
+(1290 real changes made)
+(3617 real changes made)
+(364 real changes made)
+(179 real changes made)
+(924 real changes made)
+(2987 real changes made)
+(274 real changes made)
+(178 real changes made)
+(733 real changes made)
+
+. label var ind_meds_diff "Any difficulty keeping track of meds"
+
+. label var ind_meds_mistake "Any mistake taking meds"
+
+. gen ind_meds_problem=ind_meds_diff==1 | ind_meds_mistake==1 if !missing(ind_meds_diff) ///
+> | !missing(ind_meds_mistake)
+(3690 missing values generated)
+
+. label var ind_meds_prob "SR difficulty keeping track of or mistake taking meds"
+
 . *********************************************
 . //has , sees regular doctor
 . gen reg_doc_have = .
@@ -1282,5 +1321,5 @@ stays last |                 Survey wave
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- closed on:  31 May 2016, 11:12:24
+ closed on:   7 Sep 2016, 13:59:16
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
