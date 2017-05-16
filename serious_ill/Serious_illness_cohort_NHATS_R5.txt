@@ -1,34 +1,8 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
-H="NHATS Serious Illness"
-/*HRS variables are processed in file HRS_Processing.txt
-1998-2012 Core interviews
-2002-2012 Exit interviews
-Restricted data received in March 2015
-
-Note elixhauser comorbidities diagnosis lists are modified for the 
-purposes of this project, do not copy and paste this Elixhauser code 
-for use in other projects!!
-
-******************************************************************
-
-/*nhats cleaned path*/
-libname nhats 'E:\nhats\data\NHATS cleaned';
-
-/*medicare xwalk and claims path*/
-libname medi 'E:\nhats\data\cms_DUA_28016\merged';
-
-/*project data paths*/
-libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
-libname proj_fin 'E:\nhats\data\projects\serious_ill\final_data';
-libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
-
-
-
-
 H="get index date"
-/*Import NHATS Cleaned Dataset for Rounds 1-4*/
-proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_4.dta" out=proj_int.nhats replace; run;
+/*Import NHATS Cleaned Dataset for Rounds 1-5*/
+proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_5.dta" out=proj_int.nhats replace; run;
 
 
 data index1;
@@ -64,7 +38,33 @@ proc sort data=index out=proj_int.index nodupkey;
 by spid bene_id index_year;
 run;
 
-H="get continuous ffs before index date"
+H="NHATS Serious Illness"
+/*HRS variables are processed in file HRS_Processing.txt
+1998-2012 Core interviews
+2002-2012 Exit interviews
+Restricted data received in March 2015
+
+Note elixhauser comorbidities diagnosis lists are modified for the 
+purposes of this project, do not copy and paste this Elixhauser code 
+for use in other projects!!
+
+******************************************************************
+
+/*nhats cleaned path*/
+libname nhats 'E:\nhats\data\NHATS cleaned';
+
+/*medicare xwalk and claims path*/
+libname medi 'E:\nhats\data\cms_DUA_28016\merged';
+
+/*project data paths*/
+libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
+libname proj_fin 'E:\nhats\data\projects\serious_ill\final_data';
+libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
+
+
+
+
+H="get continuous ffs after index date"
 /*determine Spouse ffs medicare before R's death using the 
 claims denominator files
 
@@ -186,7 +186,7 @@ set all_insurance3;
 run;
 
 
-H="get continuous ffs after index date"
+H="get continuous ffs before index date"
 /*determine Spouse ffs medicare before R's death using the 
 claims denominator files
 
@@ -196,7 +196,7 @@ Also pulls in spouse date of death where available in the claims s_claims_dod*/
 
 /*sort claims denominator file*/
 
-proc sort data=medi.mbsf_06_12 out=mbsf  nodupkey;
+proc sort data=medi.mbsf_06_14 out=mbsf  nodupkey;
 by bene_id year;
 run;
 
@@ -334,25 +334,25 @@ quit;
 %mend;
 
 /*run to get claims list 6 mo pre-ivw for ip*/
-%claims_pre(days_start=0,days_bef_index=183,yrs=06_12,source=ip);
+%claims_pre(days_start=0,days_bef_index=183,yrs=06_14,source=ip);
 
 /*1yr*/
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=ip);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=snf);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=op);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=pb);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=hh);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=hs);
-%claims_pre(days_start=0,days_bef_index=365,yrs=06_12,source=dm);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_14,source=ip);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=snf);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=op);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=pb);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=hh);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=hs);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_14,source=dm);
 
 /*2yrs*/
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=ip);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=snf);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=op);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=pb);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=hh);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=hs);
-%claims_pre(days_start=0,days_bef_index=730,yrs=06_12,source=dm);
+%claims_pre(days_start=0,days_bef_index=730,yrs=06_14,source=ip);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=snf);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=op);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=pb);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=hh);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=hs);
+%claims_pre(days_start=0,days_bef_index=730,yrs=09_14,source=dm);
 
 %macro ip_drop(days_bef_index=);
 data proj_int.ip_meet_&days_bef_index.;
@@ -654,34 +654,34 @@ quit;
 %mend;
 
 /*run to get claims list 6 mo pre-ivw for ip*/
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=ip);
+%claims_post(days_start=0,days_aft_index=183,yrs=06_14,source=ip);
 
 /*6m*/
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=ip);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=snf);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=op);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=pb);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=hh);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=hs);
-%claims_post(days_start=0,days_aft_index=183,yrs=06_12,source=dm);
+%claims_post(days_start=0,days_aft_index=183,yrs=06_14,source=ip);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=snf);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=op);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=pb);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=hh);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=hs);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_14,source=dm);
 
 /*1yr*/
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=ip);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=snf);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=op);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=pb);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=hh);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=hs);
-%claims_post(days_start=0,days_aft_index=365,yrs=06_12,source=dm);
+%claims_post(days_start=0,days_aft_index=365,yrs=06_14,source=ip);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=snf);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=op);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=pb);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=hh);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=hs);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_14,source=dm);
 
 /*2yrs*/
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=ip);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=snf);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=op);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=pb);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=hh);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=hs);
-%claims_post(days_start=0,days_aft_index=730,yrs=06_12,source=dm);
+%claims_post(days_start=0,days_aft_index=730,yrs=06_14,source=ip);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=snf);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=op);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=pb);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=hh);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=hs);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_14,source=dm);
 
 %macro ip_drop(days_aft_index=);
 data proj_int.ip_meet_&days_aft_index.p;
@@ -759,7 +759,7 @@ run;
 %pb_drop(days_aft_index=183);
 %pb_drop(days_aft_index=365);
 %pb_drop(days_aft_index=730);
-
+ 
 
 H="Elixhauser comorbidities"
 /*Note elixhauser comorbidities diagnosis lists are modified for the 
@@ -1440,7 +1440,7 @@ proc freq data=proj_int.elix_0_1yr_2;
 table comorb:;
 run;
 
-
+ 
 
 H="Charlson comorbidities"
 /*Add indicator variables for the Charlson comorbidities
@@ -2514,7 +2514,7 @@ run;
 /*Get indicator of ESRD codes from the denominator file the year of the interview*/
 /****************************************************************************/
 /****************************************************************************/
-proc sort data=medi.mbsf_06_12 out=dn_2000_20122  nodupkey;
+proc sort data=medi.mbsf_06_14 out=dn_2000_20122  nodupkey;
 by bene_id year;
 run;
 
@@ -2598,6 +2598,12 @@ run;
 proc freq;
 table n_ed_op_visits_12m*ind_ed_op_12m;
 run;
+
+proc sort data=ip out=ip nodupkey; by bene_id index_year; run;
+proc sort data=snf out=snf nodupkey; by bene_id index_year; run;
+proc sort data=esrd out=esrd nodupkey; by bene_id index_year; run;
+proc sort data=oxygen out=oxygen nodupkey; by bene_id index_year; run;
+proc sort data=ed out=ed nodupkey; by bene_id index_year; run;
 
 proc sql;
 create table proj_int.utilization_pre as select * 
@@ -3127,20 +3133,23 @@ do over list;
 if list=. then list=0;
 end;
 
-if year(admit_date)>=2012 then rate=1;
-if year(admit_date)=2011 then rate=1.03902;
-if year(admit_date)=2010 then rate=1.07086;
-if year(admit_date)=2009 then rate=1.10835;
-if year(admit_date)=2008 then rate=1.1439;
-if year(admit_date)=2007 then rate=1.1923;
-if year(admit_date)=2006 then rate=1.25586;
-if year(admit_date)=2005 then rate=1.30783;
-if year(admit_date)=2004 then rate=1.37027;
-if year(admit_date)=2003 then rate=1.43908;
-if year(admit_date)=2002 then rate=1.50337;
-if year(admit_date)=2001 then rate=1.57963;
-if year(admit_date)=2000 then rate=1.65519;
-if year(admit_date)<=1999 then rate=1.72641;
+
+if year(admit_date)=2014 then rate=1;
+if year(admit_date)=2013 then rate=1.02377;
+if year(admit_date)=2012 then rate=1.05554;
+if year(admit_date)=2011 then rate=1.09671;
+if year(admit_date)=2010 then rate=1.13032;
+if year(admit_date)=2009 then rate=1.16989;
+if year(admit_date)=2008 then rate=1.20745;
+if year(admit_date)=2007 then rate=1.25859;
+if year(admit_date)=2006 then rate=1.32572;
+if year(admit_date)=2005 then rate=1.38045;
+if year(admit_date)=2004 then rate=1.44662;
+if year(admit_date)=2003 then rate=1.51895;
+if year(admit_date)=2002 then rate=1.58688;
+if year(admit_date)=2001 then rate=1.66714;
+if year(admit_date)=2000 then rate=1.74736;
+if year(admit_date)<=1999 then rate=1.8833;
 
 
 &source._paid_by_mc=rate*(clm_pmt_amt+clm_pass_thru_per_diem_amt);
@@ -3185,21 +3194,24 @@ left join
 /*Adjust for inflation*/
 data &source._meet2_post;
 set proj_int.&source._meet_&days_after_core.p;
-/*adjust to 2012 dollars*/
-if year(admit_date)>=2012 then rate=1;
-if year(admit_date)=2011 then rate=1.03902;
-if year(admit_date)=2010 then rate=1.07086;
-if year(admit_date)=2009 then rate=1.10835;
-if year(admit_date)=2008 then rate=1.1439;
-if year(admit_date)=2007 then rate=1.1923;
-if year(admit_date)=2006 then rate=1.25586;
-if year(admit_date)=2005 then rate=1.30783;
-if year(admit_date)=2004 then rate=1.37027;
-if year(admit_date)=2003 then rate=1.43908;
-if year(admit_date)=2002 then rate=1.50337;
-if year(admit_date)=2001 then rate=1.57963;
-if year(admit_date)=2000 then rate=1.65519;
-if year(admit_date)<=1999 then rate=1.72641;
+/*adjust to 2014 dollars*/
+
+if year(admit_date)=2014 then rate=1;
+if year(admit_date)=2013 then rate=1.02377;
+if year(admit_date)=2012 then rate=1.05554;
+if year(admit_date)=2011 then rate=1.09671;
+if year(admit_date)=2010 then rate=1.13032;
+if year(admit_date)=2009 then rate=1.16989;
+if year(admit_date)=2008 then rate=1.20745;
+if year(admit_date)=2007 then rate=1.25859;
+if year(admit_date)=2006 then rate=1.32572;
+if year(admit_date)=2005 then rate=1.38045;
+if year(admit_date)=2004 then rate=1.44662;
+if year(admit_date)=2003 then rate=1.51895;
+if year(admit_date)=2002 then rate=1.58688;
+if year(admit_date)=2001 then rate=1.66714;
+if year(admit_date)=2000 then rate=1.74736;
+if year(admit_date)<=1999 then rate=1.8833;
 
 &source._paid_by_mc=rate*(clm_pmt_amt);
 run;
@@ -3709,6 +3721,14 @@ proc freq;
 table n_ed_op_visits_p12m*ind_ed_op_p12m;
 run;
 
+
+proc sort data=ip out=ip nodupkey; by bene_id index_year; run;
+proc sort data=snf out=snf nodupkey; by bene_id index_year; run;
+proc sort data=esrd out=esrd nodupkey; by bene_id index_year; run;
+proc sort data=oxygen out=oxygen nodupkey; by bene_id index_year; run;
+proc sort data=ed out=ed nodupkey; by bene_id index_year; run;
+
+
 proc sql;
 create table proj_int.utilization_post as select * 
 from proj_int.index a 
@@ -3733,6 +3753,16 @@ proc contents data=proj_int.utilization_post;
 run;
 
 H="combine with interviews into one dataset"
+data proj_int.index;
+set proj_int.index;
+if index_date = . then delete;
+run;
+
+
+data proj_int.index;
+set proj_int.index;
+if bene_id =" " then delete;
+run;
 
 
 proc sql; 
@@ -3789,7 +3819,7 @@ Criteria A: Either serious medical illness or ADL impairment
 Criteria B: Critera A + either nursing home resident or hospitalization*/
 
 data proj_int.serious_ill_int_dataset1;
-set proj_int.serious_ill_int_dataset ;
+set proj_int.serious_ill_int_dataset;
 
 
 /*any elixhauser cancer dx*/
@@ -4181,11 +4211,48 @@ proc freq data=esrd_check_2 order=freq table diag run
 quit
 ods rtf close
 */
+
+/* Identifying incident wave where criteria was met */
+
+data ivw_meet_a;
+set proj_int.serious_ill_int_dataset1(keep=spid criteria_a criteria_b criteria_c index_year);
+if criteria_a=1 and index_year ~=.;
+run;
+
+proc sort data=ivw_meet_a;
+by spid index_year;
+run;
+
+data ivw_meet_a_1;
+set ivw_meet_a;
+by spid;
+if first.spid then incident_ivw=1;
+else incident_ivw=0;
+run;
+
+data ivw_meet_a_1;
+set ivw_meet_a_1;
+incident_a = 0;
+incident_b = 0;
+incident_c = 0;
+IF criteria_a = 1 and criteria_b ne 1 and criteria_c ne 1 then incident_a = 1;
+IF criteria_b = 1 and criteria_c ne 1 then incident_b = 1;
+IF criteria_c = 1 then incident_c = 1;
+IF incident_ivw ne 1 then delete;
+run;
+
+data incident_date;
+set ivw_meet_a_1;
+if criteria_c = . then criteria_c = 0;
+run;
+
 /*export full dataset to Stata*/
+
+proc export data=incident_date outfile="E:\nhats\data\projects\serious_ill\int_data\incident_dataset.dta" replace; run;
+
 proc export data=proj_int.serious_ill_int_dataset1
 outfile="E:\nhats\data\projects\serious_ill\int_data\serious_ill_int_dataset1.dta" replace;
 run;
-
 
 H="compare outcomes"
 use "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta", clear
@@ -4364,9 +4431,9 @@ local datapath "E:\nhats\data\Projects\serious_ill\final_data"
 local logpath "E:\nhats\data\Projects\serious_ill\logs"
 
 cd `datapath'
-log using `logpath'\sample_derivation.txt, text replace
+log using `logpath'\sample_derivation_xwave.txt, text replace
 
-use `intpath'\serious_ill_int_dataset1.dta if wave==1, clear
+use `intpath'\serious_ill_int_dataset1.dta, clear
 
 *****************************************
 //variable cleaning and construction
@@ -4422,7 +4489,7 @@ label var hmo_12m "12m w/o HMO before ivw"
 label var wave1 "Wave 1 Interview"
 label var ffs_12m "12m continuous FFS before ivw"
 *local samplevars wave1 sp_ivw_yes ab_12m hmo_12m ffs_12m 
-local samplevars wave1 ab_12m hmo_12m ffs_12m 
+local samplevars ab_12m hmo_12m ffs_12m 
 
 local rn : word count `samplevars'
 local r=1
@@ -4430,7 +4497,7 @@ local c=1
 mat samp=J(`rn',2,.)
 
 foreach x in `samplevars' {
-	keep if `x'==1
+	*keep if `x'==1
 	sum `x'
 	mat samp[`r',`c']=r(N)
 	local r=`r'+1
@@ -4458,20 +4525,241 @@ local datapath "E:\nhats\data\Projects\serious_ill\final_data"
 local logpath "E:\nhats\data\Projects\serious_ill\logs"
 
 cd `datapath'
-log using `logpath'\table1.txt, text replace
+*log using `logpath'\table1_xwave.txt, text replace
 
 use serious_ill_nhats_sample, clear
-label var educ_hs_ind "High school
-gen criteria_group=criteria_a
-replace criteria_group=2 if criteria_b==1
-replace criteria_group=3 if criteria_c==1
-gen cgroupa=criteria_a
-gen cgroupb=criteria_b
-gen cgroupc=criteria_c
+cap drop _m
+/*
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_a.dta", keepus(ivw_meet_crit_a)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_b.dta", keepus(ivw_meet_crit_b)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_c.dta", keepus(ivw_meet_crit_c)
+drop if _m==2
+drop _m
+*/
+
+sort spid ivw_date
+by spid: egen ivw_meet_a = min(ivw_date) if criteria_a==1
+by spid: egen ivw_meet_b = min(ivw_date) if criteria_b==1
+by spid: egen ivw_meet_c = min(ivw_date) if criteria_c==1
+
+sort spid wave
+by spid (wave): carryforward aveincome, replace
+
+gen incident_a = 0
+replace incident_a = 1 if ivw_meet_a==ivw_date
+gen incident_b = 0
+replace incident_b = 1 if ivw_meet_b==ivw_date
+gen incident_c = 0
+replace incident_c = 1 if ivw_meet_c==ivw_date
+drop if wave==4
+egen max_wave = max(wave), by(spid)
+drop if criteria_a==0 & wave!=max_wave
+label var educ_hs_ind "High school"
+gen incident_group=incident_a
+replace incident_group=2 if incident_b==1
+replace incident_group=3 if incident_c==1
+rename criteria_all incident_all
+*rename criteria_none incident_none
+gen incident_none = 0
+replace incident_none = 1 if criteria_a==0
+gen cgroupa=incident_a
+gen cgroupb=incident_b
+gen cgroupc=incident_c
+label var incident_a "Incident Criteria A"
+label var incident_b "Incident Criteria B"
+label var incident_c "Incident Criteria C" 
 gen ind=1
+drop if !incident_a & !incident_b & !incident_c & !incident_none
 local cvars1 age
 local cvars2 aveincome
 local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+incident_a incident_b incident_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+/* qui */ replace missingany=1 if `x'==.
+}
+}
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+foreach i in 0 1 {
+di "SP ivw=`i'"
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+/* qui */ sum `x' if sp_ivw==`i'
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+/* qui */ sum ind if sp_ivw==`i'
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles( "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+}
+*drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all none a b c {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			/* qui */ sum `x' if incident_`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","a","b","c") {
+				/* qui */ ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			/* qui */ sum `x' if incident_`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+			/* qui */	tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		/* qui */ sum `x' if incident_`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","a","b","c") {
+		/* qui */	ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			/* qui */ sum `x' if incident_`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		/* qui */ sum `x' if incident_`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				/* qui */ tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	/* qui */ sum ind if incident_`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\sample_characteristics_xwave.doc, replace statmat(tab1) ///
+ title("NHATS Waves 1- 3 Serious Illness Criteria") ///
+ ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05 difference between x and no criteria met groups, t-test or chi2" ///
+ "Sample was derived from the incident wave when people first meet a criteria. For those who met no criteria wave 3 data was used.")
+
+capture log close
+
+
+H="char/outcomes by percentiles"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+log using `logpath'\top_percentiles.txt, text replace
+use serious_ill_nhats_sample, clear
+
+/*create variable to demarcate between care types */
+
+gen top1 = 0
+gen top5 = 0
+gen top10 = 0
+gen top20 = 0
+
+replace top1 = 1 if tot_paid_by_mc_12m>=94825.22
+replace top5 = 1 if tot_paid_by_mc_12m>=47681.3
+replace top10 = 1 if tot_paid_by_mc_12m>=28871.06
+replace top20 = 1 if tot_paid_by_mc_12m>=13784.35
+
+gen caretype = 4
+replace caretype=1 if nhres==1
+replace caretype=2 if rcfres==1 & sp_ivw_yes==1
+replace caretype=3 if rcfres==1 & sp_ivw_yes==0
+la de caretypelbl 1"nursing home"2"res care w/sp"3"res care no sp"4"community"
+la values caretype caretypelbl
+
+
+gen cgroupgroup=caretype 
+gen cgroupa=0
+replace cgroupa=1 if top1==1
+
+gen cgroupb=0 
+replace cgroupb=1 if top5==1
+
+gen cgroupc=0
+replace cgroupc = 1 if top10==1
+
+gen cgroupd=0 
+replace cgroupd=1 if top20==1
+
+gen cgroupall = 1
+
+
+gen ind=1
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married 
+
 local ivars2 proxy  ///
 medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
 adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
@@ -4485,15 +4773,213 @@ local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
  hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
  dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
 gen missingany=0
-foreach i in 0 1 {
-di "SP ivw=`i'"
+
 foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
-qui sum ind if missing(`x') & sp_ivw==`i'
+qui sum ind if missing(`x')
 if r(N)>0 {
 di "`x'"
 di r(N)
 }
 qui replace missingany=1 if `x'==.
+}
+
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+sum `x' 
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+sum ind if missing(`x')
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+sum ind
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles("" "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+*drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all a b c d {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if cgroup`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			*if inlist("`i'","a","b","c") {
+				*ttest `x' if cgroup`i'==1 | cgroupnone==1, by(cgroup`i')
+				*mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+*}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if cgroup`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			*if inlist("`i'","a","b","c") {
+			*	tab `x' cgroup`i' if cgroup`i'==1 | cgroupnone==1, chi2
+			*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+*}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		sum `x' if cgroup`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		*if inlist("`i'","a","b","c") {
+		*	ttest `x' if cgroup`i'==1 | cgroupnone==1, by(cgroup`i')
+		*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+*}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			sum `x' if cgroup`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if cgroup`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			*if inlist("`i'","a","b","c") {
+			*	tab `x' cgroup`i' if cgroup`i'==1 | cgroupnone==1, chi2
+			*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+*}
+			local r=`r'+1
+}
+	sum ind if cgroup`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\percentiles_tables.doc, replace statmat(tab1) ///
+ title("Sample Characteristics by Percentiles") ///
+ ctitles("" "All" "Top 1%" "Top 5%" "Top 10%" "Top 20%" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note()
+
+
+log close
+
+
+H="Char/outcomes Prevalence, wave 1"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+use serious_ill_nhats_sample, clear
+keep if ffs_12m==1
+cap drop _m
+/*
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_a.dta", keepus(ivw_meet_crit_a)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_b.dta", keepus(ivw_meet_crit_b)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_c.dta", keepus(ivw_meet_crit_c)
+drop if _m==2
+drop _m
+*/
+
+sort spid ivw_date
+by spid: egen ivw_meet_a = min(ivw_date) if criteria_a==1
+by spid: egen ivw_meet_b = min(ivw_date) if criteria_b==1
+by spid: egen ivw_meet_c = min(ivw_date) if criteria_c==1
+
+format ivw_meet_a %td
+format ivw_meet_b %td
+format ivw_meet_c %td
+
+
+
+sort spid wave
+by spid (wave): carryforward aveincome, replace
+
+gen incident_a = criteria_a
+*replace incident_a = 1 if ivw_meet_a==ivw_date
+gen incident_b = criteria_b
+*replace incident_b = 1 if ivw_meet_b==ivw_date
+gen incident_c = criteria_c
+*replace incident_c = 1 if ivw_meet_c==ivw_date
+drop if wave==4
+preserve
+keep if wave==1
+*egen max_wave = max(wave), by(spid)
+*drop if criteria_a==0 & wave!=max_wave
+label var educ_hs_ind "High school"
+gen incident_group=incident_a
+replace incident_group=2 if incident_b==1
+replace incident_group=3 if incident_c==1
+rename criteria_all incident_all
+*rename criteria_none incident_none
+gen incident_none = 0
+replace incident_none = 1 if criteria_a==0
+gen cgroupa=incident_a
+gen cgroupb=incident_b
+gen cgroupc=incident_c
+label var incident_a "Incident Criteria A"
+label var incident_b "Incident Criteria B"
+label var incident_c "Incident Criteria C" 
+gen ind=1
+drop if !incident_a & !incident_b & !incident_c & !incident_none
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+incident_a incident_b incident_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+/* qui */ replace missingany=1 if `x'==.
 }
 }
 
@@ -4534,19 +5020,19 @@ local c=1
 foreach i in all none a b c {
 	foreach round in 1 2 {
 		foreach x of local cvars`round' {
-			qui sum `x' if criteria_`i'==1 
+			/* qui */ sum `x' if incident_`i'==1 
 			mat tab1[`r',`c']=r(mean)
 			if inlist("`i'","a","b","c") {
-				qui ttest `x' if criteria_`i'==1 | criteria_none==1, by(cgroup`i')
+				/* qui */ ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
 				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
 }
 			local r=`r'+1
 }
 		foreach x of local ivars`round' {
-			qui sum `x' if criteria_`i'==1
+			/* qui */ sum `x' if incident_`i'==1
 			mat tab1[`r',`c']=r(mean)*100
 			if inlist("`i'","a","b","c") {
-				qui tab `x' cgroup`i' if criteria_`i'==1 | criteria_none==1, chi2
+			/* qui */	tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
 				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
 }
 			local r=`r'+1
@@ -4556,29 +5042,29 @@ foreach i in all none a b c {
 
 	
 	foreach x of local coutcomes {
-		qui sum `x' if criteria_`i'==1,d
+		/* qui */ sum `x' if incident_`i'==1,d
 		mat tab1[`r',`c']=r(mean)
 		if inlist("`i'","a","b","c") {
-			qui ttest `x' if criteria_`i'==1 | criteria_none==1, by(cgroup`i')
+		/* qui */	ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
 			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
 }
 		local r=`r'+1
 *		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
-			qui sum `x' if criteria_`i'==1,d
+			/* qui */ sum `x' if incident_`i'==1,d
 			mat tab1[`r',`c']=r(p50)
 			local r=`r'+1
 *}
 }
 	foreach x of local ioutcomes {
-		qui sum `x' if criteria_`i'==1
+		/* qui */ sum `x' if incident_`i'==1
 		mat tab1[`r',`c']=r(mean)*100
 			if inlist("`i'","a","b","c") {
-				qui tab `x' cgroup`i' if criteria_`i'==1 | criteria_none==1, chi2
+				/* qui */ tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
 				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
 }
 			local r=`r'+1
 }
-	qui sum ind if criteria_`i'==1
+	/* qui */ sum ind if incident_`i'==1
 	mat tab1[`r',`c']=r(N)
 	local r=1
 	local c=`c'+1
@@ -4591,14 +5077,414 @@ local rnames `rnames' "`x'" "Median"
 mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
 `rnames' `ioutcomes' N
 
-frmttable using `logpath'\sample_characteristics.doc, replace statmat(tab1) ///
- title("Sample Characteristics by Ser Illness criteria") ///
+frmttable using `logpath'\sample_characteristics_xwave1.doc, replace statmat(tab1) ///
+ title("NHATS Wave 1 Serious Illness Criteria (Prevalence)") ///
  ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
  sdec(1) annotate(stars) asymbol(*,*) ///
  varlabels note("*p<.05 difference between x and no criteria met groups, t-test or chi2" ///
- "missing 491 for aveincome,hs,proxy,medicaid,medigap,adl_ (no sp ivw)--missing 59 for educ, 127 for medicaid, 163 for medigap, 57 for adls")
+"Figures have been inflation adjusted to 2014 dollars")
 
-log close
+capture log close
+
+
+H="Char/outcomes Prevalence, wave 2"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+use serious_ill_nhats_sample, clear
+keep if ffs_12m==1
+cap drop _m
+/*
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_a.dta", keepus(ivw_meet_crit_a)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_b.dta", keepus(ivw_meet_crit_b)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_c.dta", keepus(ivw_meet_crit_c)
+drop if _m==2
+drop _m
+*/
+
+sort spid ivw_date
+by spid: egen ivw_meet_a = min(ivw_date) if criteria_a==1
+by spid: egen ivw_meet_b = min(ivw_date) if criteria_b==1
+by spid: egen ivw_meet_c = min(ivw_date) if criteria_c==1
+
+format ivw_meet_a %td
+format ivw_meet_b %td
+format ivw_meet_c %td
+
+
+
+sort spid wave
+by spid (wave): carryforward aveincome, replace
+
+gen incident_a = criteria_a
+*replace incident_a = 1 if ivw_meet_a==ivw_date
+gen incident_b = criteria_b
+*replace incident_b = 1 if ivw_meet_b==ivw_date
+gen incident_c = criteria_c
+*replace incident_c = 1 if ivw_meet_c==ivw_date
+drop if wave==4
+preserve
+keep if wave==2
+*egen max_wave = max(wave), by(spid)
+*drop if criteria_a==0 & wave!=max_wave
+label var educ_hs_ind "High school"
+gen incident_group=incident_a
+replace incident_group=2 if incident_b==1
+replace incident_group=3 if incident_c==1
+rename criteria_all incident_all
+*rename criteria_none incident_none
+gen incident_none = 0
+replace incident_none = 1 if criteria_a==0
+gen cgroupa=incident_a
+gen cgroupb=incident_b
+gen cgroupc=incident_c
+label var incident_a "Incident Criteria A"
+label var incident_b "Incident Criteria B"
+label var incident_c "Incident Criteria C" 
+gen ind=1
+drop if !incident_a & !incident_b & !incident_c & !incident_none
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+incident_a incident_b incident_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+/* qui */ replace missingany=1 if `x'==.
+}
+}
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+foreach i in 0 1 {
+di "SP ivw=`i'"
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+qui sum `x' if sp_ivw==`i'
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+qui sum ind if missing(`x') & sp_ivw==`i'
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+qui sum ind if sp_ivw==`i'
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles( "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+}
+*drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all none a b c {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			/* qui */ sum `x' if incident_`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","a","b","c") {
+				/* qui */ ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			/* qui */ sum `x' if incident_`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+			/* qui */	tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		/* qui */ sum `x' if incident_`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","a","b","c") {
+		/* qui */	ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			/* qui */ sum `x' if incident_`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		/* qui */ sum `x' if incident_`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				/* qui */ tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	/* qui */ sum ind if incident_`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\sample_characteristics_xwave2.doc, replace statmat(tab1) ///
+ title("NHATS Wave 2 Serious Illness Criteria (Prevalence)") ///
+ ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05 difference between x and no criteria met groups, t-test or chi2" ///
+"Figures have been inflation adjusted to 2014 dollars")
+
+capture log close
+
+
+H="Char/outcomes Prevalence, wave 3"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+use serious_ill_nhats_sample, clear
+keep if ffs_12m==1
+cap drop _m
+/*
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_a.dta", keepus(ivw_meet_crit_a)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_b.dta", keepus(ivw_meet_crit_b)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_c.dta", keepus(ivw_meet_crit_c)
+drop if _m==2
+drop _m
+*/
+
+sort spid ivw_date
+by spid: egen ivw_meet_a = min(ivw_date) if criteria_a==1
+by spid: egen ivw_meet_b = min(ivw_date) if criteria_b==1
+by spid: egen ivw_meet_c = min(ivw_date) if criteria_c==1
+
+format ivw_meet_a %td
+format ivw_meet_b %td
+format ivw_meet_c %td
+
+
+
+sort spid wave
+by spid (wave): carryforward aveincome, replace
+
+gen incident_a = criteria_a
+*replace incident_a = 1 if ivw_meet_a==ivw_date
+gen incident_b = criteria_b
+*replace incident_b = 1 if ivw_meet_b==ivw_date
+gen incident_c = criteria_c
+*replace incident_c = 1 if ivw_meet_c==ivw_date
+drop if wave==4
+preserve
+keep if wave==3
+*egen max_wave = max(wave), by(spid)
+*drop if criteria_a==0 & wave!=max_wave
+label var educ_hs_ind "High school"
+gen incident_group=incident_a
+replace incident_group=2 if incident_b==1
+replace incident_group=3 if incident_c==1
+rename criteria_all incident_all
+*rename criteria_none incident_none
+gen incident_none = 0
+replace incident_none = 1 if criteria_a==0
+gen cgroupa=incident_a
+gen cgroupb=incident_b
+gen cgroupc=incident_c
+label var incident_a "Incident Criteria A"
+label var incident_b "Incident Criteria B"
+label var incident_c "Incident Criteria C" 
+gen ind=1
+drop if !incident_a & !incident_b & !incident_c & !incident_none
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+incident_a incident_b incident_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+/* qui */ replace missingany=1 if `x'==.
+}
+}
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+foreach i in 0 1 {
+di "SP ivw=`i'"
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+qui sum `x' if sp_ivw==`i'
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+qui sum ind if missing(`x') & sp_ivw==`i'
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+qui sum ind if sp_ivw==`i'
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles( "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+}
+*drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all none a b c {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			/* qui */ sum `x' if incident_`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","a","b","c") {
+				/* qui */ ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			/* qui */ sum `x' if incident_`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+			/* qui */	tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		/* qui */ sum `x' if incident_`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","a","b","c") {
+		/* qui */	ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			/* qui */ sum `x' if incident_`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		/* qui */ sum `x' if incident_`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				/* qui */ tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	/* qui */ sum ind if incident_`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\sample_characteristics_xwave3.doc, replace statmat(tab1) ///
+ title("NHATS Wave 3 Serious Illness Criteria (Prevalence)") ///
+ ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05 difference between x and no criteria met groups, t-test or chi2" ///
+"Figures have been inflation adjusted to 2014 dollars")
+
+capture log close
 
 
 H="char/outcomes by type of care + sensitivity/specificity"
@@ -4613,6 +5499,8 @@ local logpath "E:\nhats\data\Projects\serious_ill\logs"
 cd `datapath'
 log using `logpath'\caretype_char.txt, text replace
 use serious_ill_nhats_sample, clear
+
+merge 
 
 /*create variable to demarcate between care types */
 
@@ -4841,187 +5729,6 @@ tab died_12 if criteria_c==0
 
 di 48/(48+330)
 di 4741/(4741+153)
-
-log close
-
-
-H="char/outcomes by percentiles"
-clear all 
-set more off
-capture log close
-
-local intpath "E:\nhats\data\Projects\serious_ill\int_data"
-local datapath "E:\nhats\data\Projects\serious_ill\final_data"
-local logpath "E:\nhats\data\Projects\serious_ill\logs"
-
-cd `datapath'
-log using `logpath'\top_percentiles.txt, text replace
-use serious_ill_nhats_sample, clear
-
-/*create variable to demarcate between care types */
-
-gen top1 = 0
-gen top5 = 0
-gen top10 = 0
-gen top20 = 0
-
-replace top1 = 1 if tot_paid_by_mc_12m>=94825.22
-replace top5 = 1 if tot_paid_by_mc_12m>=47681.3
-replace top10 = 1 if tot_paid_by_mc_12m>=28871.06
-replace top20 = 1 if tot_paid_by_mc_12m>=13784.35
-
-gen caretype = 4
-replace caretype=1 if nhres==1
-replace caretype=2 if rcfres==1 & sp_ivw_yes==1
-replace caretype=3 if rcfres==1 & sp_ivw_yes==0
-la de caretypelbl 1"nursing home"2"res care w/sp"3"res care no sp"4"community"
-la values caretype caretypelbl
-
-
-gen cgroupgroup=caretype 
-gen cgroupa=0
-replace cgroupa=1 if top1==1
-
-gen cgroupb=0 
-replace cgroupb=1 if top5==1
-
-gen cgroupc=0
-replace cgroupc = 1 if top10==1
-
-gen cgroupd=0 
-replace cgroupd=1 if top20==1
-
-gen cgroupall = 1
-
-
-gen ind=1
-local cvars1 age
-local cvars2 aveincome
-local ivars1 female white black hisp other_race married 
-
-local ivars2 proxy  ///
-medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
-adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
-smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
-/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
-criteria_a criteria_b criteria_c
-local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
-ind_icu_p12m ind_hs_p12m died_12
-
-local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
- hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
- dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
-gen missingany=0
-
-foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
-qui sum ind if missing(`x')
-if r(N)>0 {
-di "`x'"
-di r(N)
-}
-qui replace missingany=1 if `x'==.
-}
-
-
-local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
-
-local r=1
-local c=1
-mat miss=J(`rn',3,.)
-
-foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
-sum `x' 
-mat miss[`r',1]=r(mean)
-mat miss[`r',2]=r(N)
-sum ind if missing(`x')
-mat miss[`r',3]=r(N)
-local r=`r'+1
-}
-sum ind
-mat miss[`r',1]=r(N)
-
-mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
-
-frmttable, statmat(miss) varlabels title("Missing values") ///
-ctitles("" "Variable" "mean" "N" "N missing") sdec(2,0,0)
-tab missingany
-*drop if missingany
-local r=1
-local c=1
-
-local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
-di `rn'
-mat tab1=J(`rn',5,.)
-mat stars=J(`rn',5,0)
-local r=1
-local c=1
-foreach i in all a b c d {
-	foreach round in 1 2 {
-		foreach x of local cvars`round' {
-			qui sum `x' if cgroup`i'==1 
-			mat tab1[`r',`c']=r(mean)
-			*if inlist("`i'","a","b","c") {
-				*ttest `x' if cgroup`i'==1 | cgroupnone==1, by(cgroup`i')
-				*mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-*}
-			local r=`r'+1
-}
-		foreach x of local ivars`round' {
-			qui sum `x' if cgroup`i'==1
-			mat tab1[`r',`c']=r(mean)*100
-			*if inlist("`i'","a","b","c") {
-			*	tab `x' cgroup`i' if cgroup`i'==1 | cgroupnone==1, chi2
-			*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-*}
-			local r=`r'+1
-}
-}
-	local r=`r'+1
-
-	
-	foreach x of local coutcomes {
-		sum `x' if cgroup`i'==1,d
-		mat tab1[`r',`c']=r(mean)
-		*if inlist("`i'","a","b","c") {
-		*	ttest `x' if cgroup`i'==1 | cgroupnone==1, by(cgroup`i')
-		*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-*}
-		local r=`r'+1
-*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
-			sum `x' if cgroup`i'==1,d
-			mat tab1[`r',`c']=r(p50)
-			local r=`r'+1
-*}
-}
-	foreach x of local ioutcomes {
-		qui sum `x' if cgroup`i'==1
-		mat tab1[`r',`c']=r(mean)*100
-			*if inlist("`i'","a","b","c") {
-			*	tab `x' cgroup`i' if cgroup`i'==1 | cgroupnone==1, chi2
-			*	mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
-*}
-			local r=`r'+1
-}
-	sum ind if cgroup`i'==1
-	mat tab1[`r',`c']=r(N)
-	local r=1
-	local c=`c'+1
-}
-
-foreach x in `coutcomes' {
-local rnames `rnames' "`x'" "Median"
-}
-
-
-mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
-`rnames' `ioutcomes' N
-
-frmttable using `logpath'\percentiles_tables.doc, replace statmat(tab1) ///
- title("Sample Characteristics by Percentiles") ///
- ctitles("" "All" "Top 1%" "Top 5%" "Top 10%" "Top 20%" ) ///
- sdec(1) annotate(stars) asymbol(*,*) ///
- varlabels note()
-
 
 log close
 

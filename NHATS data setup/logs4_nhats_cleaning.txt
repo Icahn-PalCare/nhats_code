@@ -1,8 +1,8 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- opened on:   7 Sep 2016, 13:59:12
+ opened on:   7 Apr 2017, 12:54:32
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -12,52 +12,56 @@
 . cd "`work'"
 E:\nhats\data\NHATS working data
 
-. use round_1_4_cleanv2.dta
+. use round_1_5_cleanv2.dta
 
 . 
 . *********************************************
 . //fall in the last month
 . gen fall_last_month=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace fall_last_month=1 if hc`w'fllsinmth==1 & wave==`w'
   3.         replace fall_last_month=0 if hc`w'fllsinmth==2 & wave==`w'
   4.         replace fall_last_month = -7 if hc`w'fllsinmth==-7 & wave==`w'
   5.         replace fall_last_month = -8 if hc`w'fllsinmth==-8 & wave==`w'
   6. }
 (832 real changes made)
-(6777 real changes made)
+(6,777 real changes made)
 (0 real changes made)
 (0 real changes made)
 (750 real changes made)
-(5302 real changes made)
+(5,302 real changes made)
 (0 real changes made)
 (4 real changes made)
 (573 real changes made)
-(4304 real changes made)
+(4,304 real changes made)
 (1 real change made)
 (6 real changes made)
 (486 real changes made)
-(3548 real changes made)
+(3,548 real changes made)
 (0 real changes made)
 (3 real changes made)
+(884 real changes made)
+(6,686 real changes made)
+(0 real changes made)
+(6 real changes made)
 
 . la var fall_last_month "Fall down in last month"
 
 . tab fall_last_month wave, missing
 
  Fall down |
-   in last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         0          4          6          3 |        13 
-        -7 |         0          0          1          0 |         1 
-         0 |     6,777      5,302      4,304      3,548 |    19,931 
-         1 |       832        750        573        486 |     2,641 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   in last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         0          4          6          3          6 |        19 
+        -7 |         0          0          1          0          0 |         1 
+         0 |     6,777      5,302      4,304      3,548      6,686 |    26,617 
+         1 |       832        750        573        486        884 |     3,525 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -69,204 +73,263 @@ E:\nhats\data\NHATS working data
 
              R1 D HAS HELP EATING |      Freq.     Percent        Cum.
 ----------------------------------+-----------------------------------
-                  -1 Inapplicable |        636        2.46        2.46
-   1 No help eating in last month |      7,180       27.77       30.23
-      2 Help eating in last month |        420        1.62       31.85
- 3 DKRF help eating in last month |          3        0.01       31.86
-         8 Not done in last month |          6        0.02       31.89
-                                . |     17,611       68.11      100.00
+                  -1 Inapplicable |        636        1.86        1.86
+   1 No help eating in last month |      7,180       21.00       22.86
+      2 Help eating in last month |        420        1.23       24.09
+ 3 DKRF help eating in last month |          3        0.01       24.10
+         8 Not done in last month |          6        0.02       24.12
+                                . |     25,945       75.88      100.00
 ----------------------------------+-----------------------------------
-                            Total |     25,856      100.00
+                            Total |     34,190      100.00
 
-. 
+. rename sc*eatslfdif sc*eatdif
+
 . capture program drop selfcare
 
 . program define selfcare
   1.         args act
-  2.         
-.         gen adl_`act'_help=.
-  3.         foreach w in 1 2 3 4{
-  4.                 replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
-  5.                 replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
-  6.                 replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
-  7.                 replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
-  8. 
-.         }
-  9.         tab adl_`act'_help wave, missing
- 10.         tab adl_`act'_help wave if ivw_type==1, missing
- 11.         
+  2.         gen adl_`act'_diff=.
+  3.         gen adl_`act'_help=.
+  4.         foreach w in 1 2 3 4 5{
+  5.                 replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
+  6.                 replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
+  7.                 replace adl_`act'_help=0 if sc`w'`act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
+  8.                 replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
+  9.                 replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
+ 10.                 replace adl_`act'_diff=sc`w'`act'dif>1 if sc`w'`act'dif>0 & wave==`w'
+ 11. }
+ 12.         tab adl_`act'_help wave, missing
+ 13.         tab adl_`act'_help wave if ivw_type==1, missing
+ 14.         
 . end     
 
 .         
 . selfcare eat
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (420 real changes made)
-(7180 real changes made)
+(7,180 real changes made)
+(6 real changes made)
 (1 real change made)
 (2 real changes made)
+(7,540 real changes made)
 (648 real changes made)
-(5843 real changes made)
+(5,843 real changes made)
+(55 real changes made)
 (4 real changes made)
 (9 real changes made)
+(6,003 real changes made)
 (622 real changes made)
-(4712 real changes made)
+(4,712 real changes made)
+(51 real changes made)
 (3 real changes made)
 (19 real changes made)
+(4,815 real changes made)
 (548 real changes made)
-(3858 real changes made)
+(3,858 real changes made)
+(16 real changes made)
 (1 real change made)
 (18 real changes made)
+(3,987 real changes made)
+(624 real changes made)
+(7,219 real changes made)
+(18 real changes made)
+(0 real changes made)
+(11 real changes made)
+(7,507 real changes made)
 
-adl_eat_he |                 Survey wave
-        lp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          9         19         18 |        48 
-        -7 |         1          4          3          1 |         9 
-         0 |     7,180      5,843      4,712      3,858 |    21,593 
-         1 |       420        648        622        548 |     2,238 
-         . |       642        571        443        312 |     1,968 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+adl_eat_he |                      Survey wave
+        lp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          9         19         18         11 |        59 
+        -7 |         1          4          3          1          0 |         9 
+         0 |     7,186      5,898      4,763      3,874      7,237 |    28,958 
+         1 |       420        648        622        548        624 |     2,862 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-adl_eat_he |                 Survey wave
-        lp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          0          2          2 |         6 
-        -7 |         1          2          3          1 |         7 
-         0 |     7,180      5,686      4,545      3,731 |    21,142 
-         1 |       420        359        328        299 |     1,406 
-         . |         6          9          6          4 |        25 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+adl_eat_he |                      Survey wave
+        lp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          0          2          2          5 |        11 
+        -7 |         1          2          3          1          0 |         7 
+         0 |     7,186      5,695      4,551      3,735      7,131 |    28,298 
+         1 |       420        359        328        299        440 |     1,846 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . selfcare bath
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (814 real changes made)
-(6783 real changes made)
+(6,783 real changes made)
+(9 real changes made)
 (0 real changes made)
 (3 real changes made)
-(1132 real changes made)
-(5373 real changes made)
+(7,141 real changes made)
+(1,132 real changes made)
+(5,373 real changes made)
+(51 real changes made)
 (0 real changes made)
 (3 real changes made)
-(1028 real changes made)
-(4317 real changes made)
+(5,607 real changes made)
+(1,028 real changes made)
+(4,317 real changes made)
+(55 real changes made)
 (1 real change made)
 (6 real changes made)
+(4,502 real changes made)
 (868 real changes made)
-(3544 real changes made)
+(3,544 real changes made)
+(25 real changes made)
 (0 real changes made)
 (4 real changes made)
+(3,693 real changes made)
+(1,093 real changes made)
+(6,755 real changes made)
+(21 real changes made)
+(0 real changes made)
+(3 real changes made)
+(7,090 real changes made)
 
-adl_bath_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          3          6          4 |        16 
-        -7 |         0          0          1          0 |         1 
-         0 |     6,783      5,373      4,317      3,544 |    20,017 
-         1 |       814      1,132      1,028        868 |     3,842 
-         . |       645        567        447        321 |     1,980 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+adl_bath_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          3          6          4          3 |        19 
+        -7 |         0          0          1          0          0 |         1 
+         0 |     6,792      5,424      4,372      3,569      6,776 |    26,933 
+         1 |       814      1,132      1,028        868      1,093 |     4,935 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-adl_bath_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          2          1          1 |         7 
-        -7 |         0          0          1          0 |         1 
-         0 |     6,783      5,309      4,239      3,495 |    19,826 
-         1 |       814        738        632        531 |     2,715 
-         . |         9          7         11         10 |        37 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+adl_bath_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          2          1          1          3 |        10 
+        -7 |         0          0          1          0          0 |         1 
+         0 |     6,792      5,316      4,250      3,505      6,719 |    26,582 
+         1 |       814        738        632        531        854 |     3,569 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . selfcare toil
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (331 real changes made)
-(7268 real changes made)
+(7,268 real changes made)
+(0 real changes made)
 (4 real changes made)
 (6 real changes made)
+(7,474 real changes made)
 (579 real changes made)
-(5927 real changes made)
+(5,927 real changes made)
+(27 real changes made)
 (10 real changes made)
 (16 real changes made)
+(5,911 real changes made)
 (552 real changes made)
-(4802 real changes made)
+(4,802 real changes made)
+(21 real changes made)
 (6 real changes made)
 (26 real changes made)
+(4,749 real changes made)
 (469 real changes made)
-(3946 real changes made)
+(3,946 real changes made)
+(0 real changes made)
 (1 real change made)
 (25 real changes made)
+(3,910 real changes made)
+(515 real changes made)
+(7,335 real changes made)
+(0 real changes made)
+(0 real changes made)
+(22 real changes made)
+(7,393 real changes made)
 
-adl_toil_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         6         16         26         25 |        73 
-        -7 |         4         10          6          1 |        21 
-         0 |     7,268      5,927      4,802      3,946 |    21,943 
-         1 |       331        579        552        469 |     1,931 
-         . |       636        543        413        296 |     1,888 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+adl_toil_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         6         16         26         25         22 |        95 
+        -7 |         4         10          6          1          0 |        21 
+         0 |     7,268      5,954      4,823      3,946      7,335 |    29,326 
+         1 |       331        579        552        469        515 |     2,446 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-adl_toil_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         6          2          6          7 |        21 
-        -7 |         4          6          5          1 |        16 
-         0 |     7,268      5,762      4,608      3,787 |    21,425 
-         1 |       331        286        265        242 |     1,124 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+adl_toil_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         6          2          6          7         12 |        33 
+        -7 |         4          6          5          1          0 |        16 
+         0 |     7,268      5,762      4,608      3,787      7,221 |    28,646 
+         1 |       331        286        265        242        343 |     1,467 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . selfcare dres
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (936 real changes made)
-(6616 real changes made)
+(6,616 real changes made)
+(55 real changes made)
 (1 real change made)
 (1 real change made)
-(1109 real changes made)
-(5326 real changes made)
+(7,297 real changes made)
+(1,109 real changes made)
+(5,326 real changes made)
+(115 real changes made)
 (0 real changes made)
 (9 real changes made)
-(1056 real changes made)
-(4259 real changes made)
+(5,803 real changes made)
+(1,056 real changes made)
+(4,259 real changes made)
+(87 real changes made)
 (0 real changes made)
 (5 real changes made)
+(4,631 real changes made)
 (925 real changes made)
-(3453 real changes made)
+(3,453 real changes made)
+(59 real changes made)
 (0 real changes made)
 (4 real changes made)
+(3,811 real changes made)
+(1,259 real changes made)
+(6,536 real changes made)
+(68 real changes made)
+(0 real changes made)
+(9 real changes made)
+(7,245 real changes made)
 
-adl_dres_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         1          9          5          4 |        19 
-        -7 |         1          0          0          0 |         1 
-         0 |     6,616      5,326      4,259      3,453 |    19,654 
-         1 |       936      1,109      1,056        925 |     4,026 
-         . |       691        631        479        355 |     2,156 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+adl_dres_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         1          9          5          4          9 |        28 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     6,671      5,441      4,346      3,512      6,604 |    26,574 
+         1 |       936      1,109      1,056        925      1,259 |     5,285 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-adl_dres_h |                 Survey wave
-       elp |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         1          4          2          3 |        10 
-        -7 |         1          0          0          0 |         1 
-         0 |     6,616      5,241      4,173      3,385 |    19,415 
-         1 |       936        783        687        633 |     3,039 
-         . |        55         28         22         16 |       121 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+adl_dres_h |                      Survey wave
+       elp |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         1          4          2          3          5 |        15 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     6,671      5,269      4,195      3,401      6,529 |    26,065 
+         1 |       936        783        687        633      1,042 |     4,081 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
@@ -322,196 +385,241 @@ R2 D LAUNDRY SELF AND |                 R2 D LAUNDRY REASN WITH BY OTHERS
   1.         args act
   2.         
 .         gen iadl_`act'_help=.
-  3.         foreach w in 1 2 3 4 {
-  4.                 replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  3.         gen iadl_`act'_diff=.
+  4.         foreach w in 1 2 3 4 5 {
+  5.                 replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,1,3) & wave==`w'
-  5.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3,6) & wave==`w' //did by self
-  6.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  6.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3,6) & wave==`w' //did by self
+  7.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,2,4) & wave==`w'         
-  7.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,4,5,7) & wave==`w' //dkrf
-  8.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  8.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,4,5,7) & wave==`w' //dkrf
+  9.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,-7,-8) & wave==`w'
-  9.                 
-.         }       
- 10.         tab iadl_`act'_help wave, missing
- 11.         tab iadl_`act'_help wave if ivw_type==1, missing
- 12.         end
+ 10.                 replace iadl_`act'_diff=ha`w'`act'dif>1 if ha`w'`act'dif>0 & wave==`w'
+ 11.         }       
+ 12.         tab iadl_`act'_help wave, missing
+ 13.         tab iadl_`act'_help wave if ivw_type==1, missing
+ 14.         end
 
 .         
 . hhact laun
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (991 real changes made)
-(4527 real changes made)
-(2088 real changes made)
+(4,527 real changes made)
+(2,088 real changes made)
 (3 real changes made)
 (0 real changes made)
+(4,526 real changes made)
 (824 real changes made)
-(3590 real changes made)
-(1637 real changes made)
+(3,590 real changes made)
+(1,637 real changes made)
 (5 real changes made)
 (0 real changes made)
+(3,591 real changes made)
 (612 real changes made)
-(2922 real changes made)
-(1346 real changes made)
+(2,922 real changes made)
+(1,346 real changes made)
 (2 real changes made)
 (2 real changes made)
+(2,922 real changes made)
 (511 real changes made)
-(2389 real changes made)
-(1135 real changes made)
+(2,389 real changes made)
+(1,135 real changes made)
 (1 real change made)
 (1 real change made)
+(2,389 real changes made)
+(890 real changes made)
+(4,646 real changes made)
+(2,032 real changes made)
+(7 real changes made)
+(1 real change made)
+(4,647 real changes made)
 
-iadl_laun_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          5          4          2 |        14 
-         0 |     6,615      5,227      4,268      3,524 |    19,634 
-         1 |       991        824        612        511 |     2,938 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+iadl_laun_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          5          4          2          8 |        22 
+         0 |     6,615      5,227      4,268      3,524      6,678 |    26,312 
+         1 |       991        824        612        511        890 |     3,828 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-iadl_laun_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          5          4          2 |        14 
-         0 |     6,615      5,227      4,268      3,524 |    19,634 
-         1 |       991        824        612        511 |     2,938 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+iadl_laun_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          5          4          2          8 |        22 
+         0 |     6,615      5,227      4,268      3,524      6,678 |    26,312 
+         1 |       991        824        612        511        890 |     3,828 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . hhact shop
-(25856 missing values generated)
-(1546 real changes made)
-(4077 real changes made)
-(1982 real changes made)
+(34,190 missing values generated)
+(34,190 missing values generated)
+(1,546 real changes made)
+(4,077 real changes made)
+(1,982 real changes made)
 (2 real changes made)
 (2 real changes made)
-(1342 real changes made)
-(3278 real changes made)
-(1431 real changes made)
+(4,078 real changes made)
+(1,342 real changes made)
+(3,278 real changes made)
+(1,431 real changes made)
 (4 real changes made)
 (1 real change made)
-(1103 real changes made)
-(2676 real changes made)
-(1100 real changes made)
+(3,277 real changes made)
+(1,103 real changes made)
+(2,676 real changes made)
+(1,100 real changes made)
 (2 real changes made)
 (3 real changes made)
+(2,675 real changes made)
 (847 real changes made)
-(2242 real changes made)
+(2,242 real changes made)
 (941 real changes made)
 (3 real changes made)
 (4 real changes made)
+(2,240 real changes made)
+(1,491 real changes made)
+(4,356 real changes made)
+(1,722 real changes made)
+(1 real change made)
+(6 real changes made)
+(4,356 real changes made)
 
-iadl_shop_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          5          5          7 |        21 
-         0 |     6,059      4,709      3,776      3,183 |    17,727 
-         1 |     1,546      1,342      1,103        847 |     4,838 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+iadl_shop_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          5          5          7          7 |        28 
+         0 |     6,059      4,709      3,776      3,183      6,078 |    23,805 
+         1 |     1,546      1,342      1,103        847      1,491 |     6,329 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-iadl_shop_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          5          5          7 |        21 
-         0 |     6,059      4,709      3,776      3,183 |    17,727 
-         1 |     1,546      1,342      1,103        847 |     4,838 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+iadl_shop_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          5          5          7          7 |        28 
+         0 |     6,059      4,709      3,776      3,183      6,078 |    23,805 
+         1 |     1,546      1,342      1,103        847      1,491 |     6,329 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . hhact meal
-(25856 missing values generated)
+(34,190 missing values generated)
+(34,190 missing values generated)
 (883 real changes made)
-(4915 real changes made)
-(1806 real changes made)
+(4,915 real changes made)
+(1,806 real changes made)
 (3 real changes made)
 (2 real changes made)
+(4,916 real changes made)
 (759 real changes made)
-(3881 real changes made)
-(1413 real changes made)
+(3,881 real changes made)
+(1,413 real changes made)
 (3 real changes made)
 (0 real changes made)
+(3,879 real changes made)
 (550 real changes made)
-(3204 real changes made)
-(1126 real changes made)
+(3,204 real changes made)
+(1,126 real changes made)
 (2 real changes made)
 (2 real changes made)
+(3,202 real changes made)
 (434 real changes made)
-(2649 real changes made)
+(2,649 real changes made)
 (951 real changes made)
 (2 real changes made)
 (1 real change made)
+(2,646 real changes made)
+(776 real changes made)
+(5,038 real changes made)
+(1,755 real changes made)
+(4 real changes made)
+(3 real changes made)
+(5,038 real changes made)
 
-iadl_meal_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          3          4          3 |        15 
-         0 |     6,721      5,294      4,330      3,600 |    19,945 
-         1 |       883        759        550        434 |     2,626 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+iadl_meal_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          3          4          3          7 |        22 
+         0 |     6,721      5,294      4,330      3,600      6,793 |    26,738 
+         1 |       883        759        550        434        776 |     3,402 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-iadl_meal_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          3          4          3 |        15 
-         0 |     6,721      5,294      4,330      3,600 |    19,945 
-         1 |       883        759        550        434 |     2,626 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+iadl_meal_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          3          4          3          7 |        22 
+         0 |     6,721      5,294      4,330      3,600      6,793 |    26,738 
+         1 |       883        759        550        434        776 |     3,402 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . hhact bank
-(25856 missing values generated)
-(1103 real changes made)
-(4728 real changes made)
-(1750 real changes made)
+(34,190 missing values generated)
+(34,190 missing values generated)
+(1,103 real changes made)
+(4,728 real changes made)
+(1,750 real changes made)
 (28 real changes made)
 (0 real changes made)
-(1000 real changes made)
-(3765 real changes made)
-(1282 real changes made)
+(4,735 real changes made)
+(1,000 real changes made)
+(3,765 real changes made)
+(1,282 real changes made)
 (9 real changes made)
 (0 real changes made)
+(3,766 real changes made)
 (821 real changes made)
-(3011 real changes made)
-(1044 real changes made)
+(3,011 real changes made)
+(1,044 real changes made)
 (8 real changes made)
 (0 real changes made)
+(3,012 real changes made)
 (631 real changes made)
-(2526 real changes made)
+(2,526 real changes made)
 (873 real changes made)
 (7 real changes made)
 (0 real changes made)
+(2,526 real changes made)
+(1,043 real changes made)
+(4,920 real changes made)
+(1,587 real changes made)
+(22 real changes made)
+(4 real changes made)
+(4,929 real changes made)
 
-iadl_bank_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        28          9          8          7 |        52 
-         0 |     6,478      5,047      4,055      3,399 |    18,979 
-         1 |     1,103      1,000        821        631 |     3,555 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+iadl_bank_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        28          9          8          7         26 |        78 
+         0 |     6,478      5,047      4,055      3,399      6,507 |    25,486 
+         1 |     1,103      1,000        821        631      1,043 |     4,598 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
-iadl_bank_ |                 Survey wave
-      help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        28          9          8          7 |        52 
-         0 |     6,478      5,047      4,055      3,399 |    18,979 
-         1 |     1,103      1,000        821        631 |     3,555 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+iadl_bank_ |                      Survey wave
+      help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        28          9          8          7         26 |        78 
+         0 |     6,478      5,047      4,055      3,399      6,507 |    25,486 
+         1 |     1,103      1,000        821        631      1,043 |     4,598 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
@@ -562,9 +670,12 @@ iadl_bank_ |                 Survey wave
 
 . 
 . gen iadl_meds_help=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. gen iadl_meds_dif=.
+(34,190 missing values generated)
+
+. foreach w in 1 2 3 4 5{
   2.         replace iadl_meds_help=1 if inlist(mc`w'dmedssfdf,1,8) & ///
 >                 inlist(mc`w'dmedsreas,1,3) & wave==`w'
   3.         //did by self or don't take medications
@@ -574,27 +685,38 @@ iadl_bank_ |                 Survey wave
   5.         replace iadl_meds_help=-8 if mc`w'dmedssfdf == 7 & wave==`w' 
   6.         replace iadl_meds_help=-8 if inlist(mc`w'dmedssfdf,1,8) & ///
 >                 inlist(mc`w'dmedsreas,-7,-8) & wave==`w'
-  7.         }       
+  7.         replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0
+  8. }       
 (779 real changes made)
-(6384 real changes made)
+(6,384 real changes made)
 (442 real changes made)
 (2 real changes made)
 (2 real changes made)
+(31,679 real changes made)
 (683 real changes made)
-(4976 real changes made)
+(4,976 real changes made)
 (396 real changes made)
 (1 real change made)
 (0 real changes made)
+(11,768 real changes made)
 (531 real changes made)
-(3992 real changes made)
+(3,992 real changes made)
 (359 real changes made)
 (0 real changes made)
 (2 real changes made)
+(7,305 real changes made)
 (414 real changes made)
-(3266 real changes made)
+(3,266 real changes made)
 (355 real changes made)
 (0 real changes made)
 (2 real changes made)
+(5,905 real changes made)
+(710 real changes made)
+(6,330 real changes made)
+(532 real changes made)
+(1 real change made)
+(2 real changes made)
+(7,726 real changes made)
 
 . 
 . la var iadl_meds_help "Rec'd help taking medications last month"
@@ -604,15 +726,15 @@ iadl_bank_ |                 Survey wave
 Rec'd help |
     taking |
 medication |
-    s last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          1          2          2 |         9 
-         0 |     6,826      5,372      4,351      3,621 |    20,170 
-         1 |       779        683        531        414 |     2,407 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+    s last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          1          2          2          3 |        12 
+         0 |     6,826      5,372      4,351      3,621      6,862 |    27,032 
+         1 |       779        683        531        414        710 |     3,117 
+         . |       636      1,019        915        700        759 |     4,029 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab iadl_meds_help wave if ivw_type==1, missing
@@ -620,46 +742,51 @@ medication |
 Rec'd help |
     taking |
 medication |
-    s last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          1          2          2 |         9 
-         0 |     6,826      5,372      4,351      3,621 |    20,170 
-         1 |       779        683        531        414 |     2,407 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+    s last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          1          2          2          3 |        12 
+         0 |     6,826      5,372      4,351      3,621      6,862 |    27,032 
+         1 |       779        683        531        414        710 |     3,117 
+         . |         0          0          0          0          1 |         1 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
 . //other meds questions, for treatment burden
 . gen ind_meds_diff=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . gen ind_meds_mistake=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. forvalues w=1/4 {
+. forvalues w=1/5 {
   2. replace ind_meds_diff=inlist(mc`w'medsdif,2,3,4) if mc`w'medsdif>0 & !missing(mc`w'medsdif)
   3. replace ind_meds_diff=0 if mc`w'meds==2
   4. replace ind_meds_diff=0 if mc`w'dmedsrea==2 & inlist(mc`w'medstrk,2,3)
   5. replace ind_meds_mistake=mc`w'medsmis==1 if mc`w'medsmis>0 & !missing(mc`w'medsmis)
   6. }
-(5734 real changes made)
+(5,734 real changes made)
 (640 real changes made)
 (292 real changes made)
-(1482 real changes made)
-(4485 real changes made)
+(1,482 real changes made)
+(4,485 real changes made)
 (486 real changes made)
 (214 real changes made)
-(1290 real changes made)
-(3617 real changes made)
+(1,290 real changes made)
+(3,617 real changes made)
 (364 real changes made)
 (179 real changes made)
 (924 real changes made)
-(2987 real changes made)
+(2,987 real changes made)
 (274 real changes made)
 (178 real changes made)
 (733 real changes made)
+(5,710 real changes made)
+(613 real changes made)
+(309 real changes made)
+(1,436 real changes made)
 
 . label var ind_meds_diff "Any difficulty keeping track of meds"
 
@@ -667,95 +794,103 @@ medication |
 
 . gen ind_meds_problem=ind_meds_diff==1 | ind_meds_mistake==1 if !missing(ind_meds_diff) ///
 > | !missing(ind_meds_mistake)
-(3690 missing values generated)
+(4,621 missing values generated)
 
 . label var ind_meds_prob "SR difficulty keeping track of or mistake taking meds"
 
 . *********************************************
 . //has , sees regular doctor
 . gen reg_doc_have = .
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace reg_doc_have=1 if mc`w'havregdoc==1
   3.         replace reg_doc_have=0 if mc`w'havregdoc==2
   4.         replace reg_doc_have=-7 if mc`w'havregdoc==-7
   5.         replace reg_doc_have=-8 if mc`w'havregdoc==-8
   6. }
-(7219 real changes made)
+(7,219 real changes made)
 (383 real changes made)
 (2 real changes made)
 (5 real changes made)
-(5754 real changes made)
+(5,754 real changes made)
 (295 real changes made)
 (2 real changes made)
 (5 real changes made)
-(4657 real changes made)
+(4,657 real changes made)
 (215 real changes made)
 (6 real changes made)
 (6 real changes made)
-(3832 real changes made)
+(3,832 real changes made)
 (200 real changes made)
 (1 real change made)
 (4 real changes made)
+(7,171 real changes made)
+(396 real changes made)
+(0 real changes made)
+(9 real changes made)
 
 . la var reg_doc_have "Have regular doctor"
 
 . tab reg_doc_have wave, missing
 
       Have |
-   regular |                 Survey wave
-    doctor |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          5          6          4 |        20 
-        -7 |         2          2          6          1 |        11 
-         0 |       383        295        215        200 |     1,093 
-         1 |     7,219      5,754      4,657      3,832 |    21,462 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   regular |                      Survey wave
+    doctor |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          5          6          4          9 |        29 
+        -7 |         2          2          6          1          0 |        11 
+         0 |       383        295        215        200        396 |     1,489 
+         1 |     7,219      5,754      4,657      3,832      7,171 |    28,633 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab reg_doc_have wave if ivw_type==1, missing
 
       Have |
-   regular |                 Survey wave
-    doctor |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          5          6          4 |        20 
-        -7 |         2          2          6          1 |        11 
-         0 |       383        295        215        200 |     1,093 
-         1 |     7,219      5,754      4,657      3,832 |    21,462 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+   regular |                      Survey wave
+    doctor |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          5          6          4          9 |        29 
+        -7 |         2          2          6          1          0 |        11 
+         0 |       383        295        215        200        396 |     1,489 
+         1 |     7,219      5,754      4,657      3,832      7,171 |    28,633 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
 . gen reg_doc_seen = .
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace reg_doc_seen=1 if mc`w'regdoclyr==1 & wave==`w'
   3.         replace reg_doc_seen=0 if mc`w'regdoclyr==2 & wave==`w'
   4.         replace reg_doc_seen=-7 if mc`w'regdoclyr==-7 & wave==`w'
   5.         replace reg_doc_seen=-8 if mc`w'regdoclyr==-8 & wave==`w'
   6. }
-(7115 real changes made)
+(7,115 real changes made)
 (482 real changes made)
 (1 real change made)
 (11 real changes made)
-(5654 real changes made)
+(5,654 real changes made)
 (385 real changes made)
 (2 real changes made)
 (15 real changes made)
-(4553 real changes made)
+(4,553 real changes made)
 (313 real changes made)
 (7 real changes made)
 (11 real changes made)
-(3784 real changes made)
+(3,784 real changes made)
 (244 real changes made)
 (1 real change made)
 (8 real changes made)
+(7,058 real changes made)
+(497 real changes made)
+(0 real changes made)
+(21 real changes made)
 
 . la var reg_doc_seen "Seen regular doctor within last year"
 
@@ -764,16 +899,16 @@ medication |
       Seen |
    regular |
     doctor |
-    within |                 Survey wave
- last year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        11         15         11          8 |        45 
-        -7 |         1          2          7          1 |        11 
-         0 |       482        385        313        244 |     1,424 
-         1 |     7,115      5,654      4,553      3,784 |    21,106 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+    within |                      Survey wave
+ last year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        11         15         11          8         21 |        66 
+        -7 |         1          2          7          1          0 |        11 
+         0 |       482        385        313        244        497 |     1,921 
+         1 |     7,115      5,654      4,553      3,784      7,058 |    28,164 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab reg_doc_seen wave if ivw_type==1, missing
@@ -781,15 +916,15 @@ medication |
       Seen |
    regular |
     doctor |
-    within |                 Survey wave
- last year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        11         15         11          8 |        45 
-        -7 |         1          2          7          1 |        11 
-         0 |       482        385        313        244 |     1,424 
-         1 |     7,115      5,654      4,553      3,784 |    21,106 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+    within |                      Survey wave
+ last year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        11         15         11          8         21 |        66 
+        -7 |         1          2          7          1          0 |        11 
+         0 |       482        385        313        244        497 |     1,921 
+         1 |     7,115      5,654      4,553      3,784      7,058 |    28,164 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
@@ -812,9 +947,9 @@ medication |
 
 . 
 . gen reg_doc_homevisit = .
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace reg_doc_homevisit=1 if mc`w'hwgtregd8==1
   3.         replace reg_doc_homevisit=0 if mc`w'hwgtregd8==2
   4.         replace reg_doc_homevisit=-7 if mc`w'hwgtregd8==-7
@@ -822,21 +957,25 @@ medication |
   6.         //replace reg_doc_homevisit=0 if mc`w'regdoclyr==2
 . }
 (67 real changes made)
-(7046 real changes made)
+(7,046 real changes made)
 (1 real change made)
 (2 real changes made)
 (107 real changes made)
-(5544 real changes made)
+(5,544 real changes made)
 (0 real changes made)
 (3 real changes made)
 (117 real changes made)
-(4436 real changes made)
+(4,436 real changes made)
 (0 real changes made)
 (1 real change made)
 (97 real changes made)
-(3684 real changes made)
+(3,684 real changes made)
 (0 real changes made)
 (3 real changes made)
+(136 real changes made)
+(6,921 real changes made)
+(0 real changes made)
+(1 real change made)
 
 . la var reg_doc_homevisit "Was regular doctor visit a home visit?"
 
@@ -846,16 +985,16 @@ medication |
    regular |
     doctor |
    visit a |
-      home |                 Survey wave
-    visit? |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          3          1          3 |         9 
-        -7 |         1          0          0          0 |         1 
-         0 |     7,046      5,544      4,436      3,684 |    20,710 
-         1 |        67        107        117         97 |       388 
-         . |     1,129      1,421      1,245        953 |     4,748 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+      home |                      Survey wave
+    visit? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          3          1          3          1 |        10 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     7,046      5,544      4,436      3,684      6,921 |    27,631 
+         1 |        67        107        117         97        136 |       524 
+         . |     1,129      1,421      1,245        953      1,276 |     6,024 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab reg_doc_homevisit wave if ivw_type==1, missing
@@ -864,16 +1003,16 @@ medication |
    regular |
     doctor |
    visit a |
-      home |                 Survey wave
-    visit? |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          3          1          3 |         9 
-        -7 |         1          0          0          0 |         1 
-         0 |     7,046      5,544      4,436      3,684 |    20,710 
-         1 |        66        107        116         97 |       386 
-         . |       494        402        331        253 |     1,480 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+      home |                      Survey wave
+    visit? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          3          1          3          1 |        10 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     7,046      5,544      4,436      3,684      6,921 |    27,631 
+         1 |        66        107        116         97        136 |       522 
+         . |       494        402        331        253        518 |     1,998 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
@@ -883,42 +1022,46 @@ medication |
  R1 HC7 SP HOSP |
 STAY LAST 12MOS |      Freq.     Percent        Cum.
 ----------------+-----------------------------------
-     -9 Missing |        168        0.65        0.65
-          -8 DK |          8        0.03        0.68
-          -7 RF |          1        0.00        0.68
--1 Inapplicable |        468        1.81        2.49
-          1 YES |      1,777        6.87        9.37
-           2 NO |      5,823       22.52       31.89
-              . |     17,611       68.11      100.00
+     -9 Missing |        168        0.49        0.49
+          -8 DK |          8        0.02        0.51
+          -7 RF |          1        0.00        0.52
+-1 Inapplicable |        468        1.37        1.89
+          1 YES |      1,777        5.20        7.08
+           2 NO |      5,823       17.03       24.12
+              . |     25,945       75.88      100.00
 ----------------+-----------------------------------
-          Total |     25,856      100.00
+          Total |     34,190      100.00
 
 . 
 . gen sr_hosp_ind=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace sr_hosp_ind=1 if hc`w'hosptstay==1
   3.         replace sr_hosp_ind=0 if hc`w'hosptstay==2
   4.         replace sr_hosp_ind=-7 if hc`w'hosptstay==-7
   5.         replace sr_hosp_ind=-8 if hc`w'hosptstay==-8
   6. }
-(1777 real changes made)
-(5823 real changes made)
+(1,777 real changes made)
+(5,823 real changes made)
 (1 real change made)
 (8 real changes made)
-(1512 real changes made)
-(4517 real changes made)
+(1,512 real changes made)
+(4,517 real changes made)
 (0 real changes made)
 (27 real changes made)
-(1245 real changes made)
-(3621 real changes made)
+(1,245 real changes made)
+(3,621 real changes made)
 (1 real change made)
 (17 real changes made)
-(1031 real changes made)
-(2990 real changes made)
+(1,031 real changes made)
+(2,990 real changes made)
 (0 real changes made)
 (16 real changes made)
+(1,691 real changes made)
+(5,862 real changes made)
+(0 real changes made)
+(23 real changes made)
 
 . la var sr_hosp_ind "Hospital stay in the last year 1=yes"
 
@@ -926,31 +1069,31 @@ STAY LAST 12MOS |      Freq.     Percent        Cum.
 
   Hospital |
    stay in |
-  the last |                 Survey wave
-year 1=yes |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         8         27         17         16 |        68 
-        -7 |         1          0          1          0 |         2 
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,777      1,512      1,245      1,031 |     5,565 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  the last |                      Survey wave
+year 1=yes |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         8         27         17         16         23 |        91 
+        -7 |         1          0          1          0          0 |         2 
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,777      1,512      1,245      1,031      1,691 |     7,256 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab sr_hosp_ind wave if ivw_type==1, missing
 
   Hospital |
    stay in |
-  the last |                 Survey wave
-year 1=yes |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         8         27         17         16 |        68 
-        -7 |         1          0          1          0 |         2 
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,777      1,512      1,245      1,031 |     5,565 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+  the last |                      Survey wave
+year 1=yes |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         8         27         17         16         23 |        91 
+        -7 |         1          0          1          0          0 |         2 
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,777      1,512      1,245      1,031      1,691 |     7,256 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
@@ -982,24 +1125,25 @@ year 1=yes |         1          2          3          4 |     Total
              23 |         0          0          0          0          1          0          0 |         1 
              25 |         0          0          0          0          1          0          0 |         1 
              30 |         0          0          0          0          1          0          0 |         1 
-              . |         0          0          0          0          0          0     17,611 |    17,611 
+              . |         0          0          0          0          0          0     25,945 |    25,945 
 ----------------+-----------------------------------------------------------------------------+----------
-          Total |       168          8          1        468      1,777      5,823     17,611 |    25,856 
+          Total |       168          8          1        468      1,777      5,823     25,945 |    34,190 
 
 
 . gen sr_hosp_stays=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         replace sr_hosp_stays=hc`w'hosovrnht if hc`w'hosovrnht>0 & wave==`w'
   3. }
-(1765 real changes made)
-(1499 real changes made)
-(1235 real changes made)
-(1029 real changes made)
+(1,765 real changes made)
+(1,499 real changes made)
+(1,235 real changes made)
+(1,029 real changes made)
+(1,680 real changes made)
 
 . replace sr_hosp_stays=0 if sr_hosp_ind==0 //set to 0 if none reported in y/n ? above
-(16951 real changes made)
+(22,813 real changes made)
 
 . la var sr_hosp_stays "Number unique hospital stays last year"
 
@@ -1008,37 +1152,37 @@ year 1=yes |         1          2          3          4 |     Total
     Number |
     unique |
   hospital |
-stays last |                 Survey wave
-      year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,116        986        810        668 |     3,580 
-         2 |       377        290        269        219 |     1,155 
-         3 |       148        120         95         74 |       437 
-         4 |        53         41         26         34 |       154 
-         5 |        28         22         14         14 |        78 
-         6 |        11         12          8          4 |        35 
-         7 |         8          8          7          2 |        25 
-         8 |         7          6          2          0 |        15 
-         9 |         4          0          1          0 |         5 
-        10 |         4          5          0          2 |        11 
-        11 |         1          1          1          5 |         8 
-        12 |         1          2          1          2 |         6 
-        13 |         1          0          0          0 |         1 
-        14 |         1          1          0          0 |         2 
-        15 |         0          0          1          1 |         2 
-        16 |         0          1          0          0 |         1 
-        17 |         1          1          0          0 |         2 
-        20 |         0          0          0          1 |         1 
-        21 |         1          0          0          0 |         1 
-        23 |         1          0          0          1 |         2 
-        25 |         1          0          0          0 |         1 
-        30 |         1          2          0          1 |         4 
-        63 |         0          1          0          0 |         1 
-        64 |         0          0          0          1 |         1 
-         . |       657      1,059        943        718 |     3,377 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+stays last |                      Survey wave
+      year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,116        986        810        668      1,076 |     4,656 
+         2 |       377        290        269        219        368 |     1,523 
+         3 |       148        120         95         74        143 |       580 
+         4 |        53         41         26         34         29 |       183 
+         5 |        28         22         14         14         22 |       100 
+         6 |        11         12          8          4         14 |        49 
+         7 |         8          8          7          2         11 |        36 
+         8 |         7          6          2          0          3 |        18 
+         9 |         4          0          1          0          4 |         9 
+        10 |         4          5          0          2          2 |        13 
+        11 |         1          1          1          5          3 |        11 
+        12 |         1          2          1          2          0 |         6 
+        13 |         1          0          0          0          0 |         1 
+        14 |         1          1          0          0          1 |         3 
+        15 |         0          0          1          1          3 |         5 
+        16 |         0          1          0          0          0 |         1 
+        17 |         1          1          0          0          0 |         2 
+        20 |         0          0          0          1          1 |         2 
+        21 |         1          0          0          0          0 |         1 
+        23 |         1          0          0          1          0 |         2 
+        25 |         1          0          0          0          0 |         1 
+        30 |         1          2          0          1          0 |         4 
+        63 |         0          1          0          0          0 |         1 
+        64 |         0          0          0          1          0 |         1 
+         . |       657      1,059        943        718        792 |     4,169 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab sr_hosp_stays wave if ivw_type==1, missing
@@ -1046,42 +1190,42 @@ stays last |                 Survey wave
     Number |
     unique |
   hospital |
-stays last |                 Survey wave
-      year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,116        986        810        668 |     3,580 
-         2 |       377        290        269        219 |     1,155 
-         3 |       148        120         95         74 |       437 
-         4 |        53         41         26         34 |       154 
-         5 |        28         22         14         14 |        78 
-         6 |        11         12          8          4 |        35 
-         7 |         8          8          7          2 |        25 
-         8 |         7          6          2          0 |        15 
-         9 |         4          0          1          0 |         5 
-        10 |         4          5          0          2 |        11 
-        11 |         1          1          1          5 |         8 
-        12 |         1          2          1          2 |         6 
-        13 |         1          0          0          0 |         1 
-        14 |         1          1          0          0 |         2 
-        15 |         0          0          1          1 |         2 
-        16 |         0          1          0          0 |         1 
-        17 |         1          1          0          0 |         2 
-        20 |         0          0          0          1 |         1 
-        21 |         1          0          0          0 |         1 
-        23 |         1          0          0          1 |         2 
-        25 |         1          0          0          0 |         1 
-        30 |         1          2          0          1 |         4 
-        63 |         0          1          0          0 |         1 
-        64 |         0          0          0          1 |         1 
-         . |        21         40         28         18 |       107 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+stays last |                      Survey wave
+      year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,116        986        810        668      1,076 |     4,656 
+         2 |       377        290        269        219        368 |     1,523 
+         3 |       148        120         95         74        143 |       580 
+         4 |        53         41         26         34         29 |       183 
+         5 |        28         22         14         14         22 |       100 
+         6 |        11         12          8          4         14 |        49 
+         7 |         8          8          7          2         11 |        36 
+         8 |         7          6          2          0          3 |        18 
+         9 |         4          0          1          0          4 |         9 
+        10 |         4          5          0          2          2 |        13 
+        11 |         1          1          1          5          3 |        11 
+        12 |         1          2          1          2          0 |         6 
+        13 |         1          0          0          0          0 |         1 
+        14 |         1          1          0          0          1 |         3 
+        15 |         0          0          1          1          3 |         5 
+        16 |         0          1          0          0          0 |         1 
+        17 |         1          1          0          0          0 |         2 
+        20 |         0          0          0          1          1 |         2 
+        21 |         1          0          0          0          0 |         1 
+        23 |         1          0          0          1          0 |         2 
+        25 |         1          0          0          0          0 |         1 
+        30 |         1          2          0          1          0 |         4 
+        63 |         0          1          0          0          0 |         1 
+        64 |         0          0          0          1          0 |         1 
+         . |        21         40         28         18         34 |       141 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
-. save round_1_4_cleanv3.dta, replace
-file round_1_4_cleanv3.dta saved
+. save round_1_5_cleanv3.dta, replace
+file round_1_5_cleanv3.dta saved
 
 . 
 . local ivars fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help ///
@@ -1092,227 +1236,227 @@ file round_1_4_cleanv3.dta saved
   3. }
 
  Fall down |
-   in last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         0          4          6          3 |        13 
-        -7 |         0          0          1          0 |         1 
-         0 |     6,777      5,302      4,304      3,548 |    19,931 
-         1 |       832        750        573        486 |     2,641 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   in last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         0          4          6          3          6 |        19 
+        -7 |         0          0          1          0          0 |         1 
+         0 |     6,777      5,302      4,304      3,548      6,686 |    26,617 
+         1 |       832        750        573        486        884 |     3,525 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
   Has help |
-     while |                 Survey wave
-    eating |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          9         19         18 |        48 
-        -7 |         1          4          3          1 |         9 
-         0 |     7,180      5,843      4,712      3,858 |    21,593 
-         1 |       420        648        622        548 |     2,238 
-         . |       642        571        443        312 |     1,968 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+     while |                      Survey wave
+    eating |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          9         19         18         11 |        59 
+        -7 |         1          4          3          1          0 |         9 
+         0 |     7,186      5,898      4,763      3,874      7,237 |    28,958 
+         1 |       420        648        622        548        624 |     2,862 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
   Has help |
-     while |                 Survey wave
-   bathing |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          3          6          4 |        16 
-        -7 |         0          0          1          0 |         1 
-         0 |     6,783      5,373      4,317      3,544 |    20,017 
-         1 |       814      1,132      1,028        868 |     3,842 
-         . |       645        567        447        321 |     1,980 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+     while |                      Survey wave
+   bathing |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          3          6          4          3 |        19 
+        -7 |         0          0          1          0          0 |         1 
+         0 |     6,792      5,424      4,372      3,569      6,776 |    26,933 
+         1 |       814      1,132      1,028        868      1,093 |     4,935 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
   Has help |
-     while |                 Survey wave
- toileting |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         6         16         26         25 |        73 
-        -7 |         4         10          6          1 |        21 
-         0 |     7,268      5,927      4,802      3,946 |    21,943 
-         1 |       331        579        552        469 |     1,931 
-         . |       636        543        413        296 |     1,888 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+     while |                      Survey wave
+ toileting |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         6         16         26         25         22 |        95 
+        -7 |         4         10          6          1          0 |        21 
+         0 |     7,268      5,954      4,823      3,946      7,335 |    29,326 
+         1 |       331        579        552        469        515 |     2,446 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
   Has help |
-     while |                 Survey wave
-  dressing |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         1          9          5          4 |        19 
-        -7 |         1          0          0          0 |         1 
-         0 |     6,616      5,326      4,259      3,453 |    19,654 
-         1 |       936      1,109      1,056        925 |     4,026 
-         . |       691        631        479        355 |     2,156 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+     while |                      Survey wave
+  dressing |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         1          9          5          4          9 |        28 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     6,671      5,441      4,346      3,512      6,604 |    26,574 
+         1 |       936      1,109      1,056        925      1,259 |     5,285 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 Rec'd help |
      doing |
-   laundry |                 Survey wave
-last month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         3          5          4          2 |        14 
-         0 |     6,615      5,227      4,268      3,524 |    19,634 
-         1 |       991        824        612        511 |     2,938 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   laundry |                      Survey wave
+last month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         3          5          4          2          8 |        22 
+         0 |     6,615      5,227      4,268      3,524      6,678 |    26,312 
+         1 |       991        824        612        511        890 |     3,828 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 Rec'd help |
-  shopping |                 Survey wave
-last month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          5          5          7 |        21 
-         0 |     6,059      4,709      3,776      3,183 |    17,727 
-         1 |     1,546      1,342      1,103        847 |     4,838 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  shopping |                      Survey wave
+last month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          5          5          7          7 |        28 
+         0 |     6,059      4,709      3,776      3,183      6,078 |    23,805 
+         1 |     1,546      1,342      1,103        847      1,491 |     6,329 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 Rec'd help |
  preparing |
-meals last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          3          4          3 |        15 
-         0 |     6,721      5,294      4,330      3,600 |    19,945 
-         1 |       883        759        550        434 |     2,626 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+meals last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          3          4          3          7 |        22 
+         0 |     6,721      5,294      4,330      3,600      6,793 |    26,738 
+         1 |       883        759        550        434        776 |     3,402 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 Rec'd help |
       with |
-   banking |                 Survey wave
-last month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        28          9          8          7 |        52 
-         0 |     6,478      5,047      4,055      3,399 |    18,979 
-         1 |     1,103      1,000        821        631 |     3,555 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   banking |                      Survey wave
+last month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        28          9          8          7         26 |        78 
+         0 |     6,478      5,047      4,055      3,399      6,507 |    25,486 
+         1 |     1,103      1,000        821        631      1,043 |     4,598 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 Rec'd help |
     taking |
 medication |
-    s last |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         4          1          2          2 |         9 
-         0 |     6,826      5,372      4,351      3,621 |    20,170 
-         1 |       779        683        531        414 |     2,407 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+    s last |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         4          1          2          2          3 |        12 
+         0 |     6,826      5,372      4,351      3,621      6,862 |    27,032 
+         1 |       779        683        531        414        710 |     3,117 
+         . |       636      1,019        915        700        759 |     4,029 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
       Have |
-   regular |                 Survey wave
-    doctor |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         5          5          6          4 |        20 
-        -7 |         2          2          6          1 |        11 
-         0 |       383        295        215        200 |     1,093 
-         1 |     7,219      5,754      4,657      3,832 |    21,462 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+   regular |                      Survey wave
+    doctor |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         5          5          6          4          9 |        29 
+        -7 |         2          2          6          1          0 |        11 
+         0 |       383        295        215        200        396 |     1,489 
+         1 |     7,219      5,754      4,657      3,832      7,171 |    28,633 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
       Seen |
    regular |
     doctor |
-    within |                 Survey wave
- last year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        11         15         11          8 |        45 
-        -7 |         1          2          7          1 |        11 
-         0 |       482        385        313        244 |     1,424 
-         1 |     7,115      5,654      4,553      3,784 |    21,106 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+    within |                      Survey wave
+ last year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        11         15         11          8         21 |        66 
+        -7 |         1          2          7          1          0 |        11 
+         0 |       482        385        313        244        497 |     1,921 
+         1 |     7,115      5,654      4,553      3,784      7,058 |    28,164 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
        Was |
    regular |
     doctor |
    visit a |
-      home |                 Survey wave
-    visit? |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          3          1          3 |         9 
-        -7 |         1          0          0          0 |         1 
-         0 |     7,046      5,544      4,436      3,684 |    20,710 
-         1 |        67        107        117         97 |       388 
-         . |     1,129      1,421      1,245        953 |     4,748 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+      home |                      Survey wave
+    visit? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          3          1          3          1 |        10 
+        -7 |         1          0          0          0          0 |         1 
+         0 |     7,046      5,544      4,436      3,684      6,921 |    27,631 
+         1 |        67        107        117         97        136 |       524 
+         . |     1,129      1,421      1,245        953      1,276 |     6,024 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
   Hospital |
    stay in |
-  the last |                 Survey wave
-year 1=yes |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         8         27         17         16 |        68 
-        -7 |         1          0          1          0 |         2 
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,777      1,512      1,245      1,031 |     5,565 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  the last |                      Survey wave
+year 1=yes |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         8         27         17         16         23 |        91 
+        -7 |         1          0          1          0          0 |         2 
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,777      1,512      1,245      1,031      1,691 |     7,256 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
     Number |
     unique |
   hospital |
-stays last |                 Survey wave
-      year |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     5,823      4,517      3,621      2,990 |    16,951 
-         1 |     1,116        986        810        668 |     3,580 
-         2 |       377        290        269        219 |     1,155 
-         3 |       148        120         95         74 |       437 
-         4 |        53         41         26         34 |       154 
-         5 |        28         22         14         14 |        78 
-         6 |        11         12          8          4 |        35 
-         7 |         8          8          7          2 |        25 
-         8 |         7          6          2          0 |        15 
-         9 |         4          0          1          0 |         5 
-        10 |         4          5          0          2 |        11 
-        11 |         1          1          1          5 |         8 
-        12 |         1          2          1          2 |         6 
-        13 |         1          0          0          0 |         1 
-        14 |         1          1          0          0 |         2 
-        15 |         0          0          1          1 |         2 
-        16 |         0          1          0          0 |         1 
-        17 |         1          1          0          0 |         2 
-        20 |         0          0          0          1 |         1 
-        21 |         1          0          0          0 |         1 
-        23 |         1          0          0          1 |         2 
-        25 |         1          0          0          0 |         1 
-        30 |         1          2          0          1 |         4 
-        63 |         0          1          0          0 |         1 
-        64 |         0          0          0          1 |         1 
-         . |       657      1,059        943        718 |     3,377 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+stays last |                      Survey wave
+      year |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     5,823      4,517      3,621      2,990      5,862 |    22,813 
+         1 |     1,116        986        810        668      1,076 |     4,656 
+         2 |       377        290        269        219        368 |     1,523 
+         3 |       148        120         95         74        143 |       580 
+         4 |        53         41         26         34         29 |       183 
+         5 |        28         22         14         14         22 |       100 
+         6 |        11         12          8          4         14 |        49 
+         7 |         8          8          7          2         11 |        36 
+         8 |         7          6          2          0          3 |        18 
+         9 |         4          0          1          0          4 |         9 
+        10 |         4          5          0          2          2 |        13 
+        11 |         1          1          1          5          3 |        11 
+        12 |         1          2          1          2          0 |         6 
+        13 |         1          0          0          0          0 |         1 
+        14 |         1          1          0          0          1 |         3 
+        15 |         0          0          1          1          3 |         5 
+        16 |         0          1          0          0          0 |         1 
+        17 |         1          1          0          0          0 |         2 
+        20 |         0          0          0          1          1 |         2 
+        21 |         1          0          0          0          0 |         1 
+        23 |         1          0          0          1          0 |         2 
+        25 |         1          0          0          0          0 |         1 
+        30 |         1          2          0          1          0 |         4 
+        63 |         0          1          0          0          0 |         1 
+        64 |         0          0          0          1          0 |         1 
+         . |       657      1,059        943        718        792 |     4,169 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -1321,5 +1465,5 @@ stays last |                 Survey wave
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- closed on:   7 Sep 2016, 13:59:16
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   7 Apr 2017, 12:54:38
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

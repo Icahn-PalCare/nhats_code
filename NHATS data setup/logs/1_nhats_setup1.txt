@@ -1,8 +1,8 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:   1 Sep 2016, 10:33:54
+ opened on:   7 Apr 2017, 12:17:24
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -11,6 +11,8 @@
 . local r3raw E:\nhats\data\NHATS Public\round_3\
 
 . local r4raw E:\nhats\data\NHATS Public\round_4\
+
+. local r5raw E:\nhats\data\NHATS Public\round_5\
 
 . local work E:\nhats\data\NHATS working data
 
@@ -21,6 +23,8 @@
 . local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 
 . local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+
+. local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 
 . local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
@@ -134,8 +138,37 @@ file round_4_1.dta saved
 . clear 
 
 . 
+. //round 5
+. use "`r5raw'NHATS_Round_5_SP_File.dta"
+
+. //check to make sure sample ids are unique
+. sort spid 
+
+. quietly by spid: gen dup = cond(_N==1,0,_n)
+
+. tab dup
+
+        dup |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      8,334      100.00      100.00
+------------+-----------------------------------
+      Total |      8,334      100.00
+
+. gen wave=5
+
+. la var wave "Survey wave"
+
+. save round_5_1.dta, replace
+file round_5_1.dta saved
+
+. clear 
+
+. 
+. 
+. 
+. 
 . //round 1
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. use round_`w'_1.dta
   3. 
 . //keep selected variables only
@@ -147,7 +180,7 @@ file round_4_1.dta saved
   4. 
 . if `w'==1 {     
   5. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
-> ia`w'* ia1totinc re`w'resistrct 
+> ia`w'*  re`w'resistrct 
   6. }
   7. 
 . if `w'==2 {     
@@ -157,23 +190,27 @@ file round_4_1.dta saved
  10. 
 . if `w'==3 {     
  11. keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
->         re3dcensdiv ip3nginslast
+>         re3dcensdiv ip3nginslast ia*
  12. }
  13. if `w'==4 {     
  14. keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
 >         re4dcensdiv ip4nginslast
  15. }
- 16. 
-. save round_`w'_ltd.dta, replace
- 17. }
+ 16. if `w'==5 {     
+ 17. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
+>         re5dcensdiv ip5nginslast ia`w'*
+ 18. }
+ 19. save round_`w'_ltd.dta, replace
+ 20. }
 file round_1_ltd.dta saved
 file round_2_ltd.dta saved
 file round_3_ltd.dta saved
 file round_4_ltd.dta saved
+file round_5_ltd.dta saved
 
 . 
 . //check sensitive data files, keep only some variables, merge with ltd datasets
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
   3.         sort spid 
   4.         quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -205,6 +242,12 @@ file round_4_ltd.dta saved
 ------------+-----------------------------------
       Total |      4,737      100.00
 
+        dup |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      8,334      100.00      100.00
+------------+-----------------------------------
+      Total |      8,334      100.00
+
 . 
 . //combine 3 waves into single dataset
 . use round_1_ltd.dta
@@ -217,6 +260,9 @@ file round_4_ltd.dta saved
 . append using round_4_ltd.dta
 (label pa1dv2favact already defined)
 
+. append using round_5_ltd.dta
+(label pa1dv2favact already defined)
+
 . 
 . //merge in sensitive data, use r1 as basis
 . merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
@@ -225,8 +271,11 @@ file round_4_ltd.dta saved
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                             0
-    matched                            25,856  (_merge==3)
+    not matched                         4,182
+        from master                     4,182  (_merge==1)
+        from using                          0  (_merge==2)
+
+    matched                            30,008  (_merge==3)
     -----------------------------------------
 
 . drop _merge
@@ -239,11 +288,11 @@ file round_4_ltd.dta saved
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                         1,170
-        from master                     1,170  (_merge==1)
+    not matched                         5,352
+        from master                     5,352  (_merge==1)
         from using                          0  (_merge==2)
 
-    matched                            24,686  (_merge==3)
+    matched                            28,838  (_merge==3)
     -----------------------------------------
 
 . drop _merge
@@ -256,11 +305,11 @@ file round_4_ltd.dta saved
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                         3,722
-        from master                     3,722  (_merge==1)
+    not matched                         7,904
+        from master                     7,904  (_merge==1)
         from using                          0  (_merge==2)
 
-    matched                            22,134  (_merge==3)
+    matched                            26,286  (_merge==3)
     -----------------------------------------
 
 . drop _merge
@@ -274,30 +323,49 @@ file round_4_ltd.dta saved
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                         6,908
-        from master                     6,908  (_merge==1)
+    not matched                        11,090
+        from master                    11,090  (_merge==1)
         from using                          0  (_merge==2)
 
-    matched                            18,948  (_merge==3)
+    matched                            23,100  (_merge==3)
     -----------------------------------------
 
 . drop _merge
 
 . 
+. //merge in additional r5 sensitive data
+. merge m:1 spid using "`r5s'NHATS_Round_5_SP_Sen_Dem_File.dta", ///
+>         keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         9,248
+        from master                     9,248  (_merge==1)
+        from using                          0  (_merge==2)
+
+    matched                            24,942  (_merge==3)
+    -----------------------------------------
+
+. drop _merge
+
+. 
+. 
+. 
+. 
 . //3B?
 . //merge in tracker status information
-. merge m:1 spid using "`r4raw'NHATS_Round_4_Tracker_File", ///
->         keepusing(yearsample r4status r4spstat r4spstatdtmt r4spstatdtyr r3status r3spstat r3spstatdtmt r3spstatdtyr ///
+. merge m:1 spid using "`r5raw'NHATS_Round_5_Tracker_File", ///
+>         keepusing(yearsample r5status r5spstat r5spstatdtmt r5spstatdtyr r4status r4spstat r4spstatdtmt r4spstatdtyr r3status r3spstat r3spstatdtmt r3spstatdtyr ///
 >                 r2status r2spstat r2spstatdtmt r2spstatdtyr r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                         4,166
+    not matched                         7,103
         from master                         0  (_merge==1)
-        from using                      4,166  (_merge==2)
+        from using                      7,103  (_merge==2)
 
-    matched                            25,856  (_merge==3)
+    matched                            34,190  (_merge==3)
     -----------------------------------------
 
 . 
@@ -306,21 +374,21 @@ file round_4_ltd.dta saved
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                         4,166
-        from master                     4,166  
+    not matched                        11,285
+        from master                    11,285  
         from using                          0  
 
-    matched                            25,856  
+    matched                            30,008  
     -----------------------------------------
 
 . //drop obs that are in tracker file but not sp file
 . drop if _merge==2
-(4166 observations deleted)
+(7,103 observations deleted)
 
 . drop _merge     
 
-. save round_1_to_4.dta, replace
-file round_1_to_4.dta saved
+. save round_1_to_5.dta, replace
+file round_1_to_5.dta saved
 
 . 
 . *********************************************
@@ -328,5 +396,5 @@ file round_1_to_4.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:   1 Sep 2016, 10:34:06
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   7 Apr 2017, 12:17:43
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

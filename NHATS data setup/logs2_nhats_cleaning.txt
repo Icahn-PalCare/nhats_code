@@ -1,8 +1,8 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- opened on:   1 Sep 2016, 10:35:41
+ opened on:   7 Apr 2017, 12:52:59
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -12,19 +12,20 @@
 . cd "`work'"
 E:\nhats\data\NHATS working data
 
-. use round_1_to_4.dta
+. use round_1_to_5.dta
 
 . *********************************************
 . tab wave, missing
 
 Survey wave |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-          1 |      8,245       31.89       31.89
-          2 |      7,075       27.36       59.25
-          3 |      5,799       22.43       81.68
-          4 |      4,737       18.32      100.00
+          1 |      8,245       24.12       24.12
+          2 |      7,075       20.69       44.81
+          3 |      5,799       16.96       61.77
+          4 |      4,737       13.85       75.62
+          5 |      8,334       24.38      100.00
 ------------+-----------------------------------
-      Total |     25,856      100.00
+      Total |     34,190      100.00
 
 . 
 . *********************************************
@@ -57,19 +58,21 @@ Survey wave |      Freq.     Percent        Cum.
 . gen ivw_type=3
 
 . replace ivw_type=1 if r1spstat==20 & wave==1 
-(7609 real changes made)
+(7,609 real changes made)
 
 . 
-. foreach w in 2 3 4{
+. foreach w in 2 3 4 5{
   2.         replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w'
   3.         replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w'
   4. }
-(6056 real changes made)
+(6,056 real changes made)
 (503 real changes made)
-(4884 real changes made)
+(4,884 real changes made)
 (523 real changes made)
-(4037 real changes made)
+(4,037 real changes made)
 (404 real changes made)
+(7,576 real changes made)
+(296 real changes made)
 
 . 
 . la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interview completed" ///
@@ -79,14 +82,14 @@ Survey wave |      Freq.     Percent        Cum.
 
 . tab ivw_type wave, missing
 
-                      |                 Survey wave
-             ivw_type |         1          2          3          4 |     Total
-----------------------+--------------------------------------------+----------
-Alive, SP interview c |     7,609      6,056      4,884      4,037 |    22,586 
-Died, proxy SP LML in |         0        503        523        404 |     1,430 
-SP interview not comp |       636        516        392        296 |     1,840 
-----------------------+--------------------------------------------+----------
-                Total |     8,245      7,075      5,799      4,737 |    25,856 
+                      |                      Survey wave
+             ivw_type |         1          2          3          4          5 |     Total
+----------------------+-------------------------------------------------------+----------
+Alive, SP interview c |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+Died, proxy SP LML in |         0        503        523        404        296 |     1,726 
+SP interview not comp |       636        516        392        296        462 |     2,302 
+----------------------+-------------------------------------------------------+----------
+                Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -120,13 +123,13 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 . //so use ivw type=1 is the same thing for r1
 . 
 . gen sp_ivw_yes=1 if r1spstat==20 & wave==1
-(18247 missing values generated)
+(26,581 missing values generated)
 
 . replace sp_ivw_yes=0 if inlist(r1spstat,11,24) & wave==1
 (636 real changes made)
 
 . 
-. foreach w in 2 3 4{
+. foreach w in 2 3 4 5{
   2.         tab r`w'status r`w'spstat if wave==`w', missing
   3.         replace sp_ivw_yes=1 if r`w'spstat==20 & wave==`w'
   4.         replace sp_ivw_yes=0 if inlist(r`w'spstat,11,12,24) & wave==`w'
@@ -143,7 +146,7 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 ----------------------+--------------------------------------------+----------
                 Total |        56          1      6,559        459 |     7,075 
 
-(6559 real changes made)
+(6,559 real changes made)
 (516 real changes made)
 
       R3 OVERALL CASE |        R3 SUBJECT PERSON INTRVW STAT
@@ -157,7 +160,7 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 ----------------------+--------------------------------------------+----------
                 Total |        68          8      5,407        316 |     5,799 
 
-(5407 real changes made)
+(5,407 real changes made)
 (392 real changes made)
 
       R4 OVERALL CASE |        R4 SUBJECT PERSON INTRVW STAT
@@ -171,8 +174,22 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 ----------------------+--------------------------------------------+----------
                 Total |        79          6      4,441        211 |     4,737 
 
-(4441 real changes made)
+(4,441 real changes made)
 (296 real changes made)
+
+      R5 OVERALL CASE |        R5 SUBJECT PERSON INTRVW STAT
+               STATUS |  11 Ready  12 Starte   20 Final  24 Not Re |     Total
+----------------------+--------------------------------------------+----------
+          60 Complete |         0          0      7,520          0 |     7,520 
+61 Complete, NH facil |         0          0          0        283 |       283 
+62 Complete SP Deceas |         0          0        296          0 |       296 
+63 Complete SP, FQ no |         0          0         56          0 |        56 
+64 Complete FQ, SP no |       123          8          0         48 |       179 
+----------------------+--------------------------------------------+----------
+                Total |       123          8      7,872        331 |     8,334 
+
+(7,872 real changes made)
+(462 real changes made)
 
 . la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml interviews
 
@@ -180,24 +197,25 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 
         SP |
  interview |
-conducted? |                 Survey wave
-     yes=1 |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |       636        516        392        296 |     1,840 
-         1 |     7,609      6,559      5,407      4,441 |    24,016 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+conducted? |                      Survey wave
+     yes=1 |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |       636        516        392        296        462 |     2,302 
+         1 |     7,609      6,559      5,407      4,441      7,872 |    31,888 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . gen lml_ivw_yes = 0
 
-. foreach w in 2 3 4{
+. foreach w in 2 3 4 5{
   2.         replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`w'
   3. }
 (503 real changes made)
 (523 real changes made)
 (404 real changes made)
+(296 real changes made)
 
 . la var lml_ivw_yes "LWL interview? yes=1"
 
@@ -209,22 +227,22 @@ conducted? |                 Survey wave
 conducted? | LWL interview? yes=1
      yes=1 |         0          1 |     Total
 -----------+----------------------+----------
-         0 |     1,840          0 |     1,840 
-         1 |    22,586      1,430 |    24,016 
+         0 |     2,302          0 |     2,302 
+         1 |    30,162      1,726 |    31,888 
 -----------+----------------------+----------
-     Total |    24,426      1,430 |    25,856 
+     Total |    32,464      1,726 |    34,190 
 
 
 . tab lml_ivw_yes wave, missing
 
        LWL |
-interview? |                 Survey wave
-     yes=1 |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     8,245      6,572      5,276      4,333 |    24,426 
-         1 |         0        503        523        404 |     1,430 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+interview? |                      Survey wave
+     yes=1 |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     8,245      6,572      5,276      4,333      8,038 |    32,464 
+         1 |         0        503        523        404        296 |     1,726 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -267,54 +285,56 @@ interview? |                 Survey wave
 . 
 . //identify proxy SP interviews
 . gen proxy_ivw=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace proxy_ivw=1 if is`w'resptype==2
   3. replace proxy_ivw=0 if is`w'resptype==1
   4. }
 (583 real changes made)
-(7026 real changes made)
+(7,026 real changes made)
 (964 real changes made)
-(5595 real changes made)
+(5,595 real changes made)
 (897 real changes made)
-(4510 real changes made)
+(4,510 real changes made)
 (722 real changes made)
-(3719 real changes made)
+(3,719 real changes made)
+(779 real changes made)
+(7,093 real changes made)
 
 . la var proxy_ivw "Interview via proxy"
 
 . tab proxy_ivw wave, missing
 
- Interview |                 Survey wave
- via proxy |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     7,026      5,595      4,510      3,719 |    20,850 
-         1 |       583        964        897        722 |     3,166 
-         . |       636        516        392        296 |     1,840 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+ Interview |                      Survey wave
+ via proxy |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719      7,093 |    27,943 
+         1 |       583        964        897        722        779 |     3,945 
+         . |       636        516        392        296        462 |     2,302 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab proxy_ivw wave if ivw_type==1, missing
 
- Interview |                 Survey wave
- via proxy |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     7,026      5,595      4,510      3,719 |    20,850 
-         1 |       583        461        374        318 |     1,736 
------------+--------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037 |    22,586 
+ Interview |                      Survey wave
+ via proxy |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719      7,093 |    27,943 
+         1 |       583        461        374        318        483 |     2,219 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . tab proxy_ivw wave if ivw_type==2, missing
 
- Interview |           Survey wave
- via proxy |         2          3          4 |     Total
------------+---------------------------------+----------
-         1 |       503        523        404 |     1,430 
------------+---------------------------------+----------
-     Total |       503        523        404 |     1,430 
+ Interview |                 Survey wave
+ via proxy |         2          3          4          5 |     Total
+-----------+--------------------------------------------+----------
+         1 |       503        523        404        296 |     1,726 
+-----------+--------------------------------------------+----------
+     Total |       503        523        404        296 |     1,726 
 
 
 . 
@@ -322,7 +342,7 @@ interview? |                 Survey wave
 > For our purposes, code all as missing
 > The following codes were used at the item level for missing data of different types:
 > -7 = Refusal
-> -8 = Don’t Know
+> -8 = Donâ€™t Know
 > -1 = Inapplicable
 > -9 = Not Ascertained*/
 . local miss -9,-1
@@ -335,79 +355,94 @@ interview? |                 Survey wave
 . *********************************************
 . //how often go out of the house?
 . gen freq_go_out=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab mo`w'outoft, missing
   3.         replace freq_go_out=mo`w'outoft if wave==`w'
   4. }
 
         R1 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
 --------------------------------+-----------------------------------
-                     -9 Missing |        168        0.65        0.65
-                          -8 DK |          5        0.02        0.67
-                          -7 RF |          1        0.00        0.67
-                -1 Inapplicable |        468        1.81        2.48
-    1 EVERY DAY (7 DAYS A WEEK) |      4,854       18.77       21.26
-  2 MOST DAYS (5-6 DAYS A WEEK) |      1,226        4.74       26.00
-  3 SOME DAYS (2-4 DAYS A WEEK) |        962        3.72       29.72
- 4 RARELY (ONCE A WEEK OR LESS) |        428        1.66       31.37
-                        5 NEVER |        133        0.51       31.89
-                              . |     17,611       68.11      100.00
+                     -9 Missing |        168        0.49        0.49
+                          -8 DK |          5        0.01        0.51
+                          -7 RF |          1        0.00        0.51
+                -1 Inapplicable |        468        1.37        1.88
+    1 EVERY DAY (7 DAYS A WEEK) |      4,854       14.20       16.07
+  2 MOST DAYS (5-6 DAYS A WEEK) |      1,226        3.59       19.66
+  3 SOME DAYS (2-4 DAYS A WEEK) |        962        2.81       22.47
+ 4 RARELY (ONCE A WEEK OR LESS) |        428        1.25       23.73
+                        5 NEVER |        133        0.39       24.12
+                              . |     25,945       75.88      100.00
 --------------------------------+-----------------------------------
-                          Total |     25,856      100.00
-(8245 real changes made)
+                          Total |     34,190      100.00
+(8,245 real changes made)
 
        R2 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
 -------------------------------+-----------------------------------
-                    -9 Missing |        190        0.73        0.73
-                         -8 DK |         10        0.04        0.77
-                         -7 RF |          2        0.01        0.78
-               -1 Inapplicable |        453        1.75        2.53
-   1 EVERY DAY (7 DAYS A WEEK) |      3,833       14.82       17.36
- 2 MOST DAYS (5-6 DAYS A WEEK) |      1,047        4.05       21.41
- 3 SOME DAYS (2-4 DAYS A WEEK) |        830        3.21       24.62
-4 RARELY (ONCE A WEEK OR LESS) |        464        1.79       26.41
-                       5 NEVER |        246        0.95       27.36
-                             . |     18,781       72.64      100.00
+                    -9 Missing |        190        0.56        0.56
+                         -8 DK |         10        0.03        0.58
+                         -7 RF |          2        0.01        0.59
+               -1 Inapplicable |        453        1.32        1.92
+   1 EVERY DAY (7 DAYS A WEEK) |      3,833       11.21       13.13
+ 2 MOST DAYS (5-6 DAYS A WEEK) |      1,047        3.06       16.19
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        830        2.43       18.62
+4 RARELY (ONCE A WEEK OR LESS) |        464        1.36       19.97
+                       5 NEVER |        246        0.72       20.69
+                             . |     27,115       79.31      100.00
 -------------------------------+-----------------------------------
-                         Total |     25,856      100.00
-(7075 real changes made)
+                         Total |     34,190      100.00
+(7,075 real changes made)
 
        R3 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
 -------------------------------+-----------------------------------
-                    -9 Missing |        179        0.69        0.69
-                         -8 DK |         19        0.07        0.77
-                         -7 RF |          1        0.00        0.77
-               -1 Inapplicable |        330        1.28        2.05
-   1 EVERY DAY (7 DAYS A WEEK) |      3,029       11.71       13.76
- 2 MOST DAYS (5-6 DAYS A WEEK) |        865        3.35       17.11
- 3 SOME DAYS (2-4 DAYS A WEEK) |        725        2.80       19.91
-4 RARELY (ONCE A WEEK OR LESS) |        449        1.74       21.65
-                       5 NEVER |        202        0.78       22.43
-                             . |     20,057       77.57      100.00
+                    -9 Missing |        179        0.52        0.52
+                         -8 DK |         19        0.06        0.58
+                         -7 RF |          1        0.00        0.58
+               -1 Inapplicable |        330        0.97        1.55
+   1 EVERY DAY (7 DAYS A WEEK) |      3,029        8.86       10.41
+ 2 MOST DAYS (5-6 DAYS A WEEK) |        865        2.53       12.94
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        725        2.12       15.06
+4 RARELY (ONCE A WEEK OR LESS) |        449        1.31       16.37
+                       5 NEVER |        202        0.59       16.96
+                             . |     28,391       83.04      100.00
 -------------------------------+-----------------------------------
-                         Total |     25,856      100.00
-(5799 real changes made)
+                         Total |     34,190      100.00
+(5,799 real changes made)
 
        R4 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
 -------------------------------+-----------------------------------
-                    -9 Missing |        156        0.60        0.60
-                         -8 DK |          6        0.02        0.63
-               -1 Inapplicable |        159        0.61        1.24
-   1 EVERY DAY (7 DAYS A WEEK) |      2,423        9.37       10.61
- 2 MOST DAYS (5-6 DAYS A WEEK) |        773        2.99       13.60
- 3 SOME DAYS (2-4 DAYS A WEEK) |        621        2.40       16.00
-4 RARELY (ONCE A WEEK OR LESS) |        369        1.43       17.43
-                       5 NEVER |        230        0.89       18.32
-                             . |     21,119       81.68      100.00
+                    -9 Missing |        156        0.46        0.46
+                         -8 DK |          6        0.02        0.47
+               -1 Inapplicable |        159        0.47        0.94
+   1 EVERY DAY (7 DAYS A WEEK) |      2,423        7.09        8.03
+ 2 MOST DAYS (5-6 DAYS A WEEK) |        773        2.26       10.29
+ 3 SOME DAYS (2-4 DAYS A WEEK) |        621        1.82       12.10
+4 RARELY (ONCE A WEEK OR LESS) |        369        1.08       13.18
+                       5 NEVER |        230        0.67       13.85
+                             . |     29,453       86.15      100.00
 -------------------------------+-----------------------------------
-                         Total |     25,856      100.00
-(4737 real changes made)
+                         Total |     34,190      100.00
+(4,737 real changes made)
+
+       R5 MO1 OFTEN GO OUTSIDE |      Freq.     Percent        Cum.
+-------------------------------+-----------------------------------
+                    -9 Missing |        179        0.52        0.52
+                         -8 DK |          8        0.02        0.55
+               -1 Inapplicable |        292        0.85        1.40
+   1 EVERY DAY (7 DAYS A WEEK) |      4,626       13.53       14.93
+ 2 MOST DAYS (5-6 DAYS A WEEK) |      1,420        4.15       19.08
+ 3 SOME DAYS (2-4 DAYS A WEEK) |      1,048        3.07       22.15
+4 RARELY (ONCE A WEEK OR LESS) |        521        1.52       23.67
+                       5 NEVER |        240        0.70       24.38
+                             . |     25,856       75.62      100.00
+-------------------------------+-----------------------------------
+                         Total |     34,190      100.00
+(8,334 real changes made)
 
 . 
 . replace freq_go_out=. if inlist(freq_go_out,`miss')
-(2103 real changes made, 2103 to missing)
+(2,574 real changes made, 2,574 to missing)
 
 . la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
 >         3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
@@ -422,16 +457,16 @@ interview? |                 Survey wave
                      |   conducted? yes=1
 How often go outside |         0          1 |     Total
 ---------------------+----------------------+----------
-                  -8 |         0         40 |        40 
+                  -8 |         0         48 |        48 
                   -7 |         0          4 |         4 
-           Every day |         0     14,139 |    14,139 
-Most days (5-6/week) |         0      3,911 |     3,911 
-Some days (2-4/week) |         0      3,138 |     3,138 
-              Rarely |         0      1,710 |     1,710 
-               Never |         0        811 |       811 
-                   . |     1,840        263 |     2,103 
+           Every day |         0     18,765 |    18,765 
+Most days (5-6/week) |         0      5,331 |     5,331 
+Some days (2-4/week) |         0      4,186 |     4,186 
+              Rarely |         0      2,231 |     2,231 
+               Never |         0      1,051 |     1,051 
+                   . |     2,302        272 |     2,574 
 ---------------------+----------------------+----------
-               Total |     1,840     24,016 |    25,856 
+               Total |     2,302     31,888 |    34,190 
 
 
 . tab freq_go_out sp_ivw_yes if wave==1, missing
@@ -534,9 +569,9 @@ Some days (2-4/week) |         0          0          0          0          0    
 . //Did anyone ever help you - asked if report going outside
 . //left missing if report never go outside
 . gen help_go_out=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab mo`w'outhlp, missing
   3.         replace help_go_out=1 if mo`w'outhlp==1
   4.         replace help_go_out=0 if mo`w'outhlp==2
@@ -547,69 +582,86 @@ Some days (2-4/week) |         0          0          0          0          0    
  R1 MO6 HELP GO |
         OUTSIDE |      Freq.     Percent        Cum.
 ----------------+-----------------------------------
-     -9 Missing |        168        0.65        0.65
-          -8 DK |          1        0.00        0.65
-          -7 RF |          1        0.00        0.66
--1 Inapplicable |        601        2.32        2.98
-          1 YES |      1,045        4.04        7.02
-           2 NO |      6,429       24.86       31.89
-              . |     17,611       68.11      100.00
+     -9 Missing |        168        0.49        0.49
+          -8 DK |          1        0.00        0.49
+          -7 RF |          1        0.00        0.50
+-1 Inapplicable |        601        1.76        2.26
+          1 YES |      1,045        3.06        5.31
+           2 NO |      6,429       18.80       24.12
+              . |     25,945       75.88      100.00
 ----------------+-----------------------------------
-          Total |     25,856      100.00
-(1045 real changes made)
-(6429 real changes made)
+          Total |     34,190      100.00
+(1,045 real changes made)
+(6,429 real changes made)
 (1 real change made)
 (1 real change made)
 
        R2 MO6 HELP GO |
               OUTSIDE |      Freq.     Percent        Cum.
 ----------------------+-----------------------------------
-           -9 Missing |        190        0.73        0.73
-                -8 DK |         10        0.04        0.77
-                -7 RF |          2        0.01        0.78
-      -1 Inapplicable |        699        2.70        3.48
-                1 YES |      1,041        4.03        7.51
-                 2 NO |      5,133       19.85       27.36
-                    . |     18,781       72.64      100.00
+           -9 Missing |        190        0.56        0.56
+                -8 DK |         10        0.03        0.58
+                -7 RF |          2        0.01        0.59
+      -1 Inapplicable |        699        2.04        2.64
+                1 YES |      1,041        3.04        5.68
+                 2 NO |      5,133       15.01       20.69
+                    . |     27,115       79.31      100.00
 ----------------------+-----------------------------------
-                Total |     25,856      100.00
-(1041 real changes made)
-(5133 real changes made)
+                Total |     34,190      100.00
+(1,041 real changes made)
+(5,133 real changes made)
 (2 real changes made)
 (10 real changes made)
 
        R3 MO6 HELP GO |
               OUTSIDE |      Freq.     Percent        Cum.
 ----------------------+-----------------------------------
-           -9 Missing |        179        0.69        0.69
-                -8 DK |         17        0.07        0.76
-                -7 RF |          1        0.00        0.76
-      -1 Inapplicable |        532        2.06        2.82
-                1 YES |        948        3.67        6.49
-                 2 NO |      4,122       15.94       22.43
-                    . |     20,057       77.57      100.00
+           -9 Missing |        179        0.52        0.52
+                -8 DK |         17        0.05        0.57
+                -7 RF |          1        0.00        0.58
+      -1 Inapplicable |        532        1.56        2.13
+                1 YES |        948        2.77        4.90
+                 2 NO |      4,122       12.06       16.96
+                    . |     28,391       83.04      100.00
 ----------------------+-----------------------------------
-                Total |     25,856      100.00
+                Total |     34,190      100.00
 (948 real changes made)
-(4122 real changes made)
+(4,122 real changes made)
 (1 real change made)
 (17 real changes made)
 
        R4 MO6 HELP GO |
               OUTSIDE |      Freq.     Percent        Cum.
 ----------------------+-----------------------------------
-           -9 Missing |        156        0.60        0.60
-                -8 DK |         10        0.04        0.64
-      -1 Inapplicable |        389        1.50        2.15
-                1 YES |        798        3.09        5.23
-                 2 NO |      3,384       13.09       18.32
-                    . |     21,119       81.68      100.00
+           -9 Missing |        156        0.46        0.46
+                -8 DK |         10        0.03        0.49
+      -1 Inapplicable |        389        1.14        1.62
+                1 YES |        798        2.33        3.96
+                 2 NO |      3,384        9.90       13.85
+                    . |     29,453       86.15      100.00
 ----------------------+-----------------------------------
-                Total |     25,856      100.00
+                Total |     34,190      100.00
 (798 real changes made)
-(3384 real changes made)
+(3,384 real changes made)
 (0 real changes made)
 (10 real changes made)
+
+       R5 MO6 HELP GO |
+              OUTSIDE |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        0.52        0.52
+                -8 DK |         11        0.03        0.56
+                -7 RF |          1        0.00        0.56
+      -1 Inapplicable |        532        1.56        2.11
+                1 YES |      1,155        3.38        5.49
+                 2 NO |      6,456       18.88       24.38
+                    . |     25,856       75.62      100.00
+----------------------+-----------------------------------
+                Total |     34,190      100.00
+(1,155 real changes made)
+(6,456 real changes made)
+(1 real change made)
+(11 real changes made)
 
 . la var help_go_out "Anyone ever help you leave home?"
 
@@ -617,16 +669,16 @@ Some days (2-4/week) |         0          0          0          0          0    
 
     Anyone |
  ever help |
- you leave |                 Survey wave
-     home? |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         1         10         17         10 |        38 
-        -7 |         1          2          1          0 |         4 
-         0 |     6,429      5,133      4,122      3,384 |    19,068 
-         1 |     1,045      1,041        948        798 |     3,832 
-         . |       133        373        319        249 |     1,074 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+ you leave |                      Survey wave
+     home? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         1         10         17         10         11 |        49 
+        -7 |         1          2          1          0          1 |         5 
+         0 |     6,429      5,133      4,122      3,384      6,456 |    25,524 
+         1 |     1,045      1,041        948        798      1,155 |     4,987 
+         . |       133        373        319        249        249 |     1,323 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . 
@@ -634,9 +686,9 @@ Some days (2-4/week) |         0          0          0          0          0    
 . //go out of the house on own?
 . //only asked if report having help when go outside (help_go_out==1)
 . gen out_on_own=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab mo`w'outslf help_go_out if wave==`w', missing
   3.         replace out_on_own=mo`w'outslf if wave==`w'
   4. }
@@ -653,7 +705,7 @@ Some days (2-4/week) |         0          0          0          0          0    
 ----------------+-------------------------------------------------------+----------
           Total |         1          1      6,429      1,045        769 |     8,245 
 
-(8245 real changes made)
+(8,245 real changes made)
 
  R2 MO7 LEFT BY |            Anyone ever help you leave home?
        YOURSELF |        -8         -7          0          1          . |     Total
@@ -667,7 +719,7 @@ Some days (2-4/week) |         0          0          0          0          0    
 ----------------+-------------------------------------------------------+----------
           Total |        10          2      5,133      1,041        889 |     7,075 
 
-(7075 real changes made)
+(7,075 real changes made)
 
  R3 MO7 LEFT BY |            Anyone ever help you leave home?
        YOURSELF |        -8         -7          0          1          . |     Total
@@ -681,7 +733,7 @@ Some days (2-4/week) |         0          0          0          0          0    
 ----------------+-------------------------------------------------------+----------
           Total |        17          1      4,122        948        711 |     5,799 
 
-(5799 real changes made)
+(5,799 real changes made)
 
  R4 MO7 LEFT BY |      Anyone ever help you leave home?
        YOURSELF |        -8          0          1          . |     Total
@@ -695,16 +747,31 @@ Some days (2-4/week) |         0          0          0          0          0    
 ----------------+--------------------------------------------+----------
           Total |        10      3,384        798        545 |     4,737 
 
-(4737 real changes made)
+(4,737 real changes made)
+
+ R5 MO7 LEFT BY |            Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1          . |     Total
+----------------+-------------------------------------------------------+----------
+     -9 Missing |         0          0          0          0        179 |       179 
+          -8 DK |         0          0          0          1          0 |         1 
+-1 Inapplicable |        11          1      6,456        127        532 |     7,127 
+   1 MOST TIMES |         0          0          0        154          0 |       154 
+    2 SOMETIMES |         0          0          0        174          0 |       174 
+       3 RARELY |         0          0          0        132          0 |       132 
+        4 NEVER |         0          0          0        567          0 |       567 
+----------------+-------------------------------------------------------+----------
+          Total |        11          1      6,456      1,155        711 |     8,334 
+
+(8,334 real changes made)
 
 . replace out_on_own=. if inlist(out_on_own,`miss')
-(22591 real changes made, 22591 to missing)
+(29,897 real changes made, 29,897 to missing)
 
 . replace out_on_own=5 if help_go_out==0
-(19068 real changes made)
+(25,524 real changes made)
 
 . replace out_on_own=6 if freq_go_out==5
-(811 real changes made)
+(1,051 real changes made)
 
 . la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never"5"NA, reported no help" ///
 > 6"NA, never left home"
@@ -715,18 +782,19 @@ Some days (2-4/week) |         0          0          0          0          0    
 
 . tab out_on_own wave if sp_ivw_yes==1, missing
 
-    When left house, |                 Survey wave
-   left by yourself? |         1          2          3          4 |     Total
----------------------+--------------------------------------------+----------
-          Most times |       184        160        112         98 |       554 
-           Sometimes |       167        118        100         83 |       468 
-              Rarely |       118        106         82         71 |       377 
-               Never |       576        477        443        370 |     1,866 
-NA, reported no help |     6,429      5,133      4,122      3,384 |    19,068 
- NA, never left home |       133        246        202        230 |       811 
-                   . |         2        319        346        205 |       872 
----------------------+--------------------------------------------+----------
-               Total |     7,609      6,559      5,407      4,441 |    24,016 
+    When left house, |                      Survey wave
+   left by yourself? |         1          2          3          4          5 |     Total
+---------------------+-------------------------------------------------------+----------
+                  -8 |         0          0          0          0          1 |         1 
+          Most times |       184        160        112         98        154 |       708 
+           Sometimes |       167        118        100         83        174 |       642 
+              Rarely |       118        106         82         71        132 |       509 
+               Never |       576        477        443        370        567 |     2,433 
+NA, reported no help |     6,429      5,133      4,122      3,384      6,456 |    25,524 
+ NA, never left home |       133        246        202        230        240 |     1,051 
+                   . |         2        319        346        205        148 |     1,020 
+---------------------+-------------------------------------------------------+----------
+               Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . 
@@ -735,20 +803,20 @@ NA, reported no help |     6,429      5,133      4,122      3,384 |    19,068
 . gen needshelp=0
 
 . replace needshelp=1 if help_go_out==1& out_on_own~=4
-(1966 real changes made)
+(2,554 real changes made)
 
 . la var needshelp "Leaves home but with help"
 
 . tab needshelp wave, missing
 
     Leaves |
-  home but |                 Survey wave
- with help |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     7,776      6,511      5,294      4,309 |    23,890 
-         1 |       469        564        505        428 |     1,966 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  home but |                      Survey wave
+ with help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,776      6,511      5,294      4,309      7,746 |    31,636 
+         1 |       469        564        505        428        588 |     2,554 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -758,9 +826,9 @@ NA, reported no help |     6,429      5,133      4,122      3,384 |    19,068
 . //inapplicable if don't report using any device to help, so set to 0 here
 . gen hasdifficulty=0
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab mo`w'outdif if wave==`w', missing
-  3.         replace hasdifficulty=1 if inlist(mo`w'outdif,2,3,4)
+  3.         replace hasdifficulty=1 if inlist(mo`w'outdif,2,3,4,5)
   4.         replace hasdifficulty=0 if mo`w'outdif==1
   5.         replace hasdifficulty=-7 if  mo`w'outdif==-7
   6.         replace hasdifficulty=-8 if  mo`w'outdif==-8
@@ -838,6 +906,24 @@ NA, reported no help |     6,429      5,133      4,122      3,384 |    19,068
 (0 real changes made)
 (3 real changes made)
 
+     R5 MO8 HOW |
+      DIFFICULT |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+     -9 Missing |        179        2.15        2.15
+          -8 DK |          4        0.05        2.20
+          -7 RF |          1        0.01        2.21
+-1 Inapplicable |      1,281       15.37       17.58
+         1 NONE |      5,897       70.76       88.34
+     2 A LITTLE |        567        6.80       95.14
+         3 SOME |        307        3.68       98.82
+        4 A LOT |         98        1.18      100.00
+----------------+-----------------------------------
+          Total |      8,334      100.00
+(972 real changes made)
+(0 real changes made)
+(1 real change made)
+(4 real changes made)
+
 . la var hasdifficulty "Leaves home on own but has difficulty"
 
 . tab hasdifficulty wave if sp_ivw_yes==1, missing
@@ -845,27 +931,27 @@ NA, reported no help |     6,429      5,133      4,122      3,384 |    19,068
     Leaves |
    home on |
    own but |
-       has |                 Survey wave
-difficulty |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |         2          7          3          3 |        15 
-        -7 |         2          2          1          0 |         5 
-         0 |     6,638      5,789      4,837      3,923 |    21,187 
-         1 |       967        761        566        515 |     2,809 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+       has |                      Survey wave
+difficulty |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          7          3          3          4 |        19 
+        -7 |         2          2          1          0          1 |         6 
+         0 |     6,638      5,789      4,837      3,923      6,895 |    28,082 
+         1 |       967        761        566        515        972 |     3,781 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . *********************************************
 . //needs help or has difficulty going outside?
 . gen helpdiff=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . replace helpdiff=0 if needshelp==0 & hasdifficulty==0
-(21952 real changes made)
+(29,033 real changes made)
 
 . replace helpdiff=1 if needshelp==1 | hasdifficulty==1
-(3888 real changes made)
+(5,137 real changes made)
 
 . la var helpdiff "Either needs help or has difficulty going outside"
 
@@ -875,14 +961,14 @@ difficulty |         1          2          3          4 |     Total
 needs help |
     or has |
 difficulty |
-     going |                 Survey wave
-   outside |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     6,477      5,469      4,514      3,652 |    20,112 
-         1 |     1,129      1,083        890        786 |     3,888 
-         . |         3          7          3          3 |        16 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+     going |                      Survey wave
+   outside |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     6,477      5,469      4,514      3,652      6,619 |    26,731 
+         1 |     1,129      1,083        890        786      1,249 |     5,137 
+         . |         3          7          3          3          4 |        20 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . *********************************************
@@ -890,20 +976,20 @@ difficulty |
 . gen independent=0
 
 . replace independent=1 if help_go_out==0 & hasdifficulty==0
-(17137 real changes made)
+(22,932 real changes made)
 
 . la var independent "Independently leaves home"
 
 . tab independent wave if sp_ivw_yes==1, missing
 
 Independen |
-tly leaves |                 Survey wave
-      home |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     1,841      1,951      1,671      1,416 |     6,879 
-         1 |     5,768      4,608      3,736      3,025 |    17,137 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+tly leaves |                      Survey wave
+      home |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     1,841      1,951      1,671      1,416      2,077 |     8,956 
+         1 |     5,768      4,608      3,736      3,025      5,795 |    22,932 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . 
@@ -913,10 +999,10 @@ Independen |     Either needs help or has
 tly leaves |     difficulty going outside
       home |         0          1          . |     Total
 -----------+---------------------------------+----------
-         0 |     4,815      3,888         16 |     8,719 
-         1 |    17,137          0          0 |    17,137 
+         0 |     6,101      5,137         20 |    11,258 
+         1 |    22,932          0          0 |    22,932 
 -----------+---------------------------------+----------
-     Total |    21,952      3,888         16 |    25,856 
+     Total |    29,033      5,137         20 |    34,190 
 
 
 . *********************************************
@@ -928,19 +1014,19 @@ tly leaves |     difficulty going outside
 > 4 = go out, independent - don't need help or have difficulty
 > */
 . gen homebound_cat=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . replace homebound_cat=1 if freq_go_out==4 | freq_go_out==5
-(2521 real changes made)
+(3,282 real changes made)
 
 . replace homebound_cat=2 if inlist(freq_go_out,3,2,1) & out_on_own==4
-(1060 real changes made)
+(1,397 real changes made)
 
 . replace homebound_cat=3 if inlist(freq_go_out,3,2,1) & helpdiff==1
-(3285 real changes made)
+(4,358 real changes made)
 
 . replace homebound_cat=4 if inlist(freq_go_out,3,2,1) & independent==1
-(16835 real changes made)
+(22,514 real changes made)
 
 . 
 . //from technical paper
@@ -957,21 +1043,21 @@ tly leaves |     difficulty going outside
 
 . tab homebound_cat wave if sp_ivw_yes==1, missing
 
-    Homebound status, |                 Survey wave
-          categorical |         1          2          3          4 |     Total
-----------------------+--------------------------------------------+----------
-Never/Rarely leaves h |       561        710        651        599 |     2,521 
-Leaves home but never |       342        259        248        211 |     1,060 
-Leaves home but needs |     1,019        918        719        630 |     3,286 
-Independent, not home |     5,681      4,531      3,649      2,974 |    16,835 
-                    . |         6        141        140         27 |       314 
-----------------------+--------------------------------------------+----------
-                Total |     7,609      6,559      5,407      4,441 |    24,016 
+    Homebound status, |                      Survey wave
+          categorical |         1          2          3          4          5 |     Total
+----------------------+-------------------------------------------------------+----------
+Never/Rarely leaves h |       561        710        651        599        761 |     3,282 
+Leaves home but never |       342        259        248        211        337 |     1,397 
+Leaves home but needs |     1,019        918        719        630      1,073 |     4,359 
+Independent, not home |     5,681      4,531      3,649      2,974      5,679 |    22,514 
+                    . |         6        141        140         27         22 |       336 
+----------------------+-------------------------------------------------------+----------
+                Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . /*binary for never go out, since never/rarely together*/
 . gen never_go_out=freq_go_out==5 if freq!=.
-(2103 missing values generated)
+(2,574 missing values generated)
 
 . label var never_go_out "Never leaves home"
 
@@ -982,7 +1068,7 @@ Independent, not home |     5,681      4,531      3,649      2,974 |    16,835
 . gen indeplow=0
 
 . replace indeplow=1 if freq_go_out==3 & independent==1
-(1386 real changes made)
+(1,845 real changes made)
 
 . la var indeplow "Independent, go out rarely" 
 
@@ -990,7 +1076,7 @@ Independent, not home |     5,681      4,531      3,649      2,974 |    16,835
 . gen indephigh=0
 
 . replace indephigh=1 if inlist(freq_go_out,2,1) & independent==1
-(15449 real changes made)
+(20,669 real changes made)
 
 . la var indephigh "Independent, go out often"
 
@@ -998,25 +1084,25 @@ Independent, not home |     5,681      4,531      3,649      2,974 |    16,835
 . tab indeplow wave if sp_ivw_yes==1, missing
 
 Independen |
- t, go out |                 Survey wave
-    rarely |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     7,150      6,199      5,096      4,185 |    22,630 
-         1 |       459        360        311        256 |     1,386 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+ t, go out |                      Survey wave
+    rarely |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,150      6,199      5,096      4,185      7,413 |    30,043 
+         1 |       459        360        311        256        459 |     1,845 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . tab indephigh wave if sp_ivw_yes==1, missing
 
 Independen |
- t, go out |                 Survey wave
-     often |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     2,387      2,388      2,069      1,723 |     8,567 
-         1 |     5,222      4,171      3,338      2,718 |    15,449 
------------+--------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441 |    24,016 
+ t, go out |                      Survey wave
+     often |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     2,387      2,388      2,069      1,723      2,652 |    11,219 
+         1 |     5,222      4,171      3,338      2,718      5,220 |    20,669 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    31,888 
 
 
 . 
@@ -1027,21 +1113,21 @@ Independen |
 . *********************************************
 . //age at interview, note this is missing for wave 3 b/c no wave 3 sensitive data yet
 . gen age=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4 {
+. foreach w in 1 2 3 4 5{
   2.         replace age=r`w'dintvwrage if wave==`w'
   3.         sum age if wave==`w', detail
   4.         }       
-(8245 real changes made)
+(8,245 real changes made)
 
                              age
 -------------------------------------------------------------
       Percentiles      Smallest
  1%           66             65
  5%           66             65
-10%           68             65       Obs                8245
-25%           71             65       Sum of Wgt.        8245
+10%           68             65       Obs               8,245
+25%           71             65       Sum of Wgt.       8,245
 
 50%           78                      Mean            78.3698
                         Largest       Std. Dev.      8.187231
@@ -1049,15 +1135,15 @@ Independen |
 90%           90            103       Variance       67.03075
 95%           92            105       Skewness       .3186162
 99%           97            106       Kurtosis       2.275853
-(7075 real changes made)
+(7,075 real changes made)
 
                              age
 -------------------------------------------------------------
       Percentiles      Smallest
  1%           -1             -1
  5%           -1             -1
-10%           67             -1       Obs                7075
-25%           71             -1       Sum of Wgt.        7075
+10%           67             -1       Obs               7,075
+25%           71             -1       Sum of Wgt.       7,075
 
 50%           78                      Mean           73.49385
                         Largest       Std. Dev.      22.01883
@@ -1065,15 +1151,15 @@ Independen |
 90%           90            103       Variance       484.8287
 95%           93            106       Skewness      -2.627003
 99%           97            107       Kurtosis       9.423245
-(5799 real changes made)
+(5,799 real changes made)
 
                              age
 -------------------------------------------------------------
       Percentiles      Smallest
  1%           -1             -1
  5%           -1             -1
-10%           68             -1       Obs                5799
-25%           71             -1       Sum of Wgt.        5799
+10%           68             -1       Obs               5,799
+25%           71             -1       Sum of Wgt.       5,799
 
 50%           78                      Mean           72.61976
                         Largest       Std. Dev.      24.35733
@@ -1081,15 +1167,15 @@ Independen |
 90%           90            103       Variance       593.2795
 95%           93            104       Skewness      -2.372214
 99%           98            104       Kurtosis       7.620767
-(4737 real changes made)
+(4,737 real changes made)
 
                              age
 -------------------------------------------------------------
       Percentiles      Smallest
  1%           -1             -1
  5%           -1             -1
-10%           69             -1       Obs                4737
-25%           72             -1       Sum of Wgt.        4737
+10%           69             -1       Obs               4,737
+25%           72             -1       Sum of Wgt.       4,737
 
 50%           79                      Mean           73.64049
                         Largest       Std. Dev.      23.94829
@@ -1097,24 +1183,40 @@ Independen |
 90%           91            103       Variance       573.5204
 95%           94            103       Skewness      -2.468165
 99%           98            105       Kurtosis       8.139488
+(8,334 real changes made)
+
+                             age
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%           -1             -1
+ 5%           66             -1
+10%           68             -1       Obs               8,334
+25%           71             -1       Sum of Wgt.       8,334
+
+50%           78                      Mean           75.91661
+                        Largest       Std. Dev.      16.76712
+75%           84            103
+90%           90            104       Variance       281.1363
+95%           93            106       Skewness      -3.270721
+99%           97            107       Kurtosis       15.92062
 
 . //for last month of life interviews, use age at death variable
 . tab ivw_type if age==-1, missing
 
                               ivw_type |      Freq.     Percent        Cum.
 ---------------------------------------+-----------------------------------
-Died, proxy SP LML interview completed |      1,430      100.00      100.00
+Died, proxy SP LML interview completed |      1,726      100.00      100.00
 ---------------------------------------+-----------------------------------
-                                 Total |      1,430      100.00
+                                 Total |      1,726      100.00
 
 . replace age=r2ddeathage if ivw_type==2 & r2dintvwrage==-1
 (503 real changes made)
 
 . sum age
 
-    Variable |       Obs        Mean    Std. Dev.       Min        Max
--------------+--------------------------------------------------------
-         age |     25856    76.54788    16.96072         -8        107
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+         age |     34,190      76.394    16.91566         -8        107
 
 . //some observations that died still have missing age, so set to missing
 . tab ivw_type if inlist(age,-7,-8)
@@ -1137,16 +1239,16 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
 -------------------------------------------------------------
       Percentiles      Smallest
  1%           66             65
- 5%           68             65
-10%           69             65       Obs               22586
-25%           72             65       Sum of Wgt.       22586
+ 5%           67             65
+10%           69             65       Obs              30,162
+25%           72             65       Sum of Wgt.      30,162
 
-50%           78                      Mean           78.70194
-                        Largest       Std. Dev.      7.773138
-75%           84            105
-90%           89            106       Variance       60.42167
-95%           92            106       Skewness       .3531147
-99%           97            107       Kurtosis        2.37039
+50%           78                      Mean           78.59923
+                        Largest       Std. Dev.      7.805023
+75%           84            106
+90%           89            106       Variance       60.91839
+95%           92            107       Skewness       .3654863
+99%           97            107       Kurtosis         2.3768
 
 . sum age if ivw_type==2, detail
 
@@ -1155,15 +1257,15 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
       Percentiles      Smallest
  1%           -1             -1
  5%           -1             -1
-10%           -1             -1       Obs                1426
-25%           -1             -1       Sum of Wgt.        1426
+10%           -1             -1       Obs               1,722
+25%           -1             -1       Sum of Wgt.       1,722
 
-50%           -1                      Mean           29.26928
-                        Largest       Std. Dev.      41.54942
-75%           81            102
-90%           91            102       Variance       1726.354
-95%           94            103       Skewness       .6702159
-99%          100            103       Kurtosis       1.502983
+50%           -1                      Mean            24.0662
+                        Largest       Std. Dev.      39.49596
+75%           76            102
+90%           90            102       Variance       1559.931
+95%           93            103       Skewness       .9662108
+99%           99            103       Kurtosis        1.98817
 
 . sum age, detail
 
@@ -1172,26 +1274,32 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
       Percentiles      Smallest
  1%           -1             -1
  5%           66             -1
-10%           68             -1       Obs               25852
-25%           72             -1       Sum of Wgt.       25852
+10%           68             -1       Obs              34,186
+25%           72             -1       Sum of Wgt.      34,186
 
-50%           79                      Mean           76.56092
-                        Largest       Std. Dev.      16.92958
-75%           85            105
-90%           91            106       Variance       286.6106
-95%           93            106       Skewness      -3.300648
-99%           98            107       Kurtosis        15.9717
+50%           78                      Mean           76.40385
+                        Largest       Std. Dev.      16.89214
+75%           85            106
+90%           90            106       Variance       285.3443
+95%           93            107       Skewness       -3.29187
+99%           98            107       Kurtosis       15.95023
 
 . 
 . //gender, only asked in round 1
 . gen female=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . replace female=1 if r1dgender==2
-(4925 real changes made)
+(4,925 real changes made)
 
 . replace female=0 if r1dgender==1
-(3320 real changes made)
+(3,320 real changes made)
+
+. replace female=1 if r5dgender==2
+(4,927 real changes made)
+
+. replace female=0 if r5dgender==1
+(3,407 real changes made)
 
 . 
 . la var female "Female"
@@ -1213,19 +1321,20 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
 
        R1 D RACE AND HISPANIC ETHNICITY |      Freq.     Percent        Cum.
 ----------------------------------------+-----------------------------------
-                  1 White, non-hispanic |      5,655       21.87       21.87
-                  2 Black, non-hispanic |      1,794        6.94       28.81
- 3 Other (Am Indian/Asian/Native Hawaii |        231        0.89       29.70
-                             4 Hispanic |        472        1.83       31.53
-           5 more than one DKRF primary |          6        0.02       31.55
-                                 6 DKRF |         87        0.34       31.89
-                                      . |     17,611       68.11      100.00
+                  1 White, non-hispanic |      5,655       16.54       16.54
+                  2 Black, non-hispanic |      1,794        5.25       21.79
+ 3 Other (Am Indian/Asian/Native Hawaii |        231        0.68       22.46
+                             4 Hispanic |        472        1.38       23.84
+           5 more than one DKRF primary |          6        0.02       23.86
+                                 6 DKRF |         87        0.25       24.12
+                                      . |     25,945       75.88      100.00
 ----------------------------------------+-----------------------------------
-                                  Total |     25,856      100.00
+                                  Total |     34,190      100.00
 
+. 
 . //race, ethnicity
 . gen race_cat=rl1dracehisp
-(17611 missing values generated)
+(25,945 missing values generated)
 
 . replace race_cat=-8 if inlist(rl1dracehisp,5,6)
 (93 real changes made)
@@ -1250,21 +1359,37 @@ Other (Am Indian/Asian/Nat. Hawaii) |        231        2.80       94.28
                               Total |      8,245      100.00
 
 . 
+. replace race_cat = 1 if rl5dracehisp==1
+(5,703 real changes made)
+
+. replace race_cat = 2 if rl5dracehisp==2
+(1,710 real changes made)
+
+. replace race_cat = 3 if rl5dracehisp==3
+(244 real changes made)
+
+. replace race_cat = 4 if rl5dracehisp==4
+(467 real changes made)
+
+. replace race_cat = -8 if inlist(rl5dracehisp,5,6) 
+(210 real changes made)
+
+. 
 . //education
 . generate education=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . replace education=1 if inlist(el1higstschl,1,2,3)
-(2047 real changes made)
+(2,047 real changes made)
 
 . replace education=2 if el1higstschl==4
-(2069 real changes made)
+(2,069 real changes made)
 
 . replace education=3 if inlist(el1higstschl,5,6,7)
-(1818 real changes made)
+(1,818 real changes made)
 
 . replace education=4 if inlist(el1higstschl,8,9)
-(1579 real changes made)
+(1,579 real changes made)
 
 . replace education=-7 if el1higstschl == -7
 (10 real changes made)
@@ -1272,6 +1397,20 @@ Other (Am Indian/Asian/Nat. Hawaii) |        231        2.80       94.28
 . replace education=-8 if el1higstschl == -8
 (86 real changes made)
 
+. 
+. replace education=1 if inlist(el5higstschl,1,2,3)
+(798 real changes made)
+
+. replace education=2 if el5higstschl==4
+(1,050 real changes made)
+
+. replace education=3 if inlist(el5higstschl,5,6,7)
+(1,037 real changes made)
+
+. replace education=4 if inlist(el5higstschl,8,9)
+(907 real changes made)
+
+. 
 . 
 . la var education "Education level, categorical"
 
@@ -1283,41 +1422,23 @@ Other (Am Indian/Asian/Nat. Hawaii) |        231        2.80       94.28
 . tab education el1higstschl if wave==1, missing
 
       Education |
-         level, |                                                  R1 EL10 HGHST DGREE SCOOL COMPLD
-    categorical | -9 Missin      -8 DK      -7 RF  -1 Inappl   1 NO SCH   2 1ST-8T   3 9TH-12   4 HIGH S   5 VOCATI   6 SOME C   7 ASSOCI   8 BACHEL |     Total
-----------------+------------------------------------------------------------------------------------------------------------------------------------+----------
-             -8 |         0         86          0          0          0          0          0          0          0          0          0          0 |        86 
-             -7 |         0          0         10          0          0          0          0          0          0          0          0          0 |        10 
-   <High School |         0          0          0          0         89        900      1,058          0          0          0          0          0 |     2,047 
-High School/GED |         0          0          0          0          0          0          0      2,069          0          0          0          0 |     2,069 
-   Some College |         0          0          0          0          0          0          0          0        549        942        327          0 |     1,818 
-    >=Bachelors |         0          0          0          0          0          0          0          0          0          0          0        863 |     1,579 
-              . |       168          0          0        468          0          0          0          0          0          0          0          0 |       636 
-----------------+------------------------------------------------------------------------------------------------------------------------------------+----------
-          Total |       168         86         10        468         89        900      1,058      2,069        549        942        327        863 |     8,245 
-
-
-                |  R1 EL10
-                |   HGHST
-                |   DGREE
-      Education |   SCOOL
-         level, |   COMPLD
-    categorical |  9 MASTER |     Total
-----------------+-----------+----------
-             -8 |         0 |        86 
-             -7 |         0 |        10 
-   <High School |         0 |     2,047 
-High School/GED |         0 |     2,069 
-   Some College |         0 |     1,818 
-    >=Bachelors |       716 |     1,579 
-              . |         0 |       636 
-----------------+-----------+----------
-          Total |       716 |     8,245 
+         level, |                                                        R1 EL10 HGHST DGREE SCOOL COMPLD
+    categorical | -9 Missin      -8 DK      -7 RF  -1 Inappl   1 NO SCH   2 1ST-8T   3 9TH-12   4 HIGH S   5 VOCATI   6 SOME C   7 ASSOCI   8 BACHEL   9 MASTER |     Total
+----------------+-----------------------------------------------------------------------------------------------------------------------------------------------+----------
+             -8 |         0         86          0          0          0          0          0          0          0          0          0          0          0 |        86 
+             -7 |         0          0         10          0          0          0          0          0          0          0          0          0          0 |        10 
+   <High School |         0          0          0          0         89        900      1,058          0          0          0          0          0          0 |     2,047 
+High School/GED |         0          0          0          0          0          0          0      2,069          0          0          0          0          0 |     2,069 
+   Some College |         0          0          0          0          0          0          0          0        549        942        327          0          0 |     1,818 
+    >=Bachelors |         0          0          0          0          0          0          0          0          0          0          0        863        716 |     1,579 
+              . |       168          0          0        468          0          0          0          0          0          0          0          0          0 |       636 
+----------------+-----------------------------------------------------------------------------------------------------------------------------------------------+----------
+          Total |       168         86         10        468         89        900      1,058      2,069        549        942        327        863        716 |     8,245 
 
 
 . 
 . gen educ_hs_ind=education>=2 if education>0 & education!=.
-(18343 missing values generated)
+(22,885 missing values generated)
 
 . 
 . //income, just wave 1
@@ -1328,8 +1449,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%           -9             -9
  5%           -8             -9
-10%           -8             -9       Obs                8245
-25%           -8             -9       Sum of Wgt.        8245
+10%           -8             -9       Obs               8,245
+25%           -8             -9       Sum of Wgt.       8,245
 
 50%         1003                      Mean           25276.52
                         Largest       Std. Dev.      126078.6
@@ -1339,12 +1460,16 @@ High School/GED |         0 |     2,069
 99%       200000        5700000       Kurtosis       1121.346
 
 . 
-. forvalues i = 1/5{
-  2. replace ia1toincim`i'=. if inlist(ia1toincim`i',-9,-1)
-  3. sum ia1toincim`i',detail //imputed income variables
-  4. gen imputed_inc`i' = ia1toincim`i'
-  5. label var imputed_inc`i' "Imputed Income `i'"
-  6. }
+. forvalues i = 1/5 {
+  2.         gen imputed_inc`i'=.
+  3.         foreach w in 1 3 5 {
+  4.                 replace ia`w'toincim`i'=. if inlist(ia`w'toincim`i',-9,-1)
+  5.                 sum ia`w'toincim`i' if wave==`w',detail //imputed income variables
+  6.                 replace imputed_inc`i' = ia`w'toincim`i' if wave==`w'
+  7. }
+  8.                 label var imputed_inc`i' "Imputed Income `i'"
+  9. }
+(34,190 missing values generated)
 (636 real changes made, 636 to missing)
 
                  R1 IA50 IMPUTED TOTAL INC1
@@ -1352,8 +1477,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%            0              0
  5%         5000              0
-10%         8000              0       Obs                7609
-25%        13000              0       Sum of Wgt.        7609
+10%         8000              0       Obs               7,609
+25%        13000              0       Sum of Wgt.       7,609
 
 50%        25000                      Mean           48101.73
                         Largest       Std. Dev.      174772.8
@@ -1361,7 +1486,42 @@ High School/GED |         0 |     2,069
 90%        85000        5000000       Variance       3.05e+10
 95%       125000        5700000       Skewness       22.64232
 99%       280000        5700000       Kurtosis       610.7911
-(18247 missing values generated)
+(7,609 real changes made)
+(3,804 real changes made, 3,804 to missing)
+
+                 R3 IA50 IMPUTED TOTAL INC1
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            3              1
+ 5%         7416              1
+10%         9600              1       Obs               1,995
+25%        15000              1       Sum of Wgt.       1,995
+
+50%        26000                      Mean           48386.08
+                        Largest       Std. Dev.      281877.9
+75%        50000         600000
+90%        90000         700000       Variance       7.95e+10
+95%       120000        1000000       Skewness       42.24874
+99%       250000       1.24e+07       Kurtosis       1849.981
+(1,995 real changes made)
+(4,994 real changes made, 4,994 to missing)
+
+                 R5 IA50 IMPUTED TOTAL INC1
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%          500              0
+ 5%         7960              0
+10%         9600              0       Obs               3,340
+25%        15080              0       Sum of Wgt.       3,340
+
+50%        28950                      Mean           56470.78
+                        Largest       Std. Dev.      438429.2
+75%      55627.5        1000000
+90%       100000        1400000       Variance       1.92e+11
+95%       140000        1400000       Skewness       55.19802
+99%       350000       2.50e+07       Kurtosis       3138.764
+(3,340 real changes made)
+(34,190 missing values generated)
 (636 real changes made, 636 to missing)
 
                  R1 IA50 IMPUTED TOTAL INC2
@@ -1369,8 +1529,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%            0              0
  5%         5000              0
-10%         8000              0       Obs                7609
-25%        13000              0       Sum of Wgt.        7609
+10%         8000              0       Obs               7,609
+25%        13000              0       Sum of Wgt.       7,609
 
 50%        25000                      Mean           47400.31
                         Largest       Std. Dev.      163813.4
@@ -1378,7 +1538,42 @@ High School/GED |         0 |     2,069
 90%        85000        5000000       Variance       2.68e+10
 95%       124000        5700000       Skewness       24.37988
 99%       280000        5700000       Kurtosis       720.7381
-(18247 missing values generated)
+(7,609 real changes made)
+(3,804 real changes made, 3,804 to missing)
+
+                 R3 IA50 IMPUTED TOTAL INC2
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            1              1
+ 5%         7200              1
+10%         9600              1       Obs               1,995
+25%        15000              1       Sum of Wgt.       1,995
+
+50%        26000                      Mean            47069.7
+                        Largest       Std. Dev.      178641.3
+75%        50000         700000
+90%        90000        1000000       Variance       3.19e+10
+95%       120000        1500000       Skewness       36.86894
+99%       275000        7500000       Kurtosis       1522.939
+(1,995 real changes made)
+(4,994 real changes made, 4,994 to missing)
+
+                 R5 IA50 IMPUTED TOTAL INC2
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%           12              0
+ 5%         8000              0
+10%         9600              0       Obs               3,340
+25%        15104              0       Sum of Wgt.       3,340
+
+50%        29000                      Mean           58321.44
+                        Largest       Std. Dev.      473369.3
+75%        55000        1200000
+90%       100000        1500000       Variance       2.24e+11
+95%       140000       1.05e+07       Skewness       47.05424
+99%       324000       2.50e+07       Kurtosis       2379.933
+(3,340 real changes made)
+(34,190 missing values generated)
 (636 real changes made, 636 to missing)
 
                  R1 IA50 IMPUTED TOTAL INC3
@@ -1386,8 +1581,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%            0              0
  5%         5000              0
-10%         8000              0       Obs                7609
-25%        13000              0       Sum of Wgt.        7609
+10%         8000              0       Obs               7,609
+25%        13000              0       Sum of Wgt.       7,609
 
 50%        25000                      Mean           48033.05
                         Largest       Std. Dev.      174223.1
@@ -1395,7 +1590,42 @@ High School/GED |         0 |     2,069
 90%        85000        5000000       Variance       3.04e+10
 95%       120000        5700000       Skewness       22.81822
 99%       260000        5700000       Kurtosis       618.2839
-(18247 missing values generated)
+(7,609 real changes made)
+(3,804 real changes made, 3,804 to missing)
+
+                 R3 IA50 IMPUTED TOTAL INC3
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            1              1
+ 5%         7200              1
+10%         9600              1       Obs               1,995
+25%        15000              1       Sum of Wgt.       1,995
+
+50%        26000                      Mean           47659.84
+                        Largest       Std. Dev.      189034.5
+75%        50000        1000000
+90%        90000        1200000       Variance       3.57e+10
+95%       120000        3000000       Skewness       32.89802
+99%       250000        7500000       Kurtosis       1243.036
+(1,995 real changes made)
+(4,994 real changes made, 4,994 to missing)
+
+                 R5 IA50 IMPUTED TOTAL INC3
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%          650              0
+ 5%         8000              0
+10%         9600              0       Obs               3,340
+25%        15000              0       Sum of Wgt.       3,340
+
+50%        28000                      Mean           48406.01
+                        Largest       Std. Dev.      73053.08
+75%        55000         800000
+90%       100000        1000000       Variance       5.34e+09
+95%       141000        1200000       Skewness       7.284459
+99%       315000        1400000       Kurtosis       88.99018
+(3,340 real changes made)
+(34,190 missing values generated)
 (636 real changes made, 636 to missing)
 
                  R1 IA50 IMPUTED TOTAL INC4
@@ -1403,8 +1633,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%            0              0
  5%         5000              0
-10%         8000              0       Obs                7609
-25%        13000              0       Sum of Wgt.        7609
+10%         8000              0       Obs               7,609
+25%        13000              0       Sum of Wgt.       7,609
 
 50%        25000                      Mean           48079.98
                         Largest       Std. Dev.      173745.9
@@ -1412,7 +1642,42 @@ High School/GED |         0 |     2,069
 90%        85000        5000000       Variance       3.02e+10
 95%       125000        5700000       Skewness       23.20914
 99%       280000        5700000       Kurtosis       635.8328
-(18247 missing values generated)
+(7,609 real changes made)
+(3,804 real changes made, 3,804 to missing)
+
+                 R3 IA50 IMPUTED TOTAL INC4
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            3              1
+ 5%         7512              1
+10%        10000              1       Obs               1,995
+25%        15000              1       Sum of Wgt.       1,995
+
+50%        26000                      Mean           46867.35
+                        Largest       Std. Dev.      179057.9
+75%        50000         700000
+90%        90000        1000000       Variance       3.21e+10
+95%       120000        1500000       Skewness       36.63096
+99%       300000        7500000       Kurtosis       1509.025
+(1,995 real changes made)
+(4,994 real changes made, 4,994 to missing)
+
+                 R5 IA50 IMPUTED TOTAL INC4
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%          650              0
+ 5%         8000              0
+10%         9738              0       Obs               3,340
+25%        15600              0       Sum of Wgt.       3,340
+
+50%        29000                      Mean           49351.86
+                        Largest       Std. Dev.      83170.27
+75%        55000        1400000
+90%       100000        1400000       Variance       6.92e+09
+95%       140000        1400000       Skewness       8.931731
+99%       340000        1500000       Kurtosis       120.3207
+(3,340 real changes made)
+(34,190 missing values generated)
 (636 real changes made, 636 to missing)
 
                  R1 IA50 IMPUTED TOTAL INC5
@@ -1420,8 +1685,8 @@ High School/GED |         0 |     2,069
       Percentiles      Smallest
  1%            0              0
  5%         5000              0
-10%         8008              0       Obs                7609
-25%        13000              0       Sum of Wgt.        7609
+10%         8008              0       Obs               7,609
+25%        13000              0       Sum of Wgt.       7,609
 
 50%        25000                      Mean           48496.79
                         Largest       Std. Dev.        176243
@@ -1429,25 +1694,74 @@ High School/GED |         0 |     2,069
 90%        86000        5000000       Variance       3.11e+10
 95%       126000        5700000       Skewness       22.54756
 99%       265000        5700000       Kurtosis       604.0381
-(18247 missing values generated)
+(7,609 real changes made)
+(3,804 real changes made, 3,804 to missing)
+
+                 R3 IA50 IMPUTED TOTAL INC5
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            1              1
+ 5%         7500              1
+10%         9600              1       Obs               1,995
+25%        15000              1       Sum of Wgt.       1,995
+
+50%        26000                      Mean            43795.8
+                        Largest       Std. Dev.      65365.31
+75%        50000         600000
+90%        90000         700000       Variance       4.27e+09
+95%       121000        1000000       Skewness       9.542474
+99%       290000        1500000       Kurtosis       162.6787
+(1,995 real changes made)
+(4,994 real changes made, 4,994 to missing)
+
+                 R5 IA50 IMPUTED TOTAL INC5
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%          650              0
+ 5%         7872              0
+10%         9600              0       Obs               3,340
+25%        15363              0       Sum of Wgt.       3,340
+
+50%        28000                      Mean           56612.57
+                        Largest       Std. Dev.        472496
+75%        55000        1200000
+90%        98500        1400000       Variance       2.23e+11
+95%       135500       1.05e+07       Skewness       47.32019
+99%       300000       2.50e+07       Kurtosis       2398.247
+(3,340 real changes made)
 
 . 
-. egen aveincome=rowmean(ia1toincim1-ia1toincim5)
-(18247 missing values generated)
+. 
+. 
+. egen aveincome=rowmean(imputed_inc1-imputed_inc5)
+(21246 missing values generated)
+
+. foreach w in 1 3 5 {
+  2.         replace aveincome=ia`w'totinc if wave==`w' & ia`w'totinc>=0 & ///
+>         !missing(ia`w'totinc)
+  3. }
+(0 real changes made)
+(2,889 real changes made)
+(4,236 real changes made)
 
 . 
+. sort spid wave
+
+. by spid: carryforward aveincome, replace
+aveincome:  (11718 real changes made)
+
 . //use first income imputation to set income categorical variable
 . gen income_cat=0 if aveincome<15000 & aveincome!=.
-(23867 missing values generated)
+(26,763 missing values generated)
 
 . replace income_cat=1 if aveincome>=15000 & aveincome<30000 & aveincome!=.
-(2083 real changes made)
+(8,787 real changes made)
 
 . replace income_cat=2 if aveincome>=30000 & aveincome<60000 & aveincome!=.
-(2009 real changes made)
+(8,320 real changes made)
 
 . replace income_cat=3 if aveincome>=60000 & aveincome!=.
-(1528 real changes made)
+(7,253 real changes made)
 
 . label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
 
@@ -1457,21 +1771,21 @@ High School/GED |         0 |     2,069
 
  income_cat |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-     <15000 |      1,989        7.69        7.69
-  15-29,999 |      2,083        8.06       15.75
-  30-59,999 |      2,009        7.77       23.52
-     >60000 |      1,528        5.91       29.43
-          . |     18,247       70.57      100.00
+     <15000 |      7,427       21.72       21.72
+  15-29,999 |      8,787       25.70       47.42
+  30-59,999 |      8,320       24.33       71.76
+     >60000 |      7,253       21.21       92.97
+          . |      2,403        7.03      100.00
 ------------+-----------------------------------
-      Total |     25,856      100.00
+      Total |     34,190      100.00
 
 . 
 . //speak language other than english?
 . gen otherlang=rl1spkothlan
-(17611 missing values generated)
+(25,945 missing values generated)
 
 . replace otherlang=0 if rl1spkothlan==2
-(6178 real changes made)
+(6,178 real changes made)
 
 . replace otherlang = 1 if rl1condspanh == 1
 (228 real changes made)
@@ -1485,33 +1799,48 @@ High School/GED |         0 |     2,069
 
      Speak |
   language |
-other than |                 Survey wave
-  English? |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |        70          0          0          0 |        70 
-        -7 |         5          0          0          0 |         5 
-         0 |     6,178          0          0          0 |     6,178 
-         1 |     1,356          0          0          0 |     1,356 
-         . |       636      7,075      5,799      4,737 |    18,247 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+other than |                      Survey wave
+  English? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        70          0          0          0          0 |        70 
+        -7 |         5          0          0          0          0 |         5 
+         0 |     6,178          0          0          0          0 |     6,178 
+         1 |     1,356          0          0          0          0 |     1,356 
+         . |       636      7,075      5,799      4,737      8,334 |    26,581 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
+. 
+. replace otherlang=0 if rl5spkothlan==2
+(3,063 real changes made)
+
+. replace otherlang=1 if rl5spkothlan==1
+(582 real changes made)
+
+. replace otherlang=1 if rl5condspanh==1
+(150 real changes made)
+
+. replace otherlang=. if inlist(rl5spkothlan,-9,-1)
+(150 real changes made, 150 to missing)
+
+. 
 . 
 . //fill in gender, race, education, income, etc. for wave 2 interviews
 . sort spid wave
 
-. by spid (wave): carryforward female race_cat education income_cat otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
+. by spid (wave): carryforward female race_cat education income_cat ///
+> otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
 female:  (17611 real changes made)
 race_cat:  (17611 real changes made)
-education:  (16276 real changes made)
-income_cat:  (16276 real changes made)
-otherlang:  (16276 real changes made)
-imputed_inc1:  (16276 real changes made)
-imputed_inc2:  (16276 real changes made)
-imputed_inc3:  (16276 real changes made)
-imputed_inc4:  (16276 real changes made)
-imputed_inc5:  (16276 real changes made)
+education:  (20229 real changes made)
+income_cat:  (0 real changes made)
+otherlang:  (20229 real changes made)
+imputed_inc1:  (16646 real changes made)
+imputed_inc2:  (16646 real changes made)
+imputed_inc3:  (16646 real changes made)
+imputed_inc4:  (16646 real changes made)
+imputed_inc5:  (16646 real changes made)
 
 . 
 . gen white=race_cat==1
@@ -1530,21 +1859,26 @@ imputed_inc5:  (16276 real changes made)
 
 . label var other_race "Other race/ethnicity"
 
-. 
+. //merge white & other for reportability
+. gen whiteoth=white | other_race if !missing(white) & !missing(other_r)
+
+. label var whiteoth "White Non-Hispanic or other"
+
 . //marital status
 . //wave 2,3, use derived variable which is populated if not asked b/c no change 
 . gen maritalstat=hh1martlstat if wave==1
-(17611 missing values generated)
+(25,945 missing values generated)
 
-. foreach w in 2 3 4{
+. foreach w in 2 3 4 5{
   2.         replace maritalstat=hh`w'dmarstat if wave==`w'
   3. }
-(7075 real changes made)
-(5799 real changes made)
-(4737 real changes made)
+(7,075 real changes made)
+(5,799 real changes made)
+(4,737 real changes made)
+(8,334 real changes made)
 
 . replace maritalstat=-9 if inlist(maritalstat,`miss')
-(3103 real changes made)
+(3,861 real changes made)
 
 . 
 . la var maritalstat "Marital status"
@@ -1556,22 +1890,25 @@ imputed_inc5:  (16276 real changes made)
 
 . tab maritalstat wave, missing
 
-      Marital |                 Survey wave
-       status |         1          2          3          4 |     Total
---------------+--------------------------------------------+----------
-           -9 |       636      1,020        915        700 |     3,271 
-           DK |         3          1          2          0 |         6 
-      Refused |         6          0          0          0 |         6 
-      Married |     3,647      2,804      2,216      1,784 |    10,451 
-  Live w/Part |       151        119         88         73 |       431 
-    Separated |       128         97         77         69 |       371 
-     Divorced |       796        631        510        432 |     2,369 
-      Widowed |     2,578      2,160      1,802      1,522 |     8,062 
-Never Married |       300        243        189        157 |       889 
---------------+--------------------------------------------+----------
-        Total |     8,245      7,075      5,799      4,737 |    25,856 
+      Marital |                      Survey wave
+       status |         1          2          3          4          5 |     Total
+--------------+-------------------------------------------------------+----------
+           -9 |       636      1,020        915        700        758 |     4,029 
+           DK |         3          1          2          0          3 |         9 
+      Refused |         6          0          0          0          3 |         9 
+      Married |     3,647      2,804      2,216      1,784      3,498 |    13,949 
+  Live w/Part |       151        119         88         73        155 |       586 
+    Separated |       128         97         77         69        141 |       512 
+     Divorced |       796        631        510        432        901 |     3,270 
+      Widowed |     2,578      2,160      1,802      1,522      2,570 |    10,632 
+Never Married |       300        243        189        157        305 |     1,194 
+--------------+-------------------------------------------------------+----------
+        Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
+. 
+. 
+. 
 . 
 . *********************************************
 . *********************************************
@@ -1580,9 +1917,9 @@ Never Married |       300        243        189        157 |       889
 . *********************************************
 . //medicaid status
 . gen medicaid=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab ip`w'cmedicaid if wave==`w' , missing
   3.         replace medicaid=1 if ip`w'cmedicaid==1 & wave==`w'
   4.         replace medicaid=0 if ip`w'cmedicaid==2 & wave==`w'
@@ -1602,8 +1939,8 @@ Never Married |       300        243        189        157 |       889
            2 NO |      6,229       75.55      100.00
 ----------------+-----------------------------------
           Total |      8,245      100.00
-(1173 real changes made)
-(6229 real changes made)
+(1,173 real changes made)
+(6,229 real changes made)
 (16 real changes made)
 (191 real changes made)
 
@@ -1619,7 +1956,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      7,075      100.00
 (986 real changes made)
-(4947 real changes made)
+(4,947 real changes made)
 (6 real changes made)
 (117 real changes made)
 
@@ -1635,7 +1972,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      5,799      100.00
 (740 real changes made)
-(3923 real changes made)
+(3,923 real changes made)
 (21 real changes made)
 (200 real changes made)
 
@@ -1651,24 +1988,40 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      4,737      100.00
 (615 real changes made)
-(3212 real changes made)
+(3,212 real changes made)
 (4 real changes made)
 (206 real changes made)
+
+  R5 IP4 COV BY STATE |
+         MEDICAID PRG |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        2.15        2.15
+                -8 DK |        388        4.66        6.80
+                -7 RF |         16        0.19        7.00
+      -1 Inapplicable |        579        6.95       13.94
+                1 YES |      1,103       13.23       27.18
+                 2 NO |      6,069       72.82      100.00
+----------------------+-----------------------------------
+                Total |      8,334      100.00
+(1,103 real changes made)
+(6,069 real changes made)
+(16 real changes made)
+(388 real changes made)
 
 . la var medicaid "Medicaid"
 
 . tab medicaid wave,missing
 
-           |                 Survey wave
-  Medicaid |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       191        117        200        206 |       714 
-        -7 |        16          6         21          4 |        47 
-         0 |     6,229      4,947      3,923      3,212 |    18,311 
-         1 |     1,173        986        740        615 |     3,514 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+  Medicaid |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       191        117        200        206        388 |     1,102 
+        -7 |        16          6         21          4         16 |        63 
+         0 |     6,229      4,947      3,923      3,212      6,069 |    24,380 
+         1 |     1,173        986        740        615      1,103 |     4,617 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . tab medicaid if wave==1 & ivw_type==1,missing
@@ -1684,9 +2037,9 @@ Never Married |       300        243        189        157 |       889
 
 . //medigap status
 . gen medigap=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab ip`w'mgapmedsp if wave==`w' , missing
   3.         replace medigap=1 if ip`w'mgapmedsp==1 & wave==`w'
   4.         replace medigap=0 if ip`w'mgapmedsp==2 & wave==`w'
@@ -1706,8 +2059,8 @@ Never Married |       300        243        189        157 |       889
            2 NO |      3,126       37.91      100.00
 ----------------+-----------------------------------
           Total |      8,245      100.00
-(4207 real changes made)
-(3126 real changes made)
+(4,207 real changes made)
+(3,126 real changes made)
 (21 real changes made)
 (255 real changes made)
 
@@ -1722,8 +2075,8 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      2,174       30.73      100.00
 ----------------------+-----------------------------------
                 Total |      7,075      100.00
-(3697 real changes made)
-(2174 real changes made)
+(3,697 real changes made)
+(2,174 real changes made)
 (9 real changes made)
 (176 real changes made)
 
@@ -1738,8 +2091,8 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      1,649       28.44      100.00
 ----------------------+-----------------------------------
                 Total |      5,799      100.00
-(2966 real changes made)
-(1649 real changes made)
+(2,966 real changes made)
+(1,649 real changes made)
 (22 real changes made)
 (247 real changes made)
 
@@ -1754,33 +2107,49 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      1,275       26.92      100.00
 ----------------------+-----------------------------------
                 Total |      4,737      100.00
-(2483 real changes made)
-(1275 real changes made)
+(2,483 real changes made)
+(1,275 real changes made)
 (4 real changes made)
 (275 real changes made)
+
+    R5 IP3 MEDIGAP OR |
+        MEDICARE SUPP |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        2.15        2.15
+                -8 DK |        440        5.28        7.43
+                -7 RF |         16        0.19        7.62
+      -1 Inapplicable |        579        6.95       14.57
+                1 YES |      4,498       53.97       68.54
+                 2 NO |      2,622       31.46      100.00
+----------------------+-----------------------------------
+                Total |      8,334      100.00
+(4,498 real changes made)
+(2,622 real changes made)
+(16 real changes made)
+(440 real changes made)
 
 . la var medigap "Medigap"
 
 . tab medigap wave,missing
 
-           |                 Survey wave
-   Medigap |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       255        176        247        275 |       953 
-        -7 |        21          9         22          4 |        56 
-         0 |     3,126      2,174      1,649      1,275 |     8,224 
-         1 |     4,207      3,697      2,966      2,483 |    13,353 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+   Medigap |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       255        176        247        275        440 |     1,393 
+        -7 |        21          9         22          4         16 |        72 
+         0 |     3,126      2,174      1,649      1,275      2,622 |    10,846 
+         1 |     4,207      3,697      2,966      2,483      4,498 |    17,851 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //medicare part d
 . gen mc_partd=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab ip`w'covmedcad if wave==`w' , missing
   3.         replace mc_partd=1 if ip`w'covmedcad==1 & wave==`w'
   4.         replace mc_partd=0 if ip`w'covmedcad==2 & wave==`w'
@@ -1800,8 +2169,8 @@ Never Married |       300        243        189        157 |       889
            2 NO |      2,676       32.46      100.00
 ----------------+-----------------------------------
           Total |      8,245      100.00
-(4575 real changes made)
-(2676 real changes made)
+(4,575 real changes made)
+(2,676 real changes made)
 (23 real changes made)
 (335 real changes made)
 
@@ -1816,8 +2185,8 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      1,861       26.30      100.00
 ----------------------+-----------------------------------
                 Total |      7,075      100.00
-(3938 real changes made)
-(1861 real changes made)
+(3,938 real changes made)
+(1,861 real changes made)
 (5 real changes made)
 (252 real changes made)
 
@@ -1832,8 +2201,8 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      1,394       24.04      100.00
 ----------------------+-----------------------------------
                 Total |      5,799      100.00
-(3155 real changes made)
-(1394 real changes made)
+(3,155 real changes made)
+(1,394 real changes made)
 (21 real changes made)
 (314 real changes made)
 
@@ -1848,33 +2217,49 @@ Never Married |       300        243        189        157 |       889
                  2 NO |      1,079       22.78      100.00
 ----------------------+-----------------------------------
                 Total |      4,737      100.00
-(2606 real changes made)
-(1079 real changes made)
+(2,606 real changes made)
+(1,079 real changes made)
 (6 real changes made)
 (346 real changes made)
+
+     R5 IP1 COVERD BY |
+      MEDICARE PART D |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        2.15        2.15
+                -8 DK |        578        6.94        9.08
+                -7 RF |         14        0.17        9.25
+      -1 Inapplicable |        579        6.95       16.20
+                1 YES |      4,873       58.47       74.67
+                 2 NO |      2,111       25.33      100.00
+----------------------+-----------------------------------
+                Total |      8,334      100.00
+(4,873 real changes made)
+(2,111 real changes made)
+(14 real changes made)
+(578 real changes made)
 
 . la var mc_partd "Medicare Part D"
 
 . tab mc_partd wave,missing
 
-  Medicare |                 Survey wave
-    Part D |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       335        252        314        346 |     1,247 
-        -7 |        23          5         21          6 |        55 
-         0 |     2,676      1,861      1,394      1,079 |     7,010 
-         1 |     4,575      3,938      3,155      2,606 |    14,274 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  Medicare |                      Survey wave
+    Part D |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       335        252        314        346        578 |     1,825 
+        -7 |        23          5         21          6         14 |        69 
+         0 |     2,676      1,861      1,394      1,079      2,111 |     9,121 
+         1 |     4,575      3,938      3,155      2,606      4,873 |    19,147 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //tricare - va insurance
 . gen tricare=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab ip`w'covtricar if wave==`w' , missing
   3.         replace tricare=1 if ip`w'covtricar==1 & wave==`w'
   4.         replace tricare=0 if ip`w'covtricar==2 & wave==`w'
@@ -1894,7 +2279,7 @@ Never Married |       300        243        189        157 |       889
 ----------------+-----------------------------------
           Total |      8,245      100.00
 (413 real changes made)
-(7053 real changes made)
+(7,053 real changes made)
 (16 real changes made)
 (127 real changes made)
 
@@ -1910,7 +2295,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      7,075      100.00
 (350 real changes made)
-(5636 real changes made)
+(5,636 real changes made)
 (5 real changes made)
 (65 real changes made)
 
@@ -1926,7 +2311,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      5,799      100.00
 (284 real changes made)
-(4428 real changes made)
+(4,428 real changes made)
 (21 real changes made)
 (151 real changes made)
 
@@ -1942,33 +2327,49 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      4,737      100.00
 (238 real changes made)
-(3631 real changes made)
+(3,631 real changes made)
 (3 real changes made)
 (165 real changes made)
+
+    R5 IP5 COVERED BY |
+              TRICARE |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        2.15        2.15
+                -8 DK |        274        3.29        5.44
+                -7 RF |         12        0.14        5.58
+      -1 Inapplicable |        579        6.95       12.53
+                1 YES |        430        5.16       17.69
+                 2 NO |      6,860       82.31      100.00
+----------------------+-----------------------------------
+                Total |      8,334      100.00
+(430 real changes made)
+(6,860 real changes made)
+(12 real changes made)
+(274 real changes made)
 
 . la var tricare "Tricare - veterans insurance"
 
 . tab tricare wave,missing
 
  Tricare - |
-  veterans |                 Survey wave
- insurance |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       127         65        151        165 |       508 
-        -7 |        16          5         21          3 |        45 
-         0 |     7,053      5,636      4,428      3,631 |    20,748 
-         1 |       413        350        284        238 |     1,285 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+  veterans |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       127         65        151        165        274 |       782 
+        -7 |        16          5         21          3         12 |        57 
+         0 |     7,053      5,636      4,428      3,631      6,860 |    27,608 
+         1 |       413        350        284        238        430 |     1,715 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //long term care nursing home insurance, private
 . gen private_ltc=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         tab ip`w'nginsnurs if wave==`w' , missing
   3.         replace private_ltc=1 if ip`w'nginsnurs==1 & wave==`w'
   4.         replace private_ltc=0 if ip`w'nginsnurs==2 & wave==`w'
@@ -1988,8 +2389,8 @@ Never Married |       300        243        189        157 |       889
            2 NO |      5,937       72.01      100.00
 ----------------+-----------------------------------
           Total |      8,245      100.00
-(1179 real changes made)
-(5937 real changes made)
+(1,179 real changes made)
+(5,937 real changes made)
 (21 real changes made)
 (472 real changes made)
 
@@ -2005,7 +2406,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      7,075      100.00
 (329 real changes made)
-(4431 real changes made)
+(4,431 real changes made)
 (10 real changes made)
 (291 real changes made)
 
@@ -2021,7 +2422,7 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      5,799      100.00
 (180 real changes made)
-(3365 real changes made)
+(3,365 real changes made)
 (18 real changes made)
 (334 real changes made)
 
@@ -2037,9 +2438,25 @@ Never Married |       300        243        189        157 |       889
 ----------------------+-----------------------------------
                 Total |      4,737      100.00
 (147 real changes made)
-(2632 real changes made)
+(2,632 real changes made)
 (3 real changes made)
 (356 real changes made)
+
+   R5 IP6 NONGOV INSR |
+        FOR NURS HOME |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |        179        2.15        2.15
+                -8 DK |        681        8.17       10.32
+                -7 RF |         18        0.22       10.54
+      -1 Inapplicable |      1,422       17.06       27.60
+                1 YES |        761        9.13       36.73
+                 2 NO |      5,273       63.27      100.00
+----------------------+-----------------------------------
+                Total |      8,334      100.00
+(761 real changes made)
+(5,273 real changes made)
+(18 real changes made)
+(681 real changes made)
 
 . la var private_ltc "Private nursing home insurance"
 
@@ -2047,21 +2464,21 @@ Never Married |       300        243        189        157 |       889
 
    Private |
    nursing |
-      home |                 Survey wave
- insurance |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       472        291        334        356 |     1,453 
-        -7 |        21         10         18          3 |        52 
-         0 |     5,937      4,431      3,365      2,632 |    16,365 
-         1 |     1,179        329        180        147 |     1,835 
-         . |       636      2,014      1,902      1,599 |     6,151 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+      home |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       472        291        334        356        681 |     2,134 
+        -7 |        21         10         18          3         18 |        70 
+         0 |     5,937      4,431      3,365      2,632      5,273 |    21,638 
+         1 |     1,179        329        180        147        761 |     2,596 
+         . |       636      2,014      1,902      1,599      1,601 |     7,752 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //if report nh insurance in prev wave, asked to verify still have it curr wave
-. foreach w in 2 3 4{
+. foreach w in 2 3 4 5{
   2. tab ip`w'nginslast if wave==`w' & ip`w'nginsnurs==-1, missing
   3. replace private_ltc=1 if ip`w'nginslast==1 & ip`w'nginsnurs==-1 & wave==`w'
   4. replace private_ltc=0 if ip`w'nginslast==2 & ip`w'nginsnurs==-1 & wave==`w'
@@ -2111,20 +2528,34 @@ Never Married |       300        243        189        157 |       889
 (1 real change made)
 (40 real changes made)
 
+     R5 IP5A HAVE LTC INS FROM LAST INT |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                                  -8 DK |         35        2.46        2.46
+                                  -7 RF |          1        0.07        2.53
+                        -1 Inapplicable |        579       40.72       43.25
+                                  1 YES |        758       53.31       96.55
+                                   2 NO |         49        3.45      100.00
+----------------------------------------+-----------------------------------
+                                  Total |      1,422      100.00
+(758 real changes made)
+(49 real changes made)
+(1 real change made)
+(35 real changes made)
+
 . tab private_ltc wave,missing
 
    Private |
    nursing |
-      home |                 Survey wave
- insurance |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -8 |       472        305        378        396 |     1,551 
-        -7 |        21         12         21          4 |        58 
-         0 |     5,937      4,479      3,413      2,680 |    16,509 
-         1 |     1,179      1,260      1,072        957 |     4,468 
-         . |       636      1,019        915        700 |     3,270 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+      home |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       472        305        378        396        716 |     2,267 
+        -7 |        21         12         21          4         19 |        77 
+         0 |     5,937      4,479      3,413      2,680      5,322 |    21,831 
+         1 |     1,179      1,260      1,072        957      1,519 |     5,987 
+         . |       636      1,019        915        700        758 |     4,028 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -2243,21 +2674,21 @@ Never Married |       300        243        189        157 |       889
 
   R2 D RE4F ADDRESS SAME DIFF CORRECTED |      Freq.     Percent        Cum.
 ----------------------------------------+-----------------------------------
-                             -9 Missing |        190        0.73        0.73
-                        -1 Inapplicable |        326        1.26        2.00
-                    1 YES, SAME ADDRESS |      6,041       23.36       25.36
-                2 NO, DIFFERENT ADDRESS |        470        1.82       27.18
-3 YES, SAME ADDRESS WITH MINOR CORRECTI |         48        0.19       27.36
-                                      . |     18,781       72.64      100.00
+                             -9 Missing |        190        0.56        0.56
+                        -1 Inapplicable |        326        0.95        1.51
+                    1 YES, SAME ADDRESS |      6,041       17.67       19.18
+                2 NO, DIFFERENT ADDRESS |        470        1.37       20.55
+3 YES, SAME ADDRESS WITH MINOR CORRECTI |         48        0.14       20.69
+                                      . |     27,115       79.31      100.00
 ----------------------------------------+-----------------------------------
-                                  Total |     25,856      100.00
+                                  Total |     34,190      100.00
 
 . 
 . gen w2_moved=1 if re2dadrscorr==2
-(25386 missing values generated)
+(33,720 missing values generated)
 
 . replace w2_moved=0 if re2dadrscorr==1 | re2dadrscorr==3
-(6089 real changes made)
+(6,089 real changes made)
 
 . tab w2_moved
 
@@ -2273,20 +2704,20 @@ Never Married |       300        243        189        157 |       889
 
         R3 RE4F SP ADDRESS SAME OR DIFF |      Freq.     Percent        Cum.
 ----------------------------------------+-----------------------------------
-                             -9 Missing |        179        0.69        0.69
-                        -1 Inapplicable |        213        0.82        1.52
-                    1 YES, SAME ADDRESS |      5,022       19.42       20.94
-                2 NO, DIFFERENT ADDRESS |        346        1.34       22.28
-3 YES, SAME ADDRESS WITH MINOR CORRECTI |         39        0.15       22.43
-                                      . |     20,057       77.57      100.00
+                             -9 Missing |        179        0.52        0.52
+                        -1 Inapplicable |        213        0.62        1.15
+                    1 YES, SAME ADDRESS |      5,022       14.69       15.84
+                2 NO, DIFFERENT ADDRESS |        346        1.01       16.85
+3 YES, SAME ADDRESS WITH MINOR CORRECTI |         39        0.11       16.96
+                                      . |     28,391       83.04      100.00
 ----------------------------------------+-----------------------------------
-                                  Total |     25,856      100.00
+                                  Total |     34,190      100.00
 
 . gen w3_moved=1 if re3spadrsnew==2
-(25510 missing values generated)
+(33,844 missing values generated)
 
 . replace w3_moved=0 if re3spadrsnew==1 | re3spadrsnew==3
-(5061 real changes made)
+(5,061 real changes made)
 
 . tab w3_moved
 
@@ -2299,10 +2730,10 @@ Never Married |       300        243        189        157 |       889
 
 . 
 . gen w4_moved=1 if re4spadrsnew==2
-(25554 missing values generated)
+(33,888 missing values generated)
 
 . replace w4_moved=0 if re4spadrsnew==1 | re4spadrsnew==3
-(4139 real changes made)
+(4,139 real changes made)
 
 . tab w4_moved
 
@@ -2314,124 +2745,145 @@ Never Married |       300        243        189        157 |       889
       Total |      4,441      100.00
 
 . 
-. gen ht_new=.
-(25856 missing values generated)
+. gen w5_moved=1 if re5spadrsnew==2
+(33,978 missing values generated)
 
-. foreach w in 1 2 3 4{
-  2. replace ht_new=ht`w'placedesc if wave==`w'
-  3. }
-(8245 real changes made)
-(7075 real changes made)
-(5799 real changes made)
-(4737 real changes made)
+. replace w5_moved=0 if re5spadrsnew==1 | re5spadrsnew==3
+(3,697 real changes made)
+
+. tab w5_moved
+
+   w5_moved |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      3,697       94.58       94.58
+          1 |        212        5.42      100.00
+------------+-----------------------------------
+      Total |      3,909      100.00
 
 . 
-. foreach w in 2 3 4{
+. gen ht_new=.
+(34,190 missing values generated)
+
+. foreach w in 1 2 3 4 5{
+  2. replace ht_new=ht`w'placedesc if wave==`w'
+  3. }
+(8,245 real changes made)
+(7,075 real changes made)
+(5,799 real changes made)
+(4,737 real changes made)
+(8,334 real changes made)
+
+. 
+. foreach w in 2 3 4 5{
   2. replace ht_new=. if ht`w'placedesc==-1 & w`w'_moved==0
   3. }
-(6089 real changes made, 6089 to missing)
-(5060 real changes made, 5060 to missing)
-(4139 real changes made, 4139 to missing)
+(6,089 real changes made, 6,089 to missing)
+(5,060 real changes made, 5,060 to missing)
+(4,139 real changes made, 4,139 to missing)
+(3,697 real changes made, 3,697 to missing)
 
 . 
 . tab ht_new wave, missing
 
-           |                 Survey wave
-    ht_new |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -9 |       168        190        179        156 |       693 
-        -1 |     1,979        629        429        326 |     3,363 
-         1 |     6,037        150        118        108 |     6,413 
-         2 |        15          4          5          2 |        26 
-         3 |        22          8          5          6 |        41 
-         4 |         2          0          0          0 |         2 
-        91 |        22          5          3          0 |        30 
-         . |         0      6,089      5,060      4,139 |    15,288 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+    ht_new |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168        190        179        156        179 |       872 
+        -1 |     1,979        629        429        326      1,202 |     4,565 
+         1 |     6,037        150        118        108      3,229 |     9,642 
+         2 |        15          4          5          2         14 |        40 
+         3 |        22          8          5          6          7 |        48 
+         4 |         2          0          0          0          3 |         5 
+        91 |        22          5          3          0          3 |        33 
+         . |         0      6,089      5,060      4,139      3,697 |    18,985 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . sort spid wave
 
 . by spid (wave): carryforward ht_new, replace
-ht_new:  (15288 real changes made)
+ht_new:  (18985 real changes made)
 
 . 
 . tab ht_new wave, missing
 
-           |                 Survey wave
-    ht_new |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -9 |       168        214        215        213 |       810 
-        -1 |     1,979      1,861      1,507      1,175 |     6,522 
-         1 |     6,037      4,943      4,019      3,298 |    18,297 
-         2 |        15         15         17         14 |        61 
-         3 |        22         21         20         23 |        86 
-         4 |         2          2          2          2 |         8 
-        91 |        22         19         19         12 |        72 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+    ht_new |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168        214        215        213        222 |     1,032 
+        -1 |     1,979      1,861      1,507      1,175      1,974 |     8,496 
+         1 |     6,037      4,943      4,019      3,298      6,076 |    24,373 
+         2 |        15         15         17         14         26 |        87 
+         3 |        22         21         20         23         21 |       107 
+         4 |         2          2          2          2          5 |        13 
+        91 |        22         19         19         12         10 |        82 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //most residence information from wave 1
 . //used derived variables wave 2,3
 . gen residence=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
 . replace residence=re1resistrct if wave==1
-(8245 real changes made)
+(8,245 real changes made)
 
 . replace residence=re2dresistrct if wave==2
-(7075 real changes made)
+(7,075 real changes made)
 
 . replace residence=re3dresistrct if wave==3
-(5799 real changes made)
+(5,799 real changes made)
 
 . replace residence=re4dresistrct if wave==4
-(4737 real changes made)
+(4,737 real changes made)
+
+. replace residence=re5dresistrct if wave==5
+(8,334 real changes made)
 
 . replace residence=3 if inlist(residence,4,91)
-(3691 real changes made)
+(4,935 real changes made)
 
 . 
 . tab residence wave
 
-           |                 Survey wave
- residence |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -9 |       168          0          0          0 |       168 
-        -1 |       468      1,019        915        428 |     2,830 
-         1 |     5,483      4,309      3,470      3,019 |    16,281 
-         2 |       615        483        383        342 |     1,823 
-         3 |     1,511      1,264      1,031        948 |     4,754 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+ residence |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168          0          0          0          0 |       168 
+        -1 |       468      1,019        915        428        760 |     3,590 
+         1 |     5,483      4,309      3,470      3,019      5,400 |    21,681 
+         2 |       615        483        383        342        618 |     2,441 
+         3 |     1,511      1,264      1,031        948      1,556 |     6,310 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
 . //now overwrite with the new housing type description as done in orig code
 . replace residence=1 if ht_new==1
-(2189 real changes made)
+(2,909 real changes made)
 
 . replace residence=2 if inlist(ht_new,2,3,4,91)
-(131 real changes made)
+(171 real changes made)
 
 . replace residence=. if inlist(residence,-9,-1)
-(2523 real changes made, 2523 to missing)
+(3,154 real changes made, 3,154 to missing)
 
 . tab residence wave, missing
 
-           |                 Survey wave
- residence |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         1 |     6,037      4,971      4,038      3,312 |    18,358 
-         2 |        61         76         73         66 |       276 
-         3 |     1,511      1,244      1,013        931 |     4,699 
-         . |       636        784        675        428 |     2,523 
------------+--------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737 |    25,856 
+           |                      Survey wave
+ residence |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         1 |     6,037      4,971      4,038      3,312      6,087 |    24,445 
+         2 |        61         76         73         66         72 |       348 
+         3 |     1,511      1,244      1,013        931      1,544 |     6,243 
+         . |       636        784        675        428        631 |     3,154 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
 
 
 . 
@@ -2484,14 +2936,25 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
 -----------------------+-----------------------------------
                  Total |      4,737      100.00
 
+. tab residence if wave==5, missing
+
+             residence |      Freq.     Percent        Cum.
+-----------------------+-----------------------------------
+          Private Res. |      6,087       73.04       73.04
+   Group Home/Facility |         72        0.86       73.90
+Mobile Home/Multi-Unit |      1,544       18.53       92.43
+                     . |        631        7.57      100.00
+-----------------------+-----------------------------------
+                 Total |      8,334      100.00
+
 . 
 . 
 . ***********************************************************
 . //living arrangement, NHATS derived variable
 . gen livearrang=.
-(25856 missing values generated)
+(34,190 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. tab hh`w'dlvngarrg if wave==`w' & ivw_type==1, missing
   3. replace livearrang=hh`w'dlvngarrg if wave==`w'
   4. replace livearrang=1 if (hh`w'dlvngarrg==-9 & hh`w'dhshldnum==1)  & wave==`w'
@@ -2508,7 +2971,7 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
                     4 With others only  |      1,366       17.95      100.00
 ----------------------------------------+-----------------------------------
                                   Total |      7,609      100.00
-(8245 real changes made)
+(8,245 real changes made)
 (31 real changes made)
 (0 real changes made)
 (0 real changes made)
@@ -2521,7 +2984,7 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
                      4 With others only |      1,225       20.23      100.00
 ----------------------------------------+-----------------------------------
                                   Total |      6,056      100.00
-(7075 real changes made)
+(7,075 real changes made)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
@@ -2534,7 +2997,7 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
                      4 With others only |        940       19.25      100.00
 ----------------------------------------+-----------------------------------
                                   Total |      4,884      100.00
-(5799 real changes made)
+(5,799 real changes made)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
@@ -2547,13 +3010,26 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
                      4 With others only |        771       19.10      100.00
 ----------------------------------------+-----------------------------------
                                   Total |      4,037      100.00
-(4737 real changes made)
+(4,737 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+                R5 D LIVING ARRANGEMENT |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                                1 Alone |      2,620       34.58       34.58
+2 With spouse/partner only (spouse/part |      2,884       38.07       72.65
+  3 With spouse/partner and with others |        689        9.09       81.74
+                     4 With others only |      1,383       18.26      100.00
+----------------------------------------+-----------------------------------
+                                  Total |      7,576      100.00
+(8,334 real changes made)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
 
 . replace livearrang=. if livearrang==-1 
-(3270 real changes made, 3270 to missing)
+(4,028 real changes made, 4,028 to missing)
 
 . 
 . la var livearrang "Living arrangmeent, categorical"
@@ -2565,24 +3041,24 @@ Mobile Home/Multi-Unit |        931       19.65       90.96
 
 . tab livearrang wave if ivw_type==1, missing
 
-  Living arrangmeent, |                 Survey wave
-          categorical |         1          2          3          4 |     Total
-----------------------+--------------------------------------------+----------
-                Alone |     2,505      1,972      1,757      1,479 |     7,713 
-  With spouse/partner |     3,050      2,285      1,754      1,433 |     8,522 
-With spouse/partner + |       688        574        433        354 |     2,049 
-          With others |     1,366      1,225        940        771 |     4,302 
-----------------------+--------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037 |    22,586 
+  Living arrangmeent, |                      Survey wave
+          categorical |         1          2          3          4          5 |     Total
+----------------------+-------------------------------------------------------+----------
+                Alone |     2,505      1,972      1,757      1,479      2,620 |    10,333 
+  With spouse/partner |     3,050      2,285      1,754      1,433      2,884 |    11,406 
+With spouse/partner + |       688        574        433        354        689 |     2,738 
+          With others |     1,366      1,225        940        771      1,383 |     5,685 
+----------------------+-------------------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
 
 . 
 . //live alone?
 . gen livealone=1 if livearrang==1
-(18143 missing values generated)
+(23,857 missing values generated)
 
 . replace livealone=0 if inlist(livearrang,2,3,4)
-(14873 real changes made)
+(19,829 real changes made)
 
 . la var livealone "Lives alone"
 
@@ -2591,19 +3067,19 @@ With spouse/partner + |       688        574        433        354 |     2,049
      Lives |            Living arrangmeent, categorical
      alone |     Alone  With spou  With spou  With othe          . |     Total
 -----------+-------------------------------------------------------+----------
-         0 |         0      8,522      2,049      4,302          0 |    14,873 
-         1 |     7,713          0          0          0          0 |     7,713 
-         . |         0          0          0          0      3,270 |     3,270 
+         0 |         0     11,406      2,738      5,685          0 |    19,829 
+         1 |    10,333          0          0          0          0 |    10,333 
+         . |         0          0          0          0      4,028 |     4,028 
 -----------+-------------------------------------------------------+----------
-     Total |     7,713      8,522      2,049      4,302      3,270 |    25,856 
+     Total |    10,333     11,406      2,738      5,685      4,028 |    34,190 
 
 
 . 
-. save round_1_4_cleanv1.dta, replace
-file round_1_4_cleanv1.dta saved
+. save round_1_5_cleanv1.dta, replace
+file round_1_5_cleanv1.dta saved
 
-. local ivars age female race_cat education  income_cat otherlang maritalstat medicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_new residence livearrang
->  livealone
+. local ivars age female race_cat education  income_cat otherlang maritalstat medicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_new residence livearrang livealon
+> e
 
 . foreach w in `ivars'{
   2. 
@@ -2616,169 +3092,169 @@ file round_1_4_cleanv1.dta saved
   interview |
    or death |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -1 |        927        3.59        3.59
-         65 |         77        0.30        3.88
-         66 |        411        1.59        5.47
-         67 |        626        2.42        7.89
-         68 |        875        3.38       11.28
-         69 |      1,028        3.98       15.26
-         70 |      1,013        3.92       19.17
-         71 |      1,031        3.99       23.16
-         72 |      1,020        3.95       27.11
-         73 |        990        3.83       30.94
-         74 |        987        3.82       34.76
-         75 |        919        3.55       38.31
-         76 |      1,011        3.91       42.22
-         77 |        989        3.83       46.05
-         78 |        945        3.66       49.70
-         79 |        978        3.78       53.49
-         80 |        985        3.81       57.30
-         81 |        999        3.86       61.16
-         82 |      1,027        3.97       65.13
-         83 |      1,015        3.93       69.06
-         84 |      1,001        3.87       72.93
-         85 |        887        3.43       76.36
-         86 |        873        3.38       79.74
-         87 |        760        2.94       82.68
-         88 |        700        2.71       85.39
-         89 |        631        2.44       87.83
-         90 |        550        2.13       89.95
-         91 |        522        2.02       91.97
-         92 |        476        1.84       93.81
-         93 |        428        1.66       95.47
-         94 |        330        1.28       96.75
-         95 |        234        0.91       97.65
-         96 |        181        0.70       98.35
-         97 |        135        0.52       98.87
-         98 |         89        0.34       99.22
-         99 |         75        0.29       99.51
-        100 |         54        0.21       99.72
-        101 |         31        0.12       99.84
-        102 |         23        0.09       99.93
-        103 |         12        0.05       99.97
-        104 |          2        0.01       99.98
+         -1 |      1,223        3.58        3.58
+         65 |        117        0.34        3.92
+         66 |        638        1.87        5.79
+         67 |        885        2.59        8.37
+         68 |      1,186        3.47       11.84
+         69 |      1,254        3.67       15.51
+         70 |      1,406        4.11       19.62
+         71 |      1,404        4.11       23.73
+         72 |      1,424        4.17       27.90
+         73 |      1,278        3.74       31.64
+         74 |      1,313        3.84       35.48
+         75 |      1,249        3.65       39.13
+         76 |      1,374        4.02       43.15
+         77 |      1,290        3.77       46.92
+         78 |      1,288        3.77       50.69
+         79 |      1,264        3.70       54.39
+         80 |      1,304        3.81       58.20
+         81 |      1,337        3.91       62.11
+         82 |      1,296        3.79       65.90
+         83 |      1,307        3.82       69.73
+         84 |      1,284        3.76       73.48
+         85 |      1,159        3.39       76.87
+         86 |      1,137        3.33       80.20
+         87 |        990        2.90       83.10
+         88 |        914        2.67       85.77
+         89 |        796        2.33       88.10
+         90 |        712        2.08       90.18
+         91 |        681        1.99       92.17
+         92 |        616        1.80       93.97
+         93 |        548        1.60       95.58
+         94 |        406        1.19       96.76
+         95 |        328        0.96       97.72
+         96 |        241        0.70       98.43
+         97 |        166        0.49       98.91
+         98 |        121        0.35       99.27
+         99 |         86        0.25       99.52
+        100 |         68        0.20       99.72
+        101 |         44        0.13       99.85
+        102 |         28        0.08       99.93
+        103 |         14        0.04       99.97
+        104 |          3        0.01       99.98
         105 |          2        0.01       99.99
-        106 |          2        0.01      100.00
-        107 |          1        0.00      100.00
+        106 |          3        0.01       99.99
+        107 |          2        0.01      100.00
 ------------+-----------------------------------
-      Total |     25,852      100.00
+      Total |     34,186      100.00
 
      Female |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-       Male |     10,343       40.00       40.00
-     Female |     15,513       60.00      100.00
+       Male |     13,750       40.22       40.22
+     Female |     20,440       59.78      100.00
 ------------+-----------------------------------
-      Total |     25,856      100.00
+      Total |     34,190      100.00
 
                   Race, categorical |      Freq.     Percent        Cum.
 ------------------------------------+-----------------------------------
-                               DKRF |        242        0.94        0.94
-                      White Non-His |     18,025       69.71       70.65
-                      Black Non-His |      5,521       21.35       92.00
-Other (Am Indian/Asian/Nat. Hawaii) |        670        2.59       94.59
-                           Hispanic |      1,398        5.41      100.00
+                               DKRF |        452        1.32        1.32
+                      White Non-His |     23,728       69.40       70.72
+                      Black Non-His |      7,231       21.15       91.87
+Other (Am Indian/Asian/Nat. Hawaii) |        914        2.67       94.55
+                           Hispanic |      1,865        5.45      100.00
 ------------------------------------+-----------------------------------
-                              Total |     25,856      100.00
+                              Total |     34,190      100.00
 
       Education |
          level, |
     categorical |      Freq.     Percent        Cum.
 ----------------+-----------------------------------
-             -8 |        214        0.90        0.90
-             -7 |         32        0.13        1.03
-   <High School |      6,238       26.12       27.15
-High School/GED |      6,387       26.74       53.89
-   Some College |      5,732       24.00       77.89
-    >=Bachelors |      5,282       22.11      100.00
+             -8 |        240        0.76        0.76
+             -7 |         38        0.12        0.88
+   <High School |      7,957       25.16       26.04
+High School/GED |      8,473       26.79       52.82
+   Some College |      7,740       24.47       77.29
+    >=Bachelors |      7,182       22.71      100.00
 ----------------+-----------------------------------
-          Total |     23,885      100.00
+          Total |     31,630      100.00
 
  income_cat |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-     <15000 |      6,128       25.66       25.66
-  15-29,999 |      6,488       27.16       52.82
-  30-59,999 |      6,220       26.04       78.86
-     >60000 |      5,049       21.14      100.00
+     <15000 |      7,427       23.36       23.36
+  15-29,999 |      8,787       27.64       51.01
+  30-59,999 |      8,320       26.17       77.18
+     >60000 |      7,253       22.82      100.00
 ------------+-----------------------------------
-      Total |     23,885      100.00
+      Total |     31,787      100.00
 
       Speak |
    language |
  other than |
    English? |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |        176        0.74        0.74
-         -7 |         12        0.05        0.79
-          0 |     19,576       81.96       82.75
-          1 |      4,121       17.25      100.00
+         -8 |        198        0.63        0.63
+         -7 |         14        0.04        0.67
+          0 |     25,920       82.33       83.00
+          1 |      5,351       17.00      100.00
 ------------+-----------------------------------
-      Total |     23,885      100.00
+      Total |     31,483      100.00
 
       Marital |
        status |      Freq.     Percent        Cum.
 --------------+-----------------------------------
-           -9 |      3,271       12.65       12.65
-           DK |          6        0.02       12.67
-      Refused |          6        0.02       12.70
-      Married |     10,451       40.42       53.12
-  Live w/Part |        431        1.67       54.78
-    Separated |        371        1.43       56.22
-     Divorced |      2,369        9.16       65.38
-      Widowed |      8,062       31.18       96.56
-Never Married |        889        3.44      100.00
+           -9 |      4,029       11.78       11.78
+           DK |          9        0.03       11.81
+      Refused |          9        0.03       11.84
+      Married |     13,949       40.80       52.64
+  Live w/Part |        586        1.71       54.35
+    Separated |        512        1.50       55.85
+     Divorced |      3,270        9.56       65.41
+      Widowed |     10,632       31.10       96.51
+Never Married |      1,194        3.49      100.00
 --------------+-----------------------------------
-        Total |     25,856      100.00
+        Total |     34,190      100.00
 
    Medicaid |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |        714        3.16        3.16
-         -7 |         47        0.21        3.37
-          0 |     18,311       81.07       84.44
-          1 |      3,514       15.56      100.00
+         -8 |      1,102        3.65        3.65
+         -7 |         63        0.21        3.86
+          0 |     24,380       80.83       84.69
+          1 |      4,617       15.31      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
     Medigap |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |        953        4.22        4.22
-         -7 |         56        0.25        4.47
-          0 |      8,224       36.41       40.88
-          1 |     13,353       59.12      100.00
+         -8 |      1,393        4.62        4.62
+         -7 |         72        0.24        4.86
+          0 |     10,846       35.96       40.82
+          1 |     17,851       59.18      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
    Medicare |
      Part D |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |      1,247        5.52        5.52
-         -7 |         55        0.24        5.76
-          0 |      7,010       31.04       36.80
-          1 |     14,274       63.20      100.00
+         -8 |      1,825        6.05        6.05
+         -7 |         69        0.23        6.28
+          0 |      9,121       30.24       36.52
+          1 |     19,147       63.48      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
   Tricare - |
    veterans |
   insurance |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |        508        2.25        2.25
-         -7 |         45        0.20        2.45
-          0 |     20,748       91.86       94.31
-          1 |      1,285        5.69      100.00
+         -8 |        782        2.59        2.59
+         -7 |         57        0.19        2.78
+          0 |     27,608       91.53       94.31
+          1 |      1,715        5.69      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
     Private |
     nursing |
        home |
   insurance |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |      1,551        6.87        6.87
-         -7 |         58        0.26        7.12
-          0 |     16,509       73.09       80.22
-          1 |      4,468       19.78      100.00
+         -8 |      2,267        7.52        7.52
+         -7 |         77        0.26        7.77
+          0 |     21,831       72.38       80.15
+          1 |      5,987       19.85      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
    w2_moved |      Freq.     Percent        Cum.
 ------------+-----------------------------------
@@ -2796,40 +3272,40 @@ Never Married |        889        3.44      100.00
 
      ht_new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -9 |        810        3.13        3.13
-         -1 |      6,522       25.22       28.36
-          1 |     18,297       70.77       99.12
-          2 |         61        0.24       99.36
-          3 |         86        0.33       99.69
-          4 |          8        0.03       99.72
-         91 |         72        0.28      100.00
+         -9 |      1,032        3.02        3.02
+         -1 |      8,496       24.85       27.87
+          1 |     24,373       71.29       99.15
+          2 |         87        0.25       99.41
+          3 |        107        0.31       99.72
+          4 |         13        0.04       99.76
+         91 |         82        0.24      100.00
 ------------+-----------------------------------
-      Total |     25,856      100.00
+      Total |     34,190      100.00
 
              residence |      Freq.     Percent        Cum.
 -----------------------+-----------------------------------
-          Private Res. |     18,358       78.68       78.68
-   Group Home/Facility |        276        1.18       79.86
-Mobile Home/Multi-Unit |      4,699       20.14      100.00
+          Private Res. |     24,445       78.76       78.76
+   Group Home/Facility |        348        1.12       79.88
+Mobile Home/Multi-Unit |      6,243       20.12      100.00
 -----------------------+-----------------------------------
-                 Total |     23,333      100.00
+                 Total |     31,036      100.00
 
          Living arrangmeent, |
                  categorical |      Freq.     Percent        Cum.
 -----------------------------+-----------------------------------
-                       Alone |      7,713       34.15       34.15
-         With spouse/partner |      8,522       37.73       71.88
-With spouse/partner + others |      2,049        9.07       80.95
-                 With others |      4,302       19.05      100.00
+                       Alone |     10,333       34.26       34.26
+         With spouse/partner |     11,406       37.82       72.07
+With spouse/partner + others |      2,738        9.08       81.15
+                 With others |      5,685       18.85      100.00
 -----------------------------+-----------------------------------
-                       Total |     22,586      100.00
+                       Total |     30,162      100.00
 
 Lives alone |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-          0 |     14,873       65.85       65.85
-          1 |      7,713       34.15      100.00
+          0 |     19,829       65.74       65.74
+          1 |     10,333       34.26      100.00
 ------------+-----------------------------------
-      Total |     22,586      100.00
+      Total |     30,162      100.00
 
 . 
 . 
@@ -2840,5 +3316,5 @@ Lives alone |      Freq.     Percent        Cum.
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- closed on:   1 Sep 2016, 10:35:48
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   7 Apr 2017, 12:53:10
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

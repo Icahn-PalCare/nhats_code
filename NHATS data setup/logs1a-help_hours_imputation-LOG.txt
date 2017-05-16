@@ -1,8 +1,8 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs1a-help_hours_imputation-LOG.txt
   log type:  text
- opened on:   1 Sep 2016, 10:34:10
+ opened on:   7 Apr 2017, 12:19:28
 
 . 
 . //PC file paths
@@ -14,6 +14,8 @@
 
 . local r4raw "E:\nhats\data\NHATS PUBLIC\round_4\"
 
+. local r5raw "E:\nhats\data\NHATS PUBLIC\round_5\"
+
 . local work "E:\nhats\data\NHATS working data\"
 
 . local r1s "E:\nhats\data\NHATS Sensitive\r1_sensitive\"
@@ -23,6 +25,8 @@
 . local r3s "E:\nhats\data\NHATS Sensitive\r3_sensitive\"
 
 . local r4s "E:\nhats\data\NHATS Sensitive\r4_sensitive\"
+
+. local r5s "E:\nhats\data\NHATS Sensitive\r5_sensitive\"
 
 . 
 . /* //Rebecca mac file paths
@@ -41,6 +45,7 @@ E:\nhats\data\NHATS working data
 . **User note: This section can be commented out after run one time to set up datasets
 . ********************************************************************
 . //combine op and sp data files
+. 
 . //round 1
 . use "`r1raw'NHATS_Round_1_OP_File_v2.dta", clear
 
@@ -146,8 +151,39 @@ file R3_OPSPlinked.dta saved
 file R4_OPSPlinked.dta saved
 
 . 
+. //round 5
+. use "`r5raw'NHATS_Round_5_OP_File.dta", clear
+
+. sort spid opid
+
 . 
-. foreach w in 1 2 3 4{
+. merge m:1 spid using round_5_1.dta //bring in sorted sp ivw dataset
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r5dcontnew already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           394
+        from master                         0  (_merge==1)
+        from using                        394  (_merge==2)
+
+    matched                            52,285  (_merge==3)
+    -----------------------------------------
+
+. keep if _merge==3 //drop obs with no OP entries
+(394 observations deleted)
+
+. save R5_OPSPlinked.dta, replace
+file R5_OPSPlinked.dta saved
+
+. 
+. 
+. 
+. foreach w in 1 2 3 4 5 {
   2.         use R`w'_OPSPlinked.dta
   3.         
 . //now create limited datasets for each wave with only needed variables
@@ -163,6 +199,7 @@ file R1_OPSPltd.dta saved
 file R2_OPSPltd.dta saved
 file R3_OPSPltd.dta saved
 file R4_OPSPltd.dta saved
+file R5_OPSPltd.dta saved
 
 . 
 . ********************************************************************
@@ -551,6 +588,274 @@ file R4_OPSPltd.dta saved
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
 
+. append using R5_OPSPltd.dta
+(label op4proxy already defined)
+(label op4relatnshp already defined)
+(label op4drelatfl already defined)
+(label op4drelflro already defined)
+(label op4dgender already defined)
+(label op4prsninhh already defined)
+(label op4dage already defined)
+(label op4dagefl already defined)
+(label op4dageflro already defined)
+(label op4dgenderfl already defined)
+(label op4dgenderflro already defined)
+(label op4spouprtnr already defined)
+(label op4nwspouprt already defined)
+(label op4eduspo already defined)
+(label op4leveledu already defined)
+(label op4childinhh already defined)
+(label op4reasgone already defined)
+(label op4dspoudec already defined)
+(label op4ddeceased already defined)
+(label op4chnotinhh already defined)
+(label op4educhild already defined)
+(label op4martlstat already defined)
+(label op4numchldrn already defined)
+(label op4anychdu18 already defined)
+(label op4numchdu18 already defined)
+(label op4dchilddec already defined)
+(label op4dchldedit already defined)
+(label op4soclntwrk already defined)
+(label op4dsocwrkfl already defined)
+(label op4outhlp already defined)
+(label op4insdhlp already defined)
+(label op4bedhlp already defined)
+(label op4tkplhlp1 already defined)
+(label op4tkplhlp2 already defined)
+(label op4launhlp already defined)
+(label op4shophlp already defined)
+(label op4mealhlp already defined)
+(label op4bankhlp already defined)
+(label op4moneyhlp already defined)
+(label op4eathlp already defined)
+(label op4bathhlp already defined)
+(label op4toilhlp already defined)
+(label op4dreshlp already defined)
+(label op4medshlp already defined)
+(label op4dochlp already defined)
+(label op4dochlpmst already defined)
+(label op4insurhlp already defined)
+(label op4spcaredfr already defined)
+(label op4chhlpfin already defined)
+(label op4hlpchfin already defined)
+(label op4ishelper already defined)
+(label op4helpsched already defined)
+(label op4numdayswk already defined)
+(label op4numdaysmn already defined)
+(label op4numhrsday already defined)
+(label op4paidhelpr already defined)
+(label op4sppayshlp already defined)
+(label op4govpayhlp already defined)
+(label op4inspayhlp already defined)
+(label op4othpayhlp already defined)
+(label op4payunit already defined)
+(label op4hourlypay already defined)
+(label op4weeklypay already defined)
+(label op4monthlypy already defined)
+(label op4progmpaid already defined)
+(label op4dhrsmth already defined)
+(label op4contctflg already defined)
+(label op4dflmiss already defined)
+(label op4dmissadd already defined)
+(label op4dprobdup already defined)
+(label op4ddiffop already defined)
+(label op3proxy already defined)
+(label op3relatnshp already defined)
+(label op3drelatfl already defined)
+(label op3drelflro already defined)
+(label op3dgender already defined)
+(label op3prsninhh already defined)
+(label op3dage already defined)
+(label op3dagefl already defined)
+(label op3dageflro already defined)
+(label op3dgenderfl already defined)
+(label op3dgenderflro already defined)
+(label op3spouprtnr already defined)
+(label op3nwspouprt already defined)
+(label op3eduspo already defined)
+(label op3leveledu already defined)
+(label op3childinhh already defined)
+(label op3reasgone already defined)
+(label op3dspoudec already defined)
+(label op3ddeceased already defined)
+(label op3chnotinhh already defined)
+(label op3educhild already defined)
+(label op3martlstat already defined)
+(label op3numchldrn already defined)
+(label op3anychdu18 already defined)
+(label op3numchdu18 already defined)
+(label op3dchilddec already defined)
+(label op3dchldedit already defined)
+(label op3soclntwrk already defined)
+(label op3dsocwrkfl already defined)
+(label op3outhlp already defined)
+(label op3insdhlp already defined)
+(label op3bedhlp already defined)
+(label op3tkplhlp1 already defined)
+(label op3tkplhlp2 already defined)
+(label op3launhlp already defined)
+(label op3shophlp already defined)
+(label op3mealhlp already defined)
+(label op3bankhlp already defined)
+(label op3moneyhlp already defined)
+(label op3eathlp already defined)
+(label op3bathhlp already defined)
+(label op3toilhlp already defined)
+(label op3dreshlp already defined)
+(label op3medshlp already defined)
+(label op3dochlp already defined)
+(label op3dochlpmst already defined)
+(label op3insurhlp already defined)
+(label op3spcaredfr already defined)
+(label op3chhlpfin already defined)
+(label op3hlpchfin already defined)
+(label op3ishelper already defined)
+(label op3helpsched already defined)
+(label op3numdayswk already defined)
+(label op3numdaysmn already defined)
+(label op3numhrsday already defined)
+(label op3paidhelpr already defined)
+(label op3sppayshlp already defined)
+(label op3govpayhlp already defined)
+(label op3inspayhlp already defined)
+(label op3othpayhlp already defined)
+(label op3payunit already defined)
+(label op3hourlypay already defined)
+(label op3weeklypay already defined)
+(label op3monthlypy already defined)
+(label op3progmpaid already defined)
+(label op3dhrsmth already defined)
+(label op3contctflg already defined)
+(label op3dflmiss already defined)
+(label op3dmissadd already defined)
+(label op3dprobdup already defined)
+(label op3ddiffop already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+
 . 
 . save R1234_OPSPltd.dta, replace
 file R1234_OPSPltd.dta saved
@@ -563,84 +868,97 @@ file R1234_OPSPltd.dta saved
 
 Survey wave |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-          1 |     38,097       26.31       26.31
-          2 |     37,944       26.20       52.51
-          3 |     35,745       24.69       77.20
-          4 |     33,016       22.80      100.00
+          1 |     38,097       19.33       19.33
+          2 |     37,944       19.25       38.58
+          3 |     35,745       18.14       56.72
+          4 |     33,016       16.75       73.47
+          5 |     52,285       26.53      100.00
 ------------+-----------------------------------
-      Total |    144,802      100.00
+      Total |    197,087      100.00
 
 . 
 . ********************************************************************
 . //recode helper time variables to -1 (na) if not helper per flag variable
 . **Note, these OP variables are backfilled from wave to wave
 . gen opishelper_allw=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. tab op`w'ishelper wave, missing //helper flag variable
   3. replace opishelper_allw=op`w'ishelper if wave==`w'
   4. }
 
- R1 BXHL1 HELPS |                 Survey wave
-             SP |         1          2          3          4 |     Total
-----------------+--------------------------------------------+----------
--1 Inapplicable |    26,500     27,980     27,555     26,395 |   108,430 
-          1 Yes |    11,597      9,964      8,190      6,621 |    36,372 
-----------------+--------------------------------------------+----------
-          Total |    38,097     37,944     35,745     33,016 |   144,802 
+ R1 BXHL1 HELPS |                      Survey wave
+             SP |         1          2          3          4          5 |     Total
+----------------+-------------------------------------------------------+----------
+-1 Inapplicable |    26,500     27,980     27,555     26,395     46,527 |   154,957 
+          1 Yes |    11,597      9,964      8,190      6,621      5,758 |    42,130 
+----------------+-------------------------------------------------------+----------
+          Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
-(38097 real changes made)
+(38,097 real changes made)
 
        R2 BXHL2 |
-    ELIGIBLE HL |                 Survey wave
-        SECTION |         1          2          3          4 |     Total
-----------------+--------------------------------------------+----------
--1 Inapplicable |         0     28,120     26,963     25,934 |    81,017 
-          1 YES |         0      9,824      8,782      7,082 |    25,688 
-              . |    38,097          0          0          0 |    38,097 
-----------------+--------------------------------------------+----------
-          Total |    38,097     37,944     35,745     33,016 |   144,802 
+    ELIGIBLE HL |                      Survey wave
+        SECTION |         1          2          3          4          5 |     Total
+----------------+-------------------------------------------------------+----------
+-1 Inapplicable |         0     28,120     26,963     25,934     46,142 |   127,159 
+          1 YES |         0      9,824      8,782      7,082      6,143 |    31,831 
+              . |    38,097          0          0          0          0 |    38,097 
+----------------+-------------------------------------------------------+----------
+          Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
-(37944 real changes made)
+(37,944 real changes made)
 
        R3 BXHL2 |
-    ELIGIBLE HL |                 Survey wave
-        SECTION |         1          2          3          4 |     Total
-----------------+--------------------------------------------+----------
--1 Inapplicable |         0          0     27,332     25,481 |    52,813 
-          1 YES |         0          0      8,413      7,535 |    15,948 
-              . |    38,097     37,944          0          0 |    76,041 
-----------------+--------------------------------------------+----------
-          Total |    38,097     37,944     35,745     33,016 |   144,802 
+    ELIGIBLE HL |                      Survey wave
+        SECTION |         1          2          3          4          5 |     Total
+----------------+-------------------------------------------------------+----------
+-1 Inapplicable |         0          0     27,332     25,481     45,742 |    98,555 
+          1 YES |         0          0      8,413      7,535      6,543 |    22,491 
+              . |    38,097     37,944          0          0          0 |    76,041 
+----------------+-------------------------------------------------------+----------
+          Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
-(35745 real changes made)
+(35,745 real changes made)
 
        R4 BXHL2 |
-    ELIGIBLE HL |                 Survey wave
-        SECTION |         1          2          3          4 |     Total
-----------------+--------------------------------------------+----------
--1 Inapplicable |         0          0          0     25,931 |    25,931 
-          1 YES |         0          0          0      7,085 |     7,085 
-              . |    38,097     37,944     35,745          0 |   111,786 
-----------------+--------------------------------------------+----------
-          Total |    38,097     37,944     35,745     33,016 |   144,802 
+    ELIGIBLE HL |                      Survey wave
+        SECTION |         1          2          3          4          5 |     Total
+----------------+-------------------------------------------------------+----------
+-1 Inapplicable |         0          0          0     25,931     45,476 |    71,407 
+          1 YES |         0          0          0      7,085      6,809 |    13,894 
+              . |    38,097     37,944     35,745          0          0 |   111,786 
+----------------+-------------------------------------------------------+----------
+          Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
-(33016 real changes made)
+(33,016 real changes made)
+
+       R5 BXHL2 |
+    ELIGIBLE HL |                      Survey wave
+        SECTION |         1          2          3          4          5 |     Total
+----------------+-------------------------------------------------------+----------
+-1 Inapplicable |         0          0          0          0     39,861 |    39,861 
+          1 YES |         0          0          0          0     12,424 |    12,424 
+              . |    38,097     37,944     35,745     33,016          0 |   144,802 
+----------------+-------------------------------------------------------+----------
+          Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
+
+(52,285 real changes made)
 
 . tab opishelper_allw wave, missing
 
-opishelper |                 Survey wave
-     _allw |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-        -1 |    26,500     28,120     27,332     25,931 |   107,883 
-         1 |    11,597      9,824      8,413      7,085 |    36,919 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+opishelper |                      Survey wave
+     _allw |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -1 |    26,500     28,120     27,332     25,931     39,861 |   147,744 
+         1 |    11,597      9,824      8,413      7,085     12,424 |    49,343 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2.         foreach v in op`w'helpsched op`w'numdayswk op`w'numdaysmn op`w'numhrsday {
   3.                 tab `v' if op`w'ishelper==-1 & wave==`w', missing
   4.                 replace `v'=-1 if op`w'ishelper==-1 & wave==`w'
@@ -783,49 +1101,83 @@ R4 HL3 NUM DAYS |
           Total |     25,931      100.00
 (0 real changes made)
 
+ R5 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+R5 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+R5 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+ R5 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
 . //generate indicator of help with any task that has monthly reference period
 . gen month=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace month=0 if wave==`w'
   3. replace month=1 if (op`w'outhlp==1 | op`w'insdhlp==1 | op`w'bedhlp==1 | ///
 >  op`w'tkplhlp1==1 | op`w'tkplhlp2==1 | op`w'launhlp==1 | op`w'shophlp==1 | ///
 >  op`w'mealhlp==1 | op`w'bankhlp==1 | op`w'eathlp==1 | op`w'bathhlp==1 | ///
 >  op`w'toilhlp==1 | op`w'dreshlp==1 | op`w'medshlp==1) & wave==`w'
   4. } 
-(38097 real changes made)
-(11077 real changes made)
-(37944 real changes made)
-(10419 real changes made)
-(35745 real changes made)
-(9099 real changes made)
-(33016 real changes made)
-(7623 real changes made)
+(38,097 real changes made)
+(11,077 real changes made)
+(37,944 real changes made)
+(10,419 real changes made)
+(35,745 real changes made)
+(9,099 real changes made)
+(33,016 real changes made)
+(7,623 real changes made)
+(52,285 real changes made)
+(12,432 real changes made)
 
 . tab month wave, missing
 
-           |                 Survey wave
-     month |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    27,020     27,525     26,646     25,393 |   106,584 
-         1 |    11,077     10,419      9,099      7,623 |    38,218 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+           |                      Survey wave
+     month |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    27,020     27,525     26,646     25,393     39,853 |   146,437 
+         1 |    11,077     10,419      9,099      7,623     12,432 |    50,650 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . 
 .  //generate indicator of help with any task that has yearly reference period
 . gen year=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace year=0 if wave==`w'
   3. replace year=1 if (op`w'moneyhlp==1 | op`w'dochlp==1 | op`w'insurhlp==1) & wave==`w'
   4. tab year month if wave==`w', missing
   5. }
-(38097 real changes made)
-(4425 real changes made)
+(38,097 real changes made)
+(4,425 real changes made)
 
            |         month
       year |         0          1 |     Total
@@ -835,8 +1187,8 @@ R4 HL3 NUM DAYS |
 -----------+----------------------+----------
      Total |    27,020     11,077 |    38,097 
 
-(37944 real changes made)
-(3489 real changes made)
+(37,944 real changes made)
+(3,489 real changes made)
 
            |         month
       year |         0          1 |     Total
@@ -846,8 +1198,8 @@ R4 HL3 NUM DAYS |
 -----------+----------------------+----------
      Total |    27,525     10,419 |    37,944 
 
-(35745 real changes made)
-(2978 real changes made)
+(35,745 real changes made)
+(2,978 real changes made)
 
            |         month
       year |         0          1 |     Total
@@ -857,8 +1209,8 @@ R4 HL3 NUM DAYS |
 -----------+----------------------+----------
      Total |    26,646      9,099 |    35,745 
 
-(33016 real changes made)
-(2689 real changes made)
+(33,016 real changes made)
+(2,689 real changes made)
 
            |         month
       year |         0          1 |     Total
@@ -868,45 +1220,57 @@ R4 HL3 NUM DAYS |
 -----------+----------------------+----------
      Total |    25,393      7,623 |    33,016 
 
+(52,285 real changes made)
+(4,599 real changes made)
+
+           |         month
+      year |         0          1 |     Total
+-----------+----------------------+----------
+         0 |    38,773      8,913 |    47,686 
+         1 |     1,080      3,519 |     4,599 
+-----------+----------------------+----------
+     Total |    39,853     12,432 |    52,285 
+
 
 . 
 . //generate indicator of help in last year but not last month
 . gen yearnotmonth=0
 
 . replace yearnotmonth=1 if year==1 & month==0
-(2870 real changes made)
+(3,950 real changes made)
 
 . tab yearnotmonth wave, missing
 
-yearnotmon |                 Survey wave
-        th |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    37,229     37,254     35,082     32,367 |   141,932 
-         1 |       868        690        663        649 |     2,870 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+yearnotmon |                      Survey wave
+        th |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    37,229     37,254     35,082     32,367     51,205 |   193,137 
+         1 |       868        690        663        649      1,080 |     3,950 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . ********************************************************************
 . //pull variable for sits in with doctor
 . gen op_doc_help=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. forvalues i=1/4 {
+. forvalues i=1/5 {
   2.         replace op_doc_help=op`i'dochlp if wave==`i'
   3. }
-(38097 real changes made)
-(37944 real changes made)
-(35745 real changes made)
-(33016 real changes made)
+(38,097 real changes made)
+(37,944 real changes made)
+(35,745 real changes made)
+(33,016 real changes made)
+(52,285 real changes made)
 
 . ********************************************************************
 . //generate SP received help with self care or mobility activity or 
 . //household activity for health and functioning reasons
 . gen disab=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace disab=0 if wave==`w'
   3. //self care or mobility, assumed to be for health reasons
 . replace disab=1 if (mo`w'douthelp==2 | mo`w'dinsdhelp==2 | mo`w'dbedhelp==2 | ///
@@ -918,44 +1282,51 @@ yearnotmon |                 Survey wave
   5. replace disab=1 if inlist(`v',1,3,4) & wave==`w'
   6. }
   7. }
-(38097 real changes made)
-(9055 real changes made)
-(1494 real changes made)
-(1737 real changes made)
+(38,097 real changes made)
+(9,055 real changes made)
+(1,494 real changes made)
+(1,737 real changes made)
 (376 real changes made)
 (335 real changes made)
 (211 real changes made)
-(37944 real changes made)
-(10999 real changes made)
-(1524 real changes made)
-(1870 real changes made)
+(37,944 real changes made)
+(10,999 real changes made)
+(1,524 real changes made)
+(1,870 real changes made)
 (347 real changes made)
 (388 real changes made)
 (280 real changes made)
-(35745 real changes made)
-(11252 real changes made)
-(1182 real changes made)
-(1866 real changes made)
+(35,745 real changes made)
+(11,252 real changes made)
+(1,182 real changes made)
+(1,866 real changes made)
 (392 real changes made)
 (370 real changes made)
 (205 real changes made)
-(33016 real changes made)
-(10392 real changes made)
-(1215 real changes made)
-(1557 real changes made)
+(33,016 real changes made)
+(10,392 real changes made)
+(1,215 real changes made)
+(1,557 real changes made)
 (423 real changes made)
 (383 real changes made)
 (266 real changes made)
+(52,285 real changes made)
+(14,693 real changes made)
+(1,735 real changes made)
+(2,443 real changes made)
+(716 real changes made)
+(497 real changes made)
+(337 real changes made)
 
 . tab disab wave, missing
 
-           |                 Survey wave
-     disab |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    24,889     22,536     20,478     18,780 |    86,683 
-         1 |    13,208     15,408     15,267     14,236 |    58,119 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+           |                      Survey wave
+     disab |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    24,889     22,536     20,478     18,780     31,864 |   118,547 
+         1 |    13,208     15,408     15,267     14,236     20,421 |    78,540 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . 
@@ -963,253 +1334,254 @@ yearnotmon |                 Survey wave
 . //flag variable for hours/month reported, valid
 . tab op1dhrsmth wave, missing //derived hours/month from HL section
 
- R1 D HL2 HL3 HL4 HRS |                 Survey wave
-           HELP MONTH |         1          2          3          4 |     Total
-----------------------+--------------------------------------------+----------
-    -11:hours missing |       253        212        171        147 |       783 
-     -10:days missing |       103         84         69         55 |       311 
-  -9:days+hrs missing |       729        612        502        394 |     2,237 
-            -1:Inapp. |    26,500     27,980     27,555     26,395 |   108,430 
-                    1 |     1,093        952        810        665 |     3,520 
-                    2 |       554        464        405        331 |     1,754 
-                    3 |       219        195        177        156 |       747 
-                    4 |       834        481        409        339 |     2,063 
-                 4.33 |         0        238        203        167 |       608 
-                    5 |       134        117         96         77 |       424 
-                    6 |       291        249        210        173 |       923 
-                    7 |        68         58         49         43 |       218 
-                    8 |       285        255        219        170 |       929 
-                 8.66 |         0        169        130        101 |       400 
-                    9 |       291         79         65         54 |       489 
-                   10 |       191        173        148        124 |       636 
-                   11 |         2          2          1          0 |         5 
-                   12 |       197        174        142        108 |       621 
-                12.99 |         0        108         80         65 |       253 
-                   13 |       118          0          0          0 |       118 
-                   14 |        72         56         47         33 |       208 
-                   15 |       118        102         85         73 |       378 
-                   16 |       129        112         90         76 |       407 
-                   17 |       126          0          0          0 |       126 
-                17.32 |         0        111         89         67 |       267 
-                   18 |        36         34         31         20 |       121 
-                   20 |       139        121         98         85 |       443 
-                   21 |        33         27         22         16 |        98 
-                21.65 |         0         53         39         25 |       117 
-                   22 |        66          4          4          4 |        78 
-                   23 |         2          2          2          1 |         7 
-                   24 |        92         78         64         55 |       289 
-                   25 |        34         29         24         19 |       106 
-                25.98 |         0        112         90         69 |       271 
-                   26 |       134          0          0          0 |       134 
-                   27 |         2          1          1          1 |         5 
-                   28 |        31         26         23         20 |       100 
-                   30 |       531        292        234        203 |     1,260 
-                30.31 |         0        151        127        107 |       385 
-                   31 |        41         34         26         20 |       121 
-                   32 |        41         37         31         23 |       132 
-                   33 |         1          1          1          1 |         4 
-                34.64 |         0         84         70         57 |       211 
-                   35 |       116         20         14         12 |       162 
-                   36 |        24         18         13         11 |        66 
-                38.97 |         0         37         33         25 |        95 
-                   39 |        47          0          0          0 |        47 
-                   40 |        62         54         38         30 |       184 
-                   42 |        23         18         15         11 |        67 
-                   43 |        60          0          0          0 |        60 
-                 43.3 |         0         53         40         27 |       120 
-                   44 |         4          4          3          3 |        14 
-                   45 |        23         19         14         10 |        66 
-                   46 |         2          0          0          0 |         2 
-                47.63 |         0          1          1          1 |         3 
-                   48 |        24         17         13          8 |        62 
-                   49 |         7          7          6          4 |        24 
-                   50 |        28         24         23         19 |        94 
-                51.96 |         0         72         59         46 |       177 
-                   52 |        76          0          0          0 |        76 
-                   54 |         1          1          1          0 |         3 
-                   56 |        27         25         22         18 |        92 
-                   60 |       304        249        202        168 |       923 
-                60.62 |         0        179        143        107 |       429 
-                   61 |       219          0          0          0 |       219 
-                   62 |        34         29         22         18 |       103 
-                   63 |         3          3          2          1 |         9 
-                   64 |         9          6          6          5 |        26 
-                64.95 |         0         40         29         23 |        92 
-                   65 |        54          1          1          1 |        57 
-                   69 |        40          0          0          0 |        40 
-                69.28 |         0         32         28         22 |        82 
-                   70 |         8          7          3          3 |        21 
-                   72 |        11         10          8          5 |        34 
-                   75 |        15         13          9          6 |        43 
-                77.94 |         0         15         12         11 |        38 
-                   78 |        18          1          1          1 |        21 
-                   80 |        23         20         19         18 |        80 
-                   84 |         8          8          6          4 |        26 
-                 86.6 |         0         34         28         21 |        83 
-                   87 |        38          0          0          0 |        38 
-                   90 |       146        123        101         78 |       448 
-                90.93 |         0        102         81         66 |       249 
-                   91 |       122          0          0          0 |       122 
-                   93 |        13         11         10          6 |        40 
-                   95 |         1          0          0          0 |         1 
-                95.26 |         0          1          0          0 |         1 
-                   96 |        16         15         14         12 |        57 
-                   98 |         2          2          1          1 |         6 
-                  100 |        23         19         16         10 |        68 
-               103.92 |         0         39         30         20 |        89 
-                  104 |        45          0          0          0 |        45 
-                  105 |         3          2          2          2 |         9 
-                  108 |        23          1          1          1 |        26 
-               108.25 |         0         20         16         10 |        46 
-                  112 |         4          2          1          0 |         7 
-                  120 |       139        115         96         79 |       429 
-                  121 |       108          0          0          0 |       108 
-               121.24 |         0         97         77         62 |       236 
-                  124 |        20         17         11          9 |        57 
-                  125 |         6          4          4          3 |        17 
-                  126 |         1          1          0          0 |         2 
-                  128 |         2          1          1          0 |         4 
-                129.9 |         0          9          6          3 |        18 
-                  130 |        10          0          0          0 |        10 
-                  135 |         1          1          0          0 |         2 
-               138.56 |         0          2          1          0 |         3 
-                  139 |         2          0          0          0 |         2 
-                  140 |         6          5          4          3 |        18 
-                  150 |        81         70         56         46 |       253 
-               151.55 |         0         70         56         40 |       166 
-                  152 |        81          0          0          0 |        81 
-                  154 |         1          1          0          0 |         2 
-                  155 |        17         13         11         10 |        51 
-               155.88 |         0         11          8          6 |        25 
-                  156 |        11          0          0          0 |        11 
-                  160 |         9          8          7          6 |        30 
-                  161 |         1          1          1          1 |         4 
-                  168 |        28         21         12         10 |        71 
-                  173 |        20          0          0          0 |        20 
-                173.2 |         0         12          8          5 |        25 
-                  176 |         1          1          1          1 |         4 
-                  180 |        43         36         25         22 |       126 
-               181.86 |         0         49         32         29 |       110 
-                  182 |        56          1          0          0 |        57 
-                  184 |         1          1          0          0 |         2 
-                  186 |        12         10          9          7 |        38 
-               190.52 |         0          1          1          0 |         2 
-                  191 |         1          0          0          0 |         1 
-               194.85 |         0          5          5          3 |        13 
-                  195 |         5          0          0          0 |         5 
-                  200 |         9          9          7          7 |        32 
-               207.84 |         0         13         10          3 |        26 
-                  208 |        16          1          0          0 |        17 
-                  210 |         8          7          7          6 |        28 
-                  212 |        27          0          0          0 |        27 
-               212.17 |         0         23         19         16 |        58 
-                  216 |         1          1          1          1 |         4 
-                216.5 |         0          2          2          1 |         5 
-                  217 |         4          1          1          1 |         7 
-                  220 |         1          1          0          0 |         2 
-                  224 |         2          2          1          1 |         6 
-                  225 |         1          1          0          0 |         2 
-               233.82 |         0          1          1          1 |         3 
-                  234 |         2          0          0          0 |         2 
-                  240 |        73         63         52         43 |       231 
-                  242 |       101          0          0          0 |       101 
-               242.48 |         0         89         76         61 |       226 
-                  248 |        18         14         10          7 |        49 
-                  250 |         1          1          1          0 |         3 
-                  252 |         3          3          1          1 |         8 
-                259.8 |         0          6          4          4 |        14 
-                  260 |         7          0          0          0 |         7 
-                  270 |         2          0          0          0 |         2 
-               272.79 |         0          7          7          4 |        18 
-                  273 |         7          0          0          0 |         7 
-                  279 |         1          1          1          0 |         3 
-               285.78 |         0          1          0          0 |         1 
-                  286 |         1          0          0          0 |         1 
-                  288 |         1          1          0          0 |         2 
-               298.77 |         0          1          1          1 |         3 
-                  299 |         1          0          0          0 |         1 
-                  300 |        23         20         14         11 |        68 
-                  303 |        23          0          0          0 |        23 
-                303.1 |         0         19         13         11 |        43 
-                  310 |         5          4          4          3 |        16 
-               311.76 |         0         18         14          8 |        40 
-                  312 |        18          0          0          0 |        18 
-                  330 |         1          1          0          0 |         2 
-                  333 |         2          0          0          0 |         2 
-               333.41 |         0          1          1          0 |         2 
-                  336 |         1          1          0          0 |         2 
-               337.74 |         0          1          1          1 |         3 
-                  338 |         1          0          0          0 |         1 
-                  360 |        33         28         21         16 |        98 
-               363.72 |         0         40         27         18 |        85 
-                  364 |        49          0          0          0 |        49 
-                  372 |         4          4          3          1 |        12 
-                  375 |         3          3          3          3 |        12 
-                389.7 |         0          1          1          1 |         3 
-                  390 |         1          0          0          0 |         1 
-                  394 |         1          0          0          0 |         1 
-               394.03 |         0          1          1          1 |         3 
-               415.68 |         0          3          3          2 |         8 
-                  416 |         3          0          0          0 |         3 
-                  420 |         1          1          1          1 |         4 
-                  424 |         7          0          0          0 |         7 
-               424.34 |         0          6          3          0 |         9 
-                  425 |         1          1          1          1 |         4 
-                  432 |         1          1          1          0 |         3 
-                  433 |         3          3          1          0 |         7 
-                  434 |         1          1          1          0 |         3 
-                  450 |         4          4          4          4 |        16 
-               454.65 |         0          1          1          0 |         2 
-                  455 |         2          0          0          0 |         2 
-                  465 |         1          1          0          0 |         2 
-                  480 |         8          6          3          2 |        19 
-               484.96 |         0         20         11          9 |        40 
-                  485 |        22          0          0          0 |        22 
-                  496 |         2          2          2          1 |         7 
-                  504 |         1          1          0          0 |         2 
-                  515 |         1          0          0          0 |         1 
-               515.27 |         0          1          1          1 |         3 
-                519.6 |         0          4          3          3 |        10 
-                  520 |         6          0          0          0 |         6 
-                  527 |         2          2          1          0 |         5 
-                  540 |         3          3          3          2 |        11 
-               545.58 |         0          4          4          3 |        11 
-                  546 |         4          0          0          0 |         4 
-                  558 |         2          2          1          0 |         5 
-               575.89 |         0          1          1          0 |         2 
-                  576 |         2          1          1          1 |         5 
-                  600 |         3          1          1          1 |         6 
-               623.52 |         0          2          2          1 |         5 
-                  624 |         2          0          0          0 |         2 
-                  660 |         1          1          0          0 |         2 
-               666.82 |         0          1          1          1 |         3 
-                  667 |         1          0          0          0 |         1 
-                  690 |         1          1          0          0 |         2 
-                  697 |         1          0          0          0 |         1 
-               697.13 |         0          1          1          1 |         3 
-                  713 |         1          1          1          1 |         4 
-                  720 |        62         56         41         25 |       184 
-                  727 |       301          0          0          0 |       301 
-               727.44 |         0        266        202        160 |       628 
-                  744 |        30         25         20         12 |        87 
-Not codeable, <1 hour |     1,306      1,143        966        823 |     4,238 
-----------------------+--------------------------------------------+----------
-                Total |    38,097     37,944     35,745     33,016 |   144,802 
+ R1 D HL2 HL3 HL4 HRS |                      Survey wave
+           HELP MONTH |         1          2          3          4          5 |     Total
+----------------------+-------------------------------------------------------+----------
+    -11:hours missing |       253        212        171        147        121 |       904 
+     -10:days missing |       103         84         69         55         51 |       362 
+  -9:days+hrs missing |       729        612        502        394        326 |     2,563 
+            -1:Inapp. |    26,500     27,980     27,555     26,395     46,527 |   154,957 
+                    1 |     1,093        952        810        665        587 |     4,107 
+                    2 |       554        464        405        331        295 |     2,049 
+                    3 |       219        195        177        156        141 |       888 
+                    4 |       834        481        409        339        292 |     2,355 
+                 4.33 |         0        238        203        167        149 |       757 
+                    5 |       134        117         96         77         65 |       489 
+                    6 |       291        249        210        173        147 |     1,070 
+                    7 |        68         58         49         43         43 |       261 
+                    8 |       285        255        219        170        155 |     1,084 
+                 8.66 |         0        169        130        101         90 |       490 
+                    9 |       291         79         65         54         52 |       541 
+                   10 |       191        173        148        124        107 |       743 
+                   11 |         2          2          1          0          0 |         5 
+                   12 |       197        174        142        108         97 |       718 
+                12.99 |         0        108         80         65         55 |       308 
+                   13 |       118          0          0          0          0 |       118 
+                   14 |        72         56         47         33         29 |       237 
+                   15 |       118        102         85         73         59 |       437 
+                   16 |       129        112         90         76         63 |       470 
+                   17 |       126          0          0          0          0 |       126 
+                17.32 |         0        111         89         67         59 |       326 
+                   18 |        36         34         31         20         19 |       140 
+                   20 |       139        121         98         85         75 |       518 
+                   21 |        33         27         22         16         13 |       111 
+                21.65 |         0         53         39         25         22 |       139 
+                   22 |        66          4          4          4          3 |        81 
+                   23 |         2          2          2          1          1 |         8 
+                   24 |        92         78         64         55         41 |       330 
+                   25 |        34         29         24         19         17 |       123 
+                25.98 |         0        112         90         69         55 |       326 
+                   26 |       134          0          0          0          0 |       134 
+                   27 |         2          1          1          1          0 |         5 
+                   28 |        31         26         23         20         20 |       120 
+                   30 |       531        292        234        203        180 |     1,440 
+                30.31 |         0        151        127        107         93 |       478 
+                   31 |        41         34         26         20         18 |       139 
+                   32 |        41         37         31         23         17 |       149 
+                   33 |         1          1          1          1          1 |         5 
+                34.64 |         0         84         70         57         52 |       263 
+                   35 |       116         20         14         12         10 |       172 
+                   36 |        24         18         13         11          9 |        75 
+                38.97 |         0         37         33         25         18 |       113 
+                   39 |        47          0          0          0          0 |        47 
+                   40 |        62         54         38         30         27 |       211 
+                   42 |        23         18         15         11          9 |        76 
+                   43 |        60          0          0          0          0 |        60 
+                 43.3 |         0         53         40         27         25 |       145 
+                   44 |         4          4          3          3          3 |        17 
+                   45 |        23         19         14         10          8 |        74 
+                   46 |         2          0          0          0          0 |         2 
+                47.63 |         0          1          1          1          1 |         4 
+                   48 |        24         17         13          8          5 |        67 
+                   49 |         7          7          6          4          4 |        28 
+                   50 |        28         24         23         19         14 |       108 
+                51.96 |         0         72         59         46         37 |       214 
+                   52 |        76          0          0          0          0 |        76 
+                   54 |         1          1          1          0          0 |         3 
+                   56 |        27         25         22         18         16 |       108 
+                   60 |       304        249        202        168        151 |     1,074 
+                60.62 |         0        179        143        107         94 |       523 
+                   61 |       219          0          0          0          0 |       219 
+                   62 |        34         29         22         18         17 |       120 
+                   63 |         3          3          2          1          1 |        10 
+                   64 |         9          6          6          5          5 |        31 
+                64.95 |         0         40         29         23         20 |       112 
+                   65 |        54          1          1          1          1 |        58 
+                   69 |        40          0          0          0          0 |        40 
+                69.28 |         0         32         28         22         20 |       102 
+                   70 |         8          7          3          3          3 |        24 
+                   72 |        11         10          8          5          5 |        39 
+                   75 |        15         13          9          6          6 |        49 
+                77.94 |         0         15         12         11          7 |        45 
+                   78 |        18          1          1          1          1 |        22 
+                   80 |        23         20         19         18         13 |        93 
+                   84 |         8          8          6          4          4 |        30 
+                 86.6 |         0         34         28         21         19 |       102 
+                   87 |        38          0          0          0          0 |        38 
+                   90 |       146        123        101         78         67 |       515 
+                90.93 |         0        102         81         66         57 |       306 
+                   91 |       122          0          0          0          0 |       122 
+                   93 |        13         11         10          6          6 |        46 
+                   95 |         1          0          0          0          0 |         1 
+                95.26 |         0          1          0          0          0 |         1 
+                   96 |        16         15         14         12         12 |        69 
+                   98 |         2          2          1          1          1 |         7 
+                  100 |        23         19         16         10          7 |        75 
+               103.92 |         0         39         30         20         19 |       108 
+                  104 |        45          0          0          0          0 |        45 
+                  105 |         3          2          2          2          2 |        11 
+                  108 |        23          1          1          1          0 |        26 
+               108.25 |         0         20         16         10          6 |        52 
+                  112 |         4          2          1          0          0 |         7 
+                  120 |       139        115         96         79         62 |       491 
+                  121 |       108          0          0          0          0 |       108 
+               121.24 |         0         97         77         62         53 |       289 
+                  124 |        20         17         11          9          9 |        66 
+                  125 |         6          4          4          3          1 |        18 
+                  126 |         1          1          0          0          0 |         2 
+                  128 |         2          1          1          0          0 |         4 
+                129.9 |         0          9          6          3          3 |        21 
+                  130 |        10          0          0          0          0 |        10 
+                  135 |         1          1          0          0          0 |         2 
+               138.56 |         0          2          1          0          0 |         3 
+                  139 |         2          0          0          0          0 |         2 
+                  140 |         6          5          4          3          3 |        21 
+                  150 |        81         70         56         46         40 |       293 
+               151.55 |         0         70         56         40         28 |       194 
+                  152 |        81          0          0          0          0 |        81 
+                  154 |         1          1          0          0          0 |         2 
+                  155 |        17         13         11         10          7 |        58 
+               155.88 |         0         11          8          6          4 |        29 
+                  156 |        11          0          0          0          0 |        11 
+                  160 |         9          8          7          6          5 |        35 
+                  161 |         1          1          1          1          1 |         5 
+                  168 |        28         21         12         10         10 |        81 
+                  173 |        20          0          0          0          0 |        20 
+                173.2 |         0         12          8          5          5 |        30 
+                  176 |         1          1          1          1          1 |         5 
+                  180 |        43         36         25         22         20 |       146 
+               181.86 |         0         49         32         29         24 |       134 
+                  182 |        56          1          0          0          0 |        57 
+                  184 |         1          1          0          0          0 |         2 
+                  186 |        12         10          9          7          6 |        44 
+               190.52 |         0          1          1          0          0 |         2 
+                  191 |         1          0          0          0          0 |         1 
+               194.85 |         0          5          5          3          2 |        15 
+                  195 |         5          0          0          0          0 |         5 
+                  200 |         9          9          7          7          6 |        38 
+               207.84 |         0         13         10          3          3 |        29 
+                  208 |        16          1          0          0          0 |        17 
+                  210 |         8          7          7          6          5 |        33 
+                  212 |        27          0          0          0          0 |        27 
+               212.17 |         0         23         19         16         13 |        71 
+                  216 |         1          1          1          1          1 |         5 
+                216.5 |         0          2          2          1          1 |         6 
+                  217 |         4          1          1          1          1 |         8 
+                  220 |         1          1          0          0          0 |         2 
+                  224 |         2          2          1          1          1 |         7 
+                  225 |         1          1          0          0          0 |         2 
+               233.82 |         0          1          1          1          1 |         4 
+                  234 |         2          0          0          0          0 |         2 
+                  240 |        73         63         52         43         37 |       268 
+                  242 |       101          0          0          0          0 |       101 
+               242.48 |         0         89         76         61         47 |       273 
+                  248 |        18         14         10          7          6 |        55 
+                  250 |         1          1          1          0          0 |         3 
+                  252 |         3          3          1          1          1 |         9 
+                259.8 |         0          6          4          4          3 |        17 
+                  260 |         7          0          0          0          0 |         7 
+                  270 |         2          0          0          0          0 |         2 
+               272.79 |         0          7          7          4          4 |        22 
+                  273 |         7          0          0          0          0 |         7 
+                  279 |         1          1          1          0          0 |         3 
+               285.78 |         0          1          0          0          0 |         1 
+                  286 |         1          0          0          0          0 |         1 
+                  288 |         1          1          0          0          0 |         2 
+               298.77 |         0          1          1          1          0 |         3 
+                  299 |         1          0          0          0          0 |         1 
+                  300 |        23         20         14         11          9 |        77 
+                  303 |        23          0          0          0          0 |        23 
+                303.1 |         0         19         13         11         11 |        54 
+                  310 |         5          4          4          3          3 |        19 
+               311.76 |         0         18         14          8          7 |        47 
+                  312 |        18          0          0          0          0 |        18 
+                  330 |         1          1          0          0          0 |         2 
+                  333 |         2          0          0          0          0 |         2 
+               333.41 |         0          1          1          0          0 |         2 
+                  336 |         1          1          0          0          0 |         2 
+               337.74 |         0          1          1          1          1 |         4 
+                  338 |         1          0          0          0          0 |         1 
+                  360 |        33         28         21         16         14 |       112 
+               363.72 |         0         40         27         18         12 |        97 
+                  364 |        49          0          0          0          0 |        49 
+                  372 |         4          4          3          1          1 |        13 
+                  375 |         3          3          3          3          3 |        15 
+                389.7 |         0          1          1          1          1 |         4 
+                  390 |         1          0          0          0          0 |         1 
+                  394 |         1          0          0          0          0 |         1 
+               394.03 |         0          1          1          1          1 |         4 
+               415.68 |         0          3          3          2          1 |         9 
+                  416 |         3          0          0          0          0 |         3 
+                  420 |         1          1          1          1          0 |         4 
+                  424 |         7          0          0          0          0 |         7 
+               424.34 |         0          6          3          0          0 |         9 
+                  425 |         1          1          1          1          1 |         5 
+                  432 |         1          1          1          0          0 |         3 
+                  433 |         3          3          1          0          0 |         7 
+                  434 |         1          1          1          0          0 |         3 
+                  450 |         4          4          4          4          4 |        20 
+               454.65 |         0          1          1          0          0 |         2 
+                  455 |         2          0          0          0          0 |         2 
+                  465 |         1          1          0          0          0 |         2 
+                  480 |         8          6          3          2          2 |        21 
+               484.96 |         0         20         11          9          6 |        46 
+                  485 |        22          0          0          0          0 |        22 
+                  496 |         2          2          2          1          1 |         8 
+                  504 |         1          1          0          0          0 |         2 
+                  515 |         1          0          0          0          0 |         1 
+               515.27 |         0          1          1          1          1 |         4 
+                519.6 |         0          4          3          3          3 |        13 
+                  520 |         6          0          0          0          0 |         6 
+                  527 |         2          2          1          0          0 |         5 
+                  540 |         3          3          3          2          1 |        12 
+               545.58 |         0          4          4          3          2 |        13 
+                  546 |         4          0          0          0          0 |         4 
+                  558 |         2          2          1          0          0 |         5 
+               575.89 |         0          1          1          0          0 |         2 
+                  576 |         2          1          1          1          1 |         6 
+                  600 |         3          1          1          1          1 |         7 
+               623.52 |         0          2          2          1          1 |         6 
+                  624 |         2          0          0          0          0 |         2 
+                  660 |         1          1          0          0          0 |         2 
+               666.82 |         0          1          1          1          1 |         4 
+                  667 |         1          0          0          0          0 |         1 
+                  690 |         1          1          0          0          0 |         2 
+                  697 |         1          0          0          0          0 |         1 
+               697.13 |         0          1          1          1          0 |         3 
+                  713 |         1          1          1          1          1 |         5 
+                  720 |        62         56         41         25         23 |       207 
+                  727 |       301          0          0          0          0 |       301 
+               727.44 |         0        266        202        160        139 |       767 
+                  744 |        30         25         20         12         10 |        97 
+Not codeable, <1 hour |     1,306      1,143        966        823        742 |     4,980 
+----------------------+-------------------------------------------------------+----------
+                Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . gen op_ind_hrsmth=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace op_ind_hrsmth=op`w'dhrsmth if wave==`w'
   3. }
-(38097 real changes made)
-(37944 real changes made)
-(35745 real changes made)
-(33016 real changes made)
+(38,097 real changes made)
+(37,944 real changes made)
+(35,745 real changes made)
+(33,016 real changes made)
+(52,285 real changes made)
 
 . recode op_ind_hrsmth (1/750=1)
-(op_ind_hrsmth: 25808 changes made)
+(op_ind_hrsmth: 33448 changes made)
 
 . 
 . la def hrsmth -13"-13:Deceased" -12"Zero days/wk" -11"-11:hours missing" ///
@@ -1219,53 +1591,55 @@ Not codeable, <1 hour |     1,306      1,143        966        823 |     4,238
 
 . tab op_ind_hrsmth wave, missing
 
-                     |                 Survey wave
-       op_ind_hrsmth |         1          2          3          4 |     Total
----------------------+--------------------------------------------+----------
-        -13:Deceased |         0      2,287      2,790      2,516 |     7,593 
-        Zero days/wk |         0      1,264      1,024        998 |     3,286 
-   -11:hours missing |       253        220        324        237 |     1,034 
-    -10:days missing |       103          0          0          0 |       103 
--9:days+hours mssing |       729        372        558        547 |     2,206 
-               -1:NA |    26,500     25,833     24,542     23,415 |   100,290 
-             1:Valid |     9,206      7,502      6,116      4,921 |    27,745 
-       9999:<1hr/day |     1,306        466        391        382 |     2,545 
----------------------+--------------------------------------------+----------
-               Total |    38,097     37,944     35,745     33,016 |   144,802 
+                     |                      Survey wave
+       op_ind_hrsmth |         1          2          3          4          5 |     Total
+---------------------+-------------------------------------------------------+----------
+        -13:Deceased |         0      2,287      2,790      2,516      2,118 |     9,711 
+        Zero days/wk |         0      1,264      1,024        998      2,374 |     5,660 
+   -11:hours missing |       253        220        324        237        333 |     1,367 
+    -10:days missing |       103          0          0          0          0 |       103 
+-9:days+hours mssing |       729        372        558        547      1,007 |     3,213 
+               -1:NA |    26,500     25,833     24,542     23,415     37,743 |   138,033 
+             1:Valid |     9,206      7,502      6,116      4,921      7,975 |    35,720 
+       9999:<1hr/day |     1,306        466        391        382        735 |     3,280 
+---------------------+-------------------------------------------------------+----------
+               Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . 
 . //generate variable indicating one day per month or one day per week
 . gen justone=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace justone=0 if wave==`w'
   3. replace justone=1 if (op`w'numdayswk==1 | op`w'numdaysmn==1) & wave==`w'
   4. }
-(38097 real changes made)
-(3160 real changes made)
-(37944 real changes made)
-(1386 real changes made)
-(35745 real changes made)
-(1062 real changes made)
-(33016 real changes made)
+(38,097 real changes made)
+(3,160 real changes made)
+(37,944 real changes made)
+(1,386 real changes made)
+(35,745 real changes made)
+(1,062 real changes made)
+(33,016 real changes made)
 (847 real changes made)
+(52,285 real changes made)
+(1,387 real changes made)
 
 . tab justone op_ind_hrsmth, missing
 
            |                                      op_ind_hrsmth
    justone | -13:Decea  Zero days  -11:hours  -10:days   -9:days+h      -1:NA    1:Valid  9999:<1hr |     Total
 -----------+----------------------------------------------------------------------------------------+----------
-         0 |     7,593      3,285        911        103      2,205    100,290     22,678      1,282 |   138,347 
-         1 |         0          1        123          0          1          0      5,067      1,263 |     6,455 
+         0 |     9,711      5,659      1,214        103      3,212    138,033     29,521      1,792 |   189,245 
+         1 |         0          1        153          0          1          0      6,199      1,488 |     7,842 
 -----------+----------------------------------------------------------------------------------------+----------
-     Total |     7,593      3,286      1,034        103      2,206    100,290     27,745      2,545 |   144,802 
+     Total |     9,711      5,660      1,367        103      3,213    138,033     35,720      3,280 |   197,087 
 
 
 . 
 . //recode help flags to 0=(no or inapplicable) or 1=yes
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. foreach v in op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
 >  op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp op`w'dreshlp ///
 >  op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp{
@@ -1281,7 +1655,7 @@ Not codeable, <1 hour |     1,306      1,143        966        823 |     4,238
           1 Yes |      1,734        4.55      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36363 real changes made)
+(36,363 real changes made)
 
  R1 MO19A HELPS |
 SP INSIDE HOUSE |      Freq.     Percent        Cum.
@@ -1290,7 +1664,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 Yes |      1,146        3.01      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36951 real changes made)
+(36,951 real changes made)
 
  R1 MO25A HELPS |
   SP OUT OF BED |      Freq.     Percent        Cum.
@@ -1299,7 +1673,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 Yes |        725        1.90      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(37372 real changes made)
+(37,372 real changes made)
 
   R1 DT5A TAKES |
  SP PLACES MOST |      Freq.     Percent        Cum.
@@ -1308,7 +1682,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 Yes |      3,820       10.03      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(34277 real changes made)
+(34,277 real changes made)
 
   R1 DT7A TAKES |
   SP PLACES OTH |      Freq.     Percent        Cum.
@@ -1317,7 +1691,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 Yes |      1,674        4.39      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36423 real changes made)
+(36,423 real changes made)
 
   R1 HA3A HELPS |
 SP WITH LAUNDRY |      Freq.     Percent        Cum.
@@ -1326,7 +1700,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 Yes |      3,849       10.10      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(34248 real changes made)
+(34,248 real changes made)
 
  R1 HA25A HELPS |
         SP WITH |
@@ -1336,7 +1710,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 Yes |      5,406       14.19      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(32691 real changes made)
+(32,691 real changes made)
 
  R1 HA32A HELPS |
   SP WITH MEALS |      Freq.     Percent        Cum.
@@ -1345,7 +1719,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 Yes |      4,857       12.75      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(33240 real changes made)
+(33,240 real changes made)
 
  R1 HA42A HELPS |
 SP WITH BANKING |      Freq.     Percent        Cum.
@@ -1354,7 +1728,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 Yes |      3,502        9.19      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(34595 real changes made)
+(34,595 real changes made)
 
   R1 SC3A HELPS |
  SP WITH EATING |      Freq.     Percent        Cum.
@@ -1363,7 +1737,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 Yes |        631        1.66      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(37466 real changes made)
+(37,466 real changes made)
 
  R1 SC11A HELPS |
 SP WITH BATHING |      Freq.     Percent        Cum.
@@ -1372,7 +1746,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |        966        2.54      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(37131 real changes made)
+(37,131 real changes made)
 
  R1 SC17A HELPS |
         SP WITH |
@@ -1382,7 +1756,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |        496        1.30      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(37601 real changes made)
+(37,601 real changes made)
 
  R1 SC23A HELPS |
         SP WITH |
@@ -1392,7 +1766,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |      1,220        3.20      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36877 real changes made)
+(36,877 real changes made)
 
   R1 MC5A HELPS |
         SP WITH |
@@ -1402,7 +1776,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |      1,582        4.15      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36515 real changes made)
+(36,515 real changes made)
 
  R1 HA52A HELPS |
   SP WITH MONEY |      Freq.     Percent        Cum.
@@ -1411,7 +1785,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |      1,191        3.13      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(36906 real changes made)
+(36,906 real changes made)
 
   R1 MC17A SITS |
  IN W SP AT DRS |      Freq.     Percent        Cum.
@@ -1420,7 +1794,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |      3,466        9.10      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(34631 real changes made)
+(34,631 real changes made)
 
  R1 MC22A HELPS |
      WITH INSUR |
@@ -1430,7 +1804,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 Yes |        407        1.07      100.00
 ----------------+-----------------------------------
           Total |     38,097      100.00
-(37690 real changes made)
+(37,690 real changes made)
 
   R2 MO6A HELPS |
   SP GO OUTSIDE |      Freq.     Percent        Cum.
@@ -1439,7 +1813,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,825        4.81      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36119 real changes made)
+(36,119 real changes made)
 
  R2 MO19A HELPS |
 SP INSIDE HOUSE |      Freq.     Percent        Cum.
@@ -1448,7 +1822,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,408        3.71      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36536 real changes made)
+(36,536 real changes made)
 
  R2 MO25A HELPS |
   SP OUT OF BED |      Freq.     Percent        Cum.
@@ -1457,7 +1831,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,002        2.64      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36942 real changes made)
+(36,942 real changes made)
 
   R2 DT5A TAKES |
  SP PLACES MOST |      Freq.     Percent        Cum.
@@ -1466,7 +1840,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      3,236        8.53      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(34708 real changes made)
+(34,708 real changes made)
 
   R2 DT7A TAKES |
   SP PLACES OTH |      Freq.     Percent        Cum.
@@ -1475,7 +1849,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,485        3.91      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36459 real changes made)
+(36,459 real changes made)
 
   R2 HA3A HELPS |
 SP WITH LAUNDRY |      Freq.     Percent        Cum.
@@ -1484,7 +1858,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      3,153        8.31      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(34791 real changes made)
+(34,791 real changes made)
 
  R2 HA25A HELPS |
         SP WITH |
@@ -1494,7 +1868,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      4,307       11.35      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(33637 real changes made)
+(33,637 real changes made)
 
  R2 HA32A HELPS |
   SP WITH MEALS |      Freq.     Percent        Cum.
@@ -1503,7 +1877,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      4,104       10.82      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(33840 real changes made)
+(33,840 real changes made)
 
  R2 HA42A HELPS |
 SP WITH BANKING |      Freq.     Percent        Cum.
@@ -1512,7 +1886,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |      2,793        7.36      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(35151 real changes made)
+(35,151 real changes made)
 
   R2 SC3A HELPS |
  SP WITH EATING |      Freq.     Percent        Cum.
@@ -1521,7 +1895,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |        996        2.62      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36948 real changes made)
+(36,948 real changes made)
 
  R2 SC11A HELPS |
 SP WITH BATHING |      Freq.     Percent        Cum.
@@ -1530,7 +1904,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,465        3.86      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36479 real changes made)
+(36,479 real changes made)
 
  R2 SC17A HELPS |
         SP WITH |
@@ -1540,7 +1914,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        858        2.26      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(37086 real changes made)
+(37,086 real changes made)
 
  R2 SC23A HELPS |
         SP WITH |
@@ -1550,7 +1924,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,533        4.04      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36411 real changes made)
+(36,411 real changes made)
 
   R2 MC5A HELPS |
         SP WITH |
@@ -1560,7 +1934,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,315        3.47      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(36629 real changes made)
+(36,629 real changes made)
 
  R2 HA52A HELPS |
   SP WITH MONEY |      Freq.     Percent        Cum.
@@ -1569,7 +1943,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        910        2.40      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(37034 real changes made)
+(37,034 real changes made)
 
   R2 MC17A SITS |
  IN W SP AT DRS |      Freq.     Percent        Cum.
@@ -1578,7 +1952,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      2,740        7.22      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(35204 real changes made)
+(35,204 real changes made)
 
  R2 MC22A HELPS |
      WITH INSUR |
@@ -1588,7 +1962,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        274        0.72      100.00
 ----------------+-----------------------------------
           Total |     37,944      100.00
-(37670 real changes made)
+(37,670 real changes made)
 
   R3 MO6A HELPS |
   SP GO OUTSIDE |      Freq.     Percent        Cum.
@@ -1597,7 +1971,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,646        4.60      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34099 real changes made)
+(34,099 real changes made)
 
  R3 MO19A HELPS |
 SP INSIDE HOUSE |      Freq.     Percent        Cum.
@@ -1606,7 +1980,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,277        3.57      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34468 real changes made)
+(34,468 real changes made)
 
  R3 MO25A HELPS |
   SP OUT OF BED |      Freq.     Percent        Cum.
@@ -1615,7 +1989,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |        987        2.76      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34758 real changes made)
+(34,758 real changes made)
 
   R3 DT5A TAKES |
  SP PLACES MOST |      Freq.     Percent        Cum.
@@ -1624,7 +1998,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      2,681        7.50      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(33064 real changes made)
+(33,064 real changes made)
 
   R3 DT7A TAKES |
   SP PLACES OTH |      Freq.     Percent        Cum.
@@ -1633,7 +2007,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,369        3.83      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34376 real changes made)
+(34,376 real changes made)
 
   R3 HA3A HELPS |
 SP WITH LAUNDRY |      Freq.     Percent        Cum.
@@ -1642,7 +2016,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      2,597        7.27      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(33148 real changes made)
+(33,148 real changes made)
 
  R3 HA25A HELPS |
         SP WITH |
@@ -1652,7 +2026,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      3,634       10.17      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(32111 real changes made)
+(32,111 real changes made)
 
  R3 HA32A HELPS |
   SP WITH MEALS |      Freq.     Percent        Cum.
@@ -1661,7 +2035,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      3,441        9.63      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(32304 real changes made)
+(32,304 real changes made)
 
  R3 HA42A HELPS |
 SP WITH BANKING |      Freq.     Percent        Cum.
@@ -1670,7 +2044,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |      2,312        6.47      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(33433 real changes made)
+(33,433 real changes made)
 
   R3 SC3A HELPS |
  SP WITH EATING |      Freq.     Percent        Cum.
@@ -1679,7 +2053,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |      1,020        2.85      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34725 real changes made)
+(34,725 real changes made)
 
  R3 SC11A HELPS |
 SP WITH BATHING |      Freq.     Percent        Cum.
@@ -1688,7 +2062,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,346        3.77      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34399 real changes made)
+(34,399 real changes made)
 
  R3 SC17A HELPS |
         SP WITH |
@@ -1698,7 +2072,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        865        2.42      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34880 real changes made)
+(34,880 real changes made)
 
  R3 SC23A HELPS |
         SP WITH |
@@ -1708,7 +2082,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,494        4.18      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34251 real changes made)
+(34,251 real changes made)
 
   R3 MC5A HELPS |
         SP WITH |
@@ -1718,7 +2092,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,101        3.08      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34644 real changes made)
+(34,644 real changes made)
 
  R3 HA52A HELPS |
   SP WITH MONEY |      Freq.     Percent        Cum.
@@ -1727,7 +2101,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        772        2.16      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(34973 real changes made)
+(34,973 real changes made)
 
   R3 MC17A SITS |
  IN W SP AT DRS |      Freq.     Percent        Cum.
@@ -1736,7 +2110,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      2,323        6.50      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(33422 real changes made)
+(33,422 real changes made)
 
  R3 MC22A HELPS |
      WITH INSUR |
@@ -1746,7 +2120,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        229        0.64      100.00
 ----------------+-----------------------------------
           Total |     35,745      100.00
-(35516 real changes made)
+(35,516 real changes made)
 
   R4 MO6A HELPS |
   SP GO OUTSIDE |      Freq.     Percent        Cum.
@@ -1755,7 +2129,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,433        4.34      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31583 real changes made)
+(31,583 real changes made)
 
  R4 MO19A HELPS |
 SP INSIDE HOUSE |      Freq.     Percent        Cum.
@@ -1764,7 +2138,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,122        3.40      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31894 real changes made)
+(31,894 real changes made)
 
  R4 MO25A HELPS |
   SP OUT OF BED |      Freq.     Percent        Cum.
@@ -1773,7 +2147,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |        877        2.66      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32139 real changes made)
+(32,139 real changes made)
 
   R4 DT5A TAKES |
  SP PLACES MOST |      Freq.     Percent        Cum.
@@ -1782,7 +2156,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      2,247        6.81      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(30769 real changes made)
+(30,769 real changes made)
 
   R4 DT7A TAKES |
   SP PLACES OTH |      Freq.     Percent        Cum.
@@ -1791,7 +2165,7 @@ SP INSIDE HOUSE |      Freq.     Percent        Cum.
           1 YES |      1,149        3.48      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31867 real changes made)
+(31,867 real changes made)
 
   R4 HA3A HELPS |
 SP WITH LAUNDRY |      Freq.     Percent        Cum.
@@ -1800,7 +2174,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      2,169        6.57      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(30847 real changes made)
+(30,847 real changes made)
 
  R4 HA25A HELPS |
         SP WITH |
@@ -1810,7 +2184,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      2,980        9.03      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(30036 real changes made)
+(30,036 real changes made)
 
  R4 HA32A HELPS |
   SP WITH MEALS |      Freq.     Percent        Cum.
@@ -1819,7 +2193,7 @@ SP WITH LAUNDRY |      Freq.     Percent        Cum.
           1 YES |      2,885        8.74      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(30131 real changes made)
+(30,131 real changes made)
 
  R4 HA42A HELPS |
 SP WITH BANKING |      Freq.     Percent        Cum.
@@ -1828,7 +2202,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |      1,936        5.86      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31080 real changes made)
+(31,080 real changes made)
 
   R4 SC3A HELPS |
  SP WITH EATING |      Freq.     Percent        Cum.
@@ -1837,7 +2211,7 @@ SP WITH BANKING |      Freq.     Percent        Cum.
           1 YES |        912        2.76      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32104 real changes made)
+(32,104 real changes made)
 
  R4 SC11A HELPS |
 SP WITH BATHING |      Freq.     Percent        Cum.
@@ -1846,7 +2220,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,106        3.35      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31910 real changes made)
+(31,910 real changes made)
 
  R4 SC17A HELPS |
         SP WITH |
@@ -1856,7 +2230,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        687        2.08      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32329 real changes made)
+(32,329 real changes made)
 
  R4 SC23A HELPS |
         SP WITH |
@@ -1866,7 +2240,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      1,312        3.97      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31704 real changes made)
+(31,704 real changes made)
 
   R4 MC5A HELPS |
         SP WITH |
@@ -1876,7 +2250,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        983        2.98      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32033 real changes made)
+(32,033 real changes made)
 
  R4 HA52A HELPS |
   SP WITH MONEY |      Freq.     Percent        Cum.
@@ -1885,7 +2259,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        731        2.21      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32285 real changes made)
+(32,285 real changes made)
 
   R4 MC17A SITS |
  IN W SP AT DRS |      Freq.     Percent        Cum.
@@ -1894,7 +2268,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |      2,010        6.09      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(31006 real changes made)
+(31,006 real changes made)
 
  R4 MC22A HELPS |
      WITH INSUR |
@@ -1904,77 +2278,236 @@ SP WITH BATHING |      Freq.     Percent        Cum.
           1 YES |        250        0.76      100.00
 ----------------+-----------------------------------
           Total |     33,016      100.00
-(32766 real changes made)
+(32,766 real changes made)
+
+  R5 MO6A HELPS |
+  SP GO OUTSIDE |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,225       96.06       96.06
+          1 YES |      2,060        3.94      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,225 real changes made)
+
+ R5 MO19A HELPS |
+SP INSIDE HOUSE |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,773       97.11       97.11
+          1 YES |      1,512        2.89      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,773 real changes made)
+
+ R5 MO25A HELPS |
+  SP OUT OF BED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     51,201       97.93       97.93
+          1 YES |      1,084        2.07      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(51,201 real changes made)
+
+  R5 DT5A TAKES |
+ SP PLACES MOST |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     48,505       92.77       92.77
+          1 YES |      3,780        7.23      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(48,505 real changes made)
+
+  R5 DT7A TAKES |
+  SP PLACES OTH |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,442       96.48       96.48
+          1 YES |      1,843        3.52      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,442 real changes made)
+
+  R5 HA3A HELPS |
+SP WITH LAUNDRY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     48,357       92.49       92.49
+          1 YES |      3,928        7.51      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(48,357 real changes made)
+
+ R5 HA25A HELPS |
+        SP WITH |
+       SHOPPING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     46,731       89.38       89.38
+          1 YES |      5,554       10.62      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(46,731 real changes made)
+
+ R5 HA32A HELPS |
+  SP WITH MEALS |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     47,057       90.00       90.00
+          1 YES |      5,228       10.00      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(47,057 real changes made)
+
+ R5 HA42A HELPS |
+SP WITH BANKING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     48,892       93.51       93.51
+          1 YES |      3,393        6.49      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(48,892 real changes made)
+
+  R5 SC3A HELPS |
+ SP WITH EATING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     51,286       98.09       98.09
+          1 YES |        999        1.91      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(51,286 real changes made)
+
+ R5 SC11A HELPS |
+SP WITH BATHING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,903       97.36       97.36
+          1 YES |      1,382        2.64      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,903 real changes made)
+
+ R5 SC17A HELPS |
+        SP WITH |
+      TOILETING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     51,502       98.50       98.50
+          1 YES |        783        1.50      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(51,502 real changes made)
+
+ R5 SC23A HELPS |
+        SP WITH |
+       DRESSING |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,533       96.65       96.65
+          1 YES |      1,752        3.35      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,533 real changes made)
+
+  R5 MC5A HELPS |
+        SP WITH |
+      MEDICINES |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     50,666       96.90       96.90
+          1 YES |      1,619        3.10      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(50,666 real changes made)
+
+ R5 HA52A HELPS |
+  SP WITH MONEY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     51,075       97.69       97.69
+          1 YES |      1,210        2.31      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(51,075 real changes made)
+
+  R5 MC17A SITS |
+ IN W SP AT DRS |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     48,781       93.30       93.30
+          1 YES |      3,504        6.70      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(48,781 real changes made)
+
+ R5 MC22A HELPS |
+     WITH INSUR |
+          DECIS |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     51,894       99.25       99.25
+          1 YES |        391        0.75      100.00
+----------------+-----------------------------------
+          Total |     52,285      100.00
+(51,894 real changes made)
 
 . 
 . //generate variable indicating help with only one activity
 . gen numact=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace numact=op`w'outhlp + op`w'insdhlp + op`w'bedhlp + op`w'tkplhlp1 + op`w'tkplhlp2 + ///
 >  op`w'launhlp + op`w'shophlp + op`w'mealhlp + op`w'bankhlp + op`w'eathlp + op`w'bathhlp + ///
 >  op`w'toilhlp + op`w'dreshlp + op`w'medshlp + op`w'moneyhlp + op`w'dochlp + op`w'insurhlp if wave==`w'
   3. }
-(38097 real changes made)
-(37944 real changes made)
-(35745 real changes made)
-(33016 real changes made)
+(38,097 real changes made)
+(37,944 real changes made)
+(35,745 real changes made)
+(33,016 real changes made)
+(52,285 real changes made)
 
 . 
 . tab numact wave, missing
 
-           |                 Survey wave
-    numact |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    26,152     26,835     25,983     24,744 |   103,714 
-         1 |     4,741      4,436      4,003      3,367 |    16,547 
-         2 |     1,875      1,747      1,566      1,359 |     6,547 
-         3 |     1,433      1,382      1,091        931 |     4,837 
-         4 |     1,242      1,122        974        755 |     4,093 
-         5 |       877        786        665        611 |     2,939 
-         6 |       570        580        520        448 |     2,118 
-         7 |       345        357        357        264 |     1,323 
-         8 |       246        203        157        173 |       779 
-         9 |       149        152        126        111 |       538 
-        10 |       134        109        105         75 |       423 
-        11 |       131         95         78         63 |       367 
-        12 |        92         57         51         55 |       255 
-        13 |        55         51         40         35 |       181 
-        14 |        41         23         20         17 |       101 
-        15 |        13          9          8          7 |        37 
-        16 |         1          0          1          1 |         3 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+           |                      Survey wave
+    numact |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    26,152     26,835     25,983     24,744     38,773 |   142,487 
+         1 |     4,741      4,436      4,003      3,367      5,526 |    22,073 
+         2 |     1,875      1,747      1,566      1,359      2,220 |     8,767 
+         3 |     1,433      1,382      1,091        931      1,627 |     6,464 
+         4 |     1,242      1,122        974        755      1,291 |     5,384 
+         5 |       877        786        665        611        896 |     3,835 
+         6 |       570        580        520        448        679 |     2,797 
+         7 |       345        357        357        264        417 |     1,740 
+         8 |       246        203        157        173        235 |     1,014 
+         9 |       149        152        126        111        185 |       723 
+        10 |       134        109        105         75        139 |       562 
+        11 |       131         95         78         63        110 |       477 
+        12 |        92         57         51         55         90 |       345 
+        13 |        55         51         40         35         51 |       232 
+        14 |        41         23         20         17         40 |       141 
+        15 |        13          9          8          7          6 |        43 
+        16 |         1          0          1          1          0 |         3 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . gen oneact=0 //note this =0 if help with no activities
 
 . replace oneact=1 if numact==1
-(16547 real changes made)
+(22,073 real changes made)
 
 . tab oneact opishelper_allw, missing
 
            |    opishelper_allw
     oneact |        -1          1 |     Total
 -----------+----------------------+----------
-         0 |   106,781     21,474 |   128,255 
-         1 |     1,102     15,445 |    16,547 
+         0 |   146,324     28,690 |   175,014 
+         1 |     1,420     20,653 |    22,073 
 -----------+----------------------+----------
-     Total |   107,883     36,919 |   144,802 
+     Total |   147,744     49,343 |   197,087 
 
 
 . 
 . ********************************************************************
 . //generate variables indicating relationship is spouse, other rel, other nonrel
 . gen spouse=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
 . gen otherrel=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
 . gen nonrel=.
-(144802 missing values generated)
+(197,087 missing values generated)
 
 . gen daughter=0
 
@@ -1990,7 +2523,7 @@ SP WITH BATHING |      Freq.     Percent        Cum.
 . label var nonrel "Non-relative"
 
 . 
-. foreach w in 1 2 3 4{
+. foreach w in 1 2 3 4 5{
   2. replace spouse=0 if wave==`w'
   3. replace spouse=1 if op`w'relat==2 & wave==`w'
   4. replace otherrel=0 if wave==`w'
@@ -2006,15 +2539,15 @@ SP WITH BATHING |      Freq.     Percent        Cum.
  13. tab op`w'relat nonrel
  14. 
 . }
-(38097 real changes made)
-(3804 real changes made)
-(38097 real changes made)
-(29181 real changes made)
-(38097 real changes made)
-(5112 real changes made)
-(11763 real changes made)
-(11544 real changes made)
-(5874 real changes made)
+(38,097 real changes made)
+(3,804 real changes made)
+(38,097 real changes made)
+(29,181 real changes made)
+(38,097 real changes made)
+(5,112 real changes made)
+(11,763 real changes made)
+(11,544 real changes made)
+(5,874 real changes made)
 
          R1 OTHR PRSN |        spouse
    RELATIONSHIP TO SP |         0          1 |     Total
@@ -2159,15 +2692,15 @@ SP WITH BATHING |      Freq.     Percent        Cum.
 ----------------------+----------------------+----------
                 Total |    32,985      5,112 |    38,097 
 
-(37944 real changes made)
-(3063 real changes made)
-(37944 real changes made)
-(27270 real changes made)
-(37944 real changes made)
-(7365 real changes made)
-(10211 real changes made)
-(9912 real changes made)
-(7147 real changes made)
+(37,944 real changes made)
+(3,063 real changes made)
+(37,944 real changes made)
+(27,270 real changes made)
+(37,944 real changes made)
+(7,365 real changes made)
+(10,211 real changes made)
+(9,912 real changes made)
+(7,147 real changes made)
 
     R2 RELASHIP TO SP |        spouse
        UPDATE AND NEW |         0          1 |     Total
@@ -2321,15 +2854,15 @@ SP WITH BATHING |      Freq.     Percent        Cum.
 ----------------------+----------------------+----------
                 Total |    30,579      7,365 |    37,944 
 
-(35745 real changes made)
-(2440 real changes made)
-(35745 real changes made)
-(24421 real changes made)
-(35745 real changes made)
-(8364 real changes made)
-(8546 real changes made)
-(8352 real changes made)
-(7523 real changes made)
+(35,745 real changes made)
+(2,440 real changes made)
+(35,745 real changes made)
+(24,421 real changes made)
+(35,745 real changes made)
+(8,364 real changes made)
+(8,546 real changes made)
+(8,352 real changes made)
+(7,523 real changes made)
 
     R3 RELASHIP TO SP |        spouse
        UPDATE AND NEW |         0          1 |     Total
@@ -2480,15 +3013,15 @@ SP WITH BATHING |      Freq.     Percent        Cum.
 ----------------------+----------------------+----------
                 Total |    27,381      8,364 |    35,745 
 
-(33016 real changes made)
-(1969 real changes made)
-(33016 real changes made)
-(21632 real changes made)
-(33016 real changes made)
-(8600 real changes made)
-(7165 real changes made)
-(6991 real changes made)
-(7476 real changes made)
+(33,016 real changes made)
+(1,969 real changes made)
+(33,016 real changes made)
+(21,632 real changes made)
+(33,016 real changes made)
+(8,600 real changes made)
+(7,165 real changes made)
+(6,991 real changes made)
+(7,476 real changes made)
 
     R4 RELASHIP TO SP |        spouse
        UPDATE AND NEW |         0          1 |     Total
@@ -2639,39 +3172,198 @@ SP WITH BATHING |      Freq.     Percent        Cum.
 ----------------------+----------------------+----------
                 Total |    24,416      8,600 |    33,016 
 
+(52,285 real changes made)
+(3,736 real changes made)
+(52,285 real changes made)
+(35,336 real changes made)
+(52,285 real changes made)
+(12,301 real changes made)
+(12,241 real changes made)
+(11,938 real changes made)
+(11,157 real changes made)
+
+    R5 RELASHIP TO SP |        spouse
+       UPDATE AND NEW |         0          1 |     Total
+----------------------+----------------------+----------
+      -1 Inapplicable |       912          0 |       912 
+    2 SPOUSE/ PARTNER |         0      3,736 |     3,736 
+           3 DAUGHTER |    10,420          0 |    10,420 
+                4 SON |    10,355          0 |    10,355 
+    5 DAUGHTER-IN-LAW |       698          0 |       698 
+         6 SON-IN-LAW |       539          0 |       539 
+       7 STEPDAUGHTER |     1,123          0 |     1,123 
+            8 STEPSON |     1,044          0 |     1,044 
+             9 SISTER |     2,244          0 |     2,244 
+           10 BROTHER |     1,057          0 |     1,057 
+     11 SISTER-IN-LAW |       459          0 |       459 
+    12 BROTHER-IN-LAW |       179          0 |       179 
+            13 MOTHER |       183          0 |       183 
+        14 STEPMOTHER |         6          0 |         6 
+     15 MOTHER-IN-LAW |        65          0 |        65 
+            16 FATHER |        33          0 |        33 
+        17 STEPFATHER |         4          0 |         4 
+     18 FATHER-IN-LAW |        27          0 |        27 
+     19 GRANDDAUGHTER |     2,153          0 |     2,153 
+          20 GRANDSON |     1,951          0 |     1,951 
+             21 NIECE |       650          0 |       650 
+            22 NEPHEW |       329          0 |       329 
+              23 AUNT |        75          0 |        75 
+             24 UNCLE |        14          0 |        14 
+            25 COUSIN |       378          0 |       378 
+26 STEPDAUGHTER'S SON |        51          0 |        51 
+27 STEPSON'S SON/ DAU |        50          0 |        50 
+28 DAUGHTER-IN-LAW'S  |       141          0 |       141 
+29 SON-IN-LAW'S SON/  |        55          0 |        55 
+    30 BOARDER/RENTER |        26          0 |        26 
+31 PAID AIDE/ HOUSEKE |     1,201          0 |     1,201 
+          32 ROOMMATE |        36          0 |        36 
+33 EX-WIFE/ EX-HUSBAN |       127          0 |       127 
+34 BOYFRIEND/ GIRLFRI |        84          0 |        84 
+          35 NEIGHBOR |       552          0 |       552 
+            36 FRIEND |     6,402          0 |     6,402 
+37 SOMEONE/SERVICE AT |       681          0 |       681 
+         38 CO-WORKER |        40          0 |        40 
+39 MINISTER, PRIEST,  |       324          0 |       324 
+40 PSYCHIATRIST, PSYC |        85          0 |        85 
+41 DECEASED SPOUSE/PA |       132          0 |       132 
+    91 OTHER RELATIVE |     1,053          0 |     1,053 
+ 92 OTHER NONRELATIVE |     2,611          0 |     2,611 
+----------------------+----------------------+----------
+                Total |    48,549      3,736 |    52,285 
+
+
+    R5 RELASHIP TO SP |  Non-spouse relative
+       UPDATE AND NEW |         0          1 |     Total
+----------------------+----------------------+----------
+      -1 Inapplicable |       912          0 |       912 
+    2 SPOUSE/ PARTNER |     3,736          0 |     3,736 
+           3 DAUGHTER |         0     10,420 |    10,420 
+                4 SON |         0     10,355 |    10,355 
+    5 DAUGHTER-IN-LAW |         0        698 |       698 
+         6 SON-IN-LAW |         0        539 |       539 
+       7 STEPDAUGHTER |         0      1,123 |     1,123 
+            8 STEPSON |         0      1,044 |     1,044 
+             9 SISTER |         0      2,244 |     2,244 
+           10 BROTHER |         0      1,057 |     1,057 
+     11 SISTER-IN-LAW |         0        459 |       459 
+    12 BROTHER-IN-LAW |         0        179 |       179 
+            13 MOTHER |         0        183 |       183 
+        14 STEPMOTHER |         0          6 |         6 
+     15 MOTHER-IN-LAW |         0         65 |        65 
+            16 FATHER |         0         33 |        33 
+        17 STEPFATHER |         0          4 |         4 
+     18 FATHER-IN-LAW |         0         27 |        27 
+     19 GRANDDAUGHTER |         0      2,153 |     2,153 
+          20 GRANDSON |         0      1,951 |     1,951 
+             21 NIECE |         0        650 |       650 
+            22 NEPHEW |         0        329 |       329 
+              23 AUNT |         0         75 |        75 
+             24 UNCLE |         0         14 |        14 
+            25 COUSIN |         0        378 |       378 
+26 STEPDAUGHTER'S SON |         0         51 |        51 
+27 STEPSON'S SON/ DAU |         0         50 |        50 
+28 DAUGHTER-IN-LAW'S  |         0        141 |       141 
+29 SON-IN-LAW'S SON/  |         0         55 |        55 
+    30 BOARDER/RENTER |        26          0 |        26 
+31 PAID AIDE/ HOUSEKE |     1,201          0 |     1,201 
+          32 ROOMMATE |        36          0 |        36 
+33 EX-WIFE/ EX-HUSBAN |       127          0 |       127 
+34 BOYFRIEND/ GIRLFRI |        84          0 |        84 
+          35 NEIGHBOR |       552          0 |       552 
+            36 FRIEND |     6,402          0 |     6,402 
+37 SOMEONE/SERVICE AT |       681          0 |       681 
+         38 CO-WORKER |        40          0 |        40 
+39 MINISTER, PRIEST,  |       324          0 |       324 
+40 PSYCHIATRIST, PSYC |        85          0 |        85 
+41 DECEASED SPOUSE/PA |       132          0 |       132 
+    91 OTHER RELATIVE |         0      1,053 |     1,053 
+ 92 OTHER NONRELATIVE |     2,611          0 |     2,611 
+----------------------+----------------------+----------
+                Total |    16,949     35,336 |    52,285 
+
+
+    R5 RELASHIP TO SP |     Non-relative
+       UPDATE AND NEW |         0          1 |     Total
+----------------------+----------------------+----------
+      -1 Inapplicable |       912          0 |       912 
+    2 SPOUSE/ PARTNER |     3,736          0 |     3,736 
+           3 DAUGHTER |    10,420          0 |    10,420 
+                4 SON |    10,355          0 |    10,355 
+    5 DAUGHTER-IN-LAW |       698          0 |       698 
+         6 SON-IN-LAW |       539          0 |       539 
+       7 STEPDAUGHTER |     1,123          0 |     1,123 
+            8 STEPSON |     1,044          0 |     1,044 
+             9 SISTER |     2,244          0 |     2,244 
+           10 BROTHER |     1,057          0 |     1,057 
+     11 SISTER-IN-LAW |       459          0 |       459 
+    12 BROTHER-IN-LAW |       179          0 |       179 
+            13 MOTHER |       183          0 |       183 
+        14 STEPMOTHER |         6          0 |         6 
+     15 MOTHER-IN-LAW |        65          0 |        65 
+            16 FATHER |        33          0 |        33 
+        17 STEPFATHER |         4          0 |         4 
+     18 FATHER-IN-LAW |        27          0 |        27 
+     19 GRANDDAUGHTER |     2,153          0 |     2,153 
+          20 GRANDSON |     1,951          0 |     1,951 
+             21 NIECE |       650          0 |       650 
+            22 NEPHEW |       329          0 |       329 
+              23 AUNT |        75          0 |        75 
+             24 UNCLE |        14          0 |        14 
+            25 COUSIN |       378          0 |       378 
+26 STEPDAUGHTER'S SON |        51          0 |        51 
+27 STEPSON'S SON/ DAU |        50          0 |        50 
+28 DAUGHTER-IN-LAW'S  |       141          0 |       141 
+29 SON-IN-LAW'S SON/  |        55          0 |        55 
+    30 BOARDER/RENTER |         0         26 |        26 
+31 PAID AIDE/ HOUSEKE |         0      1,201 |     1,201 
+          32 ROOMMATE |         0         36 |        36 
+33 EX-WIFE/ EX-HUSBAN |         0        127 |       127 
+34 BOYFRIEND/ GIRLFRI |         0         84 |        84 
+          35 NEIGHBOR |         0        552 |       552 
+            36 FRIEND |         0      6,402 |     6,402 
+37 SOMEONE/SERVICE AT |         0        681 |       681 
+         38 CO-WORKER |         0         40 |        40 
+39 MINISTER, PRIEST,  |         0        324 |       324 
+40 PSYCHIATRIST, PSYC |         0         85 |        85 
+41 DECEASED SPOUSE/PA |         0        132 |       132 
+    91 OTHER RELATIVE |     1,053          0 |     1,053 
+ 92 OTHER NONRELATIVE |         0      2,611 |     2,611 
+----------------------+----------------------+----------
+                Total |    39,984     12,301 |    52,285 
+
 
 . 
 . tab spouse wave, missing
 
-           |                 Survey wave
-    spouse |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    34,293     34,881     33,305     31,047 |   133,526 
-         1 |     3,804      3,063      2,440      1,969 |    11,276 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+           |                      Survey wave
+    spouse |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    34,293     34,881     33,305     31,047     48,549 |   182,075 
+         1 |     3,804      3,063      2,440      1,969      3,736 |    15,012 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . tab otherrel wave, missing
 
-Non-spouse |                 Survey wave
-  relative |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |     8,916     10,674     11,324     11,384 |    42,298 
-         1 |    29,181     27,270     24,421     21,632 |   102,504 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+Non-spouse |                      Survey wave
+  relative |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     8,916     10,674     11,324     11,384     16,949 |    59,247 
+         1 |    29,181     27,270     24,421     21,632     35,336 |   137,840 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . tab nonrel wave, missing
 
-Non-relati |                 Survey wave
-        ve |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    32,985     30,579     27,381     24,416 |   115,361 
-         1 |     5,112      7,365      8,364      8,600 |    29,441 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
+Non-relati |                      Survey wave
+        ve |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    32,985     30,579     27,381     24,416     39,984 |   155,345 
+         1 |     5,112      7,365      8,364      8,600     12,301 |    41,742 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   197,087 
 
 
 . 
@@ -2679,7 +3371,12 @@ Non-relati |                 Survey wave
 . //generate variables indicating help w/ adls & iadls
 . local adl insd bed eat bath toil dres
 
-. local iadl laun shop meal bank meds
+. local iadl laun shop meal bank meds 
+
+. local nonadl out money tkpl
+
+. gen op5tkplhlp=op5tkplhlp1
+(144,802 missing values generated)
 
 . 
 . foreach x of local adl {
@@ -2690,1252 +3387,42 @@ Non-relati |                 Survey wave
   2.         gen op_iadl_`x'=0
   3. }
 
+. foreach x of local nonadl {
+  2.         gen op_nonadl_`x'=0
+  3. }
+
 . 
-. forvalues i=1/4 {
+. forvalues i=1/5 {
   2.         foreach x of local adl{
   3.                 replace op_adl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
   4. }
   5.         foreach x of local iadl {
   6.                 replace op_iadl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
   7. }
-  8. }
-(1146 real changes made)
+  8.         foreach x of local nonadl {
+  9.                 replace op_nonadl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
+ 10. }
+ 11. }
+(1,146 real changes made)
 (725 real changes made)
 (631 real changes made)
 (966 real changes made)
 (496 real changes made)
-(1220 real changes made)
-(3849 real changes made)
-(5406 real changes made)
-(4857 real changes made)
-(3502 real changes made)
-(1582 real changes made)
-(1408 real changes made)
-(1002 real changes made)
-(996 real changes made)
-(1465 real changes made)
-(858 real changes made)
-(1533 real changes made)
-(3153 real changes made)
-(4307 real changes made)
-(4104 real changes made)
-(2793 real changes made)
-(1315 real changes made)
-(1277 real changes made)
-(987 real changes made)
-(1020 real changes made)
-(1346 real changes made)
-(865 real changes made)
-(1494 real changes made)
-(2597 real changes made)
-(3634 real changes made)
-(3441 real changes made)
-(2312 real changes made)
-(1101 real changes made)
-(1122 real changes made)
-(877 real changes made)
-(912 real changes made)
-(1106 real changes made)
-(687 real changes made)
-(1312 real changes made)
-(2169 real changes made)
-(2980 real changes made)
-(2885 real changes made)
-(1936 real changes made)
-(983 real changes made)
-
-. 
-. ********************************************************************
-. //generate variables indicating help on a regular schedule
-. gen regular=.
-(144802 missing values generated)
-
-. foreach w in 1 2 3 4{
-  2. replace regular=0 if wave==`w'
-  3. replace regular=1 if op`w'helpsched==1 & wave==`w'
-  4. }
-(38097 real changes made)
-(3198 real changes made)
-(37944 real changes made)
-(2832 real changes made)
-(35745 real changes made)
-(2077 real changes made)
-(33016 real changes made)
-(1713 real changes made)
-
-. tab regular wave, missing
-
-           |                 Survey wave
-   regular |         1          2          3          4 |     Total
------------+--------------------------------------------+----------
-         0 |    34,899     35,112     33,668     31,303 |   134,982 
-         1 |     3,198      2,832      2,077      1,713 |     9,820 
------------+--------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016 |   144,802 
-
-
-. 
-. la def hrsmth -13"-13:Deceased" -12"-12:Zero days/wk" -11"-11:hours missing" ///
->  -10"-10:days missing" -9 "-9:days+hours mssing" -1"-1:NA" 1"1:Valid" 9999"9999:<1hr/day",replace
-
-. la val op_ind_hrsmth hrsmth 
-
-. 
-. tab op_ind_hrsmth wave
-
-                     |                 Survey wave
-       op_ind_hrsmth |         1          2          3          4 |     Total
----------------------+--------------------------------------------+----------
-        -13:Deceased |         0      2,287      2,790      2,516 |     7,593 
-    -12:Zero days/wk |         0      1,264      1,024        998 |     3,286 
-   -11:hours missing |       253        220        324        237 |     1,034 
-    -10:days missing |       103          0          0          0 |       103 
--9:days+hours mssing |       729        372        558        547 |     2,206 
-               -1:NA |    26,500     25,833     24,542     23,415 |   100,290 
-             1:Valid |     9,206      7,502      6,116      4,921 |    27,745 
-       9999:<1hr/day |     1,306        466        391        382 |     2,545 
----------------------+--------------------------------------------+----------
-               Total |    38,097     37,944     35,745     33,016 |   144,802 
-
-
-. 
-. tab op_ind_hrsmth yearnotmonth if wave==1 & opishelper_allw==1
-
-                     |     yearnotmonth
-       op_ind_hrsmth |         0          1 |     Total
----------------------+----------------------+----------
-   -11:hours missing |       242         11 |       253 
-    -10:days missing |        91         12 |       103 
--9:days+hours mssing |       638         91 |       729 
-             1:Valid |     8,697        509 |     9,206 
-       9999:<1hr/day |     1,072        234 |     1,306 
----------------------+----------------------+----------
-               Total |    10,740        857 |    11,597 
-
-
-. tab op_ind_hrsmth yearnotmonth if wave==2 & opishelper_allw==1
-
-                     |     yearnotmonth
-       op_ind_hrsmth |         0          1 |     Total
----------------------+----------------------+----------
-    -12:Zero days/wk |       965        299 |     1,264 
-   -11:hours missing |       209         11 |       220 
--9:days+hours mssing |       334         38 |       372 
-             1:Valid |     7,204        298 |     7,502 
-       9999:<1hr/day |       428         38 |       466 
----------------------+----------------------+----------
-               Total |     9,140        684 |     9,824 
-
-
-. 
-. tab opishelper_allw
-
-opishelper_ |
-       allw |      Freq.     Percent        Cum.
-------------+-----------------------------------
-         -1 |    107,883       74.50       74.50
-          1 |     36,919       25.50      100.00
-------------+-----------------------------------
-      Total |    144,802      100.00
-
-. 
-. //generate indicator of imputation category
-. //1=impute, 2=recode to zero, 3=recode to small number hrs/day, 4=no imputation needed
-. gen impute_cat=-1
-
-. 
-. //wave=1
-.         //1=impute
-.         replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-10) | ///
->         (op_ind_hrsmth==-9 & yearnotmonth==0) & op1ishelper==1 & wave==1
-(1775 real changes made)
-
-.         replace impute_cat=1 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
->          & yearnotmonth==0 & op1ishelper==1 & wave==1
-(676 real changes made)
-
-.         //2=recode to zero
-.         replace impute_cat=2 if op_ind_hrsmth==-9 & yearnotmonth==1 & op1ishelper==1 & wave==1
-(91 real changes made)
-
-.         replace impute_cat=2 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
->         & yearnotmonth==1 & op1ishelper==1 & wave==1
-(212 real changes made)
-
-.         //3=set to small number
-.         replace impute_cat=3 if op_ind_hrsmth==9999 & ///
->         (op1numdayswk~=1 & op1numdaysmn~=1) & op1ishelper==1 & wave==1
-(418 real changes made)
-
-.         //4=imputation not necessary, complete info
-.         replace impute_cat=4 if op_ind_hrsmth==1 & op1ishelper==1 & wave==1
-(9206 real changes made)
-
-. 
-. //if wave==2 | wave==3 | wave == 4
-.         //1=impute, wave 2,3 criteria
-.         replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inlist(wave,2,3,4)
-(1477 real changes made)
-
-.         replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inlist(wave,2,3,4)
-(2346 real changes made)
-
-.         //2=recode to zero, wave 2, 3
-.         replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inlist(wave,2,3,4)
-(940 real changes made)
-
-.         //3=recode to small number
-.         replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inlist(wave,2,3,4)
-(1239 real changes made)
-
-.         //4=imputation not necessary
-.         replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inlist(wave,2,3,4)
-(18539 real changes made)
-
-. 
-. la def impute_cat -1"N/A, not helper" 1"Impute" 2"Recode to zero" ///
-> 3"Recode to small number" 4"No imputation needed"
-
-. la val impute_cat impute_cat
-
-. tab impute_cat wave, missing
-
-                      |                 Survey wave
-           impute_cat |         1          2          3          4 |     Total
-----------------------+--------------------------------------------+----------
-      N/A, not helper |    26,500     28,120     27,332     25,931 |   107,883 
-               Impute |     1,670      1,557      1,596      1,451 |     6,274 
-       Recode to zero |       303        299        310        331 |     1,243 
-Recode to small numbe |       418        466        391        382 |     1,657 
- No imputation needed |     9,206      7,502      6,116      4,921 |    27,745 
-----------------------+--------------------------------------------+----------
-                Total |    38,097     37,944     35,745     33,016 |   144,802 
-
-
-. 
-. tab impute_cat op_ind_hrsmth if wave==1, missing
-
-                      |                           op_ind_hrsmth
-           impute_cat | -11:hours  -10:days   -9:days+h      -1:NA    1:Valid  9999:<1hr |     Total
-----------------------+------------------------------------------------------------------+----------
-      N/A, not helper |         0          0          0     26,500          0          0 |    26,500 
-               Impute |       253        103        638          0          0        676 |     1,670 
-       Recode to zero |         0          0         91          0          0        212 |       303 
-Recode to small numbe |         0          0          0          0          0        418 |       418 
- No imputation needed |         0          0          0          0      9,206          0 |     9,206 
-----------------------+------------------------------------------------------------------+----------
-                Total |       253        103        729     26,500      9,206      1,306 |    38,097 
-
-
-. tab impute_cat op_ind_hrsmth if wave==2, missing
-
-                      |                                op_ind_hrsmth
-           impute_cat | -13:Decea  -12:Zero   -11:hours  -9:days+h      -1:NA    1:Valid  9999:<1hr |     Total
-----------------------+-----------------------------------------------------------------------------+----------
-      N/A, not helper |     2,287          0          0          0     25,833          0          0 |    28,120 
-               Impute |         0        965        220        372          0          0          0 |     1,557 
-       Recode to zero |         0        299          0          0          0          0          0 |       299 
-Recode to small numbe |         0          0          0          0          0          0        466 |       466 
- No imputation needed |         0          0          0          0          0      7,502          0 |     7,502 
-----------------------+-----------------------------------------------------------------------------+----------
-                Total |     2,287      1,264        220        372     25,833      7,502        466 |    37,944 
-
-
-. tab impute_cat op_ind_hrsmth if wave==3, missing
-
-                      |                                op_ind_hrsmth
-           impute_cat | -13:Decea  -12:Zero   -11:hours  -9:days+h      -1:NA    1:Valid  9999:<1hr |     Total
-----------------------+-----------------------------------------------------------------------------+----------
-      N/A, not helper |     2,790          0          0          0     24,542          0          0 |    27,332 
-               Impute |         0        714        324        558          0          0          0 |     1,596 
-       Recode to zero |         0        310          0          0          0          0          0 |       310 
-Recode to small numbe |         0          0          0          0          0          0        391 |       391 
- No imputation needed |         0          0          0          0          0      6,116          0 |     6,116 
-----------------------+-----------------------------------------------------------------------------+----------
-                Total |     2,790      1,024        324        558     24,542      6,116        391 |    35,745 
-
-
-. tab impute_cat op_ind_hrsmth if wave==4, missing
-
-                      |                                op_ind_hrsmth
-           impute_cat | -13:Decea  -12:Zero   -11:hours  -9:days+h      -1:NA    1:Valid  9999:<1hr |     Total
-----------------------+-----------------------------------------------------------------------------+----------
-      N/A, not helper |     2,516          0          0          0     23,415          0          0 |    25,931 
-               Impute |         0        667        237        547          0          0          0 |     1,451 
-       Recode to zero |         0        331          0          0          0          0          0 |       331 
-Recode to small numbe |         0          0          0          0          0          0        382 |       382 
- No imputation needed |         0          0          0          0          0      4,921          0 |     4,921 
-----------------------+-----------------------------------------------------------------------------+----------
-                Total |     2,516        998        237        547     23,415      4,921        382 |    33,016 
-
-
-. 
-. ********************************************************************
-. //save separate datasets for r 1 2 & 3 so can run imputation with weighting
-. foreach w in 1 2 3 4{
-  2. preserve
-  3. keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
->  r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
->  daughter oth_fam 
-  4. keep if wave==`w'
-  5. save R`w'_for_hrs_impute.dta,replace
-  6. restore
-  7. }
-(106705 observations deleted)
-file R1_for_hrs_impute.dta saved
-(106858 observations deleted)
-file R2_for_hrs_impute.dta saved
-(109057 observations deleted)
-file R3_for_hrs_impute.dta saved
-(111786 observations deleted)
-file R4_for_hrs_impute.dta saved
-
-. */
-. ********************************************************************
-. //implement matching, do separately for each wave
-. foreach w in 1 2 3 4{
-  2. use R`w'_for_hrs_impute.dta, clear
-  3. 
-. svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
-  4. 
-. //wave 1 imputation... need to check what is different if anything for wave 2
-. gen op_hrsmth_i=0
-  5. replace op_hrsmth_i=op`w'dhrsmth if impute_cat==4  //use actual value
-  6. replace op_hrsmth_i=0 if impute_cat==2 //set to zero
-  7. replace op_hrsmth_i=(.5*op`w'numdayswk*4.3) if impute_cat==3 & op`w'helpsched==1 //assign small hours
-  8. replace op_hrsmth_i=(.5*op`w'numdaysmn) if impute_cat==3 & inlist(op`w'helpsched,2,-7,-8)  //assign small hours
-  9. 
-. //impute where op_ind_hrsmth=-10, missing days per month
-. gen op_numdays_i=0
- 10. replace op_numdays_i=op`w'numdayswk*4.3 if inlist(impute_cat,3,4) & op`w'helpsched==1
- 11. replace op_numdays_i=op`w'numdaysmn if inlist(impute_cat,3,4) & inlist(op`w'helpsched,2,-7,-8)
- 12. 
-. gen ln_opnumdays_i=ln(op_numdays_i) if inlist(impute_cat,3,4)
- 13. 
-. local adjvars spouse otherrel regular yearnotmonth oneact disab ///
->  op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
->  op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp ///
->  op`w'dreshlp op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp
- 14. 
-. svy: reg ln_opnumdays_i `adjvars' if inlist(impute_cat,3,4)
- 15. predict ln_opnumdays_i2 if impute_cat==1 & op_ind_hrsmth==-10
- 16. gen op_numdays_i2=exp(ln_opnumdays_i2) if impute_cat==1 & op_ind_hrsmth==-10
- 17. replace op_hrsmth_i= op_numdays_i2*op`w'numhrsday if impute_cat==1 & ///
->  op_ind_hrsmth==-10 & op`w'numhrsday>=1
- 18. replace op_hrsmth_i= op_numdays_i2*.5 if impute_cat==1 & ///
->  op_ind_hrsmth==-10 & op`w'numhrsday==0
- 19. 
-. //impute where op_ind_hrsmth=-11, missing hours per day
-. gen op_numhrsday_i=0
- 20. replace op_numhrsday_i=.5 if impute_cat==3
- 21. replace op_numhrsday_i=op`w'numhrsday if impute_cat==4
- 22. gen ln_opnumhrsday_i=ln(op_numhrsday_i) if inlist(impute_cat,3,4)
- 23. svy: reg ln_opnumhrsday_i `adjvars' if inlist(impute_cat,3,4)
- 24. predict ln_opnumhrsday_i2 if impute_cat==1 & op_ind_hrsmth==-11
- 25. gen op_numhrsday_i2=exp(ln_opnumhrsday_i2) if impute_cat==1 & op_ind_hrsmth==-11
- 26. replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
->  op_ind_hrsmth==-11 & op`w'helpsched==1
- 27. replace op_hrsmth_i=op`w'numdaysmn*op_numhrsday_i2 if impute_cat==1 & ///
->  op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & op`w'numdaysmn>=1
- 28. replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
->  op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & ///
->  op`w'numdaysmn<1 & op`w'numdayswk>=1 
- 29. 
-. //impute where op_ind_hrsmth=-9, -12 or 9999, missing hours and days or <1hr/day
-. gen ln_opdhrsmth_i=ln(op_hrsmth_i) if inlist(impute_cat,3,4)
- 30. svy: reg ln_opdhrsmth_i `adjvars' if inlist(impute_cat,3,4)
- 31. predict ln_opdhrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
- 32. gen op_hrsmth_i2=exp(ln_opdhrsmth_i2) if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
- 33. replace op_hrsmth_i=op_hrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
- 34. replace op_hrsmth_i=-1 if op`w'ishelper~=1 
- 35. 
-. //look at imputed hours per month by imputation category
-. di "where op_ind_hrsmth==-12"
- 36. capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-12 [pweight=w`w'anfinwgt0]
- 37. di "where op_ind_hrsmth==-11"
- 38. mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-11 [pweight=w`w'anfinwgt0]
- 39. di "where op_ind_hrsmth==-10"
- 40. capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-10 [pweight=w`w'anfinwgt0]
- 41. di "where op_ind_hrsmth==-9"
- 42. mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-9 [pweight=w`w'anfinwgt0] 
- 43. di "where op_ind_hrsmth==9999"
- 44. capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==9999 [pweight=w`w'anfinwgt0] 
- 45. 
-. di "impute_cat==2"
- 46. mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==2 [pweight=w`w'anfinwgt0]
- 47. di "impute_cat==3"
- 48. mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==3 [pweight=w`w'anfinwgt0]
- 49. di "impute_cat==4"
- 50. mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=w`w'anfinwgt0]
- 51. 
-. save R`w'_hrs_imputed_added.dta,replace
- 52. 
-. }
-
-      pweight: w1anfinwgt0
-          VCE: linearized
-  Single unit: missing
-     Strata 1: w1varstrat
-         SU 1: w1varunit
-        FPC 1: <zero>
-(9206 real changes made)
-(0 real changes made)
-(78 real changes made)
-(340 real changes made)
-(2921 real changes made)
-(6703 real changes made)
-(28473 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      9624
-Number of PSUs     =       112                  Population size    =  41048905
-                                                Design df          =        56
-                                                F(  23,     34)    =    312.37
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4322
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumda~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .5381677    .046348    11.61   0.000     .4453214     .631014
-    otherrel |    .149535   .0315967     4.73   0.000     .0862391    .2128309
-     regular |    .831632   .0285802    29.10   0.000      .774379     .888885
-yearnotmonth |  -.3761144   .0607903    -6.19   0.000    -.4978919   -.2543369
-      oneact |   -.299946   .0357061    -8.40   0.000    -.3714739   -.2284181
-       disab |   .1440928   .0308035     4.68   0.000     .0823859    .2057996
-   op1outhlp |   .0318444   .0472518     0.67   0.503    -.0628123    .1265012
-  op1insdhlp |   .0962042   .0550149     1.75   0.086    -.0140039    .2064122
-   op1bedhlp |  -.0000975   .0536042    -0.00   0.999    -.1074795    .1072846
- op1tkplhlp1 |   .0670854   .0278496     2.41   0.019     .0112959     .122875
- op1tkplhlp2 |  -.1540346    .033249    -4.63   0.000    -.2206404   -.0874288
-  op1launhlp |   .3127542   .0325358     9.61   0.000     .2475773    .3779312
-  op1shophlp |   .2160253   .0354635     6.09   0.000     .1449833    .2870673
-  op1mealhlp |   .2672827    .033151     8.06   0.000     .2008732    .3336922
-  op1bankhlp |   .0363355   .0297278     1.22   0.227    -.0232164    .0958874
-   op1eathlp |   .0845216   .0557201     1.52   0.135    -.0270992    .1961423
-  op1bathhlp |    .117602    .044507     2.64   0.011     .0284439    .2067602
-  op1toilhlp |   -.118526   .0724795    -1.64   0.108      -.26372     .026668
-  op1dreshlp |   .1345435   .0455844     2.95   0.005      .043227    .2258601
-  op1medshlp |   .1643136   .0409529     4.01   0.000     .0822751    .2463521
- op1moneyhlp |   .0345251   .0457505     0.75   0.454    -.0571241    .1261744
-   op1dochlp |    .025386   .0271638     0.93   0.354    -.0290296    .0798016
- op1insurhlp |   .0194013   .0707617     0.27   0.785    -.1223515    .1611541
-       _cons |   1.068917   .0475103    22.50   0.000     .9737425    1.164092
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(37994 missing values generated)
-(37994 missing values generated)
-(63 real changes made)
-(40 real changes made)
-(418 real changes made)
-(9206 real changes made)
-(28473 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      9624
-Number of PSUs     =       112                  Population size    =  41048905
-                                                Design df          =        56
-                                                F(  23,     34)    =    100.39
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.1837
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumhr~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .0564317   .0456012     1.24   0.221    -.0349184    .1477819
-    otherrel |   .0624205   .0255773     2.44   0.018     .0111831     .113658
-     regular |   .3052847   .0329666     9.26   0.000     .2392447    .3713246
-yearnotmonth |   .0200923   .0458621     0.44   0.663    -.0717805    .1119651
-      oneact |  -.0130288    .034018    -0.38   0.703     -.081175    .0551174
-       disab |     .11202   .0278872     4.02   0.000     .0561553    .1678848
-   op1outhlp |   .0449579   .0330294     1.36   0.179     -.021208    .1111238
-  op1insdhlp |   .1500529    .049026     3.06   0.003      .051842    .2482639
-   op1bedhlp |   .2441647   .0611057     4.00   0.000     .1217552    .3665741
- op1tkplhlp1 |   .0420772   .0230763     1.82   0.074    -.0041503    .0883046
- op1tkplhlp2 |   .1003105   .0297705     3.37   0.001      .040673     .159948
-  op1launhlp |   .2755963   .0233343    11.81   0.000      .228852    .3223405
-  op1shophlp |   .0844578   .0284647     2.97   0.004     .0274361    .1414794
-  op1mealhlp |   .0811433   .0264363     3.07   0.003      .028185    .1341015
-  op1bankhlp |    .031007   .0263091     1.18   0.244    -.0216965    .0837106
-   op1eathlp |   .0705038   .0564336     1.25   0.217    -.0425462    .1835539
-  op1bathhlp |    .162383   .0469407     3.46   0.001     .0683495    .2564164
-  op1toilhlp |    .196473   .0776547     2.53   0.014     .0409119    .3520341
-  op1dreshlp |   .0401705   .0448144     0.90   0.374    -.0496035    .1299445
-  op1medshlp |   .2475913   .0339665     7.29   0.000     .1795482    .3156344
- op1moneyhlp |  -.0775432   .0336455    -2.30   0.025    -.1449433   -.0101431
-   op1dochlp |    .104771   .0308297     3.40   0.001     .0430118    .1665303
- op1insurhlp |   -.157476   .0649034    -2.43   0.018    -.2874931   -.0274589
-       _cons |    .309135   .0444415     6.96   0.000      .220108    .3981621
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(37844 missing values generated)
-(37844 missing values generated)
-(60 real changes made)
-(184 real changes made)
-(9 real changes made)
-(28473 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      9624
-Number of PSUs     =       112                  Population size    =  41048905
-                                                Design df          =        56
-                                                F(  23,     34)    =    241.30
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4215
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opdhrsm~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |    .592771   .0662401     8.95   0.000      .460076    .7254659
-    otherrel |   .2109474   .0403331     5.23   0.000     .1301506    .2917442
-     regular |   1.136243   .0499583    22.74   0.000     1.036165    1.236322
-yearnotmonth |  -.3609958   .0824226    -4.38   0.000    -.5261081   -.1958835
-      oneact |  -.3134943   .0538532    -5.82   0.000    -.4213753   -.2056133
-       disab |    .257884   .0457061     5.64   0.000     .1663236    .3494444
-   op1outhlp |   .0763884   .0587189     1.30   0.199    -.0412396    .1940165
-  op1insdhlp |   .2464405   .0823616     2.99   0.004     .0814503    .4114306
-   op1bedhlp |   .2449405   .0955761     2.56   0.013     .0534785    .4364024
- op1tkplhlp1 |   .1095892   .0395119     2.77   0.008     .0304374     .188741
- op1tkplhlp2 |  -.0534629   .0504937    -1.06   0.294     -.154614    .0476882
-  op1launhlp |   .5889723   .0419012    14.06   0.000     .5050342    .6729104
-  op1shophlp |   .3009816   .0476974     6.31   0.000     .2054323    .3965309
-  op1mealhlp |   .3496706   .0464583     7.53   0.000     .2566034    .4427379
-  op1bankhlp |   .0670473   .0457148     1.47   0.148    -.0245305    .1586251
-   op1eathlp |   .1550192   .0795567     1.95   0.056    -.0043521    .3143905
-  op1bathhlp |   .2811085   .0763989     3.68   0.001     .1280632    .4341538
-  op1toilhlp |   .0776095   .1176533     0.66   0.512    -.1580784    .3132975
-  op1dreshlp |   .1752176   .0612364     2.86   0.006     .0525463    .2978889
-  op1medshlp |   .4126512   .0618707     6.67   0.000     .2887093     .536593
- op1moneyhlp |  -.0438965   .0609966    -0.72   0.475    -.1660875    .0782945
-   op1dochlp |   .1310672   .0449517     2.92   0.005     .0410181    .2211163
- op1insurhlp |  -.1385553    .112874    -1.23   0.225    -.3646691    .0875584
-       _cons |   1.377777   .0681964    20.20   0.000     1.241164    1.514391
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(36783 missing values generated)
-(36783 missing values generated)
-(1314 real changes made)
-(26500 real changes made)
-where op_ind_hrsmth==-12
-no observations
-where op_ind_hrsmth==-11
-
-Mean estimation                     Number of obs    =     253
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   45.92267   3.138149      39.74233    52.10301
---------------------------------------------------------------
-where op_ind_hrsmth==-10
-
-Mean estimation                     Number of obs    =     103
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   8.574615   .9208114       6.74819    10.40104
---------------------------------------------------------------
-where op_ind_hrsmth==-9
-
-Mean estimation                     Number of obs    =     638
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   15.02608   .8305304      13.39517    16.65699
---------------------------------------------------------------
-where op_ind_hrsmth==9999
-
-Mean estimation                     Number of obs    =     676
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   13.75598    .830141      12.12601    15.38595
---------------------------------------------------------------
-impute_cat==2
-
-Mean estimation                     Number of obs    =     303
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |          0  (omitted)
---------------------------------------------------------------
-impute_cat==3
-
-Mean estimation                     Number of obs    =     418
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   6.650921   .3211424      6.019661    7.282181
---------------------------------------------------------------
-impute_cat==4
-
-Mean estimation                     Number of obs    =    9206
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   74.28973   1.837924      70.68699    77.89247
---------------------------------------------------------------
-file R1_hrs_imputed_added.dta saved
-
-      pweight: w2anfinwgt0
-          VCE: linearized
-  Single unit: missing
-     Strata 1: w2varstrat
-         SU 1: w2varunit
-        FPC 1: <zero>
-(7502 real changes made)
-(0 real changes made)
-(85 real changes made)
-(381 real changes made)
-(2495 real changes made)
-(5473 real changes made)
-(29977 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      7967
-Number of PSUs     =       112                  Population size    =  40549774
-                                                Design df          =        56
-                                                F(  23,     34)    =    273.74
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4854
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumda~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .6174003   .0449314    13.74   0.000     .5273919    .7074088
-    otherrel |   .1256399   .0281721     4.46   0.000     .0692043    .1820754
-     regular |   .7145516   .0301197    23.72   0.000     .6542145    .7748887
-yearnotmonth |  -.2759256   .0552299    -5.00   0.000    -.3865644   -.1652868
-      oneact |  -.3394039   .0378572    -8.97   0.000    -.4152409   -.2635669
-       disab |   .1298073    .028996     4.48   0.000     .0717214    .1878932
-   op2outhlp |   .0566786   .0320764     1.77   0.083    -.0075781    .1209353
-  op2insdhlp |   .1523745   .0481907     3.16   0.003     .0558369    .2489121
-   op2bedhlp |  -.0086655   .0582687    -0.15   0.882    -.1253918    .1080607
- op2tkplhlp1 |  -.0699267   .0312954    -2.23   0.029    -.1326188   -.0072345
- op2tkplhlp2 |  -.2135425   .0330085    -6.47   0.000    -.2796664   -.1474186
-  op2launhlp |   .2615633   .0287219     9.11   0.000     .2040263    .3191002
-  op2shophlp |   .2055468   .0308275     6.67   0.000     .1437919    .2673017
-  op2mealhlp |   .3148386   .0384666     8.18   0.000     .2377807    .3918965
-  op2bankhlp |   .0851522   .0300027     2.84   0.006     .0250496    .1452549
-   op2eathlp |   .0944416   .0458509     2.06   0.044     .0025912    .1862921
-  op2bathhlp |   .0401069   .0453527     0.88   0.380    -.0507455    .1309593
-  op2toilhlp |  -.0850442   .0587285    -1.45   0.153    -.2026915    .0326031
-  op2dreshlp |   .0546973   .0418169     1.31   0.196    -.0290721    .1384667
-  op2medshlp |   .1557835   .0377292     4.13   0.000     .0802028    .2313642
- op2moneyhlp |  -.0564254   .0435809    -1.29   0.201    -.1437285    .0308777
-   op2dochlp |   .0519026   .0246118     2.11   0.039     .0025992    .1012059
- op2insurhlp |  -.0182814   .0799765    -0.23   0.820    -.1784935    .1419307
-       _cons |   1.282439   .0424484    30.21   0.000     1.197405    1.367474
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(37944 missing values generated)
-(37944 missing values generated)
-(0 real changes made)
-(0 real changes made)
-(466 real changes made)
-(7502 real changes made)
-(29976 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      7968
-Number of PSUs     =       112                  Population size    =  40556183
-                                                Design df          =        56
-                                                F(  23,     34)    =     51.13
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.1809
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumhr~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |  -.0258383   .0490153    -0.53   0.600    -.1240277    .0723511
-    otherrel |   .0403781   .0306838     1.32   0.194     -.021089    .1018452
-     regular |   .2522105   .0316505     7.97   0.000     .1888069    .3156141
-yearnotmonth |  -.0881463   .0522804    -1.69   0.097    -.1928764    .0165839
-      oneact |  -.0223245   .0364083    -0.61   0.542     -.095259    .0506101
-       disab |   .1084354    .036439     2.98   0.004     .0354394    .1814314
-   op2outhlp |   .0850452   .0402367     2.11   0.039     .0044414    .1656489
-  op2insdhlp |    .098705   .0469085     2.10   0.040      .004736    .1926739
-   op2bedhlp |   .2974317   .0750291     3.96   0.000     .1471303    .4477332
- op2tkplhlp1 |   .0690091   .0352526     1.96   0.055    -.0016104    .1396286
- op2tkplhlp2 |   .0532661   .0330387     1.61   0.113    -.0129185    .1194507
-  op2launhlp |   .2870727   .0308763     9.30   0.000     .2252201    .3489254
-  op2shophlp |   .0763197   .0324347     2.35   0.022     .0113452    .1412941
-  op2mealhlp |   .0836207   .0212575     3.93   0.000     .0410369    .1262045
-  op2bankhlp |   .0376569   .0317728     1.19   0.241    -.0259917    .1013054
-   op2eathlp |   .0455212   .0600505     0.76   0.452    -.0747744    .1658167
-  op2bathhlp |  -.0131934   .0594477    -0.22   0.825    -.1322815    .1058947
-  op2toilhlp |   .4056612   .0899065     4.51   0.000     .2255569    .5857656
-  op2dreshlp |   .1041839   .0643222     1.62   0.111     -.024669    .2330367
-  op2medshlp |   .1877458   .0442265     4.25   0.000     .0991495    .2763421
- op2moneyhlp |  -.0967339   .0355409    -2.72   0.009    -.1679308   -.0255369
-   op2dochlp |   .1360582   .0272687     4.99   0.000     .0814325    .1906839
- op2insurhlp |  -.0653032   .0677158    -0.96   0.339    -.2009542    .0703479
-       _cons |   .3997065   .0472892     8.45   0.000     .3049748    .4944383
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(37724 missing values generated)
-(37724 missing values generated)
-(50 real changes made)
-(170 real changes made)
-(0 real changes made)
-(29976 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      7968
-Number of PSUs     =       112                  Population size    =  40556183
-                                                Design df          =        56
-                                                F(  23,     34)    =    178.00
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4504
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opdhrsm~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .5911696   .0755809     7.82   0.000     .4397629    .7425764
-    otherrel |   .1652982    .041619     3.97   0.000     .0819253    .2486712
-     regular |   .9730144   .0447618    21.74   0.000     .8833458    1.062683
-yearnotmonth |  -.3642374   .0818792    -4.45   0.000    -.5282611   -.2002136
-      oneact |  -.3623332   .0593025    -6.11   0.000    -.4811303    -.243536
-       disab |   .2385008   .0527728     4.52   0.000     .1327841    .3442174
-   op2outhlp |    .140161    .051351     2.73   0.008     .0372926    .2430295
-  op2insdhlp |   .2534953   .0660306     3.84   0.000     .1212201    .3857706
-   op2bedhlp |   .2923894   .0947284     3.09   0.003     .1026257    .4821531
- op2tkplhlp1 |  -.0014302   .0525153    -0.03   0.978     -.106631    .1037707
- op2tkplhlp2 |  -.1604523   .0475711    -3.37   0.001    -.2557487    -.065156
-  op2launhlp |   .5482365   .0459304    11.94   0.000     .4562268    .6402462
-  op2shophlp |   .2814609   .0499342     5.64   0.000     .1814307    .3814911
-  op2mealhlp |   .3982719   .0492188     8.09   0.000     .2996748     .496869
-  op2bankhlp |   .1234857   .0466837     2.65   0.011     .0299671    .2170043
-   op2eathlp |   .1429649   .0767003     1.86   0.068    -.0106843    .2966142
-  op2bathhlp |   .0256077   .0799294     0.32   0.750    -.1345101    .1857255
-  op2toilhlp |    .311989   .1246332     2.50   0.015     .0623188    .5616592
-  op2dreshlp |   .1574869   .0843045     1.87   0.067    -.0113954    .3263692
-  op2medshlp |   .3424555   .0622914     5.50   0.000     .2176709    .4672402
- op2moneyhlp |  -.1531767   .0598071    -2.56   0.013    -.2729847   -.0333686
-   op2dochlp |   .1875215   .0399896     4.69   0.000     .1074126    .2676304
- op2insurhlp |  -.0834532   .1090395    -0.77   0.447    -.3018856    .1349791
-       _cons |   1.683443   .0679383    24.78   0.000     1.547346     1.81954
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(36607 missing values generated)
-(36607 missing values generated)
-(1337 real changes made)
-(28120 real changes made)
-where op_ind_hrsmth==-12
-
-Mean estimation                     Number of obs    =     965
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   15.70768   .7069004      14.32043    17.09492
---------------------------------------------------------------
-where op_ind_hrsmth==-11
-
-Mean estimation                     Number of obs    =     220
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |    50.0305   3.211043        43.702      56.359
---------------------------------------------------------------
-where op_ind_hrsmth==-10
-no observations
-where op_ind_hrsmth==-9
-
-Mean estimation                     Number of obs    =     372
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   17.59416   1.127487       15.3771    19.81123
---------------------------------------------------------------
-where op_ind_hrsmth==9999
-no observations
-impute_cat==2
-
-Mean estimation                     Number of obs    =     299
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |          0  (omitted)
---------------------------------------------------------------
-impute_cat==3
-
-Mean estimation                     Number of obs    =     466
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   4.002155   .2542403      3.502553    4.501757
---------------------------------------------------------------
-impute_cat==4
-
-Mean estimation                     Number of obs    =    7502
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   73.71425   1.905108       69.9797    77.44879
---------------------------------------------------------------
-file R2_hrs_imputed_added.dta saved
-
-      pweight: w3anfinwgt0
-          VCE: linearized
-  Single unit: missing
-     Strata 1: w3varstrat
-         SU 1: w3varunit
-        FPC 1: <zero>
-(6116 real changes made)
-(0 real changes made)
-(91 real changes made)
-(300 real changes made)
-(1782 real changes made)
-(4725 real changes made)
-(29238 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      6507
-Number of PSUs     =       112                  Population size    =  39798563
-                                                Design df          =        56
-                                                F(  23,     34)    =    256.91
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.5006
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumda~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .5474741   .0453293    12.08   0.000     .4566686    .6382796
-    otherrel |   .0491816   .0337506     1.46   0.151     -.018429    .1167922
-     regular |     .61118   .0314532    19.43   0.000     .5481717    .6741883
-yearnotmonth |  -.3755535   .0703048    -5.34   0.000    -.5163909   -.2347162
-      oneact |  -.3260701   .0416855    -7.82   0.000    -.4095762    -.242564
-       disab |   .0996972    .035542     2.81   0.007     .0284979    .1708965
-   op3outhlp |   .0581599   .0388551     1.50   0.140    -.0196762     .135996
-  op3insdhlp |   .1594248   .0706018     2.26   0.028     .0179925    .3008572
-   op3bedhlp |   .0923095   .0757025     1.22   0.228    -.0593407    .2439598
- op3tkplhlp1 |  -.0281565   .0305808    -0.92   0.361    -.0894172    .0331041
- op3tkplhlp2 |  -.2677557   .0414643    -6.46   0.000    -.3508186   -.1846928
-  op3launhlp |   .2809537   .0363668     7.73   0.000     .2081023    .3538052
-  op3shophlp |   .2382679   .0368349     6.47   0.000     .1644787     .312057
-  op3mealhlp |   .3632821   .0370363     9.81   0.000     .2890894    .4374747
-  op3bankhlp |   .0836157   .0319022     2.62   0.011      .019708    .1475234
-   op3eathlp |   .1202538   .0505282     2.38   0.021     .0190336     .221474
-  op3bathhlp |   .0327459   .0552101     0.59   0.555    -.0778532     .143345
-  op3toilhlp |   .0115329   .0717873     0.16   0.873    -.1322742    .1553401
-  op3dreshlp |   .0394282   .0554606     0.71   0.480    -.0716727    .1505292
-  op3medshlp |   .1825903   .0411739     4.43   0.000     .1001091    .2650716
- op3moneyhlp |  -.0477062   .0420952    -1.13   0.262    -.1320329    .0366205
-   op3dochlp |  -.0017881   .0311737    -0.06   0.954    -.0642365    .0606603
- op3insurhlp |   .1988462   .0766268     2.59   0.012     .0453442    .3523482
-       _cons |   1.387046   .0488214    28.41   0.000     1.289245    1.484847
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(35745 missing values generated)
-(35745 missing values generated)
-(0 real changes made)
-(0 real changes made)
-(391 real changes made)
-(6116 real changes made)
-(29238 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      6507
-Number of PSUs     =       112                  Population size    =  39798563
-                                                Design df          =        56
-                                                F(  23,     34)    =     44.01
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.1698
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumhr~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |  -.0784601   .0560593    -1.40   0.167    -.1907603    .0338401
-    otherrel |   .0587035   .0310527     1.89   0.064    -.0035027    .1209096
-     regular |   .1339523   .0445764     3.01   0.004      .044655    .2232495
-yearnotmonth |  -.1146862   .0646154    -1.77   0.081    -.2441263    .0147539
-      oneact |  -.0291444   .0346617    -0.84   0.404    -.0985801    .0402913
-       disab |   .0980952   .0255104     3.85   0.000     .0469917    .1491987
-   op3outhlp |   .0672603   .0430111     1.56   0.124    -.0189013    .1534219
-  op3insdhlp |   .0945743   .0764963     1.24   0.221    -.0586662    .2478148
-   op3bedhlp |   .1516865   .0901682     1.68   0.098    -.0289421    .3323151
- op3tkplhlp1 |   .0449282   .0303858     1.48   0.145    -.0159418    .1057982
- op3tkplhlp2 |   .1352021   .0373799     3.62   0.001     .0603212    .2100831
-  op3launhlp |   .3123969   .0285702    10.93   0.000     .2551639    .3696298
-  op3shophlp |   .0578082     .03317     1.74   0.087    -.0086394    .1242558
-  op3mealhlp |   .1269939   .0286869     4.43   0.000     .0695271    .1844606
-  op3bankhlp |    .015884   .0285125     0.56   0.580    -.0412335    .0730015
-   op3eathlp |   .1799637   .0710467     2.53   0.014       .03764    .3222874
-  op3bathhlp |   .1845982   .0650902     2.84   0.006     .0542068    .3149896
-  op3toilhlp |   .3482768   .1180198     2.95   0.005     .1118548    .5846988
-  op3dreshlp |  -.0373171   .0722364    -0.52   0.607     -.182024    .1073897
-  op3medshlp |   .1849502   .0568245     3.25   0.002      .071117    .2987833
- op3moneyhlp |   .0162145   .0418607     0.39   0.700    -.0676425    .1000715
-   op3dochlp |   .1541263    .031081     4.96   0.000     .0918635     .216389
- op3insurhlp |  -.0343378   .0799739    -0.43   0.669    -.1945448    .1258691
-       _cons |   .4266783   .0464004     9.20   0.000     .3337271    .5196295
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(35421 missing values generated)
-(35421 missing values generated)
-(73 real changes made)
-(250 real changes made)
-(1 real change made)
-(29238 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      6507
-Number of PSUs     =       112                  Population size    =  39798563
-                                                Design df          =        56
-                                                F(  23,     34)    =    168.19
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4667
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opdhrsm~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .4699376   .0753008     6.24   0.000      .319092    .6207832
-    otherrel |   .1082735   .0500123     2.16   0.035     .0080869    .2084602
-     regular |   .7525336   .0562962    13.37   0.000     .6397588    .8653084
-yearnotmonth |  -.4907115     .09781    -5.02   0.000    -.6866484   -.2947746
-      oneact |  -.3552462   .0590125    -6.02   0.000    -.4734625     -.23703
-       disab |   .1973663   .0420152     4.70   0.000     .1131998    .2815328
-   op3outhlp |   .1254505   .0595258     2.11   0.040     .0062059    .2446951
-  op3insdhlp |   .2539254   .1109227     2.29   0.026     .0317205    .4761302
-   op3bedhlp |   .2440014   .1196328     2.04   0.046     .0043482    .4836546
- op3tkplhlp1 |   .0164508    .045814     0.36   0.721    -.0753257    .1082274
- op3tkplhlp2 |  -.1322632   .0576009    -2.30   0.025    -.2476517   -.0168747
-  op3launhlp |   .5942119   .0523902    11.34   0.000     .4892617    .6991621
-  op3shophlp |    .296414   .0518385     5.72   0.000      .192569    .4002589
-  op3mealhlp |   .4906347   .0492335     9.97   0.000      .392008    .5892613
-  op3bankhlp |   .0980474   .0458533     2.14   0.037     .0061922    .1899026
-   op3eathlp |   .2999311   .0847334     3.54   0.001     .1301898    .4696725
-  op3bathhlp |   .2172211    .083759     2.59   0.012     .0494318    .3850105
-  op3toilhlp |   .3594674     .13085     2.75   0.008     .0973433    .6215915
-  op3dreshlp |   .0019321   .1051864     0.02   0.985    -.2087817    .2126459
-  op3medshlp |   .3653421   .0782816     4.67   0.000     .2085253    .5221589
- op3moneyhlp |   -.031489   .0563505    -0.56   0.579    -.1443727    .0813947
-   op3dochlp |   .1542615   .0491478     3.14   0.003     .0558067    .2527164
- op3insurhlp |   .1643042   .1188624     1.38   0.172    -.0738058    .4024141
-       _cons |   1.813121    .078581    23.07   0.000     1.655704    1.970538
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(34473 missing values generated)
-(34473 missing values generated)
-(1272 real changes made)
-(27332 real changes made)
-where op_ind_hrsmth==-12
-
-Mean estimation                     Number of obs    =     714
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   14.64018   .7360239      13.19514    16.08521
---------------------------------------------------------------
-where op_ind_hrsmth==-11
-
-Mean estimation                     Number of obs    =     324
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   55.27517   3.055636      49.26371    61.28663
---------------------------------------------------------------
-where op_ind_hrsmth==-10
-no observations
-where op_ind_hrsmth==-9
-
-Mean estimation                     Number of obs    =     558
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   18.73445   1.264598      16.25049    21.21841
---------------------------------------------------------------
-where op_ind_hrsmth==9999
-no observations
-impute_cat==2
-
-Mean estimation                     Number of obs    =     310
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |          0  (omitted)
---------------------------------------------------------------
-impute_cat==3
-
-Mean estimation                     Number of obs    =     391
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   5.054444   .3159362      4.433293    5.675596
---------------------------------------------------------------
-impute_cat==4
-
-Mean estimation                     Number of obs    =    6116
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   67.19971    1.88129      63.51172     70.8877
---------------------------------------------------------------
-file R3_hrs_imputed_added.dta saved
-
-      pweight: w4anfinwgt0
-          VCE: linearized
-  Single unit: missing
-     Strata 1: w4varstrat
-         SU 1: w4varunit
-        FPC 1: <zero>
-(4921 real changes made)
-(0 real changes made)
-(75 real changes made)
-(307 real changes made)
-(1451 real changes made)
-(3852 real changes made)
-(27713 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      5303
-Number of PSUs     =       112                  Population size    =  37609074
-                                                Design df          =        56
-                                                F(  23,     34)    =    170.75
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4720
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumda~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |   .5389448   .0489551    11.01   0.000      .440876    .6370135
-    otherrel |    .096415   .0306095     3.15   0.003     .0350968    .1577331
-     regular |   .5930351   .0343051    17.29   0.000     .5243137    .6617564
-yearnotmonth |  -.1442419   .0828231    -1.74   0.087    -.3101564    .0216727
-      oneact |  -.2521449   .0432321    -5.83   0.000    -.3387492   -.1655407
-       disab |   .1344615   .0363075     3.70   0.000     .0617289    .2071941
-   op4outhlp |   .0362634   .0455839     0.80   0.430    -.0550521    .1275788
-  op4insdhlp |   .1198898   .0662082     1.81   0.076    -.0127412    .2525209
-   op4bedhlp |   .0289062   .0808411     0.36   0.722    -.1330379    .1908503
- op4tkplhlp1 |   .0042865    .031816     0.13   0.893    -.0594486    .0680216
- op4tkplhlp2 |  -.2276146   .0409083    -5.56   0.000    -.3095637   -.1456655
-  op4launhlp |   .3163341   .0408879     7.74   0.000     .2344257    .3982425
-  op4shophlp |   .1972409   .0429879     4.59   0.000     .1111259     .283356
-  op4mealhlp |   .4014343   .0369929    10.85   0.000     .3273286      .47554
-  op4bankhlp |   .1075383   .0410596     2.62   0.011      .025286    .1897906
-   op4eathlp |  -.0028902   .0836913    -0.03   0.973    -.1705441    .1647636
-  op4bathhlp |    .057077   .0657812     0.87   0.389    -.0746985    .1888525
-  op4toilhlp |   .1309503   .0844888     1.55   0.127    -.0383011    .3002016
-  op4dreshlp |   .1287687   .0580887     2.22   0.031     .0124031    .2451342
-  op4medshlp |   .1026022   .0405006     2.53   0.014     .0214697    .1837346
- op4moneyhlp |   .0180766   .0442788     0.41   0.685    -.0706245    .1067777
-   op4dochlp |   .1073062   .0337808     3.18   0.002     .0396351    .1749773
- op4insurhlp |  -.0738072   .0732966    -1.01   0.318     -.220638    .0730235
-       _cons |   1.264653   .0553879    22.83   0.000     1.153697    1.375608
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(33016 missing values generated)
-(33016 missing values generated)
-(0 real changes made)
-(0 real changes made)
-(382 real changes made)
-(4921 real changes made)
-(27713 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      5303
-Number of PSUs     =       112                  Population size    =  37609074
-                                                Design df          =        56
-                                                F(  23,     34)    =     30.96
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.2142
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opnumhr~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |  -.1101905   .0513319    -2.15   0.036    -.2130207   -.0073603
-    otherrel |   .1213047   .0408604     2.97   0.004     .0394515     .203158
-     regular |   .1838924   .0353226     5.21   0.000     .1131329     .254652
-yearnotmonth |   -.155088   .0745429    -2.08   0.042    -.3044153   -.0057607
-      oneact |   .0035548   .0421986     0.08   0.933    -.0809791    .0880887
-       disab |   .0621988   .0335155     1.86   0.069    -.0049407    .1293383
-   op4outhlp |   .0564042     .03924     1.44   0.156     -.022203    .1350115
-  op4insdhlp |  -.0307943   .0646201    -0.48   0.636    -.1602438    .0986553
-   op4bedhlp |   .2828585   .1059707     2.67   0.010     .0705737    .4951432
- op4tkplhlp1 |   .0483347    .026793     1.80   0.077    -.0053381    .1020076
- op4tkplhlp2 |   .1109742   .0356256     3.12   0.003     .0396076    .1823407
-  op4launhlp |    .245514   .0359457     6.83   0.000      .173506    .3175219
-  op4shophlp |   .0617318   .0251383     2.46   0.017     .0113737    .1120899
-  op4mealhlp |   .1495413   .0306292     4.88   0.000     .0881837    .2108989
-  op4bankhlp |    .061585   .0291042     2.12   0.039     .0032823    .1198877
-   op4eathlp |   .1811966   .0728149     2.49   0.016     .0353307    .3270624
-  op4bathhlp |   .0864734   .0920411     0.94   0.352    -.0979072    .2708539
-  op4toilhlp |   .3410338   .1026354     3.32   0.002     .1354304    .5466372
-  op4dreshlp |   .2159683   .0722333     2.99   0.004     .0712676     .360669
-  op4medshlp |   .3249501   .0538953     6.03   0.000     .2169848    .4329153
- op4moneyhlp |   -.091109   .0443013    -2.06   0.044    -.1798552   -.0023628
-   op4dochlp |   .1375804   .0335154     4.10   0.000      .070441    .2047199
- op4insurhlp |  -.0311579   .0778298    -0.40   0.690    -.1870697    .1247539
-       _cons |   .3555255   .0637591     5.58   0.000     .2278006    .4832504
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(32779 missing values generated)
-(32779 missing values generated)
-(55 real changes made)
-(182 real changes made)
-(0 real changes made)
-(27713 missing values generated)
-(running regress on estimation sample)
-
-Survey: Linear regression
-
-Number of strata   =        56                  Number of obs      =      5303
-Number of PSUs     =       112                  Population size    =  37609074
-                                                Design df          =        56
-                                                F(  23,     34)    =    130.75
-                                                Prob > F           =    0.0000
-                                                R-squared          =    0.4605
-
-------------------------------------------------------------------------------
-             |             Linearized
-ln_opdhrsm~i |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      spouse |    .428818   .0785376     5.46   0.000     .2714883    .5861478
-    otherrel |   .2178294   .0561204     3.88   0.000     .1054067    .3302521
-     regular |    .783394   .0475008    16.49   0.000     .6882385    .8785495
-yearnotmonth |  -.2997251   .1275116    -2.35   0.022    -.5551615   -.0442888
-      oneact |  -.2486415   .0624875    -3.98   0.000     -.373819    -.123464
-       disab |   .1966733   .0486886     4.04   0.000     .0991382    .2942083
-   op4outhlp |   .0926853   .0634405     1.46   0.150    -.0344013    .2197719
-  op4insdhlp |   .0891692   .0933495     0.96   0.344    -.0978322    .2761706
-   op4bedhlp |   .3116923    .127804     2.44   0.018     .0556701    .5677145
- op4tkplhlp1 |   .0526695   .0443091     1.19   0.240    -.0360924    .1414314
- op4tkplhlp2 |  -.1165579   .0555297    -2.10   0.040    -.2277972   -.0053186
-  op4launhlp |    .561951   .0625532     8.98   0.000     .4366419    .6872601
-  op4shophlp |    .259002   .0507931     5.10   0.000     .1572512    .3607527
-  op4mealhlp |   .5510027   .0508254    10.84   0.000     .4491872    .6528183
-  op4bankhlp |   .1690593   .0527261     3.21   0.002     .0634362    .2746824
-   op4eathlp |   .1782567   .1231032     1.45   0.153    -.0683486     .424862
-  op4bathhlp |   .1435325   .1318954     1.09   0.281    -.1206858    .4077508
-  op4toilhlp |    .472151   .1410642     3.35   0.001     .1895654    .7547366
-  op4dreshlp |   .3448332   .1050022     3.28   0.002     .1344884     .555178
-  op4medshlp |   .4276202   .0720038     5.94   0.000     .2833792    .5718612
- op4moneyhlp |  -.0731165   .0667011    -1.10   0.278    -.2067348    .0605018
-   op4dochlp |   .2448772   .0488731     5.01   0.000     .1469726    .3427817
- op4insurhlp |  -.1049379   .1200768    -0.87   0.386    -.3454807    .1356049
-       _cons |   1.620066   .0872828    18.56   0.000     1.445217    1.794914
-------------------------------------------------------------------------------
-(option xb assumed; fitted values)
-(31802 missing values generated)
-(31802 missing values generated)
-(1214 real changes made)
-(25931 real changes made)
-where op_ind_hrsmth==-12
-
-Mean estimation                     Number of obs    =     667
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   13.75362   .7897666      12.20289    15.30435
---------------------------------------------------------------
-where op_ind_hrsmth==-11
-
-Mean estimation                     Number of obs    =     237
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |    45.3443   2.922556      39.58667    51.10193
---------------------------------------------------------------
-where op_ind_hrsmth==-10
-no observations
-where op_ind_hrsmth==-9
-
-Mean estimation                     Number of obs    =     547
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   19.83486   1.407003      17.07106    22.59866
---------------------------------------------------------------
-where op_ind_hrsmth==9999
-no observations
-impute_cat==2
-
-Mean estimation                     Number of obs    =     331
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |          0  (omitted)
---------------------------------------------------------------
-impute_cat==3
-
-Mean estimation                     Number of obs    =     382
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   4.280268   .2808654      3.728028    4.832509
---------------------------------------------------------------
-impute_cat==4
-
-Mean estimation                     Number of obs    =    4921
-
---------------------------------------------------------------
-             |       Mean   Std. Err.     [95% Conf. Interval]
--------------+------------------------------------------------
- op_hrsmth_i |   65.36183   2.050624       61.3417    69.38197
---------------------------------------------------------------
-file R4_hrs_imputed_added.dta saved
-
-. 
-. ********************************************************************
-. log close
-      name:  <unnamed>
-       log:  E:\nhats\nhats_code\NHATS data setup\logs1a-help_hours_imputation-LOG.txt
-  log type:  text
- closed on:   1 Sep 2016, 10:35:00
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+(1,220 real changes made)
+(3,849 real changes made)
+(5,406 real changes made)
+(4,857 real changes made)
+(3,502 real changes made)
+(1,582 real changes made)
+(1,734 real changes made)
+(1,191 real changes made)
+op1tkplhlp ambiguous abbreviation
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\bollee01\AppData\Local\Temp\5\STD00000000.tmp"
+
+. capture log close
