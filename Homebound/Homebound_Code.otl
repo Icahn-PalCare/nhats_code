@@ -4089,7 +4089,7 @@ foreach time in 1 2 {
 	local r=`r'+1
 }
 mat rownames samp=`samp' eligible_nsoc `samp'
-frmttable using "`logpath'\poster_tables_031517.rtf", replace statmat(samp) title("NHATS Wave 5 Sample") ctitles("" "Respondents" ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", replace statmat(samp) title("NHATS Wave 5 Sample") ctitles("" "Respondents" ///
 "Helpers" "Family/Unpaid" "Paid") sdec(0) varlabels
 
 use `temp1', clear
@@ -4153,7 +4153,7 @@ foreach l of local levels {
 }
 mat rownames tab1=N n `cvars1' `ivars1' `cvars2' `ivars2' 
 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab1) title(Table 1: Characteristics of the study population) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab1) title(Table 1: Characteristics of the study population) ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not Homebound") ///
 sdec(2) annotate(stars) asymbol(*,**) substat(1) varlabels
 
@@ -4193,7 +4193,7 @@ foreach l of local levels {
 
 mat rownames tab2="National estimate of helpers" "Number per SP, mean" ///
 "SD" ind_4plus_helpers tot_hrswk_help_i "SD" 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab2) title("Table 2: Helpers by homebound status") ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab2) title("Table 2: Helpers by homebound status") ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not Homebound") ///
 sdec(2) annotate(stars) asymbol(*,**)  varlabels
 
@@ -4229,7 +4229,7 @@ forvalues i=1/5 {
 }
 
 
-frmttable using "`logpath'\poster_tables_031517.rtf", statmat(count) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", statmat(count) ///
 ctitles("" "`clab1'" "`clab2'" "`clab3'")  ///
 rtitles("`rlab1'"\"`rlab2'"\"`rlab3'"\"`rlab4'"\"`rlab5'") ///
 title(Figure 1: Caregiving support by homebound status) ///
@@ -4334,7 +4334,7 @@ di "`l'"
 	local c=`c'+1
 }
 mat rownames tab3=`pvars'
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab3) title("Table 3: Paid and unpaid help by homebound status") ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab3) title("Table 3: Paid and unpaid help by homebound status") ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not homebound") ///
 sdec(2) annotate(stars) asymbol(*,**) varlabels
 restore
@@ -4398,12 +4398,341 @@ foreach x of local helpvars {
 }
 mat rownames tab`cat'=`helpvars' N "National Estimate"
 }
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tabhelpcat) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tabhelpcat) ///
 title("Table 4. Help provided to homebound and never alone groups by caregiver type") ///
 ctitles("" "Paid Helper" "Spouse" "Daughter" "Son" "Other unpaid") ///
 sdec(2) annotate(starshelpcat) asymbol(*,**) varlabels
 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tabkidcat) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tabkidcat) ///
 title("Table 4. Help provided to homebound and never alone groups by caregiver type") ///
 ctitles("" "Paid Helper" "Spouse" "Child" "Other unpaid") ///
 sdec(2) annotate(starskidcat) asymbol(*,**) varlabels
+
+
+H="tables and logits for Jenny 052217"
+clear all
+set more off
+capture log close
+
+local datapath "E:\nhats\data\NHATS Cleaned\"
+local logpath "E:\nhats\data\projects\Homebound\logs"
+
+cd "`datapath'"
+
+use sp_round_1_5, clear
+gen n=1
+label var n "NHATS Community Sample, Wave 5"
+gen n_informal=n_helpers-n_paid_helpers
+keep if wave==5 & lml==0 & sp_ivw==1 & nhres==0
+gen prob_dementia=dem_3_cat==1 if !missing(dem_3)
+label var prob_dementia "Probable dementia"
+foreach x in adl iadl {
+	gen `x'1=`x'_index==0 if !missing(`x'_index)
+	gen `x'2=inlist(`x'_index,1,2) if !missing(`x'_index)
+	gen `x'3=`x'_index>=3 if !missing(`x'_index)
+	label var `x'1 "Independent in `x's"
+	label var `x'2 "Dependent in 1-2 `x's"
+	label var `x'3 "Dependent in 3+ `x's"
+}
+gen ind_any_helpers=n_helpers>0 if !missing(n_helpers)
+label var ind_any_helpers "Indicator any helpers reported"
+preserve
+replace tot_hrsmonth_help_i=0 if missing(tot_hrsmonth_help_i)
+sum tot_hrsmonth_help_i,d
+restore
+gen top_quartile_help_helped=tot_hrsmonth_help_i>=r(p75) & !missing(tot_hrsmonth_help_i)
+label var top_quartile_help "Top quartile hours of help"
+local cvars1 age
+local cvars2 aveincome n_helpers n_paid_helpers tot_hrsmonth_help_i ///
+tot_hrsmonth_paid_i 
+local ivars1 female white black hisp other_race married educ_hs_ind proxy
+local ivars2 ind_any_helpers ind_paid_helper top_quartile_help_helped ///
+medicaid medigap srh_fp nhres ///
+sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
+sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever ///
+prob_dementia dem_2_cat adl_diff_ind adl_independent iadl_diff_ind iadl_independent 
+local ivars3 adl1 adl2 adl3 iadl1 iadl2 iadl3 adl_eat_help adl_bath_help adl_toil_help ///
+adl_dres_help adl_ins_help adl_bed_help iadl_laun_help ///
+iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
+ reg_doc_seen sr_hosp_ind
+
+
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3'{
+ sum n if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+ replace missingany=1 if `x'==.
+}
+}
+
+log using `logpath'\summ_statistics.txt, text replace
+
+di "hours of help per month"
+sum tot_hrsmonth_help_i,d
+tab top_quart if !missing(tot_hrsmonth_help_i)
+sum tot_hrsmonth_help_i if top_quart,d
+
+sum n_helpers,d
+sum n_helpers if homebound==1,d
+sum n_helpers if homebound==2,d
+sum tot_hrsmonth_help_i if homebound==1,d
+sum tot_hrsmonth_help_i if homebound==2,d
+tab homebound top_quart if homebound<3
+
+sum n_paid_helpers,d
+sum n_paid_helpers if homebound==1,d
+sum n_paid_helpers if homebound==2,d
+sum tot_hrsmonth_paid_i if homebound==1,d
+sum tot_hrsmonth_paid_i if homebound==2,d
+tab homebound top_quart if homebound<3
+
+forvalues i=1/3 {
+sum `cvars`i'' `ivars`i'' if homebound<3
+}
+
+
+
+log close
+
+
+
+ forvalues i=1/3 {
+di "Homebound"
+ sum `cvars`i'' if homebound==1,d
+di "Never by self"
+ sum `cvars`i'' if homebound==2,d
+}
+
+
+ 
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' n 
+foreach i in 0 1 {
+di "SP ivw=`i'"
+local r=1
+local c=1
+mat miss=J(`rn',4,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3'{
+ sum `x' if sp_ivw==`i'
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+ sum n if missing(`x') & sp_ivw==`i'
+mat miss[`r',3]=r(N)
+sum n if missing(`x') & sp_ivw==1 & homebound<3
+mat miss[`r',4]=r(N)
+local r=`r'+1
+}
+ sum n if sp_ivw==`i'
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' N
+
+frmttable using `logpath'\sample_characteristics_wave_5.doc, replace statmat(miss) varlabels title("Missing values") ///
+ctitles( "Variable" "mean" "N" "N missing" "Missing if homebound<3") sdec(2,0,0)
+tab missingany
+}
+local c=1
+levelsof homebound, local(levels)
+gen group1=1 if !missing(homebound)
+foreach l of local levels {
+	gen group`=`l'+1'=homebound==`l'
+}
+local max : word count `levels' 1
+
+
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+
+forvalues i=1/`max' {
+	foreach round in 1 2 3 {
+		foreach x of local cvars`round' {
+			 sum `x' if group`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if `i'>2 {
+				 ttest `x' if group`i'==1 | group2==1, by(group`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			 sum `x' if group`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if `i'>2 {
+				tab `x' group`i' if group`i'==1 | group2==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	 sum n if group`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' "_" N
+
+frmttable using `logpath'\sample_characteristics_wave_5.doc, addtable statmat(tab1) ///
+ title("NHATS Wave 5 Community Dwelling Characteristics by HB Status") ///
+ ctitles("" "Full Sample" "Never/Rarely" "Never by self" "Needs help/difficulty" ///
+ "Independent") ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05, diff btwn Homebound and other grous, t-test or chi2")
+
+
+ local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' 1 1
+
+svyset [pw=anfinw]
+mat tab1=J(`rn',8,.)
+mat stars=J(`rn',8,0)
+local r=3
+local c=1
+levelsof homebound_cat, local(levels)
+
+foreach l of local levels {
+	sum n if homebound_cat==`l' [aw=anfinw]
+	mat tab1[1,`c']=r(N)
+	mat tab1[2,`c']=r(sum)
+	forvalues round=1/3 {
+		foreach x of local cvars`round' {
+		di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)
+			mat tab1[`r',`c'+1]=r(sd)
+			if `l'>1 {
+			svy: reg `x' homebound_cat if inlist(homebound_cat,1,`l')
+			test 
+			mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+		di "`r'"
+}
+		foreach x of local ivars`round' {
+			di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)*100
+			if `l'>1 {
+				svy: tab `x' homebound_cat if inlist(homebound_cat,1,`l')
+				mat stars[`r',`c']=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+		local r=`r'+1
+}
+
+}
+	local c=`c'+2
+	local r=3
+}
+mat rownames tab1=N n `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3'
+
+frmttable using `logpath'\sample_characteristics_wave_5.doc, addtable statmat(tab1) ///
+title(Table 1: Characteristics of the study population (weighted estimates)) ///
+ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not Homebound") ///
+sdec(2) annotate(stars) asymbol(*,**) substat(1) varlabels
+
+gen age2=age*age
+local cvars1 age age2
+gen inc2=aveincome*aveincome
+local cvars2 aveincome n_helpers n_paid_helpers tot_hrsmonth_help_i ///
+tot_hrsmonth_paid_i 
+local ivars1 female white black hisp other_race married educ_hs_ind proxy
+local ivars2 ind_any_helpers ind_paid_helper top_quartile_help_helped ///
+medicaid medigap srh_fp adl_independent iadl_independent nhres ///
+sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
+sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever ///
+prob_dementia dem_2_cat
+preserve
+keep if homebound<3
+gen lowincome=income_cat==1
+gen age_ge90=age>=90
+gen missmed=medicaid==.
+label var missmed "Missing Medicaid status"
+gen missed=educati==.
+label var missed "Missing Eduation"
+replace medicaid=0 if medicaid==.
+replace educ_hs=0 if educ_hs==.
+local vars age_ge90 lowincome female black hisp married educ_hs_ind ///
+medicaid missed missmed prob_dem adl_diff_ind srh_fp
+
+log using `logpath'\propensity_score_matching.txt, text replace
+tokenize top_qu ind_paid
+
+local i=1
+cap drop *score* *_weight*
+//implement radius matching
+foreach x in topq paid {
+pscore ``i'' `vars', pscore(`x'_score) logit
+
+
+*******************************************************************
+
+
+gen logit`x'score=ln(`x'_score/(1-`x'_score))
+sum logit`x'score
+
+sca cal_ps1=r(sd)*0.02
+sca list cal_ps1
+local caliper cal_ps1
+
+//rule of thumb 0.2*sd, try 0.02* sd
+psmatch2  ``i'' ,outcome(homebound) pscore(`x'_score) radius caliper(`=`caliper'') logit
+di "``i''"
+pstest `vars' ,treated(``i'') both hist
+rename _we `x'_weight
+rename _sup `x'_sup
+psgraph, treated(``i'') pscore(`x'_score) support(`x'_sup)
+
+local i=`i'+1
+}
+
+log close
+gen hb=homebound_cat==1
+label var hb "Homebound"
+local vars age_ge90 lowincome female black hisp married educ_hs_ind ///
+medicaid missmed missed prob_dem adl_diff_ind srh_fp
+
+/*
+qui logit hb top_qua, or
+*qui outreg, stats(e_b p) varlabels
+qui logit hb top_qua [pw=topq_w], or
+*qui outreg, stats(e_b p) varlabels merge
+qui logit hb top_qua `vars',or
+qui outreg, merge stats(e_b p) varlabels
+qui logit hb top_qua `vars' [pw=topq_w],or
+ outreg, merge stats(e_b p) varlabels
+
+
+qui logit hb ind_paid `vars' ,or
+qui outreg, stats(e_b p) varlabels
+qui logit hb ind_paid `vars' [pw=paid_we],or
+qui outreg, stats(e_b p) varlabels merge
+qui logit hb ind_paid `vars' [pw=_w],or 
+ outreg, merge stats(e_b p) varlabels
+
+svy: qui logit hb top_qua
+outreg, stats(e_b p) varlabels
+svy: qui logit hb ind_paid
+outreg, stats(e_b p) varlabels merge
+ qui logit hb top_qua `vars' [pw=topq_w],or
+ outreg, stats(e_b p) varlabels merge
+qui logit hb ind_paid `vars' [pw=paid_w],or 
+ outreg, merge stats(e_b p) varlabels 
+ 
+

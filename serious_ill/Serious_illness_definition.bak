@@ -6278,3 +6278,1333 @@ foreach x in criteria_all sp_ivw nhres {
 }
 }
 
+
+
+H="5/1 update"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", clear
+gen diffany=0
+foreach x in emotional physical financial {
+	replace diffany=1 if diff_`x'_lv==1
+}
+label var diffany "Any CG-reported financial/emotional/physical difficulty (NSOC)"
+keep if cg_primary_nsoc==1
+keep spid diffany
+tempfile nsoc
+save `nsoc'
+use "`datapath'\serious_ill_nhats_sample.dta" if sp_ivw==1 | nhres==1
+cd `logpath'
+merge 1:1 spid using `nsoc', nogen
+replace diffany=0 if missing(diffany) 
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+gen pain=ss1painbothr==1
+gen pain_limit=ss1painlim==1
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+gen dem_probable=dem_3_cat==1
+/*pulling, for all Dartmouth conditions, as well as criteria A, B, C:
+ -for all and those with 6m HH/SNF use or NH res
+ -N
+ -1yr outcomes: spending, mortality, hospitalization
+ -screens: SRH, ADLs, weight loss, pain, probable dementia
+ -same 1yr outcomes
+*/
+
+gen n=1
+svyset [pw=anfin]
+replace tot_paid_by_mc_12m=tot_paid_by_mc_12m/1.05554
+sum tot_paid_by_mc_12m [aw=anfin],d
+gen ind_top_10pct=tot_paid_by_mc_12m>=r(p90)
+gen ind_top_5pct=tot_paid_by_mc_12m>=r(p95)
+label var ind_top_10pct "Top 10% MC spending"
+label var ind_top_5pct "Top 5% MC spending"
+
+local d1 "dmouthCancer"
+local d2 "dmouthCOPD"
+local d3 "dmouthCAD"
+local d4 "dmouthCHF"
+local d5 "dmouthPVD"
+local d6 "dmouthLiver"
+local d7 "dmouthDiabetes"
+local d8 "dmouthRenal"
+local d9 "dmouthDementia"
+local d10 "dmouth1cond"
+local d11 "dmouth3cond"
+*local d12 "3cond"
+local d12 "top10spend"
+local d13 "top5spend"
+local d14 "screener"
+local d15 "hh_snf"
+local d16 "hh_snf_screen"
+foreach x of varlist dmouth_* smi_* criteria_* {
+replace `x'=0 if missing(`x')
+}
+gen dmouth_10_0_6m=dmouth_index_0_6m>=1
+gen dmouth_11_0_6m=dmouth_index_0_6m>=3
+*gen dmouth_12_0_6m=dmouth_index_0_6m>=3
+gen prob_func_diff=ind_hh_6m ==1 | ind_snf_6m==1 | nhres==1
+
+gen dmouth_12_0_6m=ind_top_10
+gen dmouth_13_0_6m=ind_top_5
+
+label var weightloss "Unintentional weight loss"
+label var pain "Pain reported"
+label var pain_limit "Pain limits activities"
+label var dem_probable "Probable dementia"
+label var ind_hh_6m "Any Home health expenditures previous 6m"
+label var ind_snf_6m "Any SNF stay previous 6m"
+label var prob_func "HH/SNF use 6m prior or NH resident"
+label var tot_paid_by_mc_12m "Total MC expenditures 12m post (2012$), mean(median)"
+label var died_12 "Died 12m post ivw"
+label var dmouth_10_0 "1+ Chronic Conditions, Dartmouth"
+label var dmouth_11_0 "3+ Chronic Conditions, Dartmouth"
+*label var dmouth_12_0 "3+ Chronic Conditions, Dartmouth"
+label var adl_impair "ADL impairment at interview"
+gen ind_hh_snf=ind_hh_6m==1 | ind_snf_6m==1
+label var ind_hh_snf "HH/SNF use 6m prior to ivw"
+gen any_smi=ser_med_illness
+label var any_smi "Any indicator of serious medical illness 6m"
+local coutcomes tot_paid_by_mc_12m 
+local ioutcomes ind_top_10pct ind_top_5pct died_12 ind_hosp_adm_p12m
+local firstlev ind_hosp_adm_6m ind_hh_6m ind_snf_6m ind_hh_snf  nhres
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable
+local criteria dmouth_10_0_6m dmouth_11_0_6m any_smi criteria_a criteria_b criteria_c
+local smi_cancer_ind smi_copd_ind smi_chf_ind smi_liver_ind ///
+smi_diab_comp_ind smi_esrd_ind smi_dem_ind smi_hip_ind smi_nh_ind ///
+smi_als smi_any
+
+
+gen screen_count=0
+foreach x in adl_impair srh_fp weightloss pain_limit dem_probable diffany {
+	replace screen_count=screen_count+1 if `x'==1
+}
+gen screener=screen_count>=2
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable diffany screener hh_snf_screen
+
+gen hh_snf_screen=ind_hh_snf==1 & screener==1
+label var hh_snf_screen "HH or SNF and screen"
+gen adl_screen=adl_impair==1 & screener==1
+label var adl_screen "ADL impairment and screen"
+
+local lastgroup ind_top_5pct ind_top_10pct ind_hh_snf screener hh_snf_screen
+
+gen dmouth_15_0_6m=ind_hh_snf
+gen dmouth_14_0_6m=screener
+gen dmouth_16_0_6m=hh_snf_screen
+label var dmouth_12 "Top 10% MC spending"
+label var dmouth_13 "Top 5% MC spending"
+label var dmouth_14 "2+ on Screener"
+label var dmouth_15 "HH/SNF use in prior 6m"
+label var dmouth_16 "HH/SNF use and screener"
+foreach x in `firstlev' `nextlev' {
+	replace `x'=0 if missing(`x') & nhres==1
+}
+
+label var screener "2+ of ADL/PF SRH/weightloss/prob dem/limiting pain/CG difficulty"
+local rn : word count `firstlev' `nextlev' `criteria' 1 `coutcomes' `ioutcomes' 1
+
+
+
+local note1 "Conditions from MC claims 6m prior to interview, Sample Ns, weighted percentages"
+forvalues d=1/16 {
+preserve
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+
+foreach timethrough in 1 2 {
+local r=1
+foreach x in n sp_ivw nhres {
+	sum n if `x'==1
+	local n`r'=r(N)
+	local r=`r'+1
+}
+
+mat tab1=J(`rn',6,.)
+local r=1
+local c=1
+foreach crit in criteria_all sp_ivw nhres {
+	sum dmouth_`d'_0_6m if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(sum)
+	sum dmouth_`d'_0_6m if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw], d
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(p50)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw], d
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw], d
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+
+frmttable using condition_tables_`d`d''`hosp'_weighted.rtf, statmat(tab1) ///
+ctitles("" "Full sample, N=`n1'" "Community, N=`n2'" "Nursing Home, N=`n3'") varlabels substat(1) landscape ///
+ sdec(`sdec') replace note("`note1'""`note'") title("`title',N(%)")
+keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+}
+restore
+
+
+foreach group in sp_ivw /*nhres*/ {
+local groupname "Community dwelling"
+if "`group'"=="nhres" local groupname "NH Residents"
+preserve
+keep if `group'==1
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+foreach timethrough in 1 2 {
+
+mat tab1=J(`rn',12,.)
+
+local r=1
+local c=1
+
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen adl_impair adl_screen {
+	sum n if `crit'==1 
+	local n`crit'=r(N)
+	*local title : var label `crit'
+	sum dmouth_`d'_0_6m if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(sum)
+	sum dmouth_`d'_0_6m if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw] 
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(p50)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw] 
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'_weighted.rtf, statmat(tab1) ///
+ctitles("" "Full sample, N=`ncriteria_all'" "HH/SNF, N=`nind_hh_snf'" ///
+"Screener, N=`nscreener'" "Both, N=`nhh_snf_screen'" "ADL dependent,N=`nadl_impair'" "ADL & Screen, N=`nadl_screen'") varlabels substat(1) landscape ///
+ sdec(`sdec') addtable note("`note1'""`note'") title("`title',N(%)" "`groupname'")
+
+if `timethrough'==1 {
+restore 
+preserve
+gen condition=dmouth_`d'_0_6m 
+local lab : var label dmouth_`d'_0_6m
+label var condition "Condition = `lab'"
+gen hospitalization=ind_hosp_adm_6m==1
+tokenize condition hospitalization screener ind_hh_snf
+gen candh=`1'==1 & `2'==1
+gen cands=`1'==1 & `3'==1
+gen candu=`1'==1 & `4'==1
+gen cus=candu & cands
+gen chs=candh & cands
+gen chu=candh & candu
+gen chus=chs & chu
+label var candh "Condition & Hospitalization"
+label var cands "Condition & screener"
+label var candu "Condition & SNF/HH"
+label var chs "Condition, Hospitalization, & Screener"
+label var chu "Conditon, hospitalization, & SNF/HH"
+label var chus "Condition, hospitalization, SNF/HH, & Screener"
+label var cus "Condition, SNF/HH, & Screener" 
+
+gen screen=screener
+label var screen "2+ on Screener"
+foreach x in screen adl_impair {
+replace `x'=. if nhres==1
+}
+local colvars ind_top_5pct ind_top_10pct screen adl_impair
+local rowvars condition ind_hosp_adm_6m screener ///
+adl_screen ind_hh_snf candh cands candu chs chu cus chus
+foreach x of local rowvars {
+replace `x'=0 if nhres==1
+}
+
+local r=1
+local c=1
+local rn2 : word count `rowvars'
+mat tab=J(`rn2',8,.)
+
+foreach x of local colvars {
+	foreach y of local rowvars {
+		sum `y' if `x'==1 [aw=anfinw]
+		mat tab[`r',`c']=r(sum)
+		mat tab[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local c=`c'+2
+	local r=1
+}
+
+mat rownames tab=`rowvars'
+mat colnames tab=`colvars'
+
+foreach x in `colvars' {
+	sum `x' [aw=anfin]
+	local e`x'=round(r(sum))
+	sum `x'
+	local n`x'=r(mean)*r(N)
+	local lab : var label `x' 
+	local n`x' "`lab', N=`n`x''"
+}
+
+frmttable using condition_tables_`d`d''_weighted.rtf, statmat(tab) ///
+varlabels substat(1) landscape ///
+sdec(0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2) addtable ///
+note("Pop estimate of Top 5%: `eind_top_5pct'; Top 10%: `eind_top_10pct'; Screener: `escreen'; ADL dependence: `eadl_impair'" ///
+"Denominators for top spending columns include NH residents; survey screen and ADL dependence denominators exclude NH residents") ///
+title("`title',N(%)" "`groupname'") ctitles("" "`nind_top_5pct'" "`nind_top_10pct'" "`nscreen'" "`nadl_impair'")
+restore
+preserve
+keep if `group'==1
+} 
+
+keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw,"
+}
+restore
+}
+}
+
+
+local smi2 smi_cancer_ind smi_copd_ind smi_chf_ind smi_liver_ind ///
+smi_diab_compl_ind smi_esrd_ind smi_dem_ind smi_hip_ind smi_nh_ind ///
+/*smi_als*/ ser_med_illness n
+
+local d1 "smiCancer"
+local d2 "smiCOPD"
+local d3 "smiCHF"
+local d8 "smiHip" 
+local d4 "smiLiver"
+local d5 "smiDiabetes"
+local d6 "smiESRD"
+local d7 "smiDementia"
+local d9 "smiNH"
+local d10 "smiAny"
+local d11 "full_sample"
+
+
+local r=1
+local smi
+foreach x of local smi2 {
+	rename `x' smi_`r'
+	local smi `smi' smi_`r'
+	local r=`r'+1
+}
+label var smi_11 "Full Sample"
+gen n=1
+local wc : word count `smi'
+
+
+forvalues d=1/`wc' {
+preserve
+local hosp
+local note
+local title : var label smi_`d'
+
+foreach timethrough in 1 2 {
+local r=1
+foreach x in n sp_ivw nhres {
+	sum n if `x'==1
+	local n`r'=r(N)
+	local r=`r'+1
+}
+mat tab1=J(`rn',6,.)
+local r=1
+local c=1
+foreach crit in criteria_all sp_ivw nhres {
+	sum smi_`d' if `crit'==1 [aw=anfinw] 
+	mat tab1[`r',`c']=r(sum)
+	sum smi_`d' if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(p50)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'_weighted.rtf, statmat(tab1) ///
+ctitles("" "Full sample, N=`n1'" "Community, N=`n2'" "Nursing Home, N=`n3'") ///
+ varlabels substat(1) landscape ///
+ sdec(`sdec') replace note("`note1'"`note') title("`title',N(%)")
+ 
+
+
+keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+}
+restore
+
+foreach group in sp_ivw /*nhres*/ {
+local groupname "Community dwelling"
+if "`group'"=="nhres" local groupname "NH Residents"
+preserve
+keep if `group'==1
+
+local hosp
+local note
+foreach timethrough in 1 2 {
+mat tab1=J(`rn',12,.)
+
+local r=1
+local c=1
+
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen adl_impair adl_screen {
+	sum n if `crit'==1
+	local n`crit'=r(N)
+	*local title : var label `crit'
+	sum smi_`d' if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(sum)
+	sum smi_`d' if `crit'==1 [aw=anfinw]
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw] 
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw],d
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(p50)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw] 
+		mat tab1[`r',`c']=r(sum)
+		sum `x' if smi_`d'==1 & `crit'==1 [aw=anfinw]
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'_weighted.rtf, statmat(tab1) ///
+ctitles("" "Full sample, N=`ncriteria_all'" "HH/SNF, N=`nind_hh_snf'" ///
+"Screener, N=`nscreener'" "Both, N=`nhh_snf_screen'" "ADL dependent,N=`nadl_impair'") varlabels substat(1) landscape ///
+ sdec(`sdec') addtable note("`note1'""`note'") title("`title',N(%)" "`groupname'")
+
+if `timethrough'==1 {
+restore
+preserve
+gen condition=smi_`d'
+local lab : var label smi_`d'
+label var condition "Condition = `lab'"
+gen hospitalization=ind_hosp_adm_6m==1
+tokenize condition hospitalization screener ind_hh_snf
+gen candh=`1'==1 & `2'==1
+gen cands=`1'==1 & `3'==1
+gen candu=`1'==1 & `4'==1
+gen chs=candh & cands
+gen chu=candh & candu
+gen chus=chs & chu
+gen cus=candu & cands
+label var cus "Condition, SNF/HH, & Screener"
+label var candh "Condition & Hospitalization"
+label var cands "Condition & screener"
+label var candu "Condition & SNF/HH"
+label var chs "Condition, Hospitalization, & Screener"
+label var chu "Conditon, hospitalization, & SNF/HH"
+label var chus "Condition, hospitalization, SNF/HH, & Screener"
+gen chas=chs & adl_impair
+label var chas "Condition, hospitalization, screener, & ADL impair"
+gen cas=condition==1 & adl_impair==1 & screener==1
+label var cas "Condition, ADL impair, & screener"
+gen screen=screener
+label var screen "2+ on Screener"
+foreach x in screen adl_impair {
+replace `x'=. if nhres==1
+}
+foreach x of local rowvars {
+replace `x'=0 if nhres==1
+}
+local colvars ind_top_5pct ind_top_10pct screen adl_impair
+local rowvars condition ind_hosp_adm_6m screener ///
+cas chas ind_hh_snf candh cands candu chs chu cus chus
+local r=1
+local c=1
+local rn2 : word count `rowvars'
+mat tab=J(`rn2',8,.)
+
+
+foreach x of local colvars {
+	foreach y of local rowvars {
+		sum `y' if `x'==1 [aw=anfinw]
+		mat tab[`r',`c']=r(sum)
+		mat tab[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local c=`c'+2
+	local r=1
+}
+
+mat rownames tab=`rowvars'
+mat colnames tab=`colvars'
+
+foreach x in `colvars' {
+	sum `x' [aw=anfin]
+	local e`x'=round(r(sum))
+	sum `x'
+	local n`x'=r(mean)*r(N)
+	local lab : var label `x' 
+	local n`x' "`lab', N=`n`x''"
+}
+
+frmttable using condition_tables_`d`d''_weighted.rtf, statmat(tab) ///
+varlabels substat(1) landscape ///
+sdec(0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2\0\2) addtable ///
+note("Pop estimate of Top 5%: `eind_top_5pct'; Top 10%: `eind_top_10pct'; Screener: `escreen'; ADL dependence: `eadl_impair'" ///
+"Denominators for top spending columns include NH residents; survey screen and ADL dependence denominators exclude NH residents") ///
+title("`title',N(%)" "`groupname'") ctitles("" "`nind_top_5pct'" "`nind_top_10pct'" "`nscreen'" "`nadl_impair'")
+restore 
+preserve
+keep if `group'==1
+} 
+ 
+ keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw,"
+
+}
+restore
+}
+}
+local dmouth
+forvalues i=1/10 {
+ local dmouth `dmouth' dmouth_`i'_0_6m
+}
+local cc2 
+forvalues i=1/21 {
+	local cc2 `cc2' cc_`i'*6m 
+}
+local cc
+foreach x of varlist `cc2' {
+	local cc `cc' `x'
+}
+drop comorb_all comorb_*1yr charls_ind*
+rename el_ge3 comorb_3plus
+local elix
+foreach x of varlist comorb_* {
+	local elix `elix' `x'
+}
+local charls
+foreach x of varlist charls* {
+	local charls `charls' `x'
+}
+
+local vars1 criteria_all `dmouth' `smi'
+local vars2 `vars1' `firstlev' `nextlev' `criteria'
+local vars3 `vars1' `elix' `charls' `cc'
+/*putexcel set crosstab.xls, replace
+forvalues i=1/3 {
+local rn`i' : word count `vars`i''
+
+
+putexcel set crosstab.xls, sheet("Sheet `i'", replace) modify
+
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 
+
+local r=1
+local c=1
+mat tab`i'=J(`rn`i'',`rn`i'',.)
+
+foreach y of local vars`i' {
+	foreach x of local vars`i' {
+		sum `x' if `y'==1
+		if `r'>=`c' mat tab`i'[`r',`c']=r(sum)
+		local r=`r'+1
+}
+local r=1
+local c=`c'+1
+}
+mat rownames tab`i'=`vars`i''
+mat colnames tab`i'=`vars`i''
+local r=2
+foreach x of local vars`i' {
+local lab : var label `x'
+ putexcel A`r'=("`lab'")
+ local r=`r'+1
+}
+
+putexcel (B2)=matrix(tab`i')
+}
+
+
+forvalues i=1/2 {
+putexcel set crosstab.xls, sheet(corr `i', replace) modify
+corr `vars`i'' 
+putexcel (A1)=matrix(r(C)), names
+}
+
+*/
+preserve
+local dmouth
+forvalues i=1/11 {
+ local dmouth `dmouth' dmouth_`i'_0_6m
+}
+
+local smi
+forvalue i=1/10 {
+	local smi `smi' smi_`i'
+}
+
+gen aggregate=.
+format aggregate %16.0g
+replace aggregate=tot_paid_by_mc_12m/1000000
+label var aggregate "Aggregate spending, millions"
+gen all=1
+gen hospitalized=ind_hosp_adm_6m==1
+label var criteria_all "Full Sample"
+foreach hosp in all hospitalized {
+keep if `hosp'==1
+putexcel set aggregate_spending.xls, sheet("`hosp'", replace) modify
+local r=1
+local c=2
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+foreach x in criteria_all sp_ivw nhres {
+	local lab : var label `x'
+	putexcel ``=`c'+2''`r'=("`lab'") ``c''`=`r'+1'=("Pop Estimate") ///
+	``=`c'+1''`=`r'+1'=("% of total") ``=`c'+2''`=`r'+1'=("Mean Spending, 2012$") ///
+	``=`c'+3''`=`r'+1'=("Aggregate (Millions)") ``=`c'+4''`=`r'+1'=("% of total")
+	sum aggregate  if `x'==1 [aw=anfinw]
+	local denompop=round(r(sum_w))
+	local denomtot=round(r(sum))
+	local r=`r'+2
+	foreach y of varlist criteria_all `dmouth' `smi' `criteria' {
+		local lab : var label `y' 
+		sum aggregate if `x'==1 & `y'==1 [aw=anfinw]
+		putexcel A`r'=("`lab'") ``c''`r'=(r(sum_w)) ///
+		``=`c'+2''`r'=(r(mean)*1000000) ///
+		``=`c'+3''`r'=(r(sum)) , nformat(number_sep)
+		putexcel ``=`c'+1''`r'=((r(sum_w)/`denompop')*100) ///
+		``=`c'+4''`r'=(100*(r(sum)/`denomtot')), ///
+		nformat(number_sep_d2)
+		local r=`r'+1
+}
+	local c=`c'+5
+	local r=1
+}
+}
+
+
+
+H="PPS"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", clear
+gen diffany=0
+foreach x in emotional physical financial {
+	replace diffany=1 if diff_`x'_lv==1
+}
+label var diffany "Any CG-reported financial/emotional/physical difficulty (NSOC)"
+keep if cg_primary_nsoc==1
+keep spid diffany
+tempfile nsoc
+save `nsoc'
+use "`datapath'\serious_ill_nhats_sample.dta" if sp_ivw==1 | nhres==1
+cd `logpath'
+merge 1:1 spid using `nsoc', nogen keep(match master)
+replace diffany=0 if missing(diffany) 
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+gen pain=ss1painbothr==1
+gen pain_limit=ss1painlim==1
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+gen dem_probable=dem_3_cat==1
+
+
+//define PPS
+/*what are we pulling?
+	-symptoms--Tacara's list
+	-sudden weightloss
+	-any smi
+	-difficulty walking inside
+	-ADL difficulty no help
+	-health/function prevent activity
+	-nhres
+
+	
+	PPS
+		-80+, no difficulty in ADLs or difficulty with effort
+		-70-difficulty
+}
+
+*/
+
+gen health_keep=0
+foreach x of varlist pa1hlk* {
+	replace health_keep=1 if `x'==1
+}
+
+gen hkindex=0
+foreach x of varlist pa1h* {
+	replace health_keep=1 if `x'==1
+	replace hkindex=hkindex+1 if `x'==1
+}
+
+gen activity_cat=1 if adl_diff_index==0 & nhres==0
+replace activity_cat=2 if (inrange(adl_diff_index,1,6) | inrange(iadl_diff_index,1,6)) 
+replace activity_cat=3 if health_keep==1 & activity_cat==2
+replace activity_cat=4 if ls1diskefrm3==1
+
+label define activity_cat 1 "No difficulty reported" 2 "Difficulty in ADLs/IADLs" ///
+3 "Difficulty & unable to do activities b/c health" 4 "Unable to do light housework b/c health or disab"
+label values activity_cat activity_cat
+
+*rename mo1dinsds ambulation
+
+gen ambulation=1 if inlist(mo1dinsds,2,3,6)
+replace ambulation=2 if mo1dinsds==1 | adl_ins_help==1 | adl_bed_help | mo1insdwout==1
+replace ambulation=3 if mo1dbedsfdf==1
+replace ambulation=4 if mo1dinsds==8
+*replace ambulation=2 if mo1oflv>=1
+label define ambulation 1 "Full ambulation" ///
+2 "Reports help getting around inside or getting out of bed, or not going parts home by self" ///
+3 "Reports not getting out of bed by self" 4 "Reports not moving around inside at all in past month"
+
+label values ambulation ambulation
+gen disease=criteria_smi==1
+label var disease "Any SMI"
+
+gen freq_help=0
+foreach x in sc1eatslfoft sc1dresslf sc1toiloft sc1bathoft mo1bedslf mo1insdslf {
+replace freq_help=`x' if `x'>freq_help
+}
+
+gen self_care=(freq_help==1)+1
+replace self_care=3 if freq_help==2
+replace self_care=4 if freq_help==3
+replace self_care=5 if freq_help==4
+label define self_care 1 "No assistance" 2 "Care dependent, mostly do by self" 3 "Sometimes do by self" ///
+4 "Rarely do by self" 5 "Never do by self"
+label values self_care self_care
+
+gen intake=weightloss==1
+label var intake "Intake (unintentional weightloss)"
+
+tab1 ambulation activity self_care intake
+/*
+gen pps=100 if ambulation==1 
+replace pps=90 if pps==100 & disease==1
+replace pps=80 if pps==90 & activity_cat==2 & self_care==1
+replace pps=70 if ambulation==2
+replace pps=60 if (pps==70 & activity_cat==3) | nhres==1
+replace pps=50 if ambulation==3
+replace pps=40 if pps==50 &  self_care>=2
+replace pps=30 if ambulation==4
+*/
+
+
+log using pps_log.txt, text replace
+//first, ambulation
+gen pps=100 if ambulation==1
+replace pps=70 if ambulation==2
+replace pps=50 if ambulation==3
+replace pps=30 if ambulation==4
+
+tab pps ambulation
+
+//next, activity & disease
+replace pps=90 if pps>90 & disease==1 
+replace pps=80 if pps>80 & activity_cat==2 
+replace pps=70 if pps>70 & activity_cat==3
+replace pps=60 if pps>60 & activity_cat==4
+
+tab pps disease
+tab pps activity
+
+//self-care (ADLs)
+replace pps=60 if pps>60 & self_care==2
+replace pps=50 if pps>50 & self_care==3
+replace pps=40 if pps>40 & self_care==4
+replace pps=30 if pps>30 & self_care==5
+
+tab pps self_care
+
+//nhres (no survey)
+replace pps=60 if pps>60 & nhres==1
+
+
+/*Variables:
+	Health_keep: has health/function prevented you from doing x
+		-pa1hlk...
+	Activity_cat: No difficulty reported, yes difficulty, yes + health_keep
+		-adl_diff_index, iadl_diff_index, health_keep
+	Ambulation: Moved around inside by self w/ or w/o difficulty; 
+				help getting around inside or report of not going parts of home/building by self
+				reports not getting out of bed by self
+				reports not moving around inside at all (bedbound?)
+		-mo1dinsdslf, adl_ins_help, mo1insdwout, mo1bedwout
+	Disease: Any SMI
+		-any_smi
+	Freq_help: Frequency of doing activity by self if help in 1+ ADL (set to least frequent)
+		-sc1eatslfoft...
+	Self Care: No ADL assistance, then how often require help
+		-freq_help
+	NHRes: Nursing Home Resident
+		-nhres
+	discussed, not used--weightloss
+*/
+
+
+foreach x in ambulation disease self_care nhres {
+	tab `x'
+}
+
+foreach x in ambulation disease self_care nhres {
+	tab pps `x'
+}
+
+foreach boris in yeltsin {
+//health keep
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i'
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i'
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented) sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+preserve
+drop if activity==1
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i'
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i'
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented, among those with reported difficulty) ///
+sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+restore
+}
+log close
+
+
+H="payment groups"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", clear
+gen diffany=0
+foreach x in emotional physical financial {
+	replace diffany=1 if diff_`x'_lv==1
+}
+label var diffany "Any CG-reported financial/emotional/physical difficulty (NSOC)"
+keep if cg_primary_nsoc==1
+keep spid diffany
+tempfile nsoc
+save `nsoc'
+use "`datapath'\serious_ill_nhats_sample.dta" if sp_ivw==1 | nhres==1
+cd `logpath'
+merge 1:1 spid using `nsoc', nogen keep(match master)
+replace diffany=0 if missing(diffany) 
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+//merge to get 1m discharge
+merge 1:1 spid index_date using ///
+"E:\nhats\data\Projects\pal_perf_scale\disch_1m.dta", ///
+gen(ipm) keep(match master)
+
+gen adl_diff_insd=mo1insddif>1 if mo1insddif>0
+gen pain=ss1painbothr==1
+gen sob=ss1probbreat==1
+gen upper=ss1strnglmup==1
+gen energy=ss1lowenergy==1
+gen lower=ss1lwrbodstr==1
+gen balance=ss1prbbalcrd==1
+gen insomnia=inlist(hc1sleepmed,1,2) | inlist(hc1aslep30mn,1,2) | ///
+inlist(hc1trbfalbck,1,2)
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+
+gen dem_probable=dem_3_cat==1
+
+
+//define PPS
+/*what are we pulling?
+	-symptoms--Tacara's list
+	-sudden weightloss
+	-any smi
+	-difficulty walking inside
+	-ADL difficulty no help
+	-health/function prevent activity
+	-nhres
+
+	
+	PPS
+		-80+, no difficulty in ADLs or difficulty with effort
+		-70-difficulty
+}
+
+*/
+
+gen health_keep=0
+foreach x of varlist pa1hlk* {
+	replace health_keep=1 if `x'==1
+}
+
+gen hkindex=0
+foreach x of varlist pa1h* {
+	replace health_keep=1 if `x'==1
+	replace hkindex=hkindex+1 if `x'==1
+}
+
+gen activity_cat=1 if adl_diff_index==0 & nhres==0
+replace activity_cat=2 if (inrange(adl_diff_index,1,6) | inrange(iadl_diff_index,1,6)) 
+replace activity_cat=3 if health_keep==1 & activity_cat==2
+replace activity_cat=4 if ls1diskefrm3==1
+
+label define activity_cat 1 "No difficulty reported" 2 "Difficulty in ADLs/IADLs" ///
+3 "Difficulty & unable to do activities b/c health" 4 "Unable to do light housework b/c health or disab"
+label values activity_cat activity_cat
+
+*rename mo1dinsds ambulation
+
+gen ambulation=1 if inlist(mo1dinsds,2,3,6)
+replace ambulation=2 if mo1dinsds==1 | adl_ins_help==1 | adl_bed_help | mo1insdwout==1
+replace ambulation=3 if mo1dbedsfdf==1
+replace ambulation=4 if mo1dinsds==8
+*replace ambulation=2 if mo1oflv>=1
+label define ambulation 1 "Full ambulation" ///
+2 "Reports help getting around inside or getting out of bed, or not going parts home by self" ///
+3 "Reports not getting out of bed by self" 4 "Reports not moving around inside at all in past month"
+
+label values ambulation ambulation
+gen disease=criteria_smi==1
+label var disease "Any SMI"
+
+gen freq_help=0
+foreach x in sc1eatslfoft sc1dresslf sc1toiloft sc1bathoft mo1bedslf mo1insdslf {
+replace freq_help=`x' if `x'>freq_help
+}
+
+gen self_care=(freq_help==1)+1
+replace self_care=3 if freq_help==2
+replace self_care=4 if freq_help==3
+replace self_care=5 if freq_help==4
+label define self_care 1 "No assistance" 2 "Care dependent, mostly do by self" 3 "Sometimes do by self" ///
+4 "Rarely do by self" 5 "Never do by self"
+label values self_care self_care
+
+gen intake=weightloss==1
+label var intake "Intake (unintentional weightloss)"
+
+tab1 ambulation activity self_care intake
+/*
+gen pps=100 if ambulation==1 
+replace pps=90 if pps==100 & disease==1
+replace pps=80 if pps==90 & activity_cat==2 & self_care==1
+replace pps=70 if ambulation==2
+replace pps=60 if (pps==70 & activity_cat==3) | nhres==1
+replace pps=50 if ambulation==3
+replace pps=40 if pps==50 &  self_care>=2
+replace pps=30 if ambulation==4
+*/
+
+
+log using pps_log.txt, text replace
+//first, ambulation
+gen pps=100 if ambulation==1
+replace pps=70 if ambulation==2
+replace pps=50 if ambulation==3
+replace pps=30 if ambulation==4
+
+tab pps ambulation
+
+//next, activity & disease
+replace pps=90 if pps>90 & disease==1 
+replace pps=80 if pps>80 & activity_cat==2 
+replace pps=70 if pps>70 & activity_cat==3
+replace pps=60 if pps>60 & activity_cat==4
+
+tab pps disease
+tab pps activity
+
+//self-care (ADLs)
+replace pps=60 if pps>60 & self_care==2
+replace pps=50 if pps>50 & self_care==3
+replace pps=40 if pps>40 & self_care==4
+replace pps=30 if pps>30 & self_care==5
+
+tab pps self_care
+
+//nhres (no survey)
+replace pps=60 if pps>60 & nhres==1
+
+
+
+local symp pain sob upper energy lower balance insomnia weightloss ///
+sr_phq2_depressed sr_gad2_anxiety
+egen index_symp=rowtotal(`symp')
+gen ind_ge3_symp=index_symp>=3 if !missing(index_symp)
+
+gen ind_indication=weightloss==1 | (smi_count>=2 & !missing(smi_count)) | ind_ge3_symp==1 | ///
+any_disch_1m==1
+label var ind_indication "1+ high-need indication"
+
+/*payment category from aahpm
+
+uses: 
+pps
+
+other high need indications:
+weightloss (sudden nutritional/functional decline)
+smi_count (multiple serious illnesses)
+ind_ge3_symp (significant symptom distress--3+ on symptom index)
+any_disch_1m (inp discharge w/in 30 days)
+not currrently used--frail cg or remote location
+*/
+
+
+
+gen payment_cat=0 if pps>=80
+replace payment_cat=1 if pps<=70
+replace payment_cat=1 if pps==80 & ind_indication==1
+replace payment_cat=2 if pps<70 
+replace payment_cat=2 if pps==70 & ind_indication==1
+replace payment_cat=3 if pps<50
+replace payment_cat=3 if pps<70 & ind_indication==1
+label define payment_cat 0 "Low risk patients (not on scale)" 1 "Low-moderate need/risk patients" ///
+2 "Moderate need/risk patients" 3 "High need/risk patients"
+label values payment_cat payment_cat
+
+/*Variables:
+	Health_keep: has health/function prevented you from doing x
+		-pa1hlk...
+	Activity_cat: No difficulty reported, yes difficulty, yes + health_keep
+		-adl_diff_index, iadl_diff_index, health_keep
+	Ambulation: Moved around inside by self w/ or w/o difficulty; 
+				help getting around inside or report of not going parts of home/building by self
+				reports not getting out of bed by self
+				reports not moving around inside at all (bedbound?)
+		-mo1dinsdslf, adl_ins_help, mo1insdwout, mo1bedwout
+	Disease: Any SMI
+		-any_smi
+	Freq_help: Frequency of doing activity by self if help in 1+ ADL (set to least frequent)
+		-sc1eatslfoft...
+	Self Care: No ADL assistance, then how often require help
+		-freq_help
+	NHRes: Nursing Home Resident
+		-nhres
+	discussed, not used--weightloss
+*/
+
+
+
+foreach x in ambulation disease self_care nhres {
+	tab `x'
+}
+
+foreach x in ambulation disease self_care nhres {
+	tab pps `x'
+}
+
+foreach boris in yeltsin {
+//health keep
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i'
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i'
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented) sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+preserve
+drop if activity==1
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i'
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i'
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented, among those with reported difficulty) ///
+sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+restore
+}
+log close
+
+
+H="sample tables"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "`datapath'\pps_sample.dta", clear
+
+
+/*what to look at?
+
+-individual elements of pps and their individual elements
+PPS is based on:
+
+Ambulation
+Disease
+Activity
+Self-Care
+Others that we can't identify
+
+*/
+/*payment category from aahpm
+
+uses: 
+pps
+
+other high need indications:
+weightloss (sudden nutritional/functional decline)
+smi_count (multiple serious illnesses)
+sig_symp (significant symptom distress--activity-limiting pain or breathing)
+any_disch_1m (inp discharge w/in 30 days)
+not currrently used--frail cg or remote location
+*/
+
+preserve
+drop if nhres==1
+local pps ambulation disease  pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk health_keep ///
+nohousework ind_diff activity_cat self_care pps weightloss smi_count ///
+sig_symp any_disch_1m ss1prbbrlim ss1painl ind_indication payment_cat
+label var health_keep "Prevented from religious services, going out, or working"
+label var weightloss "Unintentional weight loss"
+label var smi_count "Count of serious illnesses"
+label var any_disch_1m "Any discharge <=30d prior to ivw"
+label define disease 0 "No" 1 "Yes"
+label values disease disease
+label var ambulation "Ambulation"
+label var activity_cat "Activity category"
+label var self_care "Self-care"
+local replace replace
+replace smi_count=3 if smi_count>=4 & !missing(smi_count)
+replace smi_count=0 if disease==0
+label define smi_count 3 "3+"
+label values smi_count smi_count
+foreach p in `pps' {
+	levelsof `p' if `p'>=0, local(levels)
+	local rn : word count `levels'
+	mat tab=J(`rn',2,.)
+	local r=1
+	local c=1
+	sum `p' if nhres==0 & !missing(pps) [aw=anfin]
+	local denom=r(sum_w)
+	tokenize `levels'
+	local rnames
+	foreach l of local levels {
+		sum `p' if `p'==`l' & nhres==0  & `p'>=0 [aw=anfin]
+		mat tab[`r',1]=r(N)
+		mat tab[`r',2]=(r(sum_w)/`denom')*100
+		local lab : label `p' `l'
+		if `l'==`1' local rnames "`lab'" 
+		else local rnames `rnames'\"`lab'"
+		local r=`r'+1
+}
+	local title : var label `p'
+	frmttable using "`logpath'\PPS_AAHPM_cats_tables.rtf", statmat(tab) title(`title') ctitles("" "N" "%") ///
+	rtitles(`rnames') sdec(0,2) `replace'
+	local replace addtable
+}
+
+local pps ambulation disease activity_cat self_care
+
+local ind_indication weightloss smi_count ss1prbbrlim ss1painl  sig_symp any_disch_1m
+
+foreach y in ind_indication {
+	foreach p in ``y'' {
+	levelsof `p' if `p'>=0, local(levels)
+	local rn : word count `levels'
+	mat tab=J(`rn',2,.)
+	local r=1
+	local c=1
+	sum `p' if nhres==0 & !missing(pps) & `y'==1 & `p'>=0
+	local denom=r(N)
+	tokenize `levels'
+	local rnames
+	foreach l of local levels {
+		sum `p' if `p'==`l' & nhres==0  & `y'==1
+		mat tab[`r',1]=r(N)
+		mat tab[`r',2]=(r(N)/`denom')*100
+		local lab : label `p' `l'
+		if `l'==`1' local rnames "`lab'" 
+		else local rnames `rnames'\"`lab'"
+		local r=`r'+1
+}
+	local title : var label `p'
+	local title "`title', among those with high need"
+	frmttable using "`logpath'\PPS_AAHPM_cats_tables.rtf", statmat(tab) title("`title'") ctitles("" "N" "%") ///
+	rtitles(`rnames') sdec(0,2) `replace'
+	local replace addtable
+}
+}
