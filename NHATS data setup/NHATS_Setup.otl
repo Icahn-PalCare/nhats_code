@@ -2139,7 +2139,19 @@ local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
 
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_4_MetNonmet_STATA\NHATS_Round_1_4_MetNonmet.dta", clear
+forvalues i=1/4 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+
 use round_1_5_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
 
 //recoding all refuse, dk, na, as missing
 destring *, replace

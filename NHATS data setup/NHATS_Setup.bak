@@ -2453,13 +2453,18 @@ rename r*status round*status
 
 gen adverse=0
 forvalues i=1/5 {
-	foreach x of varlist *`i'*out {
+	foreach x of varlist ha`i'*out sc`i'*out {
 		replace adverse=1 if `x'==1 & wave==`i'
 }
 }
-label var adverse "Any adverse consequence of unmet need"
+label var adverse "Any adverse consequence of unmet need (excluding mobility)"
 
-
+//limited favorite activity
+gen lim_fav=.
+forvalues i=1/5 {
+	replace lim_fav=pa`i'helmfvact==1 if pa`i'helmfvact>=0 & wave==`i'
+}
+label var lim_fav "Last month ever kept from favorite activity by health/function"
 ///and now drop all raw variables
 forvalues i=1/5 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///

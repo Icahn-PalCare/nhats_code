@@ -2563,7 +2563,7 @@ quit;
 proc sort data=ip_365_3 nodupkey;
 by bene_id index_year;
 run;
-
+/*
 proc sql;
 create table ip1 as select a.*,b.icu_days_6m,
 b.n_ip_admit_6m,b.n_hospd_6m,b.n_em_urgent_admit_6m,b.n_em_admit_6m,
@@ -2573,11 +2573,11 @@ left join
 ip_365_3 b 
 on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
 quit;
-
+*/
 /*Dataset just contains obs with ffs mc 6m and age 65+
 So if missing, set var to 0*/
  data ip ;
- set ip1 ;
+ set ip_6m ;
  array list icu_days_6m n_ip_admit_6m n_hospd_6m n_em_urgent_admit_6m 
 	n_em_admit_6m n_urgent_admit_6m n_elect_admit_6m n_ED_ip_6m
 	icu_days_6m n_ip_admit_6m n_hospd_6m n_em_urgent_admit_6m
@@ -2871,9 +2871,53 @@ if erdaycnt>0 then ed_op=1;
 if erdaycnt=0 then ed_op=0;
 run;
 
-proc freq;
-table ed_op;
+/*added 7/7/17; pull indicator for ER OP visit that doesn't lead to admission*/
+/*
+data ed_op_1a;
+set ed_op_1;
+where ed_op=1;
+run;*/
+
+data ip_for_op (keep=bene_id index_date admit_date match);
+set proj_int.ip_meet_183;
+match=1;
 run;
+
+proc sql;
+create table ed_op_1b as select * from
+ed_op_1 a
+left join 
+ip_for_op b
+on a.bene_id=b.bene_id and a.disch_date=b.admit_date;
+quit;
+data ed_op_1b2;
+set ed_op_1b;
+if match~=1;
+run;
+
+proc sql;
+create table ed_op_1d as select distinct bene_id,index_year,
+count(case when ed_op=1 then ed_op else . end)
+	as n_ed_op_no_adm
+	from ed_op_1b2 group by bene_id,index_year;
+quit;
+
+proc sort data=ed_op_1d nodupkey;
+by bene_id index_year;
+run;
+/*
+data ed_op_1c(keep=bene_id ed_op_wout_adm_ind);
+set ed_op_1b;
+ed_op_wout_adm_ind=1;
+where match~=1;
+run;
+proc freq;
+tables ind_ed_op_6m*ed_op_wout_adm_ind;
+run;
+proc sort nodupkey data=ed_op_1c out=ed_op_1d;
+by bene_id;
+run;
+*/
 
 proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
@@ -2891,15 +2935,26 @@ proc sort data=ed_op_2 nodupkey;
 by bene_id index_year;
 run;
 
+proc sql;
+create table ed_op_3 as select * from
+ed_op_2 a
+left join ed_op_1d b
+on a.bene_id=b.bene_id;
+quit;
 
 data ed ;
-set ed_op_2;
+set ed_op_3;
 if n_ed_op_visits_6m=. and comorb_1_0_6m~=. then n_ed_op_visits_6m=0;
 label n_ed_op_visits_6m="Count ED OP visits, 6m pre ivw";
 
 if n_ed_op_visits_6m=0 then ind_ed_op_6m=0;
 if n_ed_op_visits_6m>0 & n_ed_op_visits_6m~=. then ind_ed_op_6m=1;
 label ind_ed_op_6m="Indicator any ED OP visits, 6m pre ivw";
+
+if n_ed_op_no_adm=0 then ed_op_wout_adm_ind=0;
+if n_ed_op_no_adm>0 & n_ed_op_no_adm~=. then ed_op_wout_adm_ind=1;
+if ed_op_wout_adm_ind=. then ed_op_wout_adm_ind=0;
+label ed_op_wout_adm_ind="Indicator ED visit not leading to admission";
 run;
 
 proc freq;
@@ -4848,9 +4903,10 @@ label cc2_ge4_comorb_6m="4+ DW Chronic Conditions, excl cataract and glaucoma";
 /*create indicators for any indication of the serious medical illnesses across
 variables (cc's elix hrs survey) */
 /*dementia requires more than 1 dementia diagnosis 1 year before ivw*/
-if dem_dx_6m>=2 and dem_dx_6m~=. then smi_dem_ind=1;
-if dem_dx_6m=0 or dem_dx_6m=1 then smi_dem_ind=0;
-label smi_dem_ind="Indicator of Dementia 6m, Elixhauser 2+dx req.";
+/*update for 7/7/17--for APM, also requiring 2+ADLs*/
+if dem_dx_6m>=2 and dem_dx_6m~=. and adl_index>1 and adl_index~=. then smi_dem_ind=1;
+if dem_dx_6m=0 or dem_dx_6m=1 or adl_index<2 then smi_dem_ind=0;
+label smi_dem_ind="Indicator of Dementia 6m, Elixhauser 2+dx & 2+ ADLs req.";
 
 /*old def commented out
 if el_cancer_6m=1 | CC_cncr_chronic_6m=1 | cancer_hrs=1 then cancer_any_ind=1;
@@ -7224,6 +7280,487 @@ restore
 log close
 
 
+H="7/7 update"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\CMS_DUA_28016\Merged Stata\dm_09_12.dta", clear
+keep bene_id admit_date disch_date hcpcs_cd betos
+gen wave=1
+merge m:1 bene_id wave using ///
+ "E:\nhats\data\Projects\pal_perf_scale\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match) keepusing(spid index_date)
+keep if inrange(admit_date,index_date-186,index_date)
+
+gen wc_betosa=betos=="D1D"
+gen bed_betosa=betos=="D1B"
+
+gen ind_wheelchaira=inlist(hcpcs_cd, "E1088","E1090","E1093","E1140","E1150","E1161") ///
+ | inlist(hcpcs_cd,"E1220","E1226","E1230","E1232") ///
+ | inlist(hcpcs_cd, "E1240","E1260","E1270","E2201","E2203") | inlist(hcpcs_cd,"E2206","E2208","E2209","E2210","E2226") ///
+ | inlist(hcpcs_cd, "E2310","E2321","E2323","E2340","E2361") | inlist(hcpcs_cd,"E2363","E2364","E2365","E2366","E2367") ///
+ | inlist(hcpcs_cd, "E2368","E2370","E2374","E2375","E2381") | inlist(hcpcs_cd,"E2382","E2383","E2386","E2387","E2389") ///
+ | inlist(hcpcs_cd, "E2392","E2394","E2395","E2601","E2602") | inlist(hcpcs_cd,"E2603","E2604","E2605","E2607","E2608") ///
+ | inlist(hcpcs_cd, "E2611","E2615","E2619","E2620","E2622") | inlist(hcpcs_cd,"E2623","E2624","K0001","K0002","K0003") ///
+ | inlist(hcpcs_cd, "K0004","K0005","K0006","K0007","K0009") | inlist(hcpcs_cd,"K0010","K0011","K0012","K0014","K0015") ///
+ | inlist(hcpcs_cd,"K0017","K0019","K0040","K0045","K0046") | inlist(hcpcs_cd,"K0047","K0053","K0056","K0069","K0070") ///
+ | inlist(hcpcs_cd, "K0071","K0077","K0108","K0195","K0733") | inlist(hcpcs_cd,"K0734","K0735","K0736","K0800","K0806") ///
+ | inlist(hcpcs_cd, "K0808","K0813","K0814","K0815","K0816") | inlist(hcpcs_cd,"K0821","K0822","K0823","K0824","K0825") ///
+ | inlist(hcpcs_cd, "K0835","K0842","K0843","K0848","K0849") | inlist(hcpcs_cd,"K0856","K0861","K0877")																											
+
+gen ind_hosp_beda=inlist(hcpcs_cd,"E0250","E0255","E0256") | inlist(hcpcs_cd,"E0260","E0261","E0265","E0271","E0272","E0274","E0277") ///
+ | inlist(hcpcs_cd,"E0293","E0294","E0295","E0303","E0305") | inlist(hcpcs_cd,"E0310","E0316","E0860","E0870","E0910") ///
+ | inlist(hcpcs_cd,"E0912","E0940","E0946","E0948","E0943") | inlist(hcpcs_cd,"K0456","K0549")																																																																																																												
+
+keep spid bene_id index_date ind_* *_betosa
+duplicates drop
+
+foreach x of varlist *a {
+	by spid, sort: egen `x'1=max(`x')
+	drop `x'
+}
+
+rename *a1 *
+duplicates drop
+
+tempfile dme
+save `dme'
+
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", clear
+gen diffany=0
+foreach x in emotional physical financial {
+	replace diffany=1 if diff_`x'_lv==1
+}
+label var diffany "Any CG-reported financial/emotional/physical difficulty (NSOC)"
+keep if cg_primary_nsoc==1
+keep spid diffany
+tempfile nsoc
+save `nsoc'
+use "`datapath'\serious_ill_nhats_sample.dta" if sp_ivw==1 | nhres==1
+cd `logpath'
+merge 1:1 spid using `nsoc', nogen keep(match master)
+replace diffany=0 if missing(diffany) 
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+//merge to get 1m discharge
+merge 1:1 spid index_date using ///
+"E:\nhats\data\Projects\pal_perf_scale\disch_1m.dta", ///
+gen(ipm) keep(match master)
+merge 1:1 spid index_date using `dme', gen(dmem) keep(match master)
+replace ind_wheelchair=0 if missing(ind_whe)
+replace ind_hosp_bed=0 if missing(ind_hosp_bed)
+replace oxygen=0 if missing(oxygen)
+gen bed_or_chair=ind_wheelchair | ind_hosp_bed
+
+gen adl_diff_insd=mo1insddif>1 if mo1insddif>0
+gen pain=ss1painbothr==1
+gen sob=ss1probbreat==1
+gen upper=ss1strnglmup==1
+gen energy=ss1lowenergy==1
+gen lower=ss1lwrbodstr==1
+gen balance=ss1prbbalcrd==1
+gen insomnia=inlist(hc1sleepmed,1,2) | inlist(hc1aslep30mn,1,2) | ///
+inlist(hc1trbfalbck,1,2)
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+
+gen dem_probable=dem_3_cat==1
+/*7/7/17 update-3+ Dartmouth comorbidities counts as SMI*/
+replace smi_count=smi_count+1 if dmouth_index>=3 & !missing(dmouth_index)
+replace criteria_smi=1 if  dmouth_index>=3 & !missing(dmouth_index)
+
+//define PPS
+/*what are we pulling?
+	-symptoms--Tacara's list
+	-sudden weightloss
+	-any smi
+	-difficulty walking inside
+	-ADL difficulty no help
+	-health/function prevent activity
+	-nhres
+
+	
+	PPS
+		-80+, no difficulty in ADLs or difficulty with effort
+		-70-difficulty
+}
+
+*/
+
+/*5/24/17--switch from health keeps anything to health keeps work, rel svces, 
+going out for enjoyment*/
+
+gen health_keep=0
+foreach x of varlist pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk {
+	replace health_keep=1 if `x'==1
+}
+
+gen hkindex=0
+foreach x of varlist pa1h* {
+	*replace health_keep=1 if `x'==1
+	replace hkindex=hkindex+1 if `x'==1
+}
+
+gen activity_cat=1 if adl_diff_index==0 & nhres==0
+replace iadl_diff_index=iadl_diff_index+1 if ind_meds_diff==1
+replace adl_diff_index=adl_diff_index+1 if adl_diff_insd==1
+replace adl_diff_index=adl_diff_index+1 if inrange(mo1beddif,2,4)
+replace activity_cat=2 if (inrange(adl_diff_index,1,6) | inrange(iadl_diff_index,1,6)) ///
+| adl_impair==1 | iadl_impair==1
+replace activity_cat=3 if health_keep==1 & activity_cat==2
+gen nohousework=(inlist(ha1dmealreas,1,3) & inlist(ha1dmealsfdf,1,8)) & ///
+(inlist(ha1dlaunreas,1,3) & inlist(ha1dlaunsfdf,1,8))
+gen ind_diff=(inrange(adl_diff_index,1,6) | inrange(iadl_diff_index,1,6)) ///
+& (!missing(adl_diff_index) | !missing(iadl_diff_index))
+label var nohousework "Did not prepare meals or do laundry by self due to health"
+label var ind_diff "Any difficulty in ADLs or IADLs"
+replace activity_cat=4 if nohou
+label define activity_cat 1 "No difficulty reported" 2 "Difficulty in ADLs/IADLs" ///
+3 "Difficulty & unable to do activities b/c health" 4 "Unable to prepare meals or do laundry"
+label values activity_cat activity_cat
+
+*rename mo1dinsds ambulation
+
+gen ambulation=1 if inlist(mo1dinsds,2,3,6)
+replace ambulation=2 if mo1dinsds==1 | adl_ins_help==1 | adl_bed_help | mo1insdwout==1
+replace ambulation=3 if mo1dbedsfdf==1
+replace ambulation=4 if mo1dinsds==8
+*replace ambulation=2 if mo1oflv>=1
+label define ambulation 1 "Full ambulation" ///
+2 "Reports help getting around inside or getting out of bed, or not going parts home by self" ///
+3 "Reports not getting out of bed by self" 4 "Reports not moving around inside at all in past month"
+
+label values ambulation ambulation
+gen disease=criteria_smi==1
+label var disease "Any SMI"
+
+gen freq_help=0
+foreach x in sc1eatslfoft sc1dresslf sc1toiloft sc1bathoft mo1bedslf mo1insdslf {
+replace freq_help=`x' if `x'>freq_help
+}
+
+gen self_care=(freq_help==1)+1
+replace self_care=3 if freq_help==2
+replace self_care=4 if freq_help==3
+replace self_care=5 if freq_help==4
+label define self_care 1 "No assistance" 2 "Care dependent, mostly do by self" 3 "Sometimes do by self" ///
+4 "Rarely do by self" 5 "Never do by self"
+label values self_care self_care
+
+gen intake=weightloss==1
+label var intake "Intake (unintentional weightloss)"
+
+tab1 ambulation activity self_care intake
+/*
+gen pps=100 if ambulation==1 
+replace pps=90 if pps==100 & disease==1
+replace pps=80 if pps==90 & activity_cat==2 & self_care==1
+replace pps=70 if ambulation==2
+replace pps=60 if (pps==70 & activity_cat==3) | nhres==1
+replace pps=50 if ambulation==3
+replace pps=40 if pps==50 &  self_care>=2
+replace pps=30 if ambulation==4
+*/
+
+
+log using pps_log.txt, text replace
+//first, ambulation
+gen pps=100 if ambulation==1
+replace pps=70 if ambulation==2
+replace pps=50 if ambulation==3
+replace pps=30 if ambulation==4
+
+tab pps ambulation
+
+//next, activity & disease
+replace pps=90 if pps>90 & disease==1 
+replace pps=80 if pps>80 & activity_cat==2 
+replace pps=70 if pps>70 & activity_cat==3
+replace pps=60 if pps>60 & activity_cat==4
+
+tab pps disease
+tab pps activity
+
+//self-care (ADLs)
+replace pps=60 if pps>60 & self_care==2
+replace pps=50 if pps>50 & self_care==3
+replace pps=40 if pps>40 & self_care==4
+replace pps=30 if pps>30 & self_care==5
+
+tab pps self_care
+
+//nhres (no survey)
+replace pps=60 if pps>60 & nhres==1
+
+
+
+local symp pain sob upper energy lower balance insomnia weightloss ///
+sr_phq2_depressed sr_gad2_anxiety
+egen index_symp=rowtotal(`symp')
+gen ind_ge3_symp=index_symp>=3 if !missing(index_symp)
+
+//5/24/17--go just for pain/breathing problems limit activity
+gen sig_symp=ss1prbbrlim==1 | ss1painl==1
+label var sig_symp "Significant symptom burden--activity limited by pain or breathing problem"
+
+gen ind_indication=/*weightloss==1 |*/ (smi_count>=2 & !missing(smi_count)) | ///
+sig_symp==1 | any_disch_1m==1
+label var ind_indication "1+ high-need indication"
+/* Update 7/7/17--
+the payment categories have been altered so that we've got just two groups--
+	moderate complexity 
+		PPS 60 or ADL or DME claim and cancer
+		PPS 70 or ADL or DME claim and noncancer
+		SMI 
+		2 IP stays or 1 and separate ED visit
+	severe complexity
+		like moderate, except excludes dementia if only smi and 50/60 PPS instead
+		of 60/70
+*/
+/*payment category from apm
+
+uses: 
+pps
+
+other high need indications:
+weightloss (sudden nutritional/functional decline)
+smi_count (multiple serious illnesses)
+ind_ge3_symp (significant symptom distress--3+ on symptom index)
+any_disch_1m (inp discharge w/in 30 days)
+not currrently used--frail cg or remote location
+*/
+
+
+
+gen payment_cat=0 if pps>=80
+replace payment_cat=1 if (smi_cancer_ind==0 | smi_count>1) & (pps<=70 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+replace payment_cat=1 if (smi_cancer_ind==1) & (pps<=60 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+replace payment_cat=2 if (smi_cancer_ind==0 | smi_count>1) & (pps<=60 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+replace payment_cat=2 if (smi_cancer_ind==1) & (pps<=50 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+replace payment_cat=1 if payment_cat==2 & smi_dem_ind==1 & smi_count==1 
+replace payment_cat=0 if n_ip_admit_6m==0 | (n_ip_admit_6m==1 & ed_op_wout==0)
+replace payment_cat=0 if smi_count==0
+
+gen old_payment_cat=0 if pps>=80
+replace old_payment_cat=1 if pps==80 & ind_indication==1
+replace old_payment_cat=2 if pps<70 
+replace old_payment_cat=2 if pps==70 & ind_indication==1
+replace old_payment_cat=3 if pps<50
+replace old_payment_cat=3 if pps<70 & ind_indication==1
+replace old_payment_cat=0 if criteria_smi!=1
+label define old_payment_cat 0 "Low risk patients (not on scale)" 1 "Low-moderate need/risk patients" ///
+2 "Moderate need/risk patients" 3 "High need/risk patients"
+label values old_payment_cat old_payment_cat
+
+label define payment_cat 0 "Low complexity patients" 1 "Moderate complexity patients" ///
+2 "Severe complexity patients"
+label values payment_cat payment_cat
+
+/*Variables:
+	Health_keep: has health/function prevented you from doing x
+		-pa1hlk...
+	Activity_cat: No difficulty reported, yes difficulty, yes + health_keep
+		-adl_diff_index, iadl_diff_index, health_keep
+	Ambulation: Moved around inside by self w/ or w/o difficulty; 
+				help getting around inside or report of not going parts of home/building by self
+				reports not getting out of bed by self
+				reports not moving around inside at all (bedbound?)
+		-mo1dinsdslf, adl_ins_help, mo1insdwout, mo1bedwout
+	Disease: Any SMI
+		-any_smi
+	Freq_help: Frequency of doing activity by self if help in 1+ ADL (set to least frequent)
+		-sc1eatslfoft...
+	Self Care: No ADL assistance, then how often require help
+		-freq_help
+	NHRes: Nursing Home Resident
+		-nhres
+	discussed, not used--weightloss
+*/
+
+
+
+foreach x in ambulation disease self_care nhres {
+	tab `x'
+}
+
+foreach x in ambulation disease self_care nhres {
+	tab pps `x'
+}
+
+foreach one in two {
+//health keep
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i' & health_keep==1
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i' & health_keep==1
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented) sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+preserve
+drop if activity==1
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i' & health_keep==1
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i' & health_keep==1
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented, among those with reported difficulty) ///
+sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+restore
+}
+log close
+
+
+
+foreach now in never {
+log using pps_payment_comparison.txt, text replace
+
+label var payment_cat "Payment Category"
+label var pps "PPS"
+foreach x in pps payment_cat {
+
+
+local lab : var label `x'
+levelsof `x', local(levels)
+
+
+local rn: word count `levels'
+tokenize `levels'
+mat tab`x'=J(`rn',3,.)
+local r=1
+local c=1
+sum `x'
+local denom=r(N)
+	qui svy: tab `x'
+	mat pct=e(b)
+forvalues l=1/`rn' {
+	qui sum died_12 if `x'==``l'' [aw=anfin]
+	mat tab`x'[`r',1]=r(N)
+	mat tab`x'[`r',2]=(pct[1,`l'])*100
+	mat tab`x'[`r',3]=r(mean)*100
+	local r=`r'+1
+}
+
+mat rownames tab`x'=`levels'
+
+frmttable, statmat(tab`x') ctitles("`lab'" "N" "Estimate" "1 year mortality") ///
+sdec(0,2,2)
+}
+/*
+//look at who flips between 70 & 80 
+gen diffcat=pps==pps_old
+replace diffcat=2 if pps<pps_old
+replace diffcat=3 if pps>pps_old
+label define diffcat 1 "Same PPs" 2 "New PPS more severe" 3 "New PPS less severe"
+label values diffcat diffcat
+
+gen diffpay=payment_cat==payment_cat_old
+replace diffpay=2 if payment_cat>payment_cat_old
+replace diffpay=3 if payment_cat<payment_cat_old
+label define diffpay 1 "Same payment category" 2 " New cat more severe" 3 "New cat less severe"
+label values diffpay diffpay
+
+
+logit died_12 i.diffcat, or
+logit died_12 i.diffpay, or
+*/
+foreach x of varlist pa1h* {
+di "`x'"
+sum died_12 if `x'==1
+}
+foreach one in two {
+//health keep
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i' & health_keep==1
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i' & health_keep==1
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented) sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+preserve
+drop if activity==1
+mat tab=J(7,8,.)
+local r=1
+local c=1
+forvalues i=1/7 {
+qui sum hkindex if hkindex==`i' & health_keep==1
+local denom=r(N)
+mat tab[`r',`c']=r(N)
+local c=`c'+1
+foreach x of varlist pa1h* {
+qui sum `x' if `x'==1 & hkindex==`i' & health_keep==1
+mat tab[`r',`c']=(r(N)/`denom')*100
+local c=`c'+1
+}
+local c=1
+local r=`r'+1
+}
+
+mat rownames tab= 1 2 3 4 5 6 7
+frmttable, statmat(tab) title(Activity prevented by # activities prevented, among those with reported difficulty) ///
+sdec(0,2,2,2,2,2,2,2) ctitle("# activities" "N" "Visit fam/friends" "Rel. svcs" "clb mtgs" "going out" "work" "volunteering" "Favorite activity")
+
+restore
+}
+log close
+
+}
+save "E:\nhats\data\Projects\pal_perf_scale\final_data\pps_sample.dta", replace
+
+
+
 H="payment groups"
 clear all 
 set more off
@@ -7611,3 +8148,738 @@ foreach y in ind_indication {
 
 
 H="characteristics and outcomes"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "`datapath'\pps_sample.dta" if nhres==0, clear
+
+
+/*do table-1-style characteristics and basic outcomes by payment group
+*/
+
+log using `logpath'/pps_sample_chars.txt, text replace
+gen n=1
+
+local pps ambulation disease health_keep   pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk ///
+nohousework ind_diff activity_cat self_care pps weightloss smi_count ///
+sig_symp any_disch_1m ss1prbbrlim ss1painl ind_indication payment_cat
+
+local ind_indication weightloss smi_count ss1prbbrlim ss1painl  sig_symp any_disch_1m
+
+forvalues i=30(10)100 {
+	gen pps`i'=pps==`i' if !missing(pps)
+	label var pps`i' "PPS--`i'"
+}
+
+gen breath_lim=ss1prbbrlimt==1 
+gen pain_lim=ss1prbbrlimt==1 if ss1painlimts>-8
+gen ind_mult_smi=smi_count>=2 & !missing(smi_count)
+tab ambulation, gen(ambulation)
+tab self_care, gen(self_care)
+tab activity_cat, gen(activity_cat)
+label var breath_lim "Breathing problem limits activity"
+label 
+foreach y in ambulation self_care activity_cat {
+local `y'
+levelsof `y', local(levels)
+foreach l of local levels {
+local lab : label `y' `l'
+label var `y'`l' "`lab'"
+local `y' `y'`l'
+}
+}
+foreach x in pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk {
+	replace `x'=. if `x'<0
+	replace `x'=0 if `x'==2
+}
+
+
+local ind_indication weightloss ind_mult_smi sig_symp breath_lim pain_lim any_disch_1m
+local pps `ambulation' disease health_keep   pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk ///
+nohousework ind_diff `activity_cat' `self_care' ind_indication
+
+
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness nhres 
+
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+
+ 
+sum `cvars1' `cvars2' `ivars1' `ivars2' `ioutcomes' `coutcomes' `pps' `ind_indication'
+
+local cvars age aveincome
+local ivars female white black hisp other_race married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_independent /*iadl_independent*/ `pps' `ind_indication'
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+
+local rn : word count `cvars' `ivars' `ipps' `cout' `iout' 1 1 1 1 1
+
+label var age "Age at interview, mean"
+label var aveincome "Income, mean"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post interview, mean"
+label var n_hospd_p12m "Total hospital days 12m post interview, mean"
+label var died_12 "Died 12m post interview"
+label var ind_hosp_adm_p12m "Any hospital admission 12m post interview"
+label var educ_hs_ind "Education: HS+"
+mat tab=J(`rn',4,.)
+local r=1
+local c=1
+
+forvalues i=0/3 {
+	local r=1 
+	foreach x in vars pps out {
+		foreach y in `c`x'' {
+			sum `y' if payment_cat==`i' [aw=anfinw]
+			mat tab[`r',`c']=r(mean)
+			local r=`r'+1
+}
+		foreach y in `i`x'' {
+			sum `y' if payment_cat==`i' [aw=anfinw]
+			mat tab[`r',`c']=r(mean)*100
+			local r=`r'+1
+}
+		local r=`r'+1
+}
+	sum n if payment_cat==`i'  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local c=`c'+1
+	local lab`i' : label payment_cat `i'
+}
+
+mat rownames tab=`cvars' `ivars' "Estimated PPS score" `ipps' ///
+"Outcomes" `cout' `iout' "_" "N" "National Estimate"
+
+frmttable using "`logpath'/pps_table_1_with_outcomes.rtf", statmat(tab) sdec(2) varlabels ctitles("" "`lab0'" "`lab1'" "`lab2'" ///
+"`lab3'") title("NHATS Sample Characteristics and Outcomes""by payment category") ///
+replace note("NHATS 2011 Sample w/ 6+ months FFS pre interview, community dwelling (not nursing home) with SP interview")
+
+
+H="looking at those with no utilization"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "`datapath'\pps_sample.dta" if nhres==0, clear
+
+
+/*do table-1-style characteristics and basic outcomes by payment group
+*/
+
+log using `logpath'/pps_sample_chars.txt, text replace
+gen n=1
+replace payment_cat=3 if !payment_cat & disease==1 & (adl_impair==1 | ///
+bed_or_chair==1 | oxygen==1 | pps<=60 | (pps==70 & smi_cancer==1))
+label define payment_cat 3 "Does not meet utilization criteria but does others", modify
+local pps ambulation disease health_keep   pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk ///
+nohousework ind_diff activity_cat self_care pps weightloss smi_count ///
+sig_symp any_disch_1m ss1prbbrlim ss1painl ind_indication payment_cat
+
+local ind_indication weightloss smi_count ss1prbbrlim ss1painl  sig_symp any_disch_1m
+
+forvalues i=30(10)100 {
+	gen pps`i'=pps==`i' if !missing(pps)
+	label var pps`i' "PPS--`i'"
+}
+
+gen breath_lim=ss1prbbrlimt==1 
+gen pain_lim=ss1painlimt==1 if ss1painlimts>-8
+gen ind_mult_smi=smi_count>=2 & !missing(smi_count)
+tab ambulation, gen(ambulation)
+tab self_care, gen(self_care)
+tab activity_cat, gen(activity_cat)
+label var breath_lim "Breathing problem limits activity"
+label var pain_lim "Pain limits activity"
+foreach y in ambulation self_care activity_cat {
+local `y'
+levelsof `y', local(levels)
+foreach l of local levels {
+local lab : label `y' `l'
+label var `y'`l' "`lab'"
+local `y' ``y'' `y'`l'
+}
+di "``y''"
+}
+foreach x in pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk {
+	replace `x'=. if `x'<0
+	replace `x'=0 if `x'==2
+}
+drop if payment_cat<3
+replace payment_cat=1 if !n_ip_admit_6m & !ed_op
+replace payment_cat=2 if ed_op
+foreach x of varlist smi* dmouth* {
+replace `x'=0 if missing(`x')
+}
+
+gen smi_any=smi_count>=1 | criteria_smi==1
+label var smi_any "Any serious medical illness"
+drop smi_count smi_nh_ind smi_and_adl 
+gen dmouth_any=dmouth_index>=1 & !missing(dmouth_index)
+label var dmouth_any "Any chronic disease, Dartmouth"
+gen dmouth_ge3_ind=dmouth_index>=3
+label var dmouth_ge3_ind "3+ Chronic diseases, Dartmouth"
+drop dmouth_index
+local dmouth
+foreach x of varlist dmouth* {
+	local dmouth `dmouth' `x'
+}
+
+local smi 
+foreach x of varlist smi* {
+	local smi `smi' `x'
+}
+
+
+local ind_indication weightloss ind_mult_smi sig_symp breath_lim pain_lim any_disch_1m
+local pps `ambulation' disease health_keep pa1htkfrrlsr pa1hlkpgoenj pa1hlkpfrwrk ///
+nohousework ind_diff `activity_cat' `self_care' ind_indication
+
+
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind /*smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind */ser_med_illness nhres 
+
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+
+ 
+sum `cvars1' `cvars2' `ivars1' `ivars2' `ioutcomes' `coutcomes' `pps' `ind_indication'
+
+local cvars age aveincome
+local ivars female white black hisp other_race married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_independent /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi'
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+
+
+local rn : word count `cvars' `ivars' `ipps' `cout' `iout' 1 1 1 1 1
+
+label var age "Age at interview, mean"
+label var aveincome "Income, mean"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post interview, mean"
+label var n_hospd_p12m "Total hospital days 12m post interview, mean"
+label var died_12 "Died 12m post interview"
+label var ind_hosp_adm_p12m "Any hospital admission 12m post interview"
+label var educ_hs_ind "Education: HS+"
+mat tab=J(`rn',4,.)
+local r=1
+local c=1
+
+forvalues i=0/3 {
+	local r=1 
+	foreach x in vars pps out {
+		foreach y in `c`x'' {
+			sum `y' if payment_cat==`i' //[aw=anfinw]
+			mat tab[`r',`c']=r(N)
+			local r=`r'+1
+}
+		foreach y in `i`x'' {
+			sum `y' if payment_cat==`i' //[aw=anfinw]
+			mat tab[`r',`c']=r(mean)*r(N)
+			local r=`r'+1
+}
+		local r=`r'+1
+}
+	sum n if payment_cat==`i'  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local c=`c'+1
+	local lab`i' : label payment_cat `i'
+}
+
+mat rownames tab=`cvars' `ivars' "Estimated PPS score" `ipps' ///
+"Outcomes" `cout' `iout' "_" "N" "National Estimate"
+
+frmttable using "`logpath'/pps_table_1_with_outcomes.rtf", statmat(tab) sdec(0) varlabels ctitles("" "`lab0'" "`lab1'" "`lab2'" ///
+"`lab3'") title("NHATS Sample Characteristics and Outcomes""by payment category") ///
+replace ///
+note("NHATS 2011 Sample w/ 6+ months FFS pre interview, community dwelling (not nursing home) with SP interview; HIV, ALS, hip fracture, and liver disease not shown due to cell size restriction" ///
+"* -not shown for cell size restriction") ///
+landscape basefont(fs10) 
+
+local rn : word count `cvars' `ivars' `ipps' `cout' `iout' 1 1 1 1 1
+
+label var age "Age at interview, mean"
+label var aveincome "Income, mean"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post interview, mean"
+label var n_hospd_p12m "Total hospital days 12m post interview, mean"
+label var died_12 "Died 12m post interview"
+label var ind_hosp_adm_p12m "Any hospital admission 12m post interview"
+label var educ_hs_ind "Education: HS+"
+mat tab=J(`rn',4,.)
+local r=1
+local c=1
+
+forvalues i=0/3 {
+	local r=1 
+	foreach x in vars pps out {
+		foreach y in `c`x'' {
+			sum `y' if payment_cat==`i' [aw=anfinw]
+			mat tab[`r',`c']=r(mean)
+			local r=`r'+1
+}
+		foreach y in `i`x'' {
+			sum `y' if payment_cat==`i' [aw=anfinw]
+			mat tab[`r',`c']=r(mean)*100
+			local r=`r'+1
+}
+		local r=`r'+1
+}
+	sum n if payment_cat==`i'  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local c=`c'+1
+	local lab`i' : label payment_cat `i'
+}
+
+mat rownames tab=`cvars' `ivars' "Estimated PPS score" `ipps' ///
+"Outcomes" `cout' `iout' "_" "N" "National Estimate"
+
+frmttable using "`logpath'/pps_table_1_with_outcomes.rtf", statmat(tab) sdec(2) varlabels ctitles("" "`lab0'" "`lab1'" "`lab2'" ///
+) title("NHATS Sample Characteristics and Outcomes""by payment category") ///
+addtable ///
+note("NHATS 2011 Sample w/ 6+ months FFS pre interview, community dwelling (not nursing home) with SP interview; HIV, ALS, hip fracture, and liver disease not shown due to cell size restriction" ///
+"* -not shown for cell size restriction") ///
+landscape basefont(fs10)
+
+
+
+H="sensitivity and specificity"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\CMS_DUA_28016\Merged Stata\dm_09_12.dta", clear
+keep bene_id admit_date disch_date hcpcs_cd betos
+gen wave=1
+merge m:1 bene_id wave using ///
+ "E:\nhats\data\Projects\pal_perf_scale\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match) keepusing(spid index_date)
+keep if inrange(admit_date,index_date-186,index_date)
+
+gen wc_betosa=betos=="D1D"
+gen bed_betosa=betos=="D1B"
+
+gen ind_wheelchaira=inlist(hcpcs_cd, "E1088","E1090","E1093","E1140","E1150","E1161") ///
+ | inlist(hcpcs_cd,"E1220","E1226","E1230","E1232") ///
+ | inlist(hcpcs_cd, "E1240","E1260","E1270","E2201","E2203") | inlist(hcpcs_cd,"E2206","E2208","E2209","E2210","E2226") ///
+ | inlist(hcpcs_cd, "E2310","E2321","E2323","E2340","E2361") | inlist(hcpcs_cd,"E2363","E2364","E2365","E2366","E2367") ///
+ | inlist(hcpcs_cd, "E2368","E2370","E2374","E2375","E2381") | inlist(hcpcs_cd,"E2382","E2383","E2386","E2387","E2389") ///
+ | inlist(hcpcs_cd, "E2392","E2394","E2395","E2601","E2602") | inlist(hcpcs_cd,"E2603","E2604","E2605","E2607","E2608") ///
+ | inlist(hcpcs_cd, "E2611","E2615","E2619","E2620","E2622") | inlist(hcpcs_cd,"E2623","E2624","K0001","K0002","K0003") ///
+ | inlist(hcpcs_cd, "K0004","K0005","K0006","K0007","K0009") | inlist(hcpcs_cd,"K0010","K0011","K0012","K0014","K0015") ///
+ | inlist(hcpcs_cd,"K0017","K0019","K0040","K0045","K0046") | inlist(hcpcs_cd,"K0047","K0053","K0056","K0069","K0070") ///
+ | inlist(hcpcs_cd, "K0071","K0077","K0108","K0195","K0733") | inlist(hcpcs_cd,"K0734","K0735","K0736","K0800","K0806") ///
+ | inlist(hcpcs_cd, "K0808","K0813","K0814","K0815","K0816") | inlist(hcpcs_cd,"K0821","K0822","K0823","K0824","K0825") ///
+ | inlist(hcpcs_cd, "K0835","K0842","K0843","K0848","K0849") | inlist(hcpcs_cd,"K0856","K0861","K0877")																											
+
+gen ind_hosp_beda=inlist(hcpcs_cd,"E0250","E0255","E0256") | inlist(hcpcs_cd,"E0260","E0261","E0265","E0271","E0272","E0274","E0277") ///
+ | inlist(hcpcs_cd,"E0293","E0294","E0295","E0303","E0305") | inlist(hcpcs_cd,"E0310","E0316","E0860","E0870","E0910") ///
+ | inlist(hcpcs_cd,"E0912","E0940","E0946","E0948","E0943") | inlist(hcpcs_cd,"K0456","K0549")																																																																																																												
+
+keep spid bene_id index_date ind_* *_betosa
+duplicates drop
+
+foreach x of varlist *a {
+	by spid, sort: egen `x'1=max(`x')
+	drop `x'
+}
+
+rename *a1 *
+duplicates drop
+
+tempfile dme
+save `dme'
+
+
+use "`datapath'\serious_ill_nhats_sample.dta"
+merge 1:1 spid index_date using `dme', gen(dmem) keep(match master)
+replace ind_wheelchair=0 if missing(ind_whe)
+replace ind_hosp_bed=0 if missing(ind_hosp_bed)
+replace oxygen=0 if missing(oxygen)
+gen bed_or_chair=ind_wheelchair | ind_hosp_bed
+
+cd `logpath'
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+gen pain=ss1painbothr==1
+gen pain_limit=ss1painlim==1
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+gen dem_probable=dem_3_cat==1
+/*pulling, for all Dartmouth conditions, as well as criteria A, B, C:
+ -for all and those with 6m HH/SNF use or NH res
+ -N
+ -1yr outcomes: spending, mortality, hospitalization
+ -screens: SRH, ADLs, weight loss, pain, probable dementia
+ -same 1yr outcomes
+*/
+
+sum tot_paid_by_mc_12m,d
+gen ind_top10=tot_paid_by_mc_12m>=r(p90) if !missing(tot_paid_by_mc_12m)
+label var ind_top10 "Top 10% of MC costs"
+
+local d1 "Cancer"
+local d2 "COPD"
+local d3 "CAD"
+local d4 "CHF"
+local d5 "PVD"
+local d6 "Liver"
+local d7 "Diabetes"
+local d8 "Renal"
+local d9 "Dementia"
+local d10 "3cond"
+*local d11 "2cond"
+*local d12 "3cond"
+foreach x of varlist dmouth_* {
+replace `x'=0 if missing(`x')
+}
+gen dmouth_10_0_6m=dmouth_index_0_6m>=3
+gen dmouth_11_0_6m=dmouth_index_0_6m>=2
+gen dmouth_12_0_6m=dmouth_index_0_6m>=3
+gen prob_func_diff=ind_hh_6m ==1 | ind_snf_6m==1 | nhres==1
+
+
+label var weightloss "Unintentional weight loss"
+label var pain "Pain reported"
+label var pain_limit "Pain limits activities"
+label var dem_probable "Probable dementia"
+label var ind_hh_6m "Any Home health expenditures previous 6m"
+label var ind_snf_6m "Any SNF stay previous 6m"
+label var prob_func "HH/SNF use 6m prior or NH resident"
+label var tot_paid_by_mc_12m "Total MC expenditures 12m post, mean(SD)"
+label var died_12 "Died 12m post ivw"
+label var dmouth_10_0 "3+ Chronic Conditions, Dartmouth"
+*label var dmouth_11_0 "2+ Chronic Conditions, Dartmouth"
+*label var dmouth_12_0 "3+ Chronic Conditions, Dartmouth"
+label var adl_impair "ADL impairment at interview"
+gen ind_hh_snf=ind_hh_6m==1 | ind_snf_6m==1
+label var ind_hh_snf "HH/SNF use 6m prior to ivw"
+
+local coutcomes tot_paid_by_mc_12m 
+local ioutcomes ind_top10 died_12 ind_hosp_adm_p12m
+local firstlev ind_hh_6m ind_snf_6m ind_hh_snf  nhres
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable
+local criteria criteria_a criteria_b criteria_c
+
+gen screener=0
+foreach x in `nextlev' {
+	replace screener=1 if `x'==1
+}
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable screener hh_snf_screen
+
+gen hh_snf_screen=ind_hh_snf==1 & screener==1
+label var hh_snf_screen "HH or SNF and screen"
+
+
+foreach x in `firstlev' `nextlev' {
+	replace `x'=0 if missing(`x') & nhres==1
+}
+
+label var screener "Any of ADL/PF SRH/weightloss/prob dem/pain"
+local rn : word count `firstlev' `nextlev' `criteria' 1 `coutcomes' `ioutcomes' 1
+
+forvalues d=1/10 {
+preserve
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+
+foreach timethrough in 1 2 {
+mat tab1=J(`rn',6,.)
+local r=1
+local c=1
+foreach crit in criteria_all sp_ivw nhres {
+	sum dmouth_`d'_0_6m if `crit'==1
+	mat tab1[`r',`c']=r(mean)*r(N)
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
+ctitles("" "Full sample" "Criteria A" "Criteria B" ///
+ "Criteria C") varlabels substat(1) landscape ///
+ sdec(`sdec') replace note(`note') title(`title')
+keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+}
+restore
+
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+foreach group in sp_ivw nhres {
+local groupname "Community dwelling"
+if "`group'"=="nhres" local groupname "NH Residents"
+preserve
+keep if `group'==1
+
+foreach timethrough in 1 2 {
+mat tab1=J(`rn',8,.)
+
+local r=1
+local c=1
+
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
+	sum dmouth_`d'_0_6m if `crit'==1
+	mat tab1[`r',`c']=r(mean)*r(N)
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
+ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels substat(1) landscape ///
+ sdec(`sdec') addtable note(`note') title("`title' `groupname'")
+keep if ind_hosp_adm_6m==1
+/*local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+*/
+
+mat tab=J(9,4,.)
+local r=2
+local c=1
+
+foreach x in `ioutcomes' {
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
+	tab `x' dmouth_`d'_0_6m if `crit'==1, matcell(cell)
+	mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
+	mat tab[`r'+1,`c']=(cell[2,1]/(cell[2,1]+cell[1,1]))*100
+	local c=`c'+1
+}
+	local r=`r'+3
+	local c=1
+}
+
+
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab) ///
+ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels landscape ///
+ sdec(2) addtable note(`note') title("`title' `groupname'") ///
+ rtitles("Top 10% spending"\"	Sensitivity"\"	Specificity"\ ///
+"Death within 1 year"\"	Sensitivity"\"	Specificity"\ ///
+"Hospitalization within 1 year"\"	Sensitivity"\"	Specificity" )
+
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+
+}	
+	
+restore
+}
+}
+
+
+gen group1=dmouth_index>=1 & ind_hosp_adm_6m if !missing(dmouth_index)
+gen group2=group1==1 & (ind_hh_snf==1 | bed_or_chair==1 | oxygen==1)
+gen group3=smi_count>=1 & ind_hosp_adm_6m if !missing(smi_count)
+gen group4=group3==1 & (ind_hh_snf==1 | bed_or_chair==1 | oxygen==1)
+gen group5=smi_count>=1 & adl_impair==1 if !missing(smi_count)
+gen group6=group5==1 & group3==1
+egen screener_2=rowtotal(`nextlev')
+replace screener_2=screener_2>2 & !missing(screener_2)
+local out ind_top10 ind_hosp_adm_p12m died_12 screener_2
+
+/*
+local rn : word count `coutcomes' `ioutcomes'
+
+mat tab=J(`rn',12,.)
+local r=1
+local c=1
+forvalues i=1/6 {
+	foreach x in `coutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)*r(N)
+		mat tab[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+local r=1
+local c=`c'+2
+}
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) substat(1) ///
+sdec(`sdec') title("Outcomes") ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" ///
+"SMI & hosp" "SMI, hosp, HH/SNF/DME" "SMI & ADL" "SMI, hosp, & ADL") replace ///
+rtitles("Mean Spending"\"	SD"\"Top 10% Spending"\"	%" ///
+"Died within 1 year"\"	 %"\"Hospitalization within 1 year"\"	%")
+*/
+local xvars ind_top10 died_12 ind_hosp_adm_p12m screener_2 adl_impair
+local rn : word count `xvars' `coutcomes'
+
+mat tab=J(`rn'*3,6,.)
+local r=2
+local c=1
+
+forvalues i=1/6 {
+	foreach x in `coutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'+1,`c']=r(sd)
+		local r=`r'+3
+}
+
+	foreach x in `xvars' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)*100
+		sum group`i' if `x'==1
+		mat tab[`r'+1,`c']=r(mean)*100
+		local r=`r'+3
+}	
+	local r=2
+	local c=`c'+1
+}
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
+varlabels replace sdec(2) title("Inclusion and Identification") ///
+ rtitles("Medicare Expenditures"\ "Mean"\"SD"\"Top 10% spending" \"    %"\ "    % identified by criteria"\ ///
+ "Death within 1 year" \"    %"\ "    % identified by criteria"\ ///
+ "Hospitalization within 1 year" \"    %"\ "    % identified by criteria"\ ///
+ "2+ on screener"\"    %"\ "    % identified by criteria"\ ///
+ "ADL impairment"\"    %"\ "    % identified by criteria") ///
+ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
+"SMI & ADL" "SMI, hosp, & ADL")
+
+local rn : word count `out'
+mat tab=J(`rn'*4,6,.)
+local r=2
+local c=1
+
+foreach x in `out' {
+	forvalues i=1/6 {
+		tab group`i' `x', matcell(cell)
+		mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
+		mat tab[`r'+1,`c']=(cell[1,1]/(cell[2,1]+cell[1,1]))*100
+		roctab `x' group`i'
+		mat tab[`r'+2,`c']=r(area)
+		local c=`c'+1
+}
+	local r=`r'+4
+	local c=1
+}
+
+
+
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
+varlabels addtable sdec(2) title("Sensitivity and Specificity") ///
+ rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "Death within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "2+ on screener"\"	Sensitivity"\"	Specificity"\"	ROC AUC") ///
+ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
+"SMI & ADL" "SMI, hosp, & ADL")
+
+
+
+

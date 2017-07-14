@@ -4089,7 +4089,7 @@ foreach time in 1 2 {
 	local r=`r'+1
 }
 mat rownames samp=`samp' eligible_nsoc `samp'
-frmttable using "`logpath'\poster_tables_031517.rtf", replace statmat(samp) title("NHATS Wave 5 Sample") ctitles("" "Respondents" ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", replace statmat(samp) title("NHATS Wave 5 Sample") ctitles("" "Respondents" ///
 "Helpers" "Family/Unpaid" "Paid") sdec(0) varlabels
 
 use `temp1', clear
@@ -4153,7 +4153,7 @@ foreach l of local levels {
 }
 mat rownames tab1=N n `cvars1' `ivars1' `cvars2' `ivars2' 
 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab1) title(Table 1: Characteristics of the study population) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab1) title(Table 1: Characteristics of the study population) ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not Homebound") ///
 sdec(2) annotate(stars) asymbol(*,**) substat(1) varlabels
 
@@ -4193,7 +4193,7 @@ foreach l of local levels {
 
 mat rownames tab2="National estimate of helpers" "Number per SP, mean" ///
 "SD" ind_4plus_helpers tot_hrswk_help_i "SD" 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab2) title("Table 2: Helpers by homebound status") ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab2) title("Table 2: Helpers by homebound status") ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not Homebound") ///
 sdec(2) annotate(stars) asymbol(*,**)  varlabels
 
@@ -4229,7 +4229,7 @@ forvalues i=1/5 {
 }
 
 
-frmttable using "`logpath'\poster_tables_031517.rtf", statmat(count) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", statmat(count) ///
 ctitles("" "`clab1'" "`clab2'" "`clab3'")  ///
 rtitles("`rlab1'"\"`rlab2'"\"`rlab3'"\"`rlab4'"\"`rlab5'") ///
 title(Figure 1: Caregiving support by homebound status) ///
@@ -4334,7 +4334,7 @@ di "`l'"
 	local c=`c'+1
 }
 mat rownames tab3=`pvars'
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tab3) title("Table 3: Paid and unpaid help by homebound status") ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tab3) title("Table 3: Paid and unpaid help by homebound status") ///
 ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "Not homebound") ///
 sdec(2) annotate(stars) asymbol(*,**) varlabels
 restore
@@ -4398,12 +4398,12 @@ foreach x of local helpvars {
 }
 mat rownames tab`cat'=`helpvars' N "National Estimate"
 }
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tabhelpcat) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tabhelpcat) ///
 title("Table 4. Help provided to homebound and never alone groups by caregiver type") ///
 ctitles("" "Paid Helper" "Spouse" "Daughter" "Son" "Other unpaid") ///
 sdec(2) annotate(starshelpcat) asymbol(*,**) varlabels
 
-frmttable using "`logpath'\poster_tables_031517.rtf", addtable statmat(tabkidcat) ///
+frmttable using "`logpath'\poster_tables_`c(current_date)'.rtf", addtable statmat(tabkidcat) ///
 title("Table 4. Help provided to homebound and never alone groups by caregiver type") ///
 ctitles("" "Paid Helper" "Spouse" "Child" "Other unpaid") ///
 sdec(2) annotate(starskidcat) asymbol(*,**) varlabels
@@ -4736,3 +4736,6 @@ qui logit hb ind_paid `vars' [pw=paid_w],or
  outreg, merge stats(e_b p) varlabels 
  
 
+
+
+H="Jenny update 07112017"
