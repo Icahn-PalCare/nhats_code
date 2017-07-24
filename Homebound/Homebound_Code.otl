@@ -4784,8 +4784,10 @@ gen paid_by_`x'=op5`x'payhlp==1 if op5`x'payhlp>0 | op5`x'payhlp<-1
 local lab : var label op5`x'payhlp
 label var paid_by_`x' "`lab'"
 }
-gen paid_by_unknown=op5sppayhlp<-1 if op5sppayhlp!=-1
-label var paid_by_unk "Unknown payer (Missing,RF,DK)"
+gen paid_by_unk=(paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==0 | ///
+((paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==-4 & op5paid==1)
+label var paid_by_unk "Unknown payer"
+
 
 levelsof op5progmpaid, local(levels)
 foreach l of local levels {
@@ -4806,19 +4808,20 @@ keep spid opid paid* op_*
 tempfile paid
 save `paid'
 gen wave=5
-merge 1:m spid opid wave using op_round_1_5, keep(match master) gen(opmer)
+merge 1:m spid opid wave using "E:\nhats\data\NHATS Cleaned\op_round_1_5", ///
+keep(match master) gen(opmer)
 merge 1:1 spid opid using `paid', keep(match master) gen(paidm)
 foreach x of varlist paid_by* {
 replace `x'=0 if paid==0
 }
 drop if n_helpers>=1 & opishelp==0
 
-foreach x in sp gov ins unk {
+foreach x in sp gov ins unk oth {
 by spid, sort: egen any_paid_by_`x'=max(paid_by_`x')
 local lab :var label paid_by_`x'
 label var any_paid_by_`x' "`lab'"
 }
-
+rename paid_by_gov_cat_91 paid_by_gov_cat_oth
 foreach x of varlist paid_by_gov_cat* {
 by spid, sort: egen any_`x'=max(`x')
 local lab :var label `x'
@@ -4843,11 +4846,13 @@ label var ind_inf "Any family/unpaid help"
 local pvars ind_inf ind_gt20hrs_wk_inf ind_paid ind_gt20hrs_wk_paid ///
 any_paid_by_sp any_paid_by_gov ///
 any_paid_by_medicaid any_paid_by_medicare any_paid_by_state 
-
-local paidvars any_paid_by_sp any_paid_by_gov ///
-any_paid_by_medicaid any_paid_by_medicare any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 ///
-any_paid_by_gov_cat_3 any_paid_by_gov_cat_91 any_paid_by_gov_cat_unknown any_paid_by_unk 
+replace any_paid_by_unk=1 if (any_paid_by_sp+any_paid_by_ins+any_paid_by_oth ///
++any_paid_by_gov==0) & ind_paid==1
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_unk 
 keep spid any_paid*
+
 duplicates drop 
 tempfile paid
 save `paid'
@@ -4871,7 +4876,7 @@ forvalues i=1/6 {
 	by spid: egen ``i''_help_ind=max(``i'')
 	label var ``i''_help "Has ``i'' helper"
 	gen ``i''hrs=op_hrsmth_i if ``i''==1
-	by spid: egen tot_``i''hrs=total(``i''hrs)
+	by spid: egen tot_``i''hrs=total(``i''hrs) if ``i''_help_ind==1
 	label var tot_``i''hrs "Hours of help/month from ``i'' sources"
 	local ihelp `ihelp' ``i''_help_ind
 	local chelp `chelp' tot_``i''hrs
@@ -4946,7 +4951,7 @@ fall_last_month prob_dementia dem_2_cat adl_diff_ind adl_independent iadl_diff_i
 adl1 adl2 adl3 iadl1 iadl2 iadl3 adl_eat_help adl_bath_help adl_toil_help ///
 adl_dres_help adl_ins_help adl_bed_help iadl_laun_help ///
 iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
- reg_doc_seen sr_hosp_ind `paidvars'
+ reg_doc_seen sr_hosp_ind ind_paid_helper `paidvars'
 
 
 gen missingany=0
@@ -4992,7 +4997,9 @@ sum `cvars`i'' `ivars`i'' if homebound<3
 log close
 
 
-
+foreach x of varlist *_help_ind {
+	replace `x'=0 if n_helpers==0
+}
  forvalues i=1/3 {
 di "Homebound"
  sum `cvars`i'' if homebound==1,d
