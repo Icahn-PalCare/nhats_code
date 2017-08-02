@@ -3752,6 +3752,139 @@ quit;
 proc contents data=proj_int.utilization_post; 
 run;
 
+H="get function-related indicators"
+/*based on Chrischilles 2016, appendix*/
+
+
+proc sql;
+create table dm_meet as select * from
+proj_int.index a 
+left join 
+medi.dm_09_14 b 
+on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
+quit;
+
+proc sql;
+create table pb_meet as select * from
+proj_int.index a 
+left join 
+medi.pb_09_14 b 
+on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
+quit;
+
+data dm_pb_meet;
+set dm_meet pb_meet;
+run;
+
+
+/*get FRIs*/
+
+data dm1;
+set dm_pb_meet;
+cane1=0;
+walker1=0;
+commode1=0;
+beadpan1=0;
+urinal1=0;
+tub_toil_dev1=0;
+lift1=0;
+bed1=0;
+chair1=0;
+oxygen1=0;
+array list hcpcscd1-hcpcscd13;
+do over list;
+
+if list in("E0100","E0105")
+ then cane1=1;
+if list in("E0130","E0135","E0140","E0141","E0143","E0144","E0147","E0148","E0149",
+				"E0153","E0154","E0155","E0156","E0157","E0158","E0159")
+ then walker1=1;
+if list in("E0163","E0165","E0167","E0168","E0170","E0171","E0172","E0175")
+ then commode1=1;
+if list in("E0275","E0276")
+ then bedpan1=1;
+if list in("E02325","E0326")
+ then urinal1=1;
+if list in("E0240","E0241","E0242","E0243","E0244","E0245","E0246","E0247","E0248")
+ then tub_toil_dev1=1;
+if list in("E0621","E0625","E0627","E0628","E0629","E0630","E0635","E0636","E0637",
+				"E0638","E0639","E0640","E0642","E0700","E0705","E0710")
+ then lift1=1;
+if list in("E0250","E0251","E0255","E0256","E0260","E0261","E0265","E0266","E0270",
+				"E0271","E0272","E0273","E0274","E0277","E0280","E0290","E0291","E0292",
+				"E0293","E0294","E0295","E0296","E0297","E0301","E0302","E0303","E0304"
+				"E0305","E0310","E0315","E0316","E0370","E0371","E0372","E0373")
+ then bed1=1;
+if list in("E1031","E1035","E1038","E1039","E1050","E1060","E1070","E1083","E1084",
+				"E1085","E1086","E1087","E1088","E1089","E1090","E1092","E1093","E1100",
+				"E1110","E1130","E1140","E1150","E1160","E1161","E1170","E1171","E1172",
+				"E1180","E1190","E1195","E1200","E1220","E1221","E1222","E1223","E1224",
+				"E1230","E1240","E1250","E1260","E1270","E1280","E1285","E1290","E1295",
+				"E1296","E1297","E1298","E0950","E0951","E0952","E0955","E0956","E0957",
+				"E0958","E0959","E0960","E0961","E0966","E0967","E0970","E0971","E0973",
+				"E0974","E0978","E0980","E0981","E0982","E0983","E0984","E0985","E0986",
+				"E0990","E0992","E0994","E0995","E1002","E1003","E1004","E1005","E1006",
+				"E1007","E1008","E1009","E1010","E1015","E1016","E1017","E1018","E1020",
+				"E1028","E1029","E1030","E1225","E1226","E1227","E1228","E2201","E2202",
+				"E2203","E2204","E2205","E2206","E2207","E2208","E2209","E2210","E2211",
+				"E2212","E2213","E2214","E2215","E2216","E2217","E2218","E2219","E2220",
+				"E2221","E2222","E2223","E2224","E2225","E2226","E2300","E2301","E2310",
+				"E2311","E2321","E2322","E2323","E2324","E2325","E2326","E2327","E2328",
+				"E2329","E2330","E2331","E2340","E2341","E2342","E2343","E2351","E2360",
+				"E2361","E2362","E2363","E2364","E2365","E2366","E2367","E2368","E2369",
+				"E2370","E2371","E2372","E2373","E2374","E2375","E2376","E2377","E2381",
+				"E2382","E2383","E2384","E2385","E2386","E2387","E2388","E2389","E2390",
+				"E2391","E2392","E2393","E2394","E2395","E2396","E2399","E2402","E2601",
+				"E2602","E2603","E2604","E2605","E2606","E2607","E2608","E2609","E2610",
+				"E2611","E2612","E2613","E2614","E2615","E2616","E2617","E2618","E2619",
+				"E2620","E2621")
+ then chair1=1;
+if list in("E0424","E0425","E0430","E0431","E0434","E0435","E0439","E0440","E0441",
+				"E0442","E0443","E0444","E1390","E1391","E1392","E1399","E1405","E1406")
+ then oxygen1=1;
+end;
+run;
+
+proc sql;
+create table dm2 as select distinct bene_id, index_year,
+sum(cane1) as n_cane,
+sum(walker1) as n_w,
+sum(commode1) as n_com,
+sum(bedpan1) as n_bp,
+sum(urinal1) as n_ur,
+sum(tub_toil_dev1) as n_ttd,
+sum(lift1) as n_lift,
+sum(bed1) as n_bed,
+sum(chair1) as n_wc,
+sum(oxygen1) as n_oxy
+from dm1 group by bene_id, index_year;
+quit;
+
+proc sql; 
+create table dm3 as select * from
+proj_int.index a
+left join 
+dm2 b
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit;
+
+
+data proj_int.fri(keep=bene_id index_year cane walker commode bedpan urinal tub_toil_dev lift bed chair oxygen);
+set dm3;
+cane=n_cane>=1;
+walker=n_w>1;
+commode=n_com>=1;
+urinal=n_ur>=1;
+bedpan=n_bp>=1;
+tub_toil_dev=n_ttd>=1;
+lift=n_lift>=1;
+bed=n_bed>=1;
+chair=n_wc>=1;
+oxy=n_oxy>=1;
+run;
+
+
+
 H="combine with interviews into one dataset"
 data proj_int.index;
 set proj_int.index;
@@ -3793,7 +3926,10 @@ proj_int.utilization_post i
 on a.bene_id=i.bene_id and a.index_year=i.index_year
 left join 
 proj_int.mc_costs_all j
-on a.bene_id=j.bene_id and a.index_year=j.index_year;
+on a.bene_id=j.bene_id and a.index_year=j.index_year
+left join
+proj_int.fri k
+on a.bene_id=k.bene_id and a.index_year=k.index_year;
 quit;
 
 proc sql;
@@ -3817,6 +3953,8 @@ as well as the additional criteria for serious illness
 2 sets of criteria are used:
 Criteria A: Either serious medical illness or ADL impairment
 Criteria B: Critera A + either nursing home resident or hospitalization*/
+
+option nofmterr;
 
 data proj_int.serious_ill_int_dataset1;
 set proj_int.serious_ill_int_dataset;
@@ -4888,6 +5026,203 @@ log close
 
 
 H="Char/outcomes Prevalence, wave 1"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+use serious_ill_nhats_sample, clear
+keep if ffs_12m==1
+cap drop _m
+/*
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_a.dta", keepus(ivw_meet_crit_a)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_b.dta", keepus(ivw_meet_crit_b)
+drop if _m==2
+drop _m
+merge m:1 spid ivw_year using "E:\nhats\data\projects\serious_ill\int_data\incident_c.dta", keepus(ivw_meet_crit_c)
+drop if _m==2
+drop _m
+*/
+
+sort spid ivw_date
+by spid: egen ivw_meet_a = min(ivw_date) if criteria_a==1
+by spid: egen ivw_meet_b = min(ivw_date) if criteria_b==1
+by spid: egen ivw_meet_c = min(ivw_date) if criteria_c==1
+
+format ivw_meet_a %td
+format ivw_meet_b %td
+format ivw_meet_c %td
+
+
+
+sort spid wave
+by spid (wave): carryforward aveincome, replace
+
+gen incident_a = criteria_a
+*replace incident_a = 1 if ivw_meet_a==ivw_date
+gen incident_b = criteria_b
+*replace incident_b = 1 if ivw_meet_b==ivw_date
+gen incident_c = criteria_c
+*replace incident_c = 1 if ivw_meet_c==ivw_date
+drop if wave==4
+preserve
+keep if wave==1
+*egen max_wave = max(wave), by(spid)
+*drop if criteria_a==0 & wave!=max_wave
+label var educ_hs_ind "High school"
+gen incident_group=incident_a
+replace incident_group=2 if incident_b==1
+replace incident_group=3 if incident_c==1
+rename criteria_all incident_all
+*rename criteria_none incident_none
+gen incident_none = 0
+replace incident_none = 1 if criteria_a==0
+gen cgroupa=incident_a
+gen cgroupb=incident_b
+gen cgroupc=incident_c
+label var incident_a "Incident Criteria A"
+label var incident_b "Incident Criteria B"
+label var incident_c "Incident Criteria C" 
+gen ind=1
+drop if !incident_a & !incident_b & !incident_c & !incident_none
+local cvars1 age
+local cvars2 aveincome
+local ivars1 female white black hisp other_race married educ_hs_ind
+local ivars2 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent smi_dem_ind smi_cancer_ind ///
+smi_esrd_ind smi_chf_ind smi_copd_ind smi_diab_compl_ind smi_liver_ind ///
+/*smi_hiv_ind smi_als_ind*/ smi_hip_ind ser_med_illness el_ge3_comorb_1yr nhres ///
+incident_a incident_b incident_c
+local ioutcomes ind_hosp_adm_p12m mult_ip_adm_p12m ind_ed_op_p12m  ///
+ind_icu_p12m ind_hs_p12m died_12
+
+local coutcomes ip_paid_by_mc_12m snf_paid_by_mc_12m hh_paid_by_mc_12m ///
+ hs_paid_by_mc_12m pb_paid_by_mc_12m op_paid_by_mc_12m ///
+ dm_paid_by_mc_12m tot_paid_by_mc_12m n_hospd_p12m
+gen missingany=0
+foreach i in 0 1 {
+di "SP ivw=`i'"
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' {
+/* qui */ sum ind if missing(`x') & sp_ivw==`i'
+if r(N)>0 {
+di "`x'"
+di r(N)
+}
+/* qui */ replace missingany=1 if `x'==.
+}
+}
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' n `coutcomes' `ioutcomes'
+foreach i in 0 1 {
+di "SP ivw=`i'"
+local r=1
+local c=1
+mat miss=J(`rn',3,.)
+
+foreach x in `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' {
+qui sum `x' if sp_ivw==`i'
+mat miss[`r',1]=r(mean)
+mat miss[`r',2]=r(N)
+qui sum ind if missing(`x') & sp_ivw==`i'
+mat miss[`r',3]=r(N)
+local r=`r'+1
+}
+qui sum ind if sp_ivw==`i'
+mat miss[`r',1]=r(N)
+
+mat rownames miss=`cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `ioutcomes' N
+
+frmttable, statmat(miss) varlabels title("Missing values") ///
+ctitles( "Variable" "mean" "N" "N missing") sdec(2,0,0)
+tab missingany
+}
+*drop if missingany
+local r=1
+local c=1
+
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',5,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+foreach i in all none a b c {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			/* qui */ sum `x' if incident_`i'==1 
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","a","b","c") {
+				/* qui */ ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			/* qui */ sum `x' if incident_`i'==1
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+			/* qui */	tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		/* qui */ sum `x' if incident_`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","a","b","c") {
+		/* qui */	ttest `x' if incident_`i'==1 | incident_none==1, by(cgroup`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			/* qui */ sum `x' if incident_`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		/* qui */ sum `x' if incident_`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","a","b","c") {
+				/* qui */ tab `x' cgroup`i' if incident_`i'==1 | incident_none==1, chi2
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	/* qui */ sum ind if incident_`i'==1
+	mat tab1[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "Outcome Measures Over 1 Year" ///
+`rnames' `ioutcomes' N
+
+frmttable using `logpath'\sample_characteristics_xwave1.doc, replace statmat(tab1) ///
+ title("NHATS Wave 1 Serious Illness Criteria (Prevalence)") ///
+ ctitles("" "Full Sample" "None" "Crit A" "B" "C" ) ///
+ sdec(1) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05 difference between x and no criteria met groups, t-test or chi2" ///
+"Figures have been inflation adjusted to 2014 dollars")
+
+capture log close
 
 
 H="Char/outcomes Prevalence, wave 2"

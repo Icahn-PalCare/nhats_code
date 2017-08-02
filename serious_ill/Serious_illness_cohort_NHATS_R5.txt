@@ -3752,6 +3752,145 @@ quit;
 proc contents data=proj_int.utilization_post; 
 run;
 
+H="get function-related indicators"
+/*based on Chrischilles 2016, appendix*/
+
+
+proc sql;
+create table dm_meet as select * from
+proj_int.index a 
+left join 
+medi.dm_09_14 b 
+on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
+quit;
+
+proc sql;
+create table pb_meet as select * from
+proj_int.index a 
+left join 
+medi.pb_09_14 b 
+on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
+quit;
+
+data dm_pb_meet;
+set dm_meet pb_meet;
+run;
+
+
+/*get FRIs*/
+
+data dm1;
+set dm_pb_meet;
+cane1=0;
+walker1=0;
+commode1=0;
+beadpan1=0;
+urinal1=0;
+tub_toil_dev1=0;
+lift1=0;
+bed1=0;
+chair1=0;
+oxygen1=0;
+array list hcpcscd1-hcpcscd13;
+do over list;
+
+if list in("E0100","E0105")
+ then cane1=1;
+if list in("E0130","E0135","E0140","E0141","E0143","E0144","E0147","E0148","E0149",
+				"E0153","E0154","E0155","E0156","E0157","E0158","E0159")
+ then walker1=1;
+if list in("E0163","E0165","E0167","E0168","E0170","E0171","E0172","E0175")
+ then commode1=1;
+if list in("E0275","E0276")
+ then bedpan1=1;
+if list in("E02325","E0326")
+ then urinal1=1;
+if list in("E0240","E0241","E0242","E0243","E0244","E0245","E0246","E0247","E0248")
+ then tub_toil_dev1=1;
+if list in("E0621","E0625","E0627","E0628","E0629","E0630","E0635","E0636","E0637",
+				"E0638","E0639","E0640","E0642","E0700","E0705","E0710")
+ then lift1=1;
+if list in("E0250","E0251","E0255","E0256","E0260","E0261","E0265","E0266","E0270",
+				"E0271","E0272","E0273","E0274","E0277","E0280","E0290","E0291","E0292",
+				"E0293","E0294","E0295","E0296","E0297","E0301","E0302","E0303","E0304"
+				"E0305","E0310","E0315","E0316","E0370","E0371","E0372","E0373")
+ then bed1=1;
+if list in("E1031","E1035","E1038","E1039","E1050","E1060","E1070","E1083","E1084",
+				"E1085","E1086","E1087","E1088","E1089","E1090","E1092","E1093","E1100",
+				"E1110","E1130","E1140","E1150","E1160","E1161","E1170","E1171","E1172",
+				"E1180","E1190","E1195","E1200","E1220","E1221","E1222","E1223","E1224",
+				"E1230","E1240","E1250","E1260","E1270","E1280","E1285","E1290","E1295",
+				"E1296","E1297","E1298","E0950","E0951","E0952","E0955","E0956","E0957",
+				"E0958","E0959","E0960","E0961","E0966","E0967","E0970","E0971","E0973",
+				"E0974","E0978","E0980","E0981","E0982","E0983","E0984","E0985","E0986",
+				"E0990","E0992","E0994","E0995","E1002","E1003","E1004","E1005","E1006",
+				"E1007","E1008","E1009","E1010","E1015","E1016","E1017","E1018","E1020",
+				"E1028","E1029","E1030","E1225","E1226","E1227","E1228","E2201","E2202",
+				"E2203","E2204","E2205","E2206","E2207","E2208","E2209","E2210","E2211",
+				"E2212","E2213","E2214","E2215","E2216","E2217","E2218","E2219","E2220",
+				"E2221","E2222","E2223","E2224","E2225","E2226","E2300","E2301","E2310",
+				"E2311","E2321","E2322","E2323","E2324","E2325","E2326","E2327","E2328",
+				"E2329","E2330","E2331","E2340","E2341","E2342","E2343","E2351","E2360",
+				"E2361","E2362","E2363","E2364","E2365","E2366","E2367","E2368","E2369",
+				"E2370","E2371","E2372","E2373","E2374","E2375","E2376","E2377","E2381",
+				"E2382","E2383","E2384","E2385","E2386","E2387","E2388","E2389","E2390",
+				"E2391","E2392","E2393","E2394","E2395","E2396","E2399","E2402","E2601",
+				"E2602","E2603","E2604","E2605","E2606","E2607","E2608","E2609","E2610",
+				"E2611","E2612","E2613","E2614","E2615","E2616","E2617","E2618","E2619",
+				"E2620","E2621")
+ then chair1=1;
+if list in("E0424","E0425","E0430","E0431","E0434","E0435","E0439","E0440","E0441",
+				"E0442","E0443","E0444","E1390","E1391","E1392","E1399","E1405","E1406")
+ then oxygen1=1;
+end;
+run;
+
+proc sql;
+create table dm2 as select distinct bene_id, index_year,
+sum(cane1) as n_cane,
+sum(walker1) as n_w,
+sum(commode1) as n_com,
+sum(bedpan1) as n_bp,
+sum(urinal1) as n_ur,
+sum(tub_toil_dev1) as n_ttd,
+sum(lift1) as n_lift,
+sum(bed1) as n_bed,
+sum(chair1) as n_wc,
+sum(oxygen1) as n_oxy
+from dm1 group by bene_id, index_year;
+quit;
+
+proc sql; 
+create table dm3 as select * from
+proj_int.index a
+left join 
+dm2 b
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit;
+
+
+data proj_int.fri(keep=bene_id index_year cane walker commode bedpan urinal tub_toil_dev lift bed chair oxy);
+set dm3;
+cane=n_cane>=1;
+walker=n_w>1;
+commode=n_com>=1;
+urinal=n_ur>=1;
+bedpan=n_bp>=1;
+tub_toil_dev=n_ttd>=1;
+lift=n_lift>=1;
+bed=n_bed>=1;
+chair=n_wc>=1;
+oxy=n_oxy>=1;
+run;
+
+data pbtest;
+set pb_meet;
+if substr(hcpcscd1,1,2)="E0" then hc=hcpcscd1;
+run;
+proc freq;
+tables hc;
+run;
+
 H="combine with interviews into one dataset"
 data proj_int.index;
 set proj_int.index;
@@ -3793,7 +3932,10 @@ proj_int.utilization_post i
 on a.bene_id=i.bene_id and a.index_year=i.index_year
 left join 
 proj_int.mc_costs_all j
-on a.bene_id=j.bene_id and a.index_year=j.index_year;
+on a.bene_id=j.bene_id and a.index_year=j.index_year
+left join
+proj_int.fri k
+on a.bene_id=k.bene_id and a.index_year=k.index_year;
 quit;
 
 proc sql;
@@ -3817,6 +3959,8 @@ as well as the additional criteria for serious illness
 2 sets of criteria are used:
 Criteria A: Either serious medical illness or ADL impairment
 Criteria B: Critera A + either nursing home resident or hospitalization*/
+
+option nofmterr;
 
 data proj_int.serious_ill_int_dataset1;
 set proj_int.serious_ill_int_dataset;

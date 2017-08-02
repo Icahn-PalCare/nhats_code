@@ -408,7 +408,7 @@ run;
 %macro op_drop(days_bef_index=);
 data proj_int.op_meet_&days_bef_index.;
 set op_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
-PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt);
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt obs_stay);
 run;
 %mend op_drop;
 
@@ -629,9 +629,7 @@ pb_last_6m_dx;
 if diag~='.';
 run;
 
-proc sort data=dx_all_last_1yr_w_dups;
-by bene_id index_year diag;
-run;
+
 
 /*****************************************/
 /*check dementia diagnosis frequencies, need to pull this into main dataset
@@ -2906,11 +2904,17 @@ run;
 proc sort data=oxygen1 out=oxygen nodupkey;
 by bene_id index_year;
 run;
-proc contents data=medi.op_06_12; run;
+proc contents data=medi.op_09_14; run;
+
+proc contents data=proj_int.op_meet_183; run;
+/*added 7/27/17--Observation stays from OP file*/
 data ed_op_1;
-set proj_int.op_meet_183(keep=bene_id admit_date disch_date index_date index_year erdaycnt);
+set proj_int.op_meet_183(keep=bene_id admit_date disch_date index_date index_year erdaycnt obs_stay);
 if erdaycnt>0 then ed_op=1;
 if erdaycnt=0 then ed_op=0;
+if obs_stay=. then obs_stay=0;
+if obs_stay>1 then obs_stay=1;
+label obs_stay="Observation stay, 6m";
 run;
 
 /*added 7/7/17; pull indicator for ER OP visit that doesn't lead to admission*/
@@ -2964,12 +2968,13 @@ run;
 proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
 count(case when ed_op=1 then ed_op else . end)
-	as n_ed_op_visits_6m
+	as n_ed_op_visits_6m,
+max(obs_stay) as obs_stay
 	from ed_op_1 group by bene_id,index_year;
 quit;
 
 proc freq;
-table n_ed_op_visits_6m;
+table n_ed_op_visits_6m obs_stay;
 run;
 
 
@@ -5101,6 +5106,245 @@ run;
 proc export data=proj_int.serious_ill_int_dataset1
 outfile="E:\nhats\data\projects\pal_perf_scale\int_data\serious_ill_int_dataset1.dta" replace;
 run;
+
+H="HCC"
+libname hcc 'E:\nhats\data\Projects\pal_perf_scale\int_data\hcc';
+
+
+data persa(keep=bene_id dob orec);
+set medi.mbsf_06_14;
+if year=2011;
+dob=birth_date;
+orec=BENE_ENTLMT_RSN_ORIG;
+run;
+
+option nofmterr;
+
+data pers1 (keep=bene_id mcaid nemcaid sex);
+set proj_int.serious_ill_int_dataset;
+if bene_id~='' and wave=1;
+sex=female+1;
+mcaid=0<indexc(buyin_2y_r,"C","B","A")<=12;
+nemcaid=mcaid=1 and indexc(substr(buyin_2y_r,13,12),"C","B","A")=0;
+run;
+
+
+proc sql;
+create table person as select * from
+pers1 a 
+left join 
+persa b
+on a.bene_id=b.bene_id;
+quit;
+
+proc sort nodup data=person out=hcc.person;
+by bene_id;
+run;
+
+data diag(keep=bene_id diag);
+set proj_int.dx_0_1yr;
+if index_year=2011;
+run;
+
+proc sort nodup data=diag out=hcc.diag;
+by bene_id;
+run;
+
+
+
+
+
+ /*
+    The following is JCL if you are using an IBM-type mainframe:
+
+   //JOBCARD
+   //V1210F1P EXEC SAS9,REGION=8M,
+   // OPTIONS='ERRORS=0,NOCENTER,NEWS'
+   //WORK  DD SPACE=(CYL,(1000,2))
+   //WORK1   DD SPACE=(CYL,(2000,2))
+   //* user-defined the location of formats
+   //LIBRARY DD DISP=SHR,DSN=XXXX.XXXXXXX
+   //*user-defined the location of macros
+   //IN0 DD DISP=SHR,DSN=XXXX.XXXXXX
+   //*the location of person-level file
+   //IN1 DD DISP=SHR,DSN=XXXX.PERSON
+   //*the location of the diagnosis file
+   //IN2 DD DISP=SHR,DSN=XXXX.DIAG
+   //*the location of the file containing all coefficients
+   //INCOEF DD DISP=SHR,DSN=XXXX.HCCCOEFN
+   //*the output file containing person-level scores
+   //OUT DD DISP=(NEW,CATLG,KEEP),
+   //    DSN=XXX.V1210F1P.PERSON,
+   //    SPACE=(TRK,(20,10),RLSE)
+   //SYSIN  DD *
+
+   ******************************************************************
+  If you are using PC-SAS, you must specify the location of the files
+  on your PC in a libname/filename statement.
+ */
+  LIBNAME LIBRARY "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  FILENAME IN0 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  IN1 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  IN2 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  INCOEF "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  OUT "E:\nhats\data\Projects\pal_perf_scale\int_data\";
+ ***********************************************************************
+ *
+ *   DESCRIPTION:
+ *
+ * V1210F1P program creates seventy HCC variables (&CMSHCC) and four
+ * score variables for each person who is present in a person file
+ * supplied by a user.
+ * If a person has at least one diagnosis in DIAG file (supplied by a
+ * user) then HCC variables are created, otherwise HCCs are set to 0 .
+ * Score variables are created using coefficients from 4 final models:
+ * community, institutional, new enrollees, and SNP new enrollees.
+ *
+ * Assumptions about input files:
+ *   - both files are sorted by person ID
+ *
+ *   - person level file has the following variables:
+ *     :&IDVAR   - person ID variable (it is a macro parameter, HICNO
+ *                 for Medicare data)
+ *     :DOB      - date of birth
+ *     :SEX      - sex
+ *     :OREC     - original reason for entitlement
+ *     :MCAID    - Medicaid dummy variable (base year)
+ *     :NEMCAID  - Medicaid dummy variable for new enrollees (predicted
+ *                 year)
+ *
+ *   - diagnosis level file has the following vars:
+ *     :&IDVAR   - person ID variable (it is a macro parameter, HICNO
+ *                 for Medicare data)
+ *     :DIAG     - diagnosis
+ *
+ * The program supplies parameters to a main macro %V1210F1M that calls
+ * other external macros:
+ *
+ *      %AGESEXNV  - create age/sex, originally disabled, disabled vars
+ *      %EDITICD9  - perform edits to diagnosis
+ *      %V12H70M   - assign one ICD9 to multiple CCs
+ *      %V12H70L   - assign labels to HCCs
+ *      %V12H70H   - set HCC=0 according to hierarchies
+ *      %SCOREVAR  - calculate a score variable
+ *
+ *
+ * Program steps:
+ *         step1: include external macros
+ *         step2: define internal macro variables
+ *         step3: merge person and diagnosis files outputting one
+ *                record per person for each input person level record
+ *         step3.1: declaration section
+ *         step3.2: bring regression coefficients
+ *         step3.3: merge person and diagnosis file
+ *         step3.4: for the first record for a person set CC to 0
+ *                  and calculate age
+ *         step3.5: if there are any diagnoses for a person
+ *                  then do the following:
+ *                   - create CC using format $I12101Y09Y10YC
+ *                   - perform ICD9 edits using macro EDITICD9
+ *                   - create additional CC using V12H70M macro
+ *         step3.6: for the last record for a person do the
+ *                  following:
+ *                   - create demographic variables needed
+ *                     for regressions (macro AGESEXNV)
+ *                   - create HCC using hierarchies (macro V12H70H)
+ *                   - create HCC interaction variables
+ *                   - create HCC and DISABL interaction variables
+ *                   - set HCCs and interaction vars to zero if there
+ *                     are no diagnoses for a person
+ *                   - create score for community model
+ *                   - create score for institutional model
+ *                   - create score for new enrollee model
+ *                   - create score for SNP new enrollee model
+ *                   - normalize score if needed
+ *         step4: data checks and proc contents
+ *
+ *   USER CUSTOMIZATION:
+ * A user must supply 2 files with the variables described above and
+ * set the following parameters:
+ *      INP      - SAS input person dataset
+ *      IND      - SAS input diagnosis dataset
+ *      OUTDATA  - SAS output dataset
+ *      IDVAR    - name of person id variable (HICNO for medicare data)
+ *      KEEPVAR  - variables to keep in the output dataset
+ *      SEDITS   - a switch that controls whether to perform edits on 
+ *                 ICD9. 1-YES, 0-NO
+ *      DATE_ASOF- reference date to calculate age. Set to February 1 of 
+ *                 the payment year for consistency with CMS. 
+ *                 The default value in the code below is 1FEB2010.
+ *      FMNAME   - format name (set to I12101Y09Y10YC by default)
+ *      DF       - normalization factor (set to 1 by default)
+ ***********************************************************************;
+
+ %LET INPUTVARS=%STR(DOB MCAID NEMCAID OREC);
+
+ %*demographic variables;
+ %LET DEMVARS  =%STR(AGEF ORIGDS DISABL
+                     F0_34  F35_44 F45_54 F55_59 F60_64 F65_69
+                     F70_74 F75_79 F80_84 F85_89 F90_94 F95_GT
+                     M0_34  M35_44 M45_54 M55_59 M60_64 M65_69
+                     M70_74 M75_79 M80_84 M85_89 M90_94 M95_GT
+                     NEF0_34  NEF35_44 NEF45_54 NEF55_59 NEF60_64
+                     NEF65    NEF66    NEF67    NEF68    NEF69
+                     NEF70_74 NEF75_79 NEF80_84 NEF85_89 NEF90_94
+                     NEF95_GT
+                     NEM0_34  NEM35_44 NEM45_54 NEM55_59 NEM60_64
+                     NEM65    NEM66    NEM67    NEM68    NEM69
+                     NEM70_74 NEM75_79 NEM80_84 NEM85_89 NEM90_94
+                     NEM95_GT);
+
+ %*list of HCCs included in models;
+ %LET CMSHCC = %STR(
+      HCC1      HCC2      HCC5     HCC7       HCC8
+      HCC9      HCC10     HCC15    HCC16      HCC17
+      HCC18     HCC19     HCC21    HCC25      HCC26
+      HCC27     HCC31     HCC32    HCC33      HCC37
+      HCC38     HCC44     HCC45    HCC51      HCC52
+      HCC54     HCC55     HCC67    HCC68      HCC69
+      HCC70     HCC71     HCC72    HCC73      HCC74
+      HCC75     HCC77     HCC78    HCC79      HCC80
+      HCC81     HCC82     HCC83    HCC92      HCC95
+      HCC96     HCC100    HCC101   HCC104     HCC105
+      HCC107    HCC108    HCC111   HCC112     HCC119
+      HCC130    HCC131    HCC132   HCC148     HCC149
+      HCC150    HCC154    HCC155   HCC157     HCC158
+      HCC161    HCC177    HCC164   HCC174     HCC176);
+
+ %*list of CCs that correspond to model HCCs;
+ %LET CMSCC = %STR(
+      CC1       CC2       CC5      CC7        CC8
+      CC9       CC10      CC15     CC16       CC17
+      CC18      CC19      CC21     CC25       CC26
+      CC27      CC31      CC32     CC33       CC37
+      CC38      CC44      CC45     CC51       CC52
+      CC54      CC55      CC67     CC68       CC69
+      CC70      CC71      CC72     CC73       CC74
+      CC75      CC77      CC78     CC79       CC80
+      CC81      CC82      CC83     CC92       CC95
+      CC96      CC100     CC101    CC104      CC105
+      CC107     CC108     CC111    CC112      CC119
+      CC130     CC131     CC132    CC148      CC149
+      CC150     CC154     CC155    CC157      CC158
+      CC161     CC177     CC164    CC174      CC176);
+
+ %LET SCOREVARS=%STR(SCORE_COMMUNITY
+                     SCORE_INSTITUTIONAL
+                     SCORE_NEW_ENROLLEE
+                     SCORE_SNP_NEW_ENROLLEE);
+
+ %* include main macro;
+ %INCLUDE IN0(V1210F1M)/SOURCE2;
+
+  %V1210F1M(INP      =IN1.PERSON,
+            IND      =IN2.DIAG,
+            OUTDATA  =OUT.PERSONout,
+            IDVAR    =bene_id,
+            KEEPVAR  =bene_id &SCOREVARS,
+            SEDITS   =1,
+            DATE_ASOF="1FEB2010"D);
+
+proc export data=out.personout outfile="E:\nhats\data\Projects\pal_perf_scale\int_data\personout.dta" replace; run;
 
 H="dataset cleaning and sample derivation"
 clear all 
@@ -9186,8 +9430,11 @@ the payment categories have been altered so that we've got just two groups--
 		of 60/70
 */
 
-/*Update 7/24/17--
-update because had cancer/non-cancers flipped*/
+/*Update 7/27/17--
+update to include obs stays and latest utilization changes from AAHPM
+
+now utilization is ed or obs or ip stay for moderate and 1 ip stay and 1 other for
+severe*/
 
 /*payment category from apm
 
@@ -9203,23 +9450,25 @@ not currrently used--frail cg or remote location
 */
 
 replace smi_count=0 if missing(smi_count)
-
+gen utilization=ind_hosp_adm_6m==1 | ed_op==1 | obs_stay==1
+gen function=pps<=60 | (pps<=70 & smi_cancer_ind==1) | adl_impair==1 | ///
+oxygen==1 | bed_or_chair==1
 gen payment_cat=0 if pps>=80
-replace payment_cat=1 if (pps<=70 | ///
-bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
-(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
-replace payment_cat=1 if (smi_cancer_ind==1) & (pps<=60 | ///
-bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
-(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+replace payment_cat=1 if (pps<=60 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & criteria_smi==1 & (n_ip_admit_6m>=1 | ///
+obs_stay==1 | ed_op_wout_adm_ind==1)
+replace payment_cat=1 if (smi_cancer_ind==1) & (pps<=70 | ///
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & criteria_smi==1 & (n_ip_admit_6m>=1 | ///
+obs_stay==1 | ed_op_wout_adm_ind==1)
 replace payment_cat=2 if smi_cancer_ind==1 & (pps<=60 | ///
-bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
-(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & criteria_smi==1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & (obs_stay==1 | ed_op_wout_adm_ind==1)))
 replace payment_cat=2 if (smi_cancer_ind==0) & (pps<=50 | ///
-bed_or_chair==1 | oxygen==1 | adl_impair==1) & smi_count>=1 & (n_ip_admit_6m>=2 | ///
-(ind_hosp_adm_6m & ed_op_wout_adm_ind==1))
+bed_or_chair==1 | oxygen==1 | adl_impair==1) & criteria_smi==1 & (n_ip_admit_6m>=2 | ///
+(ind_hosp_adm_6m & (obs_stay==1 | ed_op_wout_adm_ind==1)))
 replace payment_cat=1 if payment_cat==2 & smi_dem_ind==1 & smi_count==1 
-replace payment_cat=0 if n_ip_admit_6m==0 | (n_ip_admit_6m==1 & ed_op_wout==0)
-replace payment_cat=0 if smi_count==0
+*replace payment_cat=0 if n_ip_admit_6m==0 | (n_ip_admit_6m==1 & ed_op_wout==0)
+replace payment_cat=0 if criteria_smi==0 | missing(payment_cat)
 
 gen old_payment_cat=0 if pps>=80
 replace old_payment_cat=1 if pps==80 & ind_indication==1
@@ -9535,7 +9784,7 @@ sum `cvars1' `cvars2' `ivars1' `ivars2' `ioutcomes' `coutcomes' `pps' `ind_indic
 local cvars age aveincome
 local ivars female white black hisp other_race married educ_hs_ind proxy ///
 medicaid medigap srh_fp adl_independent /*iadl_independent*/ `pps' `ind_indication' ///
-`dmouth' `smi'
+`dmouth' `smi' ind_hosp_adm_6m obs_stay ed_op_wout_adm_ind
 local ipps pps100 pps90 pps80 ///
 pps70 pps60 pps50 pps40 pps30 
 local cout tot_paid_by_mc_12m n_hospd_p12m
@@ -9543,7 +9792,7 @@ local iout ind_hosp_adm_p12m died_12
 
 
 local rn : word count `cvars' `ivars' `ipps' `cout' `iout' 1 1 1 1 1
-
+label var obs_stay "Indicator of  any observation stay 6m pre interview"
 label var age "Age at interview, mean"
 label var aveincome "Income, mean"
 label var tot_paid_by_mc_12m "Total paid by MC 12m post interview, mean"
@@ -9684,5 +9933,417 @@ note("NHATS 2011 Sample w/ 6+ months FFS pre interview, community dwelling (not 
 "* -not shown for cell size restriction") ///
 landscape basefont(fs10)
 log close
+
+
+
+
+H="sensspec with hcc"
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+use "E:\nhats\data\CMS_DUA_28016\Merged Stata\dm_09_12.dta", clear
+keep bene_id admit_date disch_date hcpcs_cd betos
+gen wave=1
+merge m:1 bene_id wave using ///
+ "E:\nhats\data\Projects\pal_perf_scale\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match) keepusing(spid index_date)
+keep if inrange(admit_date,index_date-186,index_date)
+
+gen wc_betosa=betos=="D1D"
+gen bed_betosa=betos=="D1B"
+
+gen ind_wheelchaira=inlist(hcpcs_cd, "E1088","E1090","E1093","E1140","E1150","E1161") ///
+ | inlist(hcpcs_cd,"E1220","E1226","E1230","E1232") ///
+ | inlist(hcpcs_cd, "E1240","E1260","E1270","E2201","E2203") | inlist(hcpcs_cd,"E2206","E2208","E2209","E2210","E2226") ///
+ | inlist(hcpcs_cd, "E2310","E2321","E2323","E2340","E2361") | inlist(hcpcs_cd,"E2363","E2364","E2365","E2366","E2367") ///
+ | inlist(hcpcs_cd, "E2368","E2370","E2374","E2375","E2381") | inlist(hcpcs_cd,"E2382","E2383","E2386","E2387","E2389") ///
+ | inlist(hcpcs_cd, "E2392","E2394","E2395","E2601","E2602") | inlist(hcpcs_cd,"E2603","E2604","E2605","E2607","E2608") ///
+ | inlist(hcpcs_cd, "E2611","E2615","E2619","E2620","E2622") | inlist(hcpcs_cd,"E2623","E2624","K0001","K0002","K0003") ///
+ | inlist(hcpcs_cd, "K0004","K0005","K0006","K0007","K0009") | inlist(hcpcs_cd,"K0010","K0011","K0012","K0014","K0015") ///
+ | inlist(hcpcs_cd,"K0017","K0019","K0040","K0045","K0046") | inlist(hcpcs_cd,"K0047","K0053","K0056","K0069","K0070") ///
+ | inlist(hcpcs_cd, "K0071","K0077","K0108","K0195","K0733") | inlist(hcpcs_cd,"K0734","K0735","K0736","K0800","K0806") ///
+ | inlist(hcpcs_cd, "K0808","K0813","K0814","K0815","K0816") | inlist(hcpcs_cd,"K0821","K0822","K0823","K0824","K0825") ///
+ | inlist(hcpcs_cd, "K0835","K0842","K0843","K0848","K0849") | inlist(hcpcs_cd,"K0856","K0861","K0877")																											
+
+gen ind_hosp_beda=inlist(hcpcs_cd,"E0250","E0255","E0256") | inlist(hcpcs_cd,"E0260","E0261","E0265","E0271","E0272","E0274","E0277") ///
+ | inlist(hcpcs_cd,"E0293","E0294","E0295","E0303","E0305") | inlist(hcpcs_cd,"E0310","E0316","E0860","E0870","E0910") ///
+ | inlist(hcpcs_cd,"E0912","E0940","E0946","E0948","E0943") | inlist(hcpcs_cd,"K0456","K0549")																																																																																																												
+
+keep spid bene_id index_date ind_* *_betosa
+duplicates drop
+
+foreach x of varlist *a {
+	by spid, sort: egen `x'1=max(`x')
+	drop `x'
+}
+
+rename *a1 *
+duplicates drop
+
+tempfile dme
+save `dme'
+
+
+use "`datapath'\serious_ill_nhats_sample.dta"
+merge 1:1 spid index_date using `dme', gen(dmem) keep(match master)
+replace ind_wheelchair=0 if missing(ind_whe)
+replace ind_hosp_bed=0 if missing(ind_hosp_bed)
+replace oxygen=0 if missing(oxygen)
+gen bed_or_chair=ind_wheelchair | ind_hosp_bed
+
+cd `logpath'
+//note, this is temporary, we should pull all into main xwave set
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File.dta", ///
+nogen keep(match master)
+gen pain=ss1painbothr==1
+gen pain_limit=ss1painlim==1
+gen weightloss=hw1lst10pnds==1 & hw1trytolose==2 
+gen dem_probable=dem_3_cat==1
+/*pulling, for all Dartmouth conditions, as well as criteria A, B, C:
+ -for all and those with 6m HH/SNF use or NH res
+ -N
+ -1yr outcomes: spending, mortality, hospitalization
+ -screens: SRH, ADLs, weight loss, pain, probable dementia
+ -same 1yr outcomes
+*/
+
+sum tot_paid_by_mc_12m,d
+gen ind_top10=tot_paid_by_mc_12m>=r(p90) if !missing(tot_paid_by_mc_12m)
+label var ind_top10 "Top 10% of MC costs"
+
+local d1 "Cancer"
+local d2 "COPD"
+local d3 "CAD"
+local d4 "CHF"
+local d5 "PVD"
+local d6 "Liver"
+local d7 "Diabetes"
+local d8 "Renal"
+local d9 "Dementia"
+local d10 "3cond"
+*local d11 "2cond"
+*local d12 "3cond"
+foreach x of varlist dmouth_* {
+replace `x'=0 if missing(`x')
+}
+gen dmouth_10_0_6m=dmouth_index_0_6m>=3
+gen dmouth_11_0_6m=dmouth_index_0_6m>=2
+gen dmouth_12_0_6m=dmouth_index_0_6m>=3
+gen prob_func_diff=ind_hh_6m ==1 | ind_snf_6m==1 | nhres==1
+
+
+label var weightloss "Unintentional weight loss"
+label var pain "Pain reported"
+label var pain_limit "Pain limits activities"
+label var dem_probable "Probable dementia"
+label var ind_hh_6m "Any Home health expenditures previous 6m"
+label var ind_snf_6m "Any SNF stay previous 6m"
+label var prob_func "HH/SNF use 6m prior or NH resident"
+label var tot_paid_by_mc_12m "Total MC expenditures 12m post, mean(SD)"
+label var died_12 "Died 12m post ivw"
+label var dmouth_10_0 "3+ Chronic Conditions, Dartmouth"
+*label var dmouth_11_0 "2+ Chronic Conditions, Dartmouth"
+*label var dmouth_12_0 "3+ Chronic Conditions, Dartmouth"
+label var adl_impair "ADL impairment at interview"
+gen ind_hh_snf=ind_hh_6m==1 | ind_snf_6m==1
+label var ind_hh_snf "HH/SNF use 6m prior to ivw"
+
+local coutcomes tot_paid_by_mc_12m 
+local ioutcomes ind_top10 died_12 ind_hosp_adm_p12m
+local firstlev ind_hh_6m ind_snf_6m ind_hh_snf  nhres
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable
+local criteria criteria_a criteria_b criteria_c
+
+gen screener=0
+foreach x in `nextlev' {
+	replace screener=1 if `x'==1
+}
+local nextlev  adl_impair srh_fp weightloss pain pain_limit ///
+dem_probable screener hh_snf_screen
+
+gen hh_snf_screen=ind_hh_snf==1 & screener==1
+label var hh_snf_screen "HH or SNF and screen"
+
+
+foreach x in `firstlev' `nextlev' {
+	replace `x'=0 if missing(`x') & nhres==1
+}
+
+label var screener "Any of ADL/PF SRH/weightloss/prob dem/pain"
+local rn : word count `firstlev' `nextlev' `criteria' 1 `coutcomes' `ioutcomes' 1
+
+forvalues d=1/10 {
+preserve
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+
+foreach timethrough in 1 2 {
+mat tab1=J(`rn',6,.)
+local r=1
+local c=1
+foreach crit in criteria_all sp_ivw nhres {
+	sum dmouth_`d'_0_6m if `crit'==1
+	mat tab1[`r',`c']=r(mean)*r(N)
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
+ctitles("" "Full sample" "Criteria A" "Criteria B" ///
+ "Criteria C") varlabels substat(1) landscape ///
+ sdec(`sdec') replace note(`note') title(`title')
+keep if ind_hosp_adm_6m==1
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+}
+restore
+
+local hosp
+local note
+local title : var label dmouth_`d'_0_6m
+foreach group in sp_ivw nhres {
+local groupname "Community dwelling"
+if "`group'"=="nhres" local groupname "NH Residents"
+preserve
+keep if `group'==1
+
+foreach timethrough in 1 2 {
+mat tab1=J(`rn',8,.)
+
+local r=1
+local c=1
+
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
+	sum dmouth_`d'_0_6m if `crit'==1
+	mat tab1[`r',`c']=r(mean)*r(N)
+	mat tab1[`r',`c'+1]=r(mean)*100
+	local r=`r'+1
+	foreach x in `firstlev' `nextlev' `criteria' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+	local r=`r'+1
+	foreach x in `coutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)
+		mat tab1[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
+		mat tab1[`r',`c']=r(mean)*r(N)
+		mat tab1[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+2
+}
+
+
+mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
+`coutcomes' `ioutcomes'
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+di "`sdec'"
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
+ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels substat(1) landscape ///
+ sdec(`sdec') addtable note(`note') title("`title' `groupname'")
+keep if ind_hosp_adm_6m==1
+/*local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+*/
+
+mat tab=J(9,4,.)
+local r=2
+local c=1
+
+foreach x in `ioutcomes' {
+foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
+	tab `x' dmouth_`d'_0_6m if `crit'==1, matcell(cell)
+	mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
+	mat tab[`r'+1,`c']=(cell[2,1]/(cell[2,1]+cell[1,1]))*100
+	local c=`c'+1
+}
+	local r=`r'+3
+	local c=1
+}
+
+
+frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab) ///
+ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels landscape ///
+ sdec(2) addtable note(`note') title("`title' `groupname'") ///
+ rtitles("Top 10% spending"\"	Sensitivity"\"	Specificity"\ ///
+"Death within 1 year"\"	Sensitivity"\"	Specificity"\ ///
+"Hospitalization within 1 year"\"	Sensitivity"\"	Specificity" )
+
+local hosp "_hosp"
+local note "Restricted to those with hospitalization 6m pre-ivw"
+
+}	
+	
+restore
+}
+}
+
+
+gen group1=dmouth_index>=1 & ind_hosp_adm_6m if !missing(dmouth_index)
+gen group2=group1==1 & (ind_hh_snf==1 | bed_or_chair==1 | oxygen==1)
+gen group3=smi_count>=1 & ind_hosp_adm_6m if !missing(smi_count)
+gen group4=group3==1 & (ind_hh_snf==1 | bed_or_chair==1 | oxygen==1)
+gen group5=smi_count>=1 & adl_impair==1 if !missing(smi_count)
+gen group6=group5==1 & group3==1
+egen screener_2=rowtotal(`nextlev')
+replace screener_2=screener_2>2 & !missing(screener_2)
+local out ind_top10 ind_hosp_adm_p12m died_12 screener_2
+
+/*
+local rn : word count `coutcomes' `ioutcomes'
+
+mat tab=J(`rn',12,.)
+local r=1
+local c=1
+forvalues i=1/6 {
+	foreach x in `coutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r',`c'+1]=r(sd)
+		local r=`r'+1
+}
+	foreach x in `ioutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)*r(N)
+		mat tab[`r',`c'+1]=r(mean)*100
+		local r=`r'+1
+}
+local r=1
+local c=`c'+2
+}
+
+
+local sdec "0\2"
+forvalues i=1/`=`rn'-1' {
+	local sdec "`sdec'\0\2"
+}
+
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) substat(1) ///
+sdec(`sdec') title("Outcomes") ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" ///
+"SMI & hosp" "SMI, hosp, HH/SNF/DME" "SMI & ADL" "SMI, hosp, & ADL") replace ///
+rtitles("Mean Spending"\"	SD"\"Top 10% Spending"\"	%" ///
+"Died within 1 year"\"	 %"\"Hospitalization within 1 year"\"	%")
+*/
+local xvars ind_top10 died_12 ind_hosp_adm_p12m screener_2 adl_impair
+local rn : word count `xvars' `coutcomes'
+
+mat tab=J(`rn'*3,6,.)
+local r=2
+local c=1
+
+forvalues i=1/6 {
+	foreach x in `coutcomes' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'+1,`c']=r(sd)
+		local r=`r'+3
+}
+
+	foreach x in `xvars' {
+		sum `x' if group`i'==1
+		mat tab[`r',`c']=r(mean)*100
+		sum group`i' if `x'==1
+		mat tab[`r'+1,`c']=r(mean)*100
+		local r=`r'+3
+}	
+	local r=2
+	local c=`c'+1
+}
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
+varlabels replace sdec(2) title("Inclusion and Identification") ///
+ rtitles("Medicare Expenditures"\ "Mean"\"SD"\"Top 10% spending" \"    %"\ "    % identified by criteria"\ ///
+ "Death within 1 year" \"    %"\ "    % identified by criteria"\ ///
+ "Hospitalization within 1 year" \"    %"\ "    % identified by criteria"\ ///
+ "2+ on screener"\"    %"\ "    % identified by criteria"\ ///
+ "ADL impairment"\"    %"\ "    % identified by criteria") ///
+ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
+"SMI & ADL" "SMI, hosp, & ADL")
+
+local rn : word count `out'
+mat tab=J(`rn'*4+2,6,.)
+local r=2
+local c=1
+
+foreach x in `out' {
+	forvalues i=1/6 {
+		tab group`i' `x', matcell(cell)
+		mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
+		mat tab[`r'+1,`c']=(cell[1,1]/(cell[2,1]+cell[1,1]))*100
+		roctab `x' group`i'
+		mat tab[`r'+2,`c']=r(area)
+		sum group`i' if group`i'==1 [aw=anfin]
+		mat tab[`r'+3,`c']=r(N)
+		mat tab[`r'+4,`c']=r(sum)		
+		local c=`c'+1
+}
+	local r=`r'+4
+
+	local c=1
+}
+
+
+
+frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
+varlabels addtable sdec(2) title("Sensitivity and Specificity") ///
+ rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "Death within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
+ "2+ on screener"\"	Sensitivity"\"	Specificity"\"	ROC AUC" \"N" \"Nat'l Estimate") ///
+ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
+"SMI & ADL" "SMI, hosp, & ADL")
+
+
 
 

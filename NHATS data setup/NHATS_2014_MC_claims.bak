@@ -232,7 +232,7 @@ set cumu.outpatient_base_claims_j_09_14;
 run;
 
 data op_rev;
-set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt);
+set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt rev_cntr);
 run;
 
 proc sort data=op_rev;
@@ -244,11 +244,18 @@ by bene_id clm_id;
 var rev_cntr_dt;
 run;
 
+proc transpose data=op_rev out=op_rev_wide2 prefix=rev_cntr;
+by bene_id clm_id;
+var rev_cntr;
+run;
+
 proc sql;
 create table merged.op_09_14 as select *
 from op_09_14 a 
 left join op_rev_wide1 b
-on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join op_rev_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
 quit;
 
 /*pb*/
@@ -311,6 +318,15 @@ if betos_cd='D1C' then home_oxygen=1;
 if betos_cd~='D1C' then home_oxygen=0;
 run;
 
+proc sort data=cumu.dme_line_j_09_14 out=dme_line_j_09_14;
+by bene_id clm_id;
+run;
+
+proc transpose data=dme_line_j_09_14 out=dm_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
 proc sql;
 create table line as 
 select distinct bene_id, clm_id,
@@ -324,7 +340,10 @@ create table merged.dm_09_14 as select *
 from dm_base a 
 left join 
 line b
-on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join 
+dm_line_wide1 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
 quit;
 
 
@@ -381,7 +400,7 @@ set &final_data._&cnt_var.;
 run;
 %mend;
 /*put 0000 if extra rev center not needed? need to fix at some point*/
-%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 200, rev_num2 = 209, rev_num3=0000, cnt_var = icarecnt, final_data = ip_06_12);
-%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 210, rev_num2 = 219, rev_num3=0000, cnt_var = crnrydaycnt, final_data = ip_06_12);
-%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3=981, cnt_var = ERdaycnt, final_data = ip_06_12);
-%day_cnt(sortfile = Outpatient_rev_center_j_09_12, datafile = outpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3 = 981, cnt_var = ERdaycnt, final_data = op_06_12);
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 200, rev_num2 = 209, rev_num3=0000, cnt_var = icarecnt, final_data = ip_06_14);
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 210, rev_num2 = 219, rev_num3=0000, cnt_var = crnrydaycnt, final_data = ip_06_14);
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_12, datafile = inpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3=981, cnt_var = ERdaycnt, final_data = ip_06_14);
+%day_cnt(sortfile = Outpatient_rev_center_j_09_12, datafile = outpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3 = 981, cnt_var = ERdaycnt, final_data = op_09_14);
