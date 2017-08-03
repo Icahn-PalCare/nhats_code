@@ -1,0 +1,216 @@
+
+clear all 
+set more off
+capture log close
+
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\Caregivers\logs"
+
+log using "`logpath'\EOL_utilization_CGs.txt", text replace
+
+use "`datapath'\pps_sample.dta" if !nhres & died_12
+
+svyset [pw=anfin]
+
+gen mult_hosp_adm_p12m=n_ip_admit_p12m>=2 & !missing(n_ip_admit_p12m)
+gen ind_ed_p12m=ind_ed_adm_p12m==1 | ind_ed_op_p12m==1
+
+local byvars ind_hs_p12m ind_hosp_adm_p12m mult_hosp_adm_p12m ind_icu_p12m ///
+ind_ed_p12m 
+
+gen ind_help_any=n_helpers>=1
+label var mult_hosp "Multiple hospital admissions, p12m"
+label var ind_ed_p12m "Any ED use, p12m"
+label var ind_help_any "Any helpers"
+gen n=1
+/*
+foreach x of local byvars {
+	svy: tab `x'
+}
+
+foreach x of local byvars {
+	local lab : var label `x'
+	di "`lab'"
+	sum ind_help_any ind_paid_helper n_helpers n_paid_helpers if `x'==0
+	sum ind_help_any ind_paid_helper n_helpers n_paid_helpers if `x'==1
+}
+
+foreach x of local byvars {
+	local lab : var label `x'
+	di "`lab'"
+	foreach y in ind_help_any ind_paid_helper {
+		svy: tab `x' `y', row col 
+}
+	foreach y in n_helpers n_paid_helpers {
+		svy: reg `y' `x' 
+}
+}
+*/
+//table
+
+
+
+local rn : word count `byvars' n
+
+mat tab=J(`rn',3,.)
+local r=1
+local c=1
+
+foreach x in `byvars' n {
+	sum `x' 
+	mat tab[`r',1]=r(mean)*r(N)
+	sum `x' [aw=anfinw]
+	mat tab[`r',2]=r(sum)
+	mat tab[`r',3]=r(mean)*100
+	local r=`r'+1
+}
+
+label var n "Full Sample"
+label var ind_hs_p12m "Any hospice use 12m post ivw"
+label var ind_icu_p12m "Any ICU use 12m post ivw"
+
+mat rownames tab=`byvars' n
+
+frmttable using "`logpath'\EOL_utilization.rtf", replace statmat(tab) ctitles("" "N Yes" "Estimate Yes" "% Yes") ///
+title("EOL Utilization") note("Restricted to wave 1 SPs with 6m FFS who die within 12m" ///
+"All utilization measures are post-interview") ///
+sdec(0,0,2) varlabels 
+
+local rn : word count `byvars'
+
+mat tab=J(`rn',24,.)
+mat stars=J(`rn',24,0)
+local r=1
+local c=1
+
+
+foreach x of local byvars {
+	foreach y in ind_help_any ind_paid_helper {
+		foreach i in 0 1 {
+			sum `y' if `x'==`i' [aw=anfin]
+			mat tab[`r',`c']=r(mean)*100
+			local c=`c'+3
+}
+		svy: tab `x' `y'
+		mat tab[`r',`c'-1]=e(p_Pear)
+		mat stars[`r',`c'-1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+
+}
+	foreach y in n_helpers n_paid_helpers {
+		foreach i in 0 1 {
+			sum `y' if `x'==`i' [aw=anfin]
+			mat tab[`r',`c']=r(mean)
+			mat tab[`r',`c'+1]=r(sd)
+			local c=`c'+3
+}
+			svy: reg `y' `x'
+			test
+			mat tab[`r',`c'-1]=r(p)
+			mat stars[`r',`c'-1]=(r(p)<.05)+(r(p)<.01)
+}
+	/*foreach i in 0 1 {
+		sum n if `x'==`i'
+		mat tab[`r',`c']=r(mean)*r(N)
+		sum n if `x'==`i' [aw=anfin]
+		mat tab[`r',`c'+1]=r(sum)
+		local c=`c'+3
+}*/
+	local c=1
+	local r=`r'+1
+
+}
+
+mat rownames tab=`byvars'
+
+frmttable using "`logpath'\EOL_utilization.rtf", addtable statmat(tab) title("Helpers, by EOL utilization") ///
+note("All utilization measures are post-interview") ///
+ctitles("" "Any helpers" "" "Any paid helpers" "" "# helpers" "" ///
+ "# paid helpers"  "" /*"N (estimate)"*/\ "" "No" "Yes" "No" "Yes" "No"  "Yes" "No" "Yes" ///
+ /*"No" "Yes"*/) ///
+sdec(2) substat(2) annotate(stars) asymbol(*,**) varlabels
+
+	
+merge 1:m spid using "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", keep(match)
+svyset [pw=cgfin]
+
+foreach x of varlist gain_* {
+	local gain `gain' `x'
+}
+
+foreach x of varlist neg_* {
+	local neg `neg' `x'
+}
+
+sum total_hours [aw=cgfin],d
+gen top_quartile_hours=total_hours>=r(p75)
+label var top_quartile_hours "Top quartile hours helping"
+
+local cg top_quartile_hours cg_srh_pf `gain' `neg' cg_phq2_depressed
+
+sum `cg'
+
+foreach x of local byvars {
+	local lab : var label `x'
+	di "`lab'"
+	foreach y of local cg {
+		svy: tab `x' `y', row col
+}
+}
+ //tables
+ 
+ local rn : word count `byvars' `cg' n
+
+mat tab=J(`rn',3,.)
+local r=1
+local c=1
+
+foreach x in `byvars' `cg' n {
+	sum `x' 
+	mat tab[`r',1]=r(mean)*r(N)
+	sum `x' [aw=cgfinw]
+	mat tab[`r',2]=r(sum)
+	mat tab[`r',3]=r(mean)*100
+	local r=`r'+1
+}
+
+label var n "Full Sample"
+label var ind_hs_p12m "Any hospice use 12m post ivw"
+label var ind_icu_p12m "Any ICU use 12m post ivw"
+
+mat rownames tab= `byvars' `cg' n
+
+frmttable using "`logpath'\EOL_utilization.rtf", addtable statmat(tab) ctitles("" "N Yes" "Estimate Yes" "% Yes") ///
+title("EOL Utilization") note("Wave 1 NSOC EOL CGs whose SP has 6m FFS") ///
+sdec(0,0,2) varlabels
+
+ local rn : word count `cg' 
+
+mat tab=J(`rn',15,.)
+mat stars=J(`rn',15,0)
+local r=1
+local c=1
+foreach y of local cg {
+	foreach x of local byvars {
+		foreach i in 0 1 {
+			sum `y' if `x'==`i' [aw=cgfin]
+			mat tab[`r',`c']=r(mean)*100
+			local c=`c'+1
+}
+		svy: tab `x' `y'
+		mat tab[`r',`c']=e(p_Pear)
+		mat stars[`r',`c']=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+		local c=`c'+1
+}
+	local c=1
+	local r=`r'+1
+}
+
+mat rownames tab=`cg'
+
+frmttable using "`logpath'\EOL_utilization.rtf", addtable statmat(tab) ctitles("" "" "Hospice" "" "" "Any Adm" "" "" "Mult Adm" ///
+"" "" "ICU" "" "" "ED" "" \ "" "No" "Yes" "P" "No" "Yes" "P" "No" "Yes" "P" ///
+"No" "Yes" "P") ///
+sdec(2) varlabels
+	
+
+log close

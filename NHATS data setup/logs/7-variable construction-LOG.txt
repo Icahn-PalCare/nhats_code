@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\7-variable construction-LOG.txt
   log type:  text
- opened on:  13 Jul 2017, 11:19:20
+ opened on:   2 Aug 2017, 14:45:14
 
 . 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
@@ -35,8 +35,7 @@ E:\nhats\data\NHATS working data
 
 . 
 . //7/13/17--add in metro/nonmetro var
-. use "E:\nhats\data\NHATS Public\NHATS_Round_1_4_MetNonmet_STATA\NHATS_Round_1_4_MetN
-> onmet.dta", clear
+. use "E:\nhats\data\NHATS Public\NHATS_Round_1_4_MetNonmet_STATA\NHATS_Round_1_4_MetNonmet.dta", clear
 
 . forvalues i=1/4 {
   2. gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
@@ -62,7 +61,7 @@ xij variables:
 . tempfile metro
 
 . save `metro'
-file C:\Users\bollee01\AppData\Local\Temp\5\ST_06000001.tmp saved
+file C:\Users\bollee01\AppData\Local\Temp\5\ST_04000001.tmp saved
 
 . 
 . 
@@ -6164,9 +6163,8 @@ metro_ind already numeric; no replace
 (53 real changes made)
 (54 real changes made)
 
-. label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" 4 "
-> Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" 8 "Home vi
-> sit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
+. label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" 8 "Home visit" 9 "
+> Other" 0 "Did not See Doctor" 10 "Refused/DK"
 
 . label values howgetdoc howgetdoc
 
@@ -6455,8 +6453,7 @@ smokedever:  (25,945 real changes made)
 . label var height_in "Current height, inches"
 
 . 
-. //get the per round weight, cluster, and strata vars (and why is moved created like 
-> that?)
+. //get the per round weight, cluster, and strata vars (and why is moved created like that?)
 . gen moved=.
 (34,190 missing values generated)
 
@@ -6497,15 +6494,13 @@ smokedever:  (25,945 real changes made)
 . 
 . gen community_dwelling = 0
 
-. replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2
-> dresid == 2 | r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+. replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
 (22,345 real changes made)
 
 . gen SP_completed = 0
 
-. replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid
->  == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 
-> 1 | r4dresid == 2 | r4dresid == 4
+. replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dr
+> esid == 2 | r4dresid == 4
 (22,586 real changes made)
 
 . 
@@ -6564,8 +6559,7 @@ smokedever:  (25,945 real changes made)
 
 . label var res_care "Residential Care, incl. NH"
 
-. label define sp_status 1 "Non-res care community" 2 "Res-care not NH" 3 "NH resident
-> " ///
+. label define sp_status 1 "Non-res care community" 2 "Res-care not NH" 3 "NH resident" ///
 > 4 "Deceased"
 
 . label values sp_status sp_status
@@ -6701,8 +6695,7 @@ smokedever:  (25,945 real changes made)
 (3,321 real changes made, 305 to missing)
 (3,800 real changes made, 203 to missing)
 
-. *gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_help+a
-> dl_bed_help
+. *gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_help+adl_bed_help
 . replace adl_index=. if adl_index<0
 (0 real changes made)
 
@@ -6712,8 +6705,7 @@ smokedever:  (25,945 real changes made)
 . gen adl_impair=adl_index>0 if adl_index!=.
 (2,989 missing values generated)
 
-. gen iadl_index=iadl_laun_help+iadl_shop_help+iadl_bank_help+iadl_meal_help+iadl_meds
-> _help
+. gen iadl_index=iadl_laun_help+iadl_shop_help+iadl_bank_help+iadl_meal_help+iadl_meds_help
 (4,160 missing values generated)
 
 . replace iadl_index=. if iadl_index<0
@@ -6827,40 +6819,76 @@ smokedever:  (25,945 real changes made)
 > replace died_12=inlist(r`=`i'+1'status,62,86) if wave==`i' & r`=`i'+1'status!=79
 > }
 > forvalues i=1/2 {
-> replace died_24=inlist(r`=`i'+2'status,62,86) if wave==`i' & !inlist(r`=`i'+2'status
-> ,79,.)
+> replace died_24=inlist(r`=`i'+2'status,62,86) if wave==`i' & !inlist(r`=`i'+2'status,79,.)
 > }
 > replace died_24=1 if died_12==1
 > 
 > foreach i in 12 24 {
 > label var died_`i' "SP died w/in `i' months, per future wave status"
-> }
-> //look at death month & year. don't have, so set date to last of month
-> gen dd=.
-> replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
-> gen death_day=. 
-> forvalues i=2/4 {
->         foreach j in mth yr {
->                 replace pd`i'`j'died=. if pd`i'`j'<0
-> }
->         replace death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
->         replace death_day=30 if inlist(pd`i'm,4,6,9,11)
->         replace death_day=28 if inlist(pd`i'm,2)
->         replace dd=mdy(pd`i'mthdied,death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'y
-> rdied!=.
-> }
-> 
-> by spid, sort: egen death_date=max(dd)
-> label var death_date "SP death date, from tracker (day imputed)"
-> format death_date %td
-> gen death_month=month(death_date)
-> gen death_year=year(death_date)
-> foreach x in month year {
-> label var death_date "SP death `x', from tracker"
-> }
-> 
-> drop dd
-> */
+> }*/
+. 
+. //update 8/2/17--pulled in nhats dod to share off server
+. 
+. //look at death month & year. don't have, so set date to last of month
+. gen dd=.
+(34,190 missing values generated)
+
+. replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+(998 real changes made)
+
+. gen nhats_death_day=. 
+(34,190 missing values generated)
+
+. forvalues i=2/4 {
+  2.         foreach j in mth yr {
+  3.                 replace pd`i'`j'died=. if pd`i'`j'<0
+  4. }
+  5.         replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+  6.         replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
+  7.         replace nhats_death_day=28 if inlist(pd`i'm,2)
+  8.         replace dd=mdy(pd`i'mthdied,nhats_death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
+  9. }
+(0 real changes made)
+(0 real changes made)
+(532 real changes made)
+(348 real changes made)
+(94 real changes made)
+(974 real changes made)
+(0 real changes made)
+(0 real changes made)
+(888 real changes made)
+(486 real changes made)
+(129 real changes made)
+(1,503 real changes made)
+(0 real changes made)
+(0 real changes made)
+(1,020 real changes made)
+(484 real changes made)
+(84 real changes made)
+(1,580 real changes made)
+
+. 
+. by spid, sort: egen nhats_death_date=max(dd)
+(30133 missing values generated)
+
+. label var nhats_death_date "SP death date, from tracker (day imputed)"
+
+. format nhats_death_date %td
+
+. gen nhats_death_month=month(nhats_death_date)
+(30,133 missing values generated)
+
+. gen nhats_death_year=year(nhats_death_date)
+(30,133 missing values generated)
+
+. foreach x in month year {
+  2. label var nhats_death_date "SP death `x', from tracker"
+  3. }
+
+. 
+. drop dd
+
+. 
 . gen eligible_nsoc=fl1dnsoc==1
 
 . gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
@@ -6982,11 +7010,34 @@ educ_hs_ind:  (20047 real changes made)
 
 . saveold "E:\nhats\data\NHATS cleaned\sp_round_1_5", replace
 (saving in Stata 13 format)
-(FYI, saveold has options version(12) and version(11) that write files in older
-      Stata formats)
+(FYI, saveold has options version(12) and version(11) that write files in older Stata formats)
 file E:\nhats\data\NHATS cleaned\sp_round_1_5.dta saved
+
+. 
+. drop death_* died_12 died_24
+
+. 
+. gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
+(30,427 missing values generated)
+
+. 
+. foreach x in 12 24 {
+  2.         gen nhats_died_`x'=time2d<=`x' if !lml
+  3. }
+(1,726 missing values generated)
+(1,726 missing values generated)
+
+. 
+. drop time2d
+
+. 
+. save "E:\nhats\data\NHATS cleaned\sp_round_1_5_public_sens_only.dta", replace
+(note: file E:\nhats\data\NHATS cleaned\sp_round_1_5_public_sens_only.dta not found)
+file E:\nhats\data\NHATS cleaned\sp_round_1_5_public_sens_only.dta saved
 
 . 
 end of do-file
 
-. exit, clear
+. do "C:\Users\bollee01\AppData\Local\Temp\5\STD04000000.tmp"
+
+. capture log close
