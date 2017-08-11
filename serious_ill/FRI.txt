@@ -176,6 +176,20 @@ foreach x  in cancer dem esrd chf copd diab_compl liver {
 	local smi `smi' smi_`x'_ind
 }
 
+
+gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+label var prob_dem "Probable dementia"
+label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat homebound_cat
+tab homebound, gen(hb)
+forvalues i=1/4 {
+	local lab: label homebound_cat `i'
+	label var hb`i' "`lab'"
+}
+
+
+label var educ_hs_ind "Education: HS +"
+
 keep if !missing(adl_index)
 gen adl_2=adl_index>=2 if !missing(adl_index)
 gen adl_3=adl_index>=3 if !missing(adl_index)
@@ -183,7 +197,7 @@ label var adl_2 "Dependent in 2+ ADLs"
 label var adl_3 "Dependent in 3+ ADLs"
 local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
 female white black hisp other_race married educ_hs_ind proxy ///
-medicaid medigap srh_fp adl_impair adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
 `dmouth' `smi' ind_hosp_adm_12m
 local ipps pps100 pps90 pps80 ///
 pps70 pps60 pps50 pps40 pps30 
@@ -303,10 +317,90 @@ local replace addtable
 
 }
 
-/*
-frmttable using "`logpath'function.rtf", statmat(tabdemonly) ctitles("" "Full Sample" ///
-"Non-ADL dependent" "ADL dependents" "P-value") title("SR and claims-based function") ///
-substat(1) annotate(starsdemonly) asymbol(*,**) sdec(`sdec') varlabels ///
-note("NHATS wave 1 interviews, restricted to those with 12m FFS Medicare and probable dementia") ///
-addtable
-*/
+local vars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white black hisp other_race married educ_hs_ind ///
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 ///
+sr_cancer_ever
+
+foreach x in sr_cancer_ever prob_dem married female educ_hs_ind {
+	gen no_`x'=`x'==0 if !missing(`x')
+}
+label var no_sr_c "No cancer"
+label var no_prob "Not demented"
+label var no_marr "Not married"
+label var no_fem "Male"
+label var no_edu "Education: <HS"
+
+local vars n sr_cancer_ever no_sr_cancer_ever prob_dem no_prob_dem ///
+inccat1 inccat2 inccat3 inccat4 hb1 hb2 hb3 hb4 ///
+white black hisp other_race age_lt75 age_lt85 age_85 married no_married ///
+female no_female educ_hs_ind no_educ_hs_ind
+label var n "Full Sample"
+local group bed_or_chair ind_fri oxy ind_snf_or_hh_12m fri_hh_snf_oxy
+
+label var fri_hh_snf_oxy "Any HH/SNF/FRI/Oxy"
+label var ind_snf_or_hh_12m "Any HH/SNF"
+
+
+
+local rn: word count `vars' 
+
+local cn : word count `group' 
+
+mat tab=J(`rn',`cn',.)
+mat stars=J(`rn',`cn',0) 
+local r=1
+local c=1
+
+foreach x of local vars {
+	foreach g of local group {
+		roctab adl_impair `g' if `x'==1
+		mat tab[`r',`c']=r(area)
+		local c=`c'+1
+}
+	local c=1
+	local r=`r'+1
+}
+
+
+
+mat rownames tab=`vars'
+mat colnames tab=`group'
+
+frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
+title ("C-Statistics, stratified by characteristics") addtable
+
+
+local rn: word count `vars' 
+
+local cn : word count `group' `group'
+
+mat tab=J(`rn',`cn',.)
+mat stars=J(`rn',`cn',0) 
+local r=1
+local c=1
+
+foreach x of local vars {
+	foreach g of local group {
+		logit adl_impair `g' if `x'==1, or
+		mat beta=e(b)
+		mat tab[`r',`c']=exp(beta[1,1])
+		mat p=r(table)
+		scalar p=p[4,1]
+		mat tab[`r',`c'+1]=p
+		mat stars[`r',`c'+1]=(p<.05)+(p<.01)
+		local c=`c'+2
+}
+	local c=1
+	local r=`r'+1
+}
+
+foreach x of local group {
+	local colnames `colnames' `x' P 
+}
+
+mat rownames tab=`vars'
+mat colnames tab=`colnames'
+
+frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
+title ("Bivariate Odds Ratios, stratified by characteristics") substat(1) addtable

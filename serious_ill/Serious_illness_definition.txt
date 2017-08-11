@@ -9990,6 +9990,9 @@ save `dme'
 
 use "`datapath'\serious_ill_nhats_sample.dta"
 merge 1:1 spid index_date using `dme', gen(dmem) keep(match master)
+merge 1:1 bene_id using "E:\nhats\data\Projects\pal_perf_scale\int_data\personout", ///
+keep(match master)
+
 replace ind_wheelchair=0 if missing(ind_whe)
 replace ind_hosp_bed=0 if missing(ind_hosp_bed)
 replace oxygen=0 if missing(oxygen)
@@ -10077,158 +10080,7 @@ foreach x in `firstlev' `nextlev' {
 label var screener "Any of ADL/PF SRH/weightloss/prob dem/pain"
 local rn : word count `firstlev' `nextlev' `criteria' 1 `coutcomes' `ioutcomes' 1
 
-forvalues d=1/10 {
-preserve
-local hosp
-local note
-local title : var label dmouth_`d'_0_6m
 
-foreach timethrough in 1 2 {
-mat tab1=J(`rn',6,.)
-local r=1
-local c=1
-foreach crit in criteria_all sp_ivw nhres {
-	sum dmouth_`d'_0_6m if `crit'==1
-	mat tab1[`r',`c']=r(mean)*r(N)
-	mat tab1[`r',`c'+1]=r(mean)*100
-	local r=`r'+1
-	foreach x in `firstlev' `nextlev' `criteria' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-	local r=`r'+1
-	foreach x in `coutcomes' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)
-		mat tab1[`r',`c'+1]=r(sd)
-		local r=`r'+1
-}
-	foreach x in `ioutcomes' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-
-	local r=1
-	local c=`c'+2
-}
-
-
-mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
-`coutcomes' `ioutcomes'
-
-
-local sdec "0\2"
-forvalues i=1/`=`rn'-1' {
-	local sdec "`sdec'\0\2"
-}
-di "`sdec'"
-frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
-ctitles("" "Full sample" "Criteria A" "Criteria B" ///
- "Criteria C") varlabels substat(1) landscape ///
- sdec(`sdec') replace note(`note') title(`title')
-keep if ind_hosp_adm_6m==1
-local hosp "_hosp"
-local note "Restricted to those with hospitalization 6m pre-ivw"
-}
-restore
-
-local hosp
-local note
-local title : var label dmouth_`d'_0_6m
-foreach group in sp_ivw nhres {
-local groupname "Community dwelling"
-if "`group'"=="nhres" local groupname "NH Residents"
-preserve
-keep if `group'==1
-
-foreach timethrough in 1 2 {
-mat tab1=J(`rn',8,.)
-
-local r=1
-local c=1
-
-foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
-	sum dmouth_`d'_0_6m if `crit'==1
-	mat tab1[`r',`c']=r(mean)*r(N)
-	mat tab1[`r',`c'+1]=r(mean)*100
-	local r=`r'+1
-	foreach x in `firstlev' `nextlev' `criteria' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-	local r=`r'+1
-	foreach x in `coutcomes' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)
-		mat tab1[`r',`c'+1]=r(sd)
-		local r=`r'+1
-}
-	foreach x in `ioutcomes' {
-		sum `x' if dmouth_`d'_0_6m==1 & `crit'==1
-		mat tab1[`r',`c']=r(mean)*r(N)
-		mat tab1[`r',`c'+1]=r(mean)*100
-		local r=`r'+1
-}
-
-	local r=1
-	local c=`c'+2
-}
-
-
-mat rownames tab1="`d`d''_yes" `firstlev' `nextlev' `criteria' "Outcomes" ///
-`coutcomes' `ioutcomes'
-
-
-local sdec "0\2"
-forvalues i=1/`=`rn'-1' {
-	local sdec "`sdec'\0\2"
-}
-di "`sdec'"
-frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab1) ///
-ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels substat(1) landscape ///
- sdec(`sdec') addtable note(`note') title("`title' `groupname'")
-keep if ind_hosp_adm_6m==1
-/*local hosp "_hosp"
-local note "Restricted to those with hospitalization 6m pre-ivw"
-*/
-
-mat tab=J(9,4,.)
-local r=2
-local c=1
-
-foreach x in `ioutcomes' {
-foreach crit in criteria_all ind_hh_snf screener hh_snf_screen {
-	tab `x' dmouth_`d'_0_6m if `crit'==1, matcell(cell)
-	mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
-	mat tab[`r'+1,`c']=(cell[2,1]/(cell[2,1]+cell[1,1]))*100
-	local c=`c'+1
-}
-	local r=`r'+3
-	local c=1
-}
-
-
-frmttable using condition_tables_`d`d''`hosp'.rtf, statmat(tab) ///
-ctitles("" "" "Full sample" "HH/SNF" "Screener" "Both") varlabels landscape ///
- sdec(2) addtable note(`note') title("`title' `groupname'") ///
- rtitles("Top 10% spending"\"	Sensitivity"\"	Specificity"\ ///
-"Death within 1 year"\"	Sensitivity"\"	Specificity"\ ///
-"Hospitalization within 1 year"\"	Sensitivity"\"	Specificity" )
-
-local hosp "_hosp"
-local note "Restricted to those with hospitalization 6m pre-ivw"
-
-}	
-	
-restore
-}
-}
 
 
 gen group1=dmouth_index>=1 & ind_hosp_adm_6m if !missing(dmouth_index)
@@ -10276,14 +10128,18 @@ sdec(`sdec') title("Outcomes") ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME"
 rtitles("Mean Spending"\"	SD"\"Top 10% Spending"\"	%" ///
 "Died within 1 year"\"	 %"\"Hospitalization within 1 year"\"	%")
 */
-local xvars ind_top10 died_12 ind_hosp_adm_p12m screener_2 adl_impair
+sum score_com,d
+gen hcc_top10=score_com>=r(p90) if !missing(score_com)
+local xvars ind_top10 hcc_top10 died_12 ind_hosp_adm_p12m screener_2 adl_impair
 local rn : word count `xvars' `coutcomes'
 
-mat tab=J(`rn'*3,6,.)
+gen group7=hcc_top10
+
+mat tab=J(`rn'*3,7,.)
 local r=2
 local c=1
 
-forvalues i=1/6 {
+forvalues i=1/7 {
 	foreach x in `coutcomes' {
 		sum `x' if group`i'==1
 		mat tab[`r',`c']=r(mean)
@@ -10303,32 +10159,45 @@ forvalues i=1/6 {
 }
 frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
 varlabels replace sdec(2) title("Inclusion and Identification") ///
- rtitles("Medicare Expenditures"\ "Mean"\"SD"\"Top 10% spending" \"    %"\ "    % identified by criteria"\ ///
+ rtitles("Medicare Expenditures"\ "Mean"\"SD"\"Top 10% spending" \"    %"\ ///
+ "    % identified by criteria"\ ///
+ "HCC Top 10%"\"    %"\ "    % identified by criteria"\ ///
  "Death within 1 year" \"    %"\ "    % identified by criteria"\ ///
  "Hospitalization within 1 year" \"    %"\ "    % identified by criteria"\ ///
  "2+ on screener"\"    %"\ "    % identified by criteria"\ ///
  "ADL impairment"\"    %"\ "    % identified by criteria") ///
 ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
-"SMI & ADL" "SMI, hosp, & ADL")
+"SMI & ADL" "SMI, hosp, & ADL" "HCC Top 10%") landscape
 
+label var group1 "Cond & hosp" 
+label var group2 "Cond, hosp, HH/SNF/DME"
+label var group3 "SMI & hosp" 
+label var group4 "SMI, hosp, HH/SNF/DME"
+label var group5 "SMI & ADL" 
+label var group6 "SMI, hosp, & ADL" 
+label var group7 "HCC Top 10%"
 local rn : word count `out'
-mat tab=J(`rn'*4+2,6,.)
+mat tab=J(`rn'*6+3,7,.)
 local r=2
 local c=1
 
 foreach x in `out' {
-	forvalues i=1/6 {
+	forvalues i=1/7 {
 		tab group`i' `x', matcell(cell)
 		mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
 		mat tab[`r'+1,`c']=(cell[1,1]/(cell[2,1]+cell[1,1]))*100
+		mat tab[`r'+2,`c']=(cell[2,2]/(cell[2,2]+cell[2,1]))*100
+		mat tab[`r'+3,`c']=(cell[1,1]/(cell[1,1]+cell[1,2]))*100
 		roctab `x' group`i'
-		mat tab[`r'+2,`c']=r(area)
+		mat tab[`r'+4,`c']=r(area)
 		sum group`i' if group`i'==1 [aw=anfin]
-		mat tab[`r'+3,`c']=r(N)
-		mat tab[`r'+4,`c']=r(sum)		
+		mat tab[`r'+5,`c']=r(N)
+		mat tab[`r'+6,`c']=r(sum)	
+		sum group`i'   [aw=anfin]
+		mat tab[`r'+7,`c']=r(mean)*100
 		local c=`c'+1
 }
-	local r=`r'+4
+	local r=`r'+6
 
 	local c=1
 }
@@ -10336,13 +10205,14 @@ foreach x in `out' {
 
 
 frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
-varlabels addtable sdec(2) title("Sensitivity and Specificity") ///
- rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "Death within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "2+ on screener"\"	Sensitivity"\"	Specificity"\"	ROC AUC" \"N" \"Nat'l Estimate") ///
+varlabels addtable sdec(2) title("Sensitivity and Specificity"\"     PPV"\"     NPV") ///
+ rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "Death within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "2+ on screener"\"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC" \ ///
+ "N" \"Nat'l Estimate"\"% of FFS Medicare") ///
 ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
-"SMI & ADL" "SMI, hosp, & ADL")
+"SMI & ADL" "SMI, hosp, & ADL" "HCC Top 10%") landscape
 
 
 
