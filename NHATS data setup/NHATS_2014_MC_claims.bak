@@ -232,7 +232,9 @@ set cumu.outpatient_base_claims_j_09_14;
 run;
 
 data op_rev;
-set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt rev_cntr);
+set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt);
+if rev_cntr='0762' then obs_stay1=1;
+if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
 run;
 
 proc sort data=op_rev;
@@ -244,13 +246,15 @@ by bene_id clm_id;
 var rev_cntr_dt;
 run;
 
-proc transpose data=op_rev out=op_rev_wide2 prefix=rev_cntr;
-by bene_id clm_id;
-var rev_cntr;
-run;
+proc sql;
+create table op_rev_wide2 as select distinct bene_id, clm_id, 
+sum(obs_stay1) as obs_stay,
+sum(poss_obs_stay1) as poss_obs_stay
+from op_rev group by bene_id, clm_id;
+quit;
 
 proc sql;
-create table merged.op_09_14 as select *
+create table op_09_142 as select *
 from op_09_14 a 
 left join op_rev_wide1 b
 on a.bene_id=b.bene_id and a.clm_id=b.clm_id
@@ -258,6 +262,15 @@ left join op_rev_wide2 c
 on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
 quit;
 
+data merged.op_09_14;
+set op_09_142;
+array list icd_prcdr_cd1-icd_prcdr_cd25;
+do over list;
+if list='G0378' and poss_obs_stay=1 then obs_stay=1;
+end;
+run;
+
+ 
 /*pb*/
 data pb_09_14;
 set cumu.bcarrier_claims_j_09_14;

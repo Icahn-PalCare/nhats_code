@@ -10177,7 +10177,7 @@ label var group5 "SMI & ADL"
 label var group6 "SMI, hosp, & ADL" 
 label var group7 "HCC Top 10%"
 local rn : word count `out'
-mat tab=J(`rn'*4+2,7,.)
+mat tab=J(`rn'*6+3,7,.)
 local r=2
 local c=1
 
@@ -10186,14 +10186,18 @@ foreach x in `out' {
 		tab group`i' `x', matcell(cell)
 		mat tab[`r',`c']=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
 		mat tab[`r'+1,`c']=(cell[1,1]/(cell[2,1]+cell[1,1]))*100
+		mat tab[`r'+2,`c']=(cell[2,2]/(cell[2,2]+cell[2,1]))*100
+		mat tab[`r'+3,`c']=(cell[1,1]/(cell[1,1]+cell[1,2]))*100
 		roctab `x' group`i'
-		mat tab[`r'+2,`c']=r(area)
+		mat tab[`r'+4,`c']=r(area)
 		sum group`i' if group`i'==1 [aw=anfin]
-		mat tab[`r'+3,`c']=r(N)
-		mat tab[`r'+4,`c']=r(sum)		
+		mat tab[`r'+5,`c']=r(N)
+		mat tab[`r'+6,`c']=r(sum)	
+		sum group`i'   [aw=anfin]
+		mat tab[`r'+7,`c']=r(mean)*100
 		local c=`c'+1
 }
-	local r=`r'+4
+	local r=`r'+6
 
 	local c=1
 }
@@ -10201,11 +10205,12 @@ foreach x in `out' {
 
 
 frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
-varlabels addtable sdec(2) title("Sensitivity and Specificity") ///
- rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "Death within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"	ROC AUC"\ ///
- "2+ on screener"\"	Sensitivity"\"	Specificity"\"	ROC AUC" \"N" \"Nat'l Estimate") ///
+varlabels addtable sdec(2) title("Sensitivity and Specificity"\"     PPV"\"     NPV") ///
+ rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "Death within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
+ "2+ on screener"\"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC" \ ///
+ "N" \"Nat'l Estimate"\"% of FFS Medicare") ///
 ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
 "SMI & ADL" "SMI, hosp, & ADL" "HCC Top 10%") landscape
 

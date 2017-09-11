@@ -1455,8 +1455,11 @@ local cond sr_cond_cat2 sr_cond_cat3
 local vars `age' `inc' female black hisp married educ_hs_ind  ///
 medicaid prob_dem `cond' adl_diff_ind srh_fp ind_helper_any ind_paid_helper metro_ind
 
-stcox `vars'
-
+svy: stcox `vars' //, nohr mgale(mg)
+stcoxkm. by(income_cat)
+stphplot, by(income_cat) adjust(`age'  female black hisp married educ_hs_ind  ///
+medicaid prob_dem `cond' adl_diff_ind srh_fp ind_helper_any ind_paid_helper metro_ind)
+stphplot, by(income_cat)
 qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
 gen timenh=firstnh
 replace timenh=lastwave if missing(firstnh)
@@ -1466,7 +1469,7 @@ graph save km_nh, replace
 graph export km_nh.pdf, replace
 
 
-stcox `vars'
+svy: stcox `vars'
 
 qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
 
@@ -1476,8 +1479,10 @@ sts graph, by(income_cat)
 graph save km_either, replace
 graph export km_either.pdf, replace
 
+local vars `age' `inc' female black hisp married educ_hs_ind  ///
+medicaid prob_dem `cond' adl_diff_ind srh_fp ind_helper_any ind_paid_helper metro_ind
 
-stcox `vars'
+svy: stcox `vars'
 
 qui outreg using homebound_income_cox_models, merge ctitles("" "HB or NH") varlabels or ///
 title(Cox proportional hazard models) stats(e_b p)

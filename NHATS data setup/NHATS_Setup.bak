@@ -97,7 +97,7 @@ local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  
 	mo* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
-	is`w'* ht`w'placedesc fl`w'* 
+	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn*
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
@@ -446,7 +446,9 @@ tab nonrel wave, missing
 local adl insd bed eat bath toil dres
 local iadl laun shop meal bank meds 
 local nonadl out money tkpl
-gen op5tkplhlp=op5tkplhlp1
+forvalues i=1/5 {
+	gen op`i'tkplhlp=op`i'tkplhlp1==1 | op`i'tkplhlp2==1
+}
 
 foreach x of local adl {
 	gen op_adl_`x'=0
@@ -1713,11 +1715,13 @@ tab fall_last_month wave, missing
 //if don't know, refused, or not done, set to missing
 tab sc1deathelp, missing
 rename sc*eatslfdif sc*eatdif
+rename sc*eatslfoft sc*eatoft
 capture program drop selfcare
 program define selfcare
 	args act
 	gen adl_`act'_diff=.
 	gen adl_`act'_help=.
+	gen adl_`act'_not_done=.
 	foreach w in 1 2 3 4 5{
 		replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
 		replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
@@ -1725,9 +1729,11 @@ program define selfcare
 		replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
 		replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
 		replace adl_`act'_diff=sc`w'`act'dif>1 if sc`w'`act'dif>0 & wave==`w'
+		replace adl_`act'_not_done=sc`w'`act'oft==5 if sc`w'`act'oft>0 & wave==`w'
 }
 	tab adl_`act'_help wave, missing
 	tab adl_`act'_help wave if ivw_type==1, missing
+	*replace adl_`act'_diff=1 if adl_`act'_help==1
 	
 end	
 	
@@ -1753,6 +1759,7 @@ program define hhact
 	
 	gen iadl_`act'_help=.
 	gen iadl_`act'_diff=.
+	gen iadl_`act'_not_done=.
 	foreach w in 1 2 3 4 5 {
 		replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
 			inlist(ha`w'd`act'reas,1,3) & wave==`w'
@@ -1763,9 +1770,11 @@ program define hhact
 		replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
 			inlist(ha`w'd`act'reas,-7,-8) & wave==`w'
 		replace iadl_`act'_diff=ha`w'`act'dif>1 if ha`w'`act'dif>0 & wave==`w'
+		replace iadl_`act'_not_done=ha`w'`act'oft==5 if ha`w'`act'oft>0
 	}	
 	tab iadl_`act'_help wave, missing
 	tab iadl_`act'_help wave if ivw_type==1, missing
+	*replace iadl_`act'_diff=1 if iadl_`act'_help==1
 	end
 	
 hhact laun
@@ -1784,7 +1793,8 @@ tab mc1dmedssfdf mc1dmedsreas if wave==1, missing
 tab mc2dmedssfdf mc2dmedsreas if wave==2, missing
 
 gen iadl_meds_help=.
-gen iadl_meds_dif=.
+gen iadl_meds_diff=.
+gen iadl_meds_not_done=.
 foreach w in 1 2 3 4 5{
 	replace iadl_meds_help=1 if inlist(mc`w'dmedssfdf,1,8) & ///
 		inlist(mc`w'dmedsreas,1,3) & wave==`w'
@@ -1795,13 +1805,14 @@ foreach w in 1 2 3 4 5{
 	replace iadl_meds_help=-8 if mc`w'dmedssfdf == 7 & wave==`w' 
 	replace iadl_meds_help=-8 if inlist(mc`w'dmedssfdf,1,8) & ///
 		inlist(mc`w'dmedsreas,-7,-8) & wave==`w'
-	replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0
+	replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0 & wave==`w'
+	replace iadl_meds_not_done=inlist(mc`w'dmedssfdf,1,8) if wave==`w'
 }	
 
 la var iadl_meds_help "Rec'd help taking medications last month"
 tab iadl_meds_help wave, missing
 tab iadl_meds_help wave if ivw_type==1, missing
-
+replace iadl_meds_diff=1 if iadl_meds_help==1
 //other meds questions, for treatment burden
 gen ind_meds_diff=.
 gen ind_meds_mistake=.
@@ -2244,18 +2255,27 @@ label values impvisit pa1impvstfam
 label values impclub pa1imparclub
 
 //smokin'
+gen smokedever=. 
+gen smoke_start_age=.
+gen smoke_stop_age=.
+forvalues i=1(4)5 {
+	replace smokedever=sd`i'smokedreg==1 if wave==`i' & sd`i'smokedreg>0
+	replace smoke_start_age=sd`i'agesrtsmk if wave==`i' & sd`i'agesrtsmk>0
+	replace smoke_stop_age=sd`i'agelstsmk if wave==`i' & sd`i'agelstsmk>0
+}
 
-gen smokedever=sd1smokedreg==1 if wave==1 & sd1smokedreg>0
 sort spid wave
-carryforward smokedever, replace
+by spid: carryforward smoke*, replace
 gen smokesnow=.
 by spid, sort: egen numcigsever=max(sd1numcigday)
 gen numcigsnow=.
+
 
 forvalues i=1/5 {
 	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
 	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
 }
+replace smokedever=1 if smokesnow==1
 replace smokesnow=0 if smokedever==0
 replace numcigsnow=0 if smokesnow==0
 
@@ -2263,6 +2283,8 @@ label var smokedever "Ever smoked"
 label var smokesnow "Smokes now"
 label var numcigsever "Number of cigarettes/day when smoked"
 label var numcigsnow "Number of cigarettes/day currently"
+label var smoke_start_age "Age started smoking"
+label var smoke_stop_age "Age stopped smoking"
 
 //weight
 
@@ -2279,6 +2301,10 @@ forvalues i=1/5 {
 label var wgt_curr "Current weight, lbs."
 label var height_ft "Current height, feet"
 label var height_in "Current height, inches"
+
+gen bmi=(wgt_curr/((height_ft*12+height_in)^2))*703
+
+label var bmi "Current BMI"
 
 //get the per round weight, cluster, and strata vars (and why is moved created like that?)
 gen moved=.
@@ -2307,7 +2333,8 @@ gen rcfres=inlist(r1dresid,2,3) if r1dresid!=.
 gen res_care=r1dresid>1 if r1dresid!=.
 gen sp_status=1 
 gen deceased=0
-
+gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
+label var prob_dem "Indicator probable dementia"
 forvalues i=2/5 {
 	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
 	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
@@ -2328,25 +2355,44 @@ label values sp_status sp_status
 
 //these ADL variables were missing previously
 gen adl_ins_help = .
+gen adl_ins_diff=.
+gen adl_ins_not_done=.
+
 foreach w in 1 2 3 4 5{
 	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
 	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
 	replace adl_ins_help=0 if mo`w'insdhlp==-1 & sp_ivw==1 & wave==`w'
 	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
 	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
+	replace adl_ins_diff=1 if mo`w'insddif==1 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==2 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
+	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
+	replace adl_ins_not_done=inlist(mo`w'dinsdsfdf,1,8) if wave==`w'
 }
+
+*replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
 
 gen adl_bed_help = .
+gen adl_bed_diff=.
+gen adl_bed_not_done=.
 foreach w in 1 2 3 4 5{
 	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
 	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
 	replace adl_bed_help=0 if mo`w'bedhlp==-1 & sp_ivw==1 & wave==`w'
 	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
 	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
+	replace adl_bed_diff=1 if mo`w'beddif==1 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==2 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_diff=-7 if mo`w'beddif==-7 & wave==`w'
+	replace adl_bed_diff=-8 if mo`w'beddif==-8 & wave==`w'
+	replace adl_bed_not_done=inlist(mo`w'dbedsfdf,1,8) if wave==`w'
 }
 label var adl_bed_help "Received help getting out of bed"
-
+*replace adl_bed_diff=1 if adl_bed_help==1
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
 gen ivw_day=1
@@ -2480,13 +2526,174 @@ forvalues i=1/5 {
 	replace lim_fav=pa`i'helmfvact==1 if pa`i'helmfvact>=0 & wave==`i'
 }
 label var lim_fav "Last month ever kept from favorite activity by health/function"
-///and now drop all raw variables
+
+//social cohesion
+gen cohesion_knowwell=.
+gen cohesion_willing=.
+gen cohesion_peop=.
+
 forvalues i=1/5 {
-	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
-	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* 
+	foreach x in know will peop {
+		replace cohesion_`x'=cm`i'`x'==1 if !missing(cm`i'`x') & wave==`i'
+}
+}
+egen cohesion=rowtotal(cohesion_*)
+label var cohesion_knowwell "People know each other well in the community"
+label var cohesion_w "People are willing to help each other in the commmunity"
+label var cohesion_p "People can be trusted in the community"
+label define cohesion_ 1 "Agree a lot" 2 "Agree a little" 3 "Do not agree"
+label var cohesion "High community cohesion"
+
+gen home_disorder_insd=.
+gen home_disorder_outsd=.
+gen home_disorder_area=.
+gen home_disorder_clutter=.
+
+forvalues i=1/5 {
+	foreach x of varlist ir`i'condihom* ir`i'condhome* ir`i'areacond* ir`i'clutter* {
+		replace `x'=. if `x'==7
+		qui sum `x'
+		if r(max)==2 replace `x'=`x'==1 if !missing(`x')
+		if inlist(r(max),3,4) replace `x'=`x'>1 if !missing(`x')
 }
 
-drop el1* rl1* ia1* pd2* pd3* pd4*
+	egen insd=rowtotal(ir`i'condihom*)
+	egen outsd=rowtotal(ir`i'condhome*)
+	egen area=rowtotal(ir`i'areacond*)
+	egen clutter=rowtotal(ir`i'clutter*)
+	foreach x in insd outsd area clutter {
+		replace home_disorder_`x'=`x'>=1 if wave==`i' & !missing(`x')
+		drop `x'
+}
+}
+
+label var home_disorder_insd "Disorder in home (peelng paint, pests, brkn furniture or floorbrds, trippng hazards)"
+label var home_disorder_outsd "Disorder outside (brkn windows, foundation, bricks/siding, roof, steps)"
+label var home_disorder_clutter "Disorder in home (clutter in interview or other rooms)"
+label var home_disorder_area "Disorder in immed area (litter/glass/graffiti/vacant houses/stores/foreclosures)"	
+
+//economic well-being
+foreach x of varlist ew* {
+	replace `x'=. if `x'<0
+}
+
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	gen `x'=.
+}
+
+forvalues i=1/5 {
+gen creditdebt`i'=inlist(ew`i'pycredbal,2,3) | !missing(ew`i'crecardeb) if ///
+ !missing(ew`i'pycredbal) | !missing(ew`i'crecardeb)
+gen medcreditdebt`i'=ew`i'credcdmed==1 if !missing(ew`i'credcdmed)
+gen medbillsovertime`i'=ew`i'medpaovtm==1 if !missing(ew`i'medpaovtm)
+gen medpaynotcash`i'=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | ///
+!missing(medcreditdebt)
+
+gen finhlpfam`i'=ew`i'finhlpfam==1 if !missing(ew`i'finhlpfam)
+gen fingftfam`i'= ew`i'fingftfam==1 if !missing(ew`i'finhlpfam)
+gen govtasst`i'=ew`i'progneed1==1 | ew`i'progneed2==1 | ew`i'progneed3==1 if !missing(ew`i'progneed1) ///
+| !missing(ew`i'progneed2) | !missing(ew`i'progneed3)
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	replace `x'=`x'`i' if wave==`i'
+	drop `x'`i'
+}
+}
+replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | !missing(medcreditdebt)
+
+label var creditdebt "Has credit card debt or does not pay off in full monthly"
+label var medpaynotcash "Has medical credit card debt or pays bills over time"
+label var govtasst "Receives foodstamps or other food or gas/energy assistance"
+
+//home ownership
+
+local homevars ownhome rent mortgagepaidoff paysmortgage mortpaymt ///
+timeinmort owedonmort homevalue rentpaid section8
+
+foreach x of local homevars {
+	gen `x'=.
+}
+
+label var ownhome "SP owns home"
+label var rent "SP rents"
+label var mortgagepaidoff "Mortgage is paid off"
+label var mortpaymt "Mortgage payment"
+label define mortpaymt 1 "<$250" 2 "$250-499" 3 "$500-999" 4 "$1000+"
+label values mortpaymt mortpaymt
+label var timeinmort "Time left in mortgage"
+label define timeinmort 1 "5 years" 2 "10 years" 3 "Longer than 10 years"
+label values timeinmort timeinmort
+label var owedonmort "Amount left on mortgage"
+label define owedonmort 1 "<$50,000" 2 "$50,000-99,999.99" 3 "$100,000+"
+label values owedonmort owedonmort
+label var homevalue "Home value"
+label define homevalue 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K" ///
+6 "300-500K" 7 "500-750K" 8 "$750K+"
+label values homevalue homevalue
+
+forvalues i=1/5 {
+tab hp`i'ownrentot 
+replace ownhome=hp`i'ownrentot==1 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+replace rent=hp`i'ownrentot==2 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+tab hp`i'mrtpadoff 
+replace mortgagepaidoff=hp`i'mrtpadoff==1 if !missing(hp`i'mrtpadoff)
+replace paysmortgage=hp`i'mrtpadoff==2 if !missing(hp`i'mrtpadoff)
+tab hp`i'mortpaymt 
+replace mortpaymt= hp`i'mortpaymt if wave==`i'
+qui replace mortpaymt=1 if wave==`i' & hp`i'mthlymort<250
+qui replace mortpaymt=2 if wave==`i' & hp`i'mthlymort>=250 & hp`i'mthlymort<=499
+qui replace mortpaymt=3 if wave==`i' & hp`i'mthlymort>=500 & hp`i'mthlymort<1000
+qui replace mortpaymt=4 if wave==`i' & hp`i'mthlymort>=1000 & !missing(hp`i'mthlymort)
+tab hp`i'whnpayoff 
+replace timeinmort=hp`i'whnpayoff if wave==`i'
+tab hp`i'amoutowed 
+replace owedonmort=hp`i'amoutowed if wave==`i'
+qui replace owedonmort=1 if wave==`i' & hp`i'amtstlowe<50000 
+qui replace owedonmort=2 if wave==`i' & hp`i'amtstlowe>=50000 & hp`i'amtstlowe<=100000
+qui replace owedonmort=3 if wave==`i' & hp`i'amtstlowe>=100000 & !missing(hp`i'amtstlowe)
+tab hp`i'homvalamt 
+replace homevalue= hp`i'homvalamt if wave==`i'
+qui replace homevalue=1 if wave==`i' & hp`i'homevalue<50000 & hp`i'homevalue>=0
+qui replace homevalue=2 if wave==`i' & hp`i'homevalue>=50000 & hp`i'homevalue<75000
+qui replace homevalue=3 if wave==`i' & hp`i'homevalue>=75000 & hp`i'homevalue<100000
+qui replace homevalue=4 if wave==`i' & hp`i'homevalue>=100000 & hp`i'homevalue<200000
+qui replace homevalue=5 if wave==`i' & hp`i'homevalue>=200000 & hp`i'homevalue<300000
+qui replace homevalue=6 if wave==`i' & hp`i'homevalue>=300000 & hp`i'homevalue<500000
+qui replace homevalue=7 if wave==`i' & hp`i'homevalue>=500000 & hp`i'homevalue<750000
+qui replace homevalue=8 if wave==`i' & hp`i'homevalue>=750000 & !missing(hp`i'homevalue)
+
+tab hp`i'rentamou 
+replace rentpaid =hp`i'rentamou if wave==`i'
+qui replace rentpaid=1 if wave==`i' & hp`i'rentamt<250 & hp`i'rentamt>=0
+qui replace rentpaid=2 if wave==`i' & hp`i'rentamt>=250 & hp`i'rentamt<=499
+qui replace rentpaid=3 if wave==`i' & hp`i'rentamt>=500 & hp`i'rentamt<1000
+qui replace rentpaid=4 if wave==`i' & hp`i'rentamt>=1000 & !missing(hp`i'rentamt)
+qui replace rentpaid=4 if inlist(rentpaid,5,6)
+replace mortpaymt=4 if inlist(mortpaymt,5,6)
+tab hp1sec8pubsn
+replace section8=hp`i'sec8pubsn==1 if wave==`i' & (!missing(hp`i'sec8pubsn) |ownhome==1 | rent==1)
+}
+
+label var rentpaid "Amount rent paid"
+label define rentpaid 1 "<$250" 2 "250-499" 3 "500-999" 4 "$1000+"
+label values rentpaid rentpaid
+label var section8 "Indicator lives in Section 8 housing"
+
+gen n_social_network=.
+forvalues i=1/5 {
+	replace n_social_network=sn`i'dnumsn if sn`i'dnumsn>=0 & wave==`i'
+}
+label var n_social_network "Number in social network"
+
+//and now drop all raw variables
+forvalues i=1/5 {
+	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
+	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'*
+}
+
+drop el1* rl1* ia1* pd2* pd3* pd4* ia3* ia5*
 
 rename round*status r*status
 
@@ -2494,6 +2701,8 @@ svyset varunit [pw=anfinwgt], strat(varstrat)
 
 sort spid wave
 by spid: carryforward educ*, replace
+label var educ_hs_ind "Education: HS+"
+
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_5", replace
 
 drop death_* died_12 died_24
@@ -2504,7 +2713,7 @@ foreach x in 12 24 {
 	gen nhats_died_`x'=time2d<=`x' if !lml
 }
 
-drop time2d
+drop time2d 
 
 save "E:\nhats\data\NHATS cleaned\sp_round_1_5_public_sens_only.dta", replace
 

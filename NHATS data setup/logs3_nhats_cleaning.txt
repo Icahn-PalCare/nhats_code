@@ -1,8 +1,8 @@
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs3_nhats_cleaning.txt
   log type:  text
- opened on:   7 Apr 2017, 12:53:23
+ opened on:  11 Sep 2017, 10:41:29
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -12,7 +12,7 @@
 . cd "`work'"
 E:\nhats\data\NHATS working data
 
-. use round_1_5_cleanv1.dta
+. use round_1_6_cleanv1.dta
 
 . 
 . *********************************************
@@ -20,13 +20,14 @@ E:\nhats\data\NHATS working data
 
 Survey wave |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-          1 |      8,245       24.12       24.12
-          2 |      7,075       20.69       44.81
-          3 |      5,799       16.96       61.77
-          4 |      4,737       13.85       75.62
-          5 |      8,334       24.38      100.00
+          1 |      8,245       19.88       19.88
+          2 |      7,075       17.06       36.95
+          3 |      5,799       13.98       50.93
+          4 |      4,737       11.42       62.35
+          5 |      8,334       20.10       82.45
+          6 |      7,276       17.55      100.00
 ------------+-----------------------------------
-      Total |     34,190      100.00
+      Total |     41,466      100.00
 
 . 
 . *********************************************
@@ -35,9 +36,9 @@ Survey wave |      Freq.     Percent        Cum.
 . *********************************************
 . *********************************************
 . gen srh=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2. tab hc`w'health if wave==`w', missing
   3. replace srh=hc`w'health if wave==`w'
   4. }
@@ -123,8 +124,25 @@ Survey wave |      Freq.     Percent        Cum.
           Total |      8,334      100.00
 (8,334 real changes made)
 
+ R6 HC1 OVERALL |
+         HEALTH |
+      CONDITION |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+     -9 Missing |        177        2.43        2.43
+          -8 DK |          3        0.04        2.47
+          -7 RF |          1        0.01        2.49
+-1 Inapplicable |        689        9.47       11.96
+    1 EXCELLENT |        688        9.46       21.41
+    2 VERY GOOD |      1,867       25.66       47.07
+         3 GOOD |      2,225       30.58       77.65
+         4 FAIR |      1,275       17.52       95.18
+         5 POOR |        351        4.82      100.00
+----------------+-----------------------------------
+          Total |      7,276      100.00
+(7,276 real changes made)
+
 . replace srh=. if inlist(srh,-9,-1)
-(4,028 real changes made, 4,028 to missing)
+(4,894 real changes made, 4,894 to missing)
 
 . 
 . la var srh "Self reported health, categorical"
@@ -140,28 +158,28 @@ Survey wave |      Freq.     Percent        Cum.
     health, |
 categorical |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         25        0.08        0.08
-         -7 |          1        0.00        0.09
-  Excellent |      3,419       11.34       11.42
-  Very good |      8,490       28.15       39.57
-       Good |     10,056       33.34       72.91
-       Fair |      6,135       20.34       93.25
-       Poor |      2,036        6.75      100.00
+         -8 |         28        0.08        0.08
+         -7 |          2        0.01        0.08
+  Excellent |      4,107       11.23       11.31
+  Very good |     10,357       28.32       39.63
+       Good |     12,281       33.58       73.21
+       Fair |      7,410       20.26       93.47
+       Poor |      2,387        6.53      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 . 
 . gen srh_fp=1 if srh==4 | srh==5
-(26,019 missing values generated)
+(31,669 missing values generated)
 
 . replace srh_fp=0 if inlist(srh,1,2,3)
-(21,965 real changes made)
+(26,745 real changes made)
 
 . replace srh_fp=-7 if srh == -7
-(1 real change made)
+(2 real changes made)
 
 . replace srh_fp=-8 if srh == -8
-(25 real changes made)
+(28 real changes made)
 
 . la var srh_fp "Self reported health=fair/poor"
 
@@ -172,13 +190,13 @@ categorical |      Freq.     Percent        Cum.
 health=fai |                            Self reported health, categorical
     r/poor |        -8         -7  Excellent  Very good       Good       Fair       Poor          . |     Total
 -----------+----------------------------------------------------------------------------------------+----------
-        -8 |        25          0          0          0          0          0          0          0 |        25 
-        -7 |         0          1          0          0          0          0          0          0 |         1 
-         0 |         0          0      3,419      8,490     10,056          0          0          0 |    21,965 
-         1 |         0          0          0          0          0      6,135      2,036          0 |     8,171 
-         . |         0          0          0          0          0          0          0      4,028 |     4,028 
+        -8 |        28          0          0          0          0          0          0          0 |        28 
+        -7 |         0          2          0          0          0          0          0          0 |         2 
+         0 |         0          0      4,107     10,357     12,281          0          0          0 |    26,745 
+         1 |         0          0          0          0          0      7,410      2,387          0 |     9,797 
+         . |         0          0          0          0          0          0          0      4,894 |     4,894 
 -----------+----------------------------------------------------------------------------------------+----------
-     Total |        25          1      3,419      8,490     10,056      6,135      2,036      4,028 |    34,190 
+     Total |        28          2      4,107     10,357     12,281      7,410      2,387      4,894 |    41,466 
 
 
 . 
@@ -212,7 +230,7 @@ health=fai |                            Self reported health, categorical
   1.         args dis num
   2.         
 .         gen sr_`dis'_raw=.
-  3.         foreach w in 1 2 3 4 5{
+  3.         foreach w in 1 2 3 4 5 6{
   4.                 replace sr_`dis'_raw=1 if hc`w'disescn`num'==1 & wave==`w'
   5.                 replace sr_`dis'_raw=0 if hc`w'disescn`num'==2 & wave==`w'
   6.                 replace sr_`dis'_raw=-7 if hc`w'disescn`num'==-7 & wave==`w'
@@ -236,7 +254,7 @@ health=fai |                            Self reported health, categorical
 . 
 . //now run programs for specific disease variables
 . disease ami 1
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,164 real changes made)
 (6,437 real changes made)
 (0 real changes made)
@@ -257,16 +275,20 @@ health=fai |                            Self reported health, categorical
 (6,936 real changes made)
 (0 real changes made)
 (18 real changes made)
-(4,028 missing values generated)
+(160 real changes made)
+(6,243 real changes made)
+(0 real changes made)
+(7 real changes made)
+(4,894 missing values generated)
 (21,463 real changes made, 21,463 to missing)
 (0 real changes made)
 (0 real changes made)
 sr_ami_ever:  (18007 real changes made)
 (3,456 real changes made)
-(11,637 missing values generated)
+(18,913 missing values generated)
 
 . disease stroke 8
-(34,190 missing values generated)
+(41,466 missing values generated)
 (892 real changes made)
 (6,709 real changes made)
 (0 real changes made)
@@ -287,16 +309,20 @@ sr_ami_ever:  (18007 real changes made)
 (7,083 real changes made)
 (0 real changes made)
 (17 real changes made)
-(4,028 missing values generated)
+(165 real changes made)
+(6,233 real changes made)
+(0 real changes made)
+(12 real changes made)
+(4,894 missing values generated)
 (21,578 real changes made, 21,578 to missing)
 (0 real changes made)
 (0 real changes made)
 sr_stroke_ever:  (17948 real changes made)
 (3,630 real changes made)
-(11,637 missing values generated)
+(18,913 missing values generated)
 
 . disease cancer 10
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,953 real changes made)
 (5,653 real changes made)
 (1 real change made)
@@ -317,13 +343,17 @@ sr_stroke_ever:  (17948 real changes made)
 (6,386 real changes made)
 (1 real change made)
 (6 real changes made)
-(4,028 missing values generated)
+(375 real changes made)
+(6,031 real changes made)
+(0 real changes made)
+(4 real changes made)
+(4,894 missing values generated)
 (20,474 real changes made, 20,474 to missing)
 (0 real changes made)
 (0 real changes made)
 sr_cancer_ever:  (17422 real changes made)
 (3,052 real changes made)
-(11,637 missing values generated)
+(18,913 missing values generated)
 
 . 
 . la var sr_ami_raw "Self report Heart Attack, Raw"
@@ -347,9 +377,9 @@ sr_cancer_ever:  (17422 real changes made)
 . 
 . //same question pattern, different variable name though, for hip fracture
 . gen sr_hip_raw=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace sr_hip_raw=1 if hc`w'brokebon1==1 & wave==`w'
   3.         replace sr_hip_raw=0 if hc`w'brokebon1==2 & wave==`w'
   4.         replace sr_hip_raw = -7 if hc`w'brokebon1==-7 & wave==`w'
@@ -375,27 +405,31 @@ sr_cancer_ever:  (17422 real changes made)
 (7,350 real changes made)
 (0 real changes made)
 (3 real changes made)
+(87 real changes made)
+(6,320 real changes made)
+(0 real changes made)
+(3 real changes made)
 
 . //create two new variables from this...
 . gen sr_hip_ever=sr_hip_raw
-(4,028 missing values generated)
+(4,894 missing values generated)
 
-. replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5) & sr_hip_raw==0 //set to missing if report no new wave
-(22,100 real changes made, 22,100 to missing)
+. replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6) & sr_hip_raw==0 //set to missing if report no new wave
+(28,420 real changes made, 28,420 to missing)
 
 . 
 . sort spid wave
 
 . by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
-sr_hip_ever:  (18246 real changes made)
+sr_hip_ever:  (21493 real changes made)
 
 . 
-. replace sr_hip_ever = sr_hip_raw if (wave==2 | wave==3 | wave==4 | wave==5) & sr_hip_ever == . & sr_hip_raw != .
-(3,854 real changes made)
+. replace sr_hip_ever = sr_hip_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6) & sr_hip_ever == . & sr_hip_raw != .
+(6,927 real changes made)
 
 . 
-. gen sr_hip_new=sr_hip_raw if wave==2 | wave==3 | wave == 4 | wave==5
-(11,637 missing values generated)
+. gen sr_hip_new=sr_hip_raw if wave==2 | wave==3 | wave == 4 | wave==5 | wave==6
+(12,503 missing values generated)
 
 . la var sr_hip_raw "Self report Hip Fracture, Raw"
 
@@ -413,166 +447,166 @@ sr_hip_ever:  (18246 real changes made)
       Self |
     report |
      Heart |
-   Attack, |                      Survey wave
-       Raw |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         8          3          7          6         18 |        42 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     6,437      5,875      4,735      3,917      6,936 |    27,900 
-         1 |     1,164        178        141        114        622 |     2,219 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+   Attack, |                            Survey wave
+       Raw |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         8          3          7          6         18          7 |        49 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     6,437      5,875      4,735      3,917      6,936      6,243 |    34,143 
+         1 |     1,164        178        141        114        622        160 |     2,379 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
  Ever Self |
     report |
-     Heart |                      Survey wave
-    Attack |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         8          8         12         10         27 |        65 
-        -7 |         0          0          1          1          1 |         3 
-         0 |     6,437      5,040      4,025      3,289      6,343 |    25,134 
-         1 |     1,164      1,008        846        737      1,205 |     4,960 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+     Heart |                            Survey wave
+    Attack |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         8          8         12         10         27          7 |        72 
+        -7 |         0          0          1          1          1          0 |         3 
+         0 |     6,437      5,040      4,025      3,289      6,343      6,243 |    31,377 
+         1 |     1,164      1,008        846        737      1,205        160 |     5,120 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
     report |
      Heart |
     Attack |
-since prev |                      Survey wave
-      year |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         0          3          7          6         18 |        34 
-        -7 |         0          0          1          0          0 |         1 
-         0 |         0      5,875      4,735      3,917      6,936 |    21,463 
-         1 |         0        178        141        114        622 |     1,055 
-         . |     7,609          0          0          0          0 |     7,609 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+since prev |                            Survey wave
+      year |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         0          3          7          6         18          0 |        34 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |         0      5,875      4,735      3,917      6,936          0 |    21,463 
+         1 |         0        178        141        114        622          0 |     1,055 
+         . |     7,609          0          0          0          0      6,410 |    14,019 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
     report |
-   Stroke, |                      Survey wave
-       Raw |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         8          7          5          7         17 |        44 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     6,709      5,871      4,727      3,897      7,083 |    28,287 
-         1 |       892        178        151        133        476 |     1,830 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+   Stroke, |                            Survey wave
+       Raw |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         8          7          5          7         17         12 |        56 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     6,709      5,871      4,727      3,897      7,083      6,233 |    34,520 
+         1 |       892        178        151        133        476        165 |     1,995 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
  Ever Self |
-    report |                      Survey wave
-    Stroke |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         8         13         12         14         24 |        71 
-        -7 |         0          0          1          1          1 |         3 
-         0 |     6,709      5,262      4,186      3,423      6,633 |    26,213 
-         1 |       892        781        685        599        918 |     3,875 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+    report |                            Survey wave
+    Stroke |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         8         13         12         14         24         12 |        83 
+        -7 |         0          0          1          1          1          0 |         3 
+         0 |     6,709      5,262      4,186      3,423      6,633      6,233 |    32,446 
+         1 |       892        781        685        599        918        165 |     4,040 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
     report |
     Stroke |
-since prev |                      Survey wave
-      year |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         0          7          5          7         17 |        36 
-        -7 |         0          0          1          0          0 |         1 
-         0 |         0      5,871      4,727      3,897      7,083 |    21,578 
-         1 |         0        178        151        133        476 |       938 
-         . |     7,609          0          0          0          0 |     7,609 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+since prev |                            Survey wave
+      year |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         0          7          5          7         17          0 |        36 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |         0      5,871      4,727      3,897      7,083          0 |    21,578 
+         1 |         0        178        151        133        476          0 |       938 
+         . |     7,609          0          0          0          0      6,410 |    14,019 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
     report |
-   Cancer, |                      Survey wave
-       Raw |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         2          7          6          5          6 |        26 
-        -7 |         1          0          1          0          1 |         3 
-         0 |     5,653      5,694      4,602      3,792      6,386 |    26,127 
-         1 |     1,953        355        275        240      1,183 |     4,006 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+   Cancer, |                            Survey wave
+       Raw |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         2          7          6          5          6          4 |        30 
+        -7 |         1          0          1          0          1          0 |         3 
+         0 |     5,653      5,694      4,602      3,792      6,386      6,031 |    32,158 
+         1 |     1,953        355        275        240      1,183        375 |     4,381 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
  Ever Self |
-    report |                      Survey wave
-    Cancer |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         2          8         11         13         16 |        50 
-        -7 |         1          1          2          2          2 |         8 
-         0 |     5,653      4,357      3,430      2,746      5,407 |    21,593 
-         1 |     1,953      1,690      1,441      1,276      2,151 |     8,511 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+    report |                            Survey wave
+    Cancer |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         2          8         11         13         16          4 |        54 
+        -7 |         1          1          2          2          2          0 |         8 
+         0 |     5,653      4,357      3,430      2,746      5,407      6,031 |    27,624 
+         1 |     1,953      1,690      1,441      1,276      2,151        375 |     8,886 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
     report |
     Cancer |
-since prev |                      Survey wave
-      year |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         0          7          6          5          6 |        24 
-        -7 |         0          0          1          0          1 |         2 
-         0 |         0      5,694      4,602      3,792      6,386 |    20,474 
-         1 |         0        355        275        240      1,183 |     2,053 
-         . |     7,609          0          0          0          0 |     7,609 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+since prev |                            Survey wave
+      year |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         0          7          6          5          6          0 |        24 
+        -7 |         0          0          1          0          1          0 |         2 
+         0 |         0      5,694      4,602      3,792      6,386          0 |    20,474 
+         1 |         0        355        275        240      1,183          0 |     2,053 
+         . |     7,609          0          0          0          0      6,410 |    14,019 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
 report Hip |
- Fracture, |                      Survey wave
-       Raw |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         4          2          2          1          3 |        12 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     7,226      5,976      4,795      3,979      7,350 |    29,326 
-         1 |       379         78         86         57        223 |       823 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+ Fracture, |                            Survey wave
+       Raw |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         4          2          2          1          3          3 |        15 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     7,226      5,976      4,795      3,979      7,350      6,320 |    35,646 
+         1 |       379         78         86         57        223         87 |       910 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
  Ever Self |
 report Hip |
   Fracture |
-(since age |                      Survey wave
-       50) |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         4          5          6          3          6 |        24 
-        -7 |         0          0          1          1          1 |         3 
-         0 |     7,226      5,706      4,556      3,751      7,134 |    28,373 
-         1 |       379        345        321        282        435 |     1,762 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+(since age |                            Survey wave
+       50) |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         4          5          6          3          6          7 |        31 
+        -7 |         0          0          1          1          1          0 |         3 
+         0 |     7,226      5,706      4,556      3,751      7,134      5,993 |    34,366 
+         1 |       379        345        321        282        435        410 |     2,172 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
       Self |
 report Hip |
   Fracture |
-since prev |                      Survey wave
-      year |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         0          2          2          1          3 |         8 
-        -7 |         0          0          1          0          0 |         1 
-         0 |         0      5,976      4,795      3,979      7,350 |    22,100 
-         1 |         0         78         86         57        223 |       444 
-         . |     7,609          0          0          0          0 |     7,609 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+since prev |                            Survey wave
+      year |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         0          2          2          1          3          3 |        11 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |         0      5,976      4,795      3,979      7,350      6,320 |    28,420 
+         1 |         0         78         86         57        223         87 |       531 
+         . |     7,609          0          0          0          0          0 |     7,609 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
 . 
@@ -590,7 +624,7 @@ since prev |                      Survey wave
   1.         args dis num
   2.  
 .         gen sr_`dis'_raw=.
-  3.                 foreach w in 1 2 3 4 5{
+  3.                 foreach w in 1 2 3 4 5 6{
   4.                         replace sr_`dis'_raw=1 if hc`w'disescn`num'==1 & wave==`w'
   5.                         replace sr_`dis'_raw=0 if hc`w'disescn`num'==2 & wave==`w'
   6.                         replace sr_`dis'_raw=7 if hc`w'disescn`num'==7 & wave==`w'
@@ -608,16 +642,16 @@ since prev |                      Survey wave
  16.         tab sr_`dis'_ever sr_`dis'_raw, missing
  17.         tab sr_`dis'_ever wave if ivw_type==1, missing
  18. 
-.         gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave== 4 | wave==5
+.         gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave== 4 | wave==5 | wave==6
  19.         replace sr_`dis'_new=0 if sr_`dis'_raw==7
- 20.         tab sr_`dis'_new if (wave==2 | wave==3 | wave==4 | wave==5) & ivw_type==1, missing
+ 20.         tab sr_`dis'_new if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6) & ivw_type==1, missing
  21. 
 .         end
 
 . 
 . //now run programs for specific disease variables
 . prev_report heart_dis 2
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,411 real changes made)
 (6,182 real changes made)
 (0 real changes made)
@@ -643,60 +677,65 @@ since prev |                      Survey wave
 (868 real changes made)
 (0 real changes made)
 (21 real changes made)
+(160 real changes made)
+(4,932 real changes made)
+(1,303 real changes made)
+(0 real changes made)
+(15 real changes made)
 
-                    |                      Survey wave
-   sr_heart_dis_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |        16          5          6          4         21 |        52 
-                 -7 |         0          0          1          0          0 |         1 
-                 No |     6,182      4,757      3,749      3,022      5,963 |    23,673 
-                Yes |     1,411        187        138         94        724 |     2,554 
-Previously reported |         0      1,107        990        917        868 |     3,882 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+   sr_heart_dis_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |        16          5          6          4         21         15 |        67 
+                 -7 |         0          0          1          0          0          0 |         1 
+                 No |     6,182      4,757      3,749      3,022      5,963      4,932 |    28,605 
+                Yes |     1,411        187        138         94        724        160 |     2,714 
+Previously reported |         0      1,107        990        917        868      1,303 |     5,185 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(27,754 missing values generated)
-(23,673 real changes made)
+(33,567 missing values generated)
+(28,605 real changes made)
 (1 real change made)
-(52 real changes made)
+(67 real changes made)
 
 sr_heart_d |                         sr_heart_dis_raw
    is_ever |        -8         -7         No        Yes  Previousl          . |     Total
 -----------+------------------------------------------------------------------+----------
-        -8 |        52          0          0          0          0          0 |        52 
+        -8 |        67          0          0          0          0          0 |        67 
         -7 |         0          1          0          0          0          0 |         1 
-         0 |         0          0     23,673          0          0          0 |    23,673 
-         1 |         0          0          0      2,554      3,882          0 |     6,436 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     28,605          0          0          0 |    28,605 
+         1 |         0          0          0      2,714      5,185          0 |     7,899 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |        52          1     23,673      2,554      3,882      4,028 |    34,190 
+     Total |        67          1     28,605      2,714      5,185      4,894 |    41,466 
 
 
-sr_heart_d |                      Survey wave
-   is_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |        16          5          6          4         21 |        52 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     6,182      4,757      3,749      3,022      5,963 |    23,673 
-         1 |     1,411      1,294      1,128      1,011      1,592 |     6,436 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_heart_d |                            Survey wave
+   is_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |        16          5          6          4         21         15 |        67 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     6,182      4,757      3,749      3,022      5,963      4,932 |    28,605 
+         1 |     1,411      1,294      1,128      1,011      1,592      1,463 |     7,899 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(3,882 real changes made)
+(12,503 missing values generated)
+(5,185 real changes made)
 
 sr_heart_di |
       s_new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         36        0.16        0.16
-         -7 |          1        0.00        0.16
-          0 |     21,373       94.77       94.93
-          1 |      1,143        5.07      100.00
+         -8 |         51        0.18        0.18
+         -7 |          1        0.00        0.18
+          0 |     27,608       95.32       95.50
+          1 |      1,303        4.50      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report htn 3
-(34,190 missing values generated)
+(41,466 missing values generated)
 (5,108 real changes made)
 (2,491 real changes made)
 (0 real changes made)
@@ -722,55 +761,60 @@ sr_heart_di |
 (2,671 real changes made)
 (0 real changes made)
 (10 real changes made)
-
-                    |                      Survey wave
-         sr_htn_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |        10          4          7          3         10 |        34 
-                 No |     2,491      1,840      1,359      1,042      2,221 |     8,953 
-                Yes |     5,108        146        124         76      2,674 |     8,128 
-Previously reported |         0      4,066      3,394      2,916      2,671 |    13,047 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
-
-(13,015 missing values generated)
-(8,953 real changes made)
+(111 real changes made)
+(1,786 real changes made)
+(4,510 real changes made)
 (0 real changes made)
-(34 real changes made)
+(3 real changes made)
+
+                    |                            Survey wave
+         sr_htn_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |        10          4          7          3         10          3 |        37 
+                 No |     2,491      1,840      1,359      1,042      2,221      1,786 |    10,739 
+                Yes |     5,108        146        124         76      2,674        111 |     8,239 
+Previously reported |         0      4,066      3,394      2,916      2,671      4,510 |    17,557 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
+
+(15,670 missing values generated)
+(10,739 real changes made)
+(0 real changes made)
+(37 real changes made)
 
 sr_htn_eve |                       sr_htn_raw
          r |        -8         No        Yes  Previousl          . |     Total
 -----------+-------------------------------------------------------+----------
-        -8 |        34          0          0          0          0 |        34 
-         0 |         0      8,953          0          0          0 |     8,953 
-         1 |         0          0      8,128     13,047          0 |    21,175 
-         . |         0          0          0          0      4,028 |     4,028 
+        -8 |        37          0          0          0          0 |        37 
+         0 |         0     10,739          0          0          0 |    10,739 
+         1 |         0          0      8,239     17,557          0 |    25,796 
+         . |         0          0          0          0      4,894 |     4,894 
 -----------+-------------------------------------------------------+----------
-     Total |        34      8,953      8,128     13,047      4,028 |    34,190 
+     Total |        37     10,739      8,239     17,557      4,894 |    41,466 
 
 
-sr_htn_eve |                      Survey wave
-         r |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |        10          4          7          3         10 |        34 
-         0 |     2,491      1,840      1,359      1,042      2,221 |     8,953 
-         1 |     5,108      4,212      3,518      2,992      5,345 |    21,175 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_htn_eve |                            Survey wave
+         r |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |        10          4          7          3         10          3 |        37 
+         0 |     2,491      1,840      1,359      1,042      2,221      1,786 |    10,739 
+         1 |     5,108      4,212      3,518      2,992      5,345      4,621 |    25,796 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(13,047 real changes made)
+(12,503 missing values generated)
+(17,557 real changes made)
 
  sr_htn_new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         24        0.11        0.11
-          0 |     19,509       86.50       86.61
-          1 |      3,020       13.39      100.00
+         -8 |         27        0.09        0.09
+          0 |     25,805       89.10       89.19
+          1 |      3,131       10.81      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report ra 4
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,248 real changes made)
 (3,345 real changes made)
 (0 real changes made)
@@ -796,58 +840,63 @@ sr_htn_eve |                      Survey wave
 (2,402 real changes made)
 (0 real changes made)
 (10 real changes made)
+(283 real changes made)
+(2,153 real changes made)
+(3,972 real changes made)
+(0 real changes made)
+(2 real changes made)
 
-                    |                      Survey wave
-          sr_ra_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |        15          2          7          3         10 |        37 
-                 -7 |         1          0          0          0          0 |         1 
-                 No |     3,345      2,399      1,753      1,344      2,896 |    11,737 
-                Yes |     4,248        277        190        127      2,268 |     7,110 
-Previously reported |         0      3,378      2,934      2,563      2,402 |    11,277 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+          sr_ra_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |        15          2          7          3         10          2 |        39 
+                 -7 |         1          0          0          0          0          0 |         1 
+                 No |     3,345      2,399      1,753      1,344      2,896      2,153 |    13,890 
+                Yes |     4,248        277        190        127      2,268        283 |     7,393 
+Previously reported |         0      3,378      2,934      2,563      2,402      3,972 |    15,249 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(15,803 missing values generated)
-(11,737 real changes made)
+(18,824 missing values generated)
+(13,890 real changes made)
 (1 real change made)
-(37 real changes made)
+(39 real changes made)
 
            |                             sr_ra_raw
 sr_ra_ever |        -8         -7         No        Yes  Previousl          . |     Total
 -----------+------------------------------------------------------------------+----------
-        -8 |        37          0          0          0          0          0 |        37 
+        -8 |        39          0          0          0          0          0 |        39 
         -7 |         0          1          0          0          0          0 |         1 
-         0 |         0          0     11,737          0          0          0 |    11,737 
-         1 |         0          0          0      7,110     11,277          0 |    18,387 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     13,890          0          0          0 |    13,890 
+         1 |         0          0          0      7,393     15,249          0 |    22,642 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |        37          1     11,737      7,110     11,277      4,028 |    34,190 
+     Total |        39          1     13,890      7,393     15,249      4,894 |    41,466 
 
 
-           |                      Survey wave
-sr_ra_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |        15          2          7          3         10 |        37 
-        -7 |         1          0          0          0          0 |         1 
-         0 |     3,345      2,399      1,753      1,344      2,896 |    11,737 
-         1 |     4,248      3,655      3,124      2,690      4,670 |    18,387 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+           |                            Survey wave
+sr_ra_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |        15          2          7          3         10          2 |        39 
+        -7 |         1          0          0          0          0          0 |         1 
+         0 |     3,345      2,399      1,753      1,344      2,896      2,153 |    13,890 
+         1 |     4,248      3,655      3,124      2,690      4,670      4,255 |    22,642 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(11,277 real changes made)
+(12,503 missing values generated)
+(15,249 real changes made)
 
   sr_ra_new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         22        0.10        0.10
-          0 |     19,669       87.21       87.31
-          1 |      2,862       12.69      100.00
+         -8 |         24        0.08        0.08
+          0 |     25,794       89.06       89.14
+          1 |      3,145       10.86      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report osteoprs 5
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,559 real changes made)
 (6,023 real changes made)
 (0 real changes made)
@@ -873,60 +922,65 @@ sr_ra_ever |         1          2          3          4          5 |     Total
 (1,064 real changes made)
 (0 real changes made)
 (37 real changes made)
+(209 real changes made)
+(4,603 real changes made)
+(1,584 real changes made)
+(0 real changes made)
+(14 real changes made)
 
-                    |                      Survey wave
-    sr_osteoprs_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |        27         14         12         16         37 |       106 
-                 -7 |         0          0          1          0          0 |         1 
-                 No |     6,023      4,628      3,558      2,835      5,672 |    22,716 
-                Yes |     1,559        172        158        100        803 |     2,792 
-Previously reported |         0      1,242      1,155      1,086      1,064 |     4,547 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+    sr_osteoprs_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |        27         14         12         16         37         14 |       120 
+                 -7 |         0          0          1          0          0          0 |         1 
+                 No |     6,023      4,628      3,558      2,835      5,672      4,603 |    27,319 
+                Yes |     1,559        172        158        100        803        209 |     3,001 
+Previously reported |         0      1,242      1,155      1,086      1,064      1,584 |     6,131 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(26,851 missing values generated)
-(22,716 real changes made)
+(32,334 missing values generated)
+(27,319 real changes made)
 (1 real change made)
-(106 real changes made)
+(120 real changes made)
 
 sr_osteopr |                          sr_osteoprs_raw
     s_ever |        -8         -7         No        Yes  Previousl          . |     Total
 -----------+------------------------------------------------------------------+----------
-        -8 |       106          0          0          0          0          0 |       106 
+        -8 |       120          0          0          0          0          0 |       120 
         -7 |         0          1          0          0          0          0 |         1 
-         0 |         0          0     22,716          0          0          0 |    22,716 
-         1 |         0          0          0      2,792      4,547          0 |     7,339 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     27,319          0          0          0 |    27,319 
+         1 |         0          0          0      3,001      6,131          0 |     9,132 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |       106          1     22,716      2,792      4,547      4,028 |    34,190 
+     Total |       120          1     27,319      3,001      6,131      4,894 |    41,466 
 
 
-sr_osteopr |                      Survey wave
-    s_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |        27         14         12         16         37 |       106 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     6,023      4,628      3,558      2,835      5,672 |    22,716 
-         1 |     1,559      1,414      1,313      1,186      1,867 |     7,339 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_osteopr |                            Survey wave
+    s_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |        27         14         12         16         37         14 |       120 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     6,023      4,628      3,558      2,835      5,672      4,603 |    27,319 
+         1 |     1,559      1,414      1,313      1,186      1,867      1,793 |     9,132 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(4,547 real changes made)
+(12,503 missing values generated)
+(6,131 real changes made)
 
 sr_osteoprs |
        _new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         79        0.35        0.35
-         -7 |          1        0.00        0.35
-          0 |     21,240       94.18       94.53
-          1 |      1,233        5.47      100.00
+         -8 |         93        0.32        0.32
+         -7 |          1        0.00        0.32
+          0 |     27,427       94.70       95.02
+          1 |      1,442        4.98      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report diabetes 6
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,925 real changes made)
 (5,681 real changes made)
 (0 real changes made)
@@ -952,20 +1006,25 @@ sr_osteoprs |
 (1,037 real changes made)
 (0 real changes made)
 (9 real changes made)
+(86 real changes made)
+(4,541 real changes made)
+(1,783 real changes made)
+(0 real changes made)
+(0 real changes made)
 
-                    |                      Survey wave
-    sr_diabetes_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |         2          2          3          3          9 |        19 
-                 -7 |         1          0          1          0          0 |         2 
-                 No |     5,681      4,444      3,543      2,888      5,431 |    21,987 
-                Yes |     1,925         88         54         44      1,099 |     3,210 
-Previously reported |         0      1,522      1,283      1,102      1,037 |     4,944 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+    sr_diabetes_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |         2          2          3          3          9          0 |        19 
+                 -7 |         1          0          1          0          0          0 |         2 
+                 No |     5,681      4,444      3,543      2,888      5,431      4,541 |    26,528 
+                Yes |     1,925         88         54         44      1,099         86 |     3,296 
+Previously reported |         0      1,522      1,283      1,102      1,037      1,783 |     6,727 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(26,036 missing values generated)
-(21,987 real changes made)
+(31,443 missing values generated)
+(26,528 real changes made)
 (2 real changes made)
 (19 real changes made)
 
@@ -974,38 +1033,38 @@ sr_diabete |                          sr_diabetes_raw
 -----------+------------------------------------------------------------------+----------
         -8 |        19          0          0          0          0          0 |        19 
         -7 |         0          2          0          0          0          0 |         2 
-         0 |         0          0     21,987          0          0          0 |    21,987 
-         1 |         0          0          0      3,210      4,944          0 |     8,154 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     26,528          0          0          0 |    26,528 
+         1 |         0          0          0      3,296      6,727          0 |    10,023 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |        19          2     21,987      3,210      4,944      4,028 |    34,190 
+     Total |        19          2     26,528      3,296      6,727      4,894 |    41,466 
 
 
-sr_diabete |                      Survey wave
-    s_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         2          2          3          3          9 |        19 
-        -7 |         1          0          1          0          0 |         2 
-         0 |     5,681      4,444      3,543      2,888      5,431 |    21,987 
-         1 |     1,925      1,610      1,337      1,146      2,136 |     8,154 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_diabete |                            Survey wave
+    s_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         2          2          3          3          9          0 |        19 
+        -7 |         1          0          1          0          0          0 |         2 
+         0 |     5,681      4,444      3,543      2,888      5,431      4,541 |    26,528 
+         1 |     1,925      1,610      1,337      1,146      2,136      1,869 |    10,023 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(4,944 real changes made)
+(12,503 missing values generated)
+(6,727 real changes made)
 
 sr_diabetes |
        _new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         17        0.08        0.08
-         -7 |          1        0.00        0.08
-          0 |     21,250       94.22       94.30
-          1 |      1,285        5.70      100.00
+         -8 |         17        0.06        0.06
+         -7 |          1        0.00        0.06
+          0 |     27,574       95.20       95.27
+          1 |      1,371        4.73      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report lung_dis 7
-(34,190 missing values generated)
+(41,466 missing values generated)
 (1,154 real changes made)
 (6,450 real changes made)
 (0 real changes made)
@@ -1031,60 +1090,65 @@ sr_diabetes |
 (710 real changes made)
 (0 real changes made)
 (6 real changes made)
+(111 real changes made)
+(5,126 real changes made)
+(1,170 real changes made)
+(0 real changes made)
+(3 real changes made)
 
-                    |                      Survey wave
-    sr_lung_dis_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |         5          4          3          3          6 |        21 
-                 -7 |         0          0          1          0          0 |         1 
-                 No |     6,450      5,033      3,979      3,223      6,181 |    24,866 
-                Yes |     1,154        135        106         75        679 |     2,149 
-Previously reported |         0        884        795        736        710 |     3,125 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+    sr_lung_dis_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |         5          4          3          3          6          3 |        24 
+                 -7 |         0          0          1          0          0          0 |         1 
+                 No |     6,450      5,033      3,979      3,223      6,181      5,126 |    29,992 
+                Yes |     1,154        135        106         75        679        111 |     2,260 
+Previously reported |         0        884        795        736        710      1,170 |     4,295 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(28,916 missing values generated)
-(24,866 real changes made)
+(34,911 missing values generated)
+(29,992 real changes made)
 (1 real change made)
-(21 real changes made)
+(24 real changes made)
 
 sr_lung_di |                          sr_lung_dis_raw
     s_ever |        -8         -7         No        Yes  Previousl          . |     Total
 -----------+------------------------------------------------------------------+----------
-        -8 |        21          0          0          0          0          0 |        21 
+        -8 |        24          0          0          0          0          0 |        24 
         -7 |         0          1          0          0          0          0 |         1 
-         0 |         0          0     24,866          0          0          0 |    24,866 
-         1 |         0          0          0      2,149      3,125          0 |     5,274 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     29,992          0          0          0 |    29,992 
+         1 |         0          0          0      2,260      4,295          0 |     6,555 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |        21          1     24,866      2,149      3,125      4,028 |    34,190 
+     Total |        24          1     29,992      2,260      4,295      4,894 |    41,466 
 
 
-sr_lung_di |                      Survey wave
-    s_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         5          4          3          3          6 |        21 
-        -7 |         0          0          1          0          0 |         1 
-         0 |     6,450      5,033      3,979      3,223      6,181 |    24,866 
-         1 |     1,154      1,019        901        811      1,389 |     5,274 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_lung_di |                            Survey wave
+    s_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         5          4          3          3          6          3 |        24 
+        -7 |         0          0          1          0          0          0 |         1 
+         0 |     6,450      5,033      3,979      3,223      6,181      5,126 |    29,992 
+         1 |     1,154      1,019        901        811      1,389      1,281 |     6,555 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(3,125 real changes made)
+(12,503 missing values generated)
+(4,295 real changes made)
 
 sr_lung_dis |
        _new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         16        0.07        0.07
-         -7 |          1        0.00        0.08
-          0 |     21,541       95.51       95.59
-          1 |        995        4.41      100.00
+         -8 |         19        0.07        0.07
+         -7 |          1        0.00        0.07
+          0 |     27,837       96.11       96.18
+          1 |      1,106        3.82      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . prev_report dementia 9
-(34,190 missing values generated)
+(41,466 missing values generated)
 (457 real changes made)
 (7,146 real changes made)
 (0 real changes made)
@@ -1110,57 +1174,62 @@ sr_lung_dis |
 (283 real changes made)
 (1 real change made)
 (10 real changes made)
+(147 real changes made)
+(5,865 real changes made)
+(393 real changes made)
+(0 real changes made)
+(5 real changes made)
 
-                    |                      Survey wave
-    sr_dementia_raw |         1          2          3          4          5 |     Total
---------------------+-------------------------------------------------------+----------
-                 -8 |         6          4          5          1         10 |        26 
-                 -7 |         0          0          1          0          1 |         2 
-                 No |     7,146      5,611      4,455      3,658      6,994 |    27,864 
-                Yes |       457        136        126         95        288 |     1,102 
-Previously reported |         0        305        297        283        283 |     1,168 
---------------------+-------------------------------------------------------+----------
-              Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+                    |                            Survey wave
+    sr_dementia_raw |         1          2          3          4          5          6 |     Total
+--------------------+------------------------------------------------------------------+----------
+                 -8 |         6          4          5          1         10          5 |        31 
+                 -7 |         0          0          1          0          1          0 |         2 
+                 No |     7,146      5,611      4,455      3,658      6,994      5,865 |    33,729 
+                Yes |       457        136        126         95        288        147 |     1,249 
+Previously reported |         0        305        297        283        283        393 |     1,561 
+--------------------+------------------------------------------------------------------+----------
+              Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(31,920 missing values generated)
-(27,864 real changes made)
+(38,656 missing values generated)
+(33,729 real changes made)
 (2 real changes made)
-(26 real changes made)
+(31 real changes made)
 
 sr_dementi |                          sr_dementia_raw
     a_ever |        -8         -7         No        Yes  Previousl          . |     Total
 -----------+------------------------------------------------------------------+----------
-        -8 |        26          0          0          0          0          0 |        26 
+        -8 |        31          0          0          0          0          0 |        31 
         -7 |         0          2          0          0          0          0 |         2 
-         0 |         0          0     27,864          0          0          0 |    27,864 
-         1 |         0          0          0      1,102      1,168          0 |     2,270 
-         . |         0          0          0          0          0      4,028 |     4,028 
+         0 |         0          0     33,729          0          0          0 |    33,729 
+         1 |         0          0          0      1,249      1,561          0 |     2,810 
+         . |         0          0          0          0          0      4,894 |     4,894 
 -----------+------------------------------------------------------------------+----------
-     Total |        26          2     27,864      1,102      1,168      4,028 |    34,190 
+     Total |        31          2     33,729      1,249      1,561      4,894 |    41,466 
 
 
-sr_dementi |                      Survey wave
-    a_ever |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         6          4          5          1         10 |        26 
-        -7 |         0          0          1          0          1 |         2 
-         0 |     7,146      5,611      4,455      3,658      6,994 |    27,864 
-         1 |       457        441        423        378        571 |     2,270 
------------+-------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+sr_dementi |                            Survey wave
+    a_ever |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         6          4          5          1         10          5 |        31 
+        -7 |         0          0          1          0          1          0 |         2 
+         0 |     7,146      5,611      4,455      3,658      6,994      5,865 |    33,729 
+         1 |       457        441        423        378        571        540 |     2,810 
+-----------+------------------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
-(11,637 missing values generated)
-(1,168 real changes made)
+(12,503 missing values generated)
+(1,561 real changes made)
 
 sr_dementia |
        _new |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         20        0.09        0.09
-         -7 |          2        0.01        0.10
-          0 |     21,886       97.04       97.14
-          1 |        645        2.86      100.00
+         -8 |         25        0.09        0.09
+         -7 |          2        0.01        0.09
+          0 |     28,144       97.17       97.27
+          1 |        792        2.73      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . 
 . la var sr_heart_dis_ever "Self report Heart Disease"
@@ -1198,19 +1267,19 @@ sr_dementia |
 . //responses are 1=not at all, 2=several days, 3=more than half days, 4=nearly every day
 . *************************************************
 . gen sr_depr_pqq1=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
 . gen sr_depr_pqq2=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
 . gen sr_anx_gad1=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
 . gen sr_anx_gad2=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
 . 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         //set up new variables for individual wave variables
 .         foreach q in 1 2 3 4 {
   3.         gen temp_hc`w'deprsan`q'=. if inlist(hc`w'depresan`q',-9,-8,-7,-1)
@@ -1229,86 +1298,102 @@ sr_dementia |
  13.         }
  14.         
 . }
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,564 real changes made)
 (45 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,579 real changes made)
 (30 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,579 real changes made)
 (30 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,580 real changes made)
 (29 real changes made)
 (7,609 real changes made)
 (7,609 real changes made)
 (7,609 real changes made)
 (7,609 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,010 real changes made)
 (46 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,031 real changes made)
 (25 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,034 real changes made)
 (22 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,018 real changes made)
 (38 real changes made)
 (6,056 real changes made)
 (6,056 real changes made)
 (6,056 real changes made)
 (6,056 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,844 real changes made)
 (40 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,854 real changes made)
 (30 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,853 real changes made)
 (31 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,842 real changes made)
 (42 real changes made)
 (4,884 real changes made)
 (4,884 real changes made)
 (4,884 real changes made)
 (4,884 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (3,998 real changes made)
 (39 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,010 real changes made)
 (27 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,015 real changes made)
 (22 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (4,008 real changes made)
 (29 real changes made)
 (4,037 real changes made)
 (4,037 real changes made)
 (4,037 real changes made)
 (4,037 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,520 real changes made)
 (56 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,534 real changes made)
 (42 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,540 real changes made)
 (36 real changes made)
-(34,190 missing values generated)
+(41,466 missing values generated)
 (7,517 real changes made)
 (59 real changes made)
 (7,576 real changes made)
 (7,576 real changes made)
 (7,576 real changes made)
 (7,576 real changes made)
+(41,466 missing values generated)
+(6,365 real changes made)
+(45 real changes made)
+(41,466 missing values generated)
+(6,379 real changes made)
+(31 real changes made)
+(41,466 missing values generated)
+(6,376 real changes made)
+(34 real changes made)
+(41,466 missing values generated)
+(6,368 real changes made)
+(42 real changes made)
+(6,410 real changes made)
+(6,410 real changes made)
+(6,410 real changes made)
+(6,410 real changes made)
 
 . 
 . la def depr_anx 0"Not at all" 1"Several days" 2"More than half the days" ///
@@ -1330,60 +1415,60 @@ sr_dementia |
   3. }
 
      How often little |
-    interest in doing |                      Survey wave
-              things? |         1          2          3          4          5 |     Total
-----------------------+-------------------------------------------------------+----------
-           Not at all |     4,843      3,847      3,091      2,540      4,819 |    19,140 
-         Several days |     1,561      1,327      1,093        900      1,637 |     6,518 
-More than half the da |       556        446        329        304        565 |     2,200 
-     Nearly every day |       649        436        371        293        555 |     2,304 
-----------------------+-------------------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+    interest in doing |                            Survey wave
+              things? |         1          2          3          4          5          6 |     Total
+----------------------+------------------------------------------------------------------+----------
+           Not at all |     4,843      3,847      3,091      2,540      4,819      4,058 |    23,198 
+         Several days |     1,561      1,327      1,093        900      1,637      1,432 |     7,950 
+More than half the da |       556        446        329        304        565        481 |     2,681 
+     Nearly every day |       649        436        371        293        555        439 |     2,743 
+----------------------+------------------------------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
- How often felt down, |                      Survey wave
- depressed, hopeless? |         1          2          3          4          5 |     Total
-----------------------+-------------------------------------------------------+----------
-           Not at all |     5,336      4,301      3,479      2,868      5,489 |    21,473 
-         Several days |     1,589      1,258        999        873      1,529 |     6,248 
-More than half the da |       353        282        199        160        298 |     1,292 
-     Nearly every day |       331        215        207        136        260 |     1,149 
-----------------------+-------------------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+ How often felt down, |                            Survey wave
+ depressed, hopeless? |         1          2          3          4          5          6 |     Total
+----------------------+------------------------------------------------------------------+----------
+           Not at all |     5,336      4,301      3,479      2,868      5,489      4,644 |    26,117 
+         Several days |     1,589      1,258        999        873      1,529      1,276 |     7,524 
+More than half the da |       353        282        199        160        298        279 |     1,571 
+     Nearly every day |       331        215        207        136        260        211 |     1,360 
+----------------------+------------------------------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
-       How often felt |                      Survey wave
-  nervous or anxious? |         1          2          3          4          5 |     Total
-----------------------+-------------------------------------------------------+----------
-           Not at all |     4,840      3,962      3,139      2,631      5,008 |    19,580 
-         Several days |     2,011      1,574      1,332      1,085      1,946 |     7,948 
-More than half the da |       382        265        199        156        328 |     1,330 
-     Nearly every day |       376        255        214        165        294 |     1,304 
-----------------------+-------------------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+       How often felt |                            Survey wave
+  nervous or anxious? |         1          2          3          4          5          6 |     Total
+----------------------+------------------------------------------------------------------+----------
+           Not at all |     4,840      3,962      3,139      2,631      5,008      4,256 |    23,836 
+         Several days |     2,011      1,574      1,332      1,085      1,946      1,630 |     9,578 
+More than half the da |       382        265        199        156        328        286 |     1,616 
+     Nearly every day |       376        255        214        165        294        238 |     1,542 
+----------------------+------------------------------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
-  How often unable to |                      Survey wave
-       stop worrying? |         1          2          3          4          5 |     Total
-----------------------+-------------------------------------------------------+----------
-           Not at all |     5,456      4,420      3,635      2,950      5,517 |    21,978 
-         Several days |     1,283      1,015        773        716      1,336 |     5,123 
-More than half the da |       357        256        195        144        325 |     1,277 
-     Nearly every day |       513        365        281        227        398 |     1,784 
-----------------------+-------------------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
+  How often unable to |                            Survey wave
+       stop worrying? |         1          2          3          4          5          6 |     Total
+----------------------+------------------------------------------------------------------+----------
+           Not at all |     5,456      4,420      3,635      2,950      5,517      4,699 |    26,677 
+         Several days |     1,283      1,015        773        716      1,336      1,134 |     6,257 
+More than half the da |       357        256        195        144        325        247 |     1,524 
+     Nearly every day |       513        365        281        227        398        330 |     2,114 
+----------------------+------------------------------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
 
 
 . 
 . //combined phq-2 score for depression, cutoff 3+=depressed
 . gen sr_phq2_score=sr_depr_pqq1+sr_depr_pqq2
-(4,028 missing values generated)
+(4,894 missing values generated)
 
 . gen sr_phq2_depressed=1 if sr_phq2_score>=3 & sr_phq2_score~=.
-(29,780 missing values generated)
+(36,187 missing values generated)
 
 . replace sr_phq2_depressed=0 if sr_phq2_score<3 & sr_phq2_score~=.
-(25,752 real changes made)
+(31,293 real changes made)
 
 . la var sr_phq2_score "PHQ-2 combined score 0-6 scale"
 
@@ -1396,27 +1481,27 @@ More than half the da |       357        256        195        144        325 | 
  score 0-6 |       score=3+
      scale |         0          1 |     Total
 -----------+----------------------+----------
-         0 |    16,395          0 |    16,395 
-         1 |     5,357          0 |     5,357 
-         2 |     4,000          0 |     4,000 
-         3 |         0      2,372 |     2,372 
-         4 |         0      1,087 |     1,087 
-         5 |         0        418 |       418 
-         6 |         0        533 |       533 
+         0 |    19,930          0 |    19,930 
+         1 |     6,497          0 |     6,497 
+         2 |     4,866          0 |     4,866 
+         3 |         0      2,839 |     2,839 
+         4 |         0      1,294 |     1,294 
+         5 |         0        511 |       511 
+         6 |         0        635 |       635 
 -----------+----------------------+----------
-     Total |    25,752      4,410 |    30,162 
+     Total |    31,293      5,279 |    36,572 
 
 
 . 
 . //combined gad-2 score for anxiety, cutoff 3+=anxiety
 . gen sr_gad2_score=sr_anx_gad1+sr_anx_gad2
-(4,028 missing values generated)
+(4,894 missing values generated)
 
 . gen sr_gad2_anxiety=1 if sr_gad2_score>=3 & sr_gad2_score~=.
-(30,558 missing values generated)
+(37,145 missing values generated)
 
 . replace sr_gad2_anxiety=0 if sr_gad2_score<3 & sr_gad2_score~=.
-(26,530 real changes made)
+(32,251 real changes made)
 
 . la var sr_gad2_score "GAD-2 combined score 0-6 scale"
 
@@ -1429,28 +1514,28 @@ More than half the da |       357        256        195        144        325 | 
  score 0-6 |       score=3+
      scale |         0          1 |     Total
 -----------+----------------------+----------
-         0 |    17,051          0 |    17,051 
-         1 |     6,009          0 |     6,009 
-         2 |     3,470          0 |     3,470 
-         3 |         0      1,561 |     1,561 
-         4 |         0      1,068 |     1,068 
-         5 |         0        373 |       373 
-         6 |         0        630 |       630 
+         0 |    20,761          0 |    20,761 
+         1 |     7,264          0 |     7,264 
+         2 |     4,226          0 |     4,226 
+         3 |         0      1,852 |     1,852 
+         4 |         0      1,271 |     1,271 
+         5 |         0        461 |       461 
+         6 |         0        737 |       737 
 -----------+----------------------+----------
-     Total |    26,530      3,632 |    30,162 
+     Total |    32,251      4,321 |    36,572 
 
 
 . tab sr_gad2_anxiety wave, missing
 
    Anxiety |
-per GAD-2, |                      Survey wave
-  score=3+ |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     6,581      5,308      4,320      3,593      6,728 |    26,530 
-         1 |     1,028        748        564        444        848 |     3,632 
-         . |       636      1,019        915        700        758 |     4,028 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+per GAD-2, |                            Survey wave
+  score=3+ |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     6,581      5,308      4,320      3,593      6,728      5,721 |    32,251 
+         1 |     1,028        748        564        444        848        689 |     4,321 
+         . |       636      1,019        915        700        758        866 |     4,894 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
@@ -1463,11 +1548,11 @@ per GAD-2, |                      Survey wave
  Interview |             ivw_type
  via proxy | Alive, SP  Died, pro  SP interv |     Total
 -----------+---------------------------------+----------
-         0 |    27,943          0          0 |    27,943 
-         1 |     2,219      1,726          0 |     3,945 
-         . |         0          0      2,302 |     2,302 
+         0 |    33,945          0          0 |    33,945 
+         1 |     2,627      2,212          0 |     4,839 
+         . |         0          0      2,682 |     2,682 
 -----------+---------------------------------+----------
-     Total |    30,162      1,726      2,302 |    34,190 
+     Total |    36,572      2,212      2,682 |    41,466 
 
 
 . 
@@ -1475,24 +1560,24 @@ per GAD-2, |                      Survey wave
 . //probable dementia, possible dementia, no dementia
 . //probable = diagnosis reported or 2+ ad8 questions (proxy) or <1.5 SD below mean
 . gen dem_3_cat=-1 if ivw_type!=1 //set to na if not SP interview
-(30,162 missing values generated)
+(36,572 missing values generated)
 
 . replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
-(2,270 real changes made)
+(2,810 real changes made)
 
 . 
 . //for proxy interviews, use ad8 score
 . forvalues i = 1/8{
   2. gen pr_ad8_`i'=-1 //initialize to n/a
   3. replace pr_ad8_`i'=. if proxy_ivw==1 & dem_3_cat==. //set missing if proxy ivw w/o direct report dementia
-  4. foreach w in 1 2 3 4 5{
+  4. foreach w in 1 2 3 4 5 6{
   5.         replace pr_ad8_`i'=1 if inlist(cp`w'chgthink`i',1,3) & wave==`w' & dem_3_cat==. & proxy_ivw==1 //yes or dementia reported
   6.         replace pr_ad8_`i'=0 if inlist(cp`w'chgthink`i',2,-8) & wave==`w' & dem_3_cat==. &  proxy_ivw==1 //no or don't know
   7.         }       
   8. tab pr_ad8_`i' wave, missing
   9. tab pr_ad8_`i' wave if proxy_ivw==1, missing
  10. }
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (108 real changes made)
 (206 real changes made)
 (73 real changes made)
@@ -1503,29 +1588,31 @@ per GAD-2, |                      Survey wave
 (63 real changes made)
 (62 real changes made)
 (111 real changes made)
+(50 real changes made)
+(89 real changes made)
 
-           |                      Survey wave
-  pr_ad8_1 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       206        148        101         63        111 |       629 
-         1 |       108         73         50         42         62 |       335 
-         . |         0          3          4          7          4 |        18 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_1 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       206        148        101         63        111         89 |       718 
+         1 |       108         73         50         42         62         50 |       385 
+         . |         0          3          4          7          4          5 |        23 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_1 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       206        148        101         63        111 |       629 
-         1 |       108         73         50         42         62 |       335 
-         . |         0          3          4          7          4 |        18 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_1 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       206        148        101         63        111         89 |       718 
+         1 |       108         73         50         42         62         50 |       385 
+         . |         0          3          4          7          4          5 |        23 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (124 real changes made)
 (190 real changes made)
 (86 real changes made)
@@ -1536,29 +1623,31 @@ per GAD-2, |                      Survey wave
 (61 real changes made)
 (73 real changes made)
 (99 real changes made)
+(67 real changes made)
+(72 real changes made)
 
-           |                      Survey wave
-  pr_ad8_2 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       190        135         89         61         99 |       574 
-         1 |       124         86         62         44         73 |       389 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_2 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       190        135         89         61         99         72 |       646 
+         1 |       124         86         62         44         73         67 |       456 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_2 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       190        135         89         61         99 |       574 
-         1 |       124         86         62         44         73 |       389 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_2 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       190        135         89         61         99         72 |       646 
+         1 |       124         86         62         44         73         67 |       456 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (133 real changes made)
 (181 real changes made)
 (88 real changes made)
@@ -1569,29 +1658,31 @@ per GAD-2, |                      Survey wave
 (59 real changes made)
 (74 real changes made)
 (98 real changes made)
+(54 real changes made)
+(85 real changes made)
 
-           |                      Survey wave
-  pr_ad8_3 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       181        133         89         59         98 |       560 
-         1 |       133         88         62         46         74 |       403 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_3 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       181        133         89         59         98         85 |       645 
+         1 |       133         88         62         46         74         54 |       457 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_3 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       181        133         89         59         98 |       560 
-         1 |       133         88         62         46         74 |       403 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_3 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       181        133         89         59         98         85 |       645 
+         1 |       133         88         62         46         74         54 |       457 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (97 real changes made)
 (217 real changes made)
 (81 real changes made)
@@ -1602,29 +1693,31 @@ per GAD-2, |                      Survey wave
 (61 real changes made)
 (72 real changes made)
 (100 real changes made)
+(50 real changes made)
+(89 real changes made)
 
-           |                      Survey wave
-  pr_ad8_4 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       217        140         92         61        100 |       610 
-         1 |        97         81         59         44         72 |       353 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_4 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       217        140         92         61        100         89 |       699 
+         1 |        97         81         59         44         72         50 |       403 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_4 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       217        140         92         61        100 |       610 
-         1 |        97         81         59         44         72 |       353 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_4 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       217        140         92         61        100         89 |       699 
+         1 |        97         81         59         44         72         50 |       403 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (104 real changes made)
 (210 real changes made)
 (83 real changes made)
@@ -1635,29 +1728,31 @@ per GAD-2, |                      Survey wave
 (68 real changes made)
 (64 real changes made)
 (108 real changes made)
+(51 real changes made)
+(88 real changes made)
 
-           |                      Survey wave
-  pr_ad8_5 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       210        138        108         68        108 |       632 
-         1 |       104         83         43         37         64 |       331 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_5 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       210        138        108         68        108         88 |       720 
+         1 |       104         83         43         37         64         51 |       382 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_5 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       210        138        108         68        108 |       632 
-         1 |       104         83         43         37         64 |       331 
-         . |         0          3          4          7          5 |        19 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_5 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       210        138        108         68        108         88 |       720 
+         1 |       104         83         43         37         64         51 |       382 
+         . |         0          3          4          7          5          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (98 real changes made)
 (215 real changes made)
 (68 real changes made)
@@ -1668,29 +1763,31 @@ per GAD-2, |                      Survey wave
 (70 real changes made)
 (61 real changes made)
 (112 real changes made)
+(41 real changes made)
+(98 real changes made)
 
-           |                      Survey wave
-  pr_ad8_6 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       215        153        107         70        112 |       657 
-         1 |        98         68         44         35         61 |       306 
-         . |         1          3          4          7          4 |        19 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_6 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       215        153        107         70        112         98 |       755 
+         1 |        98         68         44         35         61         41 |       347 
+         . |         1          3          4          7          4          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_6 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       215        153        107         70        112 |       657 
-         1 |        98         68         44         35         61 |       306 
-         . |         1          3          4          7          4 |        19 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_6 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       215        153        107         70        112         98 |       755 
+         1 |        98         68         44         35         61         41 |       347 
+         . |         1          3          4          7          4          5 |        24 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (66 real changes made)
 (248 real changes made)
 (49 real changes made)
@@ -1701,29 +1798,31 @@ per GAD-2, |                      Survey wave
 (80 real changes made)
 (29 real changes made)
 (143 real changes made)
+(19 real changes made)
+(120 real changes made)
 
-           |                      Survey wave
-  pr_ad8_7 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       248        171        127         80        143 |       769 
-         1 |        66         49         24         24         29 |       192 
-         . |         0          4          4          8          5 |        21 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_7 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       248        171        127         80        143        120 |       889 
+         1 |        66         49         24         24         29         19 |       211 
+         . |         0          4          4          8          5          5 |        26 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_7 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       248        171        127         80        143 |       769 
-         1 |        66         49         24         24         29 |       192 
-         . |         0          4          4          8          5 |        21 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_7 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       248        171        127         80        143        120 |       889 
+         1 |        66         49         24         24         29         19 |       211 
+         . |         0          4          4          8          5          5 |        26 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
-(982 real changes made, 982 to missing)
+(1,126 real changes made, 1,126 to missing)
 (114 real changes made)
 (200 real changes made)
 (79 real changes made)
@@ -1734,27 +1833,29 @@ per GAD-2, |                      Survey wave
 (56 real changes made)
 (74 real changes made)
 (99 real changes made)
+(65 real changes made)
+(74 real changes made)
 
-           |                      Survey wave
-  pr_ad8_8 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       200        142         88         56         99 |       585 
-         1 |       114         79         63         49         74 |       379 
-         . |         0          3          4          7          4 |        18 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_8 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       200        142         88         56         99         74 |       659 
+         1 |       114         79         63         49         74         65 |       444 
+         . |         0          3          4          7          4          5 |        23 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
-           |                      Survey wave
-  pr_ad8_8 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        740        742        610        602 |     2,963 
-         0 |       200        142         88         56         99 |       585 
-         1 |       114         79         63         49         74 |       379 
-         . |         0          3          4          7          4 |        18 
------------+-------------------------------------------------------+----------
-     Total |       583        964        897        722        779 |     3,945 
+           |                            Survey wave
+  pr_ad8_8 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        740        742        610        602        750 |     3,713 
+         0 |       200        142         88         56         99         74 |       659 
+         1 |       114         79         63         49         74         65 |       444 
+         . |         0          3          4          7          4          5 |        23 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        964        897        722        779        894 |     4,839 
 
 
 . 
@@ -1788,15 +1889,15 @@ per GAD-2, |                      Survey wave
 . 
 . tab pr_ad8_1 wave, missing
 
-           |                      Survey wave
-  pr_ad8_1 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |     7,931      6,851      5,644      4,625      8,157 |    33,208 
-         0 |       206        148        101         63        111 |       629 
-         1 |       108         73         50         42         62 |       335 
-         . |         0          3          4          7          4 |        18 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  pr_ad8_1 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |     7,931      6,851      5,644      4,625      8,157      7,132 |    40,340 
+         0 |       206        148        101         63        111         89 |       718 
+         1 |       108         73         50         42         62         50 |       385 
+         . |         0          3          4          7          4          5 |        23 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . tab pr_ad8_1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
@@ -1828,79 +1929,79 @@ per GAD-2, |                      Survey wave
 
 . 
 . gen pr_ad8_score=(pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8) if proxy_ivw==1 & dem_3_cat==.
-(33,231 missing values generated)
+(40,368 missing values generated)
 
 . tab pr_ad8_score proxy_ivw, missing
 
 pr_ad8_sco |       Interview via proxy
         re |         0          1          . |     Total
 -----------+---------------------------------+----------
-         0 |         0        300          0 |       300 
-         1 |         0        144          0 |       144 
-         2 |         0         85          0 |        85 
-         3 |         0         74          0 |        74 
-         4 |         0         72          0 |        72 
-         5 |         0         79          0 |        79 
-         6 |         0         63          0 |        63 
-         7 |         0         58          0 |        58 
-         8 |         0         84          0 |        84 
-         . |    27,943      2,986      2,302 |    33,231 
+         0 |         0        342          0 |       342 
+         1 |         0        156          0 |       156 
+         2 |         0        105          0 |       105 
+         3 |         0         86          0 |        86 
+         4 |         0         85          0 |        85 
+         5 |         0         89          0 |        89 
+         6 |         0         74          0 |        74 
+         7 |         0         69          0 |        69 
+         8 |         0         92          0 |        92 
+         . |    33,945      3,741      2,682 |    40,368 
 -----------+---------------------------------+----------
-     Total |    27,943      3,945      2,302 |    34,190 
+     Total |    33,945      4,839      2,682 |    41,466 
 
 
 . tab pr_ad8_score wave, missing
 
-pr_ad8_sco |                      Survey wave
-        re |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |       103         76         43         31         47 |       300 
-         1 |        51         31         29         11         22 |       144 
-         2 |        25         19         11         13         17 |        85 
-         3 |        18         14         15          6         21 |        74 
-         4 |        22         16         14          9         11 |        72 
-         5 |        27         19         10          8         15 |        79 
-         6 |        25          8         10          6         14 |        63 
-         7 |        21         14          7          6         10 |        58 
-         8 |        21         23         12         14         14 |        84 
-         . |     7,932      6,855      5,648      4,633      8,163 |    33,231 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+pr_ad8_sco |                            Survey wave
+        re |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |       103         76         43         31         47         42 |       342 
+         1 |        51         31         29         11         22         12 |       156 
+         2 |        25         19         11         13         17         20 |       105 
+         3 |        18         14         15          6         21         12 |        86 
+         4 |        22         16         14          9         11         13 |        85 
+         5 |        27         19         10          8         15         10 |        89 
+         6 |        25          8         10          6         14         11 |        74 
+         7 |        21         14          7          6         10         11 |        69 
+         8 |        21         23         12         14         14          8 |        92 
+         . |     7,932      6,855      5,648      4,633      8,163      7,137 |    40,368 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . gen dem_via_proxy=1 if pr_ad8_score>=2 & pr_ad8_score~=. //from ad8 score directly
-(33,675 missing values generated)
+(40,866 missing values generated)
 
 . replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
-(444 real changes made)
+(498 real changes made)
 
 . replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1 //if previous interview ad8 indicated dementia
 (219 real changes made)
 
 . replace dem_via_proxy=-1 if sr_dementia_ever==1
-(2,270 real changes made)
+(2,810 real changes made)
 
 . tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
 
-dem_via_pr |                      Survey wave
-       oxy |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       269        237        219        206        306 |     1,237 
-         0 |       154        107         72         42         69 |       444 
-         1 |       159        116         83         62        102 |       522 
-         . |         1          1          0          8          6 |        16 
------------+-------------------------------------------------------+----------
-     Total |       583        461        374        318        483 |     2,219 
+dem_via_pr |                            Survey wave
+       oxy |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       269        237        219        206        306        264 |     1,501 
+         0 |       154        107         72         42         69         54 |       498 
+         1 |       159        116         83         62        102         85 |       607 
+         . |         1          1          0          8          6          5 |        21 
+-----------+------------------------------------------------------------------+----------
+     Total |       583        461        374        318        483        408 |     2,627 
 
 
 . 
 . //set 3 category dementia state variable
 . //first xwave variable for proxy allowed sp to answer cg section
 . gen speaktosp=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace speaktosp=cg`w'speaktosp if wave==`w'
   3. }
 (8,245 real changes made)
@@ -1908,25 +2009,26 @@ dem_via_pr |                      Survey wave
 (5,799 real changes made)
 (4,737 real changes made)
 (8,334 real changes made)
+(7,276 real changes made)
 
 . 
 . replace dem_3_cat=1 if dem_3_cat==. & dem_via_proxy==1 //if proxy ivw indicates dem
-(522 real changes made)
+(607 real changes made)
 
 . replace dem_3_cat=3 if dem_3_cat==. & dem_via_proxy==0 & speaktosp==2  //proxy ind no dem
-(219 real changes made)
+(248 real changes made)
 
 . tab dem_3_cat wave, missing
 
-           |                      Survey wave
- dem_3_cat |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       636      1,019        915        700        758 |     4,028 
-         1 |       616        557        506        440        673 |     2,792 
-         3 |        76         57         31         20         35 |       219 
-         . |     6,917      5,442      4,347      3,577      6,868 |    27,151 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+ dem_3_cat |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       636      1,019        915        700        758        866 |     4,894 
+         1 |       616        557        506        440        673        625 |     3,417 
+         3 |        76         57         31         20         35         29 |       248 
+         . |     6,917      5,442      4,347      3,577      6,868      5,756 |    32,907 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . *************************************************
@@ -1949,12 +2051,12 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 . 
 . forvalues i = 1/4{
   2.         gen date_item`i'=.
-  3.         foreach w in 1 2 3 4 5{
+  3.         foreach w in 1 2 3 4 5 6{
   4.                 replace date_item`i'=1 if cg`w'todaydat`i'==1 & wave==`w' //yes
   5.                 replace date_item`i'=0 if inlist(cg`w'todaydat`i',2,-7) & wave==`w' //no, dont know, refused
   6.         }
   7. }
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,663 real changes made)
 (656 real changes made)
 (5,305 real changes made)
@@ -1965,7 +2067,9 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (359 real changes made)
 (6,715 real changes made)
 (618 real changes made)
-(34,190 missing values generated)
+(5,711 real changes made)
+(472 real changes made)
+(41,466 missing values generated)
 (5,845 real changes made)
 (1,474 real changes made)
 (4,261 real changes made)
@@ -1976,7 +2080,9 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (1,110 real changes made)
 (5,585 real changes made)
 (1,748 real changes made)
-(34,190 missing values generated)
+(4,506 real changes made)
+(1,677 real changes made)
+(41,466 missing values generated)
 (6,620 real changes made)
 (699 real changes made)
 (5,302 real changes made)
@@ -1987,7 +2093,9 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (354 real changes made)
 (6,673 real changes made)
 (660 real changes made)
-(34,190 missing values generated)
+(5,668 real changes made)
+(515 real changes made)
+(41,466 missing values generated)
 (6,583 real changes made)
 (736 real changes made)
 (5,357 real changes made)
@@ -1998,29 +2106,31 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (3,772 real changes made)
 (6,774 real changes made)
 (559 real changes made)
+(5,760 real changes made)
+(423 real changes made)
 
 . //count date questions correct
 . gen date_sum=date_item1+date_item2+date_item3+date_item4
-(5,194 missing values generated)
+(6,287 missing values generated)
 
 . tab date_sum wave, missing
 
-           |                      Survey wave
-  date_sum |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |       317        202        179        200        268 |     1,166 
-         1 |       213        158        138        185        203 |       897 
-         2 |       293        294        196        825        305 |     1,913 
-         3 |     1,072      1,121      1,018      2,590      1,294 |     7,095 
-         4 |     5,424      4,029      3,155         54      5,263 |    17,925 
-         . |       926      1,271      1,113        883      1,001 |     5,194 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  date_sum |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |       317        202        179        200        268        186 |     1,352 
+         1 |       213        158        138        185        203        174 |     1,071 
+         2 |       293        294        196        825        305        246 |     2,159 
+         3 |     1,072      1,121      1,018      2,590      1,294      1,329 |     8,424 
+         4 |     5,424      4,029      3,155         54      5,263      4,248 |    22,173 
+         . |       926      1,271      1,113        883      1,001      1,093 |     6,287 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace date_sum=-2 if date_sum==. & cg`w'speaktosp==2 & wave==`w'
   3.         replace date_sum=-3 if (date_item1==. | date_item2==. | date_item3==. | ///
 >                 date_item4==. ) & cg`w'speaktosp==1 & wave==`w'
@@ -2035,34 +2145,36 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (1 real change made)
 (237 real changes made)
 (6 real changes made)
+(220 real changes made)
+(7 real changes made)
 
 . tab date_sum wave, missing
 
-           |                      Survey wave
-  date_sum |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -3 |         6          2          1          1          6 |        16 
-        -2 |       284        250        197        182        237 |     1,150 
-         0 |       317        202        179        200        268 |     1,166 
-         1 |       213        158        138        185        203 |       897 
-         2 |       293        294        196        825        305 |     1,913 
-         3 |     1,072      1,121      1,018      2,590      1,294 |     7,095 
-         4 |     5,424      4,029      3,155         54      5,263 |    17,925 
-         . |       636      1,019        915        700        758 |     4,028 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  date_sum |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -3 |         6          2          1          1          6          7 |        23 
+        -2 |       284        250        197        182        237        220 |     1,370 
+         0 |       317        202        179        200        268        186 |     1,352 
+         1 |       213        158        138        185        203        174 |     1,071 
+         2 |       293        294        196        825        305        246 |     2,159 
+         3 |     1,072      1,121      1,018      2,590      1,294      1,329 |     8,424 
+         4 |     5,424      4,029      3,155         54      5,263      4,248 |    22,173 
+         . |       636      1,019        915        700        758        866 |     4,894 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //new version date sum measure, without the extra categories
 . gen date_sumr=date_sum
-(4,028 missing values generated)
+(4,894 missing values generated)
 
 . replace date_sumr=. if date_sum==-2
-(1,150 real changes made, 1,150 to missing)
+(1,370 real changes made, 1,370 to missing)
 
 . replace date_sumr=0 if date_sum==-3
-(16 real changes made)
+(23 real changes made)
 
 . 
 . //president/vp items and count
@@ -2071,7 +2183,7 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 . program define president
   1.         args newv oldv
   2.         gen `newv'=.    
-  3.         foreach w in 1 2 3 4 5{
+  3.         foreach w in 1 2 3 4 5 6{
   4.                 replace `newv'=1 if cg`w'`oldv'==1  & wave==`w' //yes
   5.                 replace `newv'=0 if inlist(cg`w'`oldv',2,-7) & wave==`w' //no, refused
   6.         }
@@ -2080,7 +2192,7 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 
 . 
 . president preslast presidna1    
-(34,190 missing values generated)
+(41,466 missing values generated)
 (6,672 real changes made)
 (532 real changes made)
 (5,395 real changes made)
@@ -2091,19 +2203,21 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (188 real changes made)
 (6,802 real changes made)
 (415 real changes made)
+(5,786 real changes made)
+(321 real changes made)
 
-           |                      Survey wave
-  preslast |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |       532        329        281        188        415 |     1,745 
-         1 |     6,672      5,395      4,331      3,594      6,802 |    26,794 
-         . |     1,041      1,351      1,187        955      1,117 |     5,651 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  preslast |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |       532        329        281        188        415        321 |     2,066 
+         1 |     6,672      5,395      4,331      3,594      6,802      5,786 |    32,580 
+         . |     1,041      1,351      1,187        955      1,117      1,169 |     6,820 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . president presfirst presidna3
-(34,190 missing values generated)
+(41,466 missing values generated)
 (3,943 real changes made)
 (3,261 real changes made)
 (3,689 real changes made)
@@ -2114,19 +2228,21 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (1,142 real changes made)
 (4,841 real changes made)
 (2,376 real changes made)
+(4,304 real changes made)
+(1,803 real changes made)
 
-           |                      Survey wave
- presfirst |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     3,261      2,035      1,526      1,142      2,376 |    10,340 
-         1 |     3,943      3,689      3,086      2,640      4,841 |    18,199 
-         . |     1,041      1,351      1,187        955      1,117 |     5,651 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+ presfirst |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     3,261      2,035      1,526      1,142      2,376      1,803 |    12,143 
+         1 |     3,943      3,689      3,086      2,640      4,841      4,304 |    22,503 
+         . |     1,041      1,351      1,187        955      1,117      1,169 |     6,820 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . president vplast vpname1
-(34,190 missing values generated)
+(41,466 missing values generated)
 (3,387 real changes made)
 (3,817 real changes made)
 (3,202 real changes made)
@@ -2137,19 +2253,21 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (1,496 real changes made)
 (4,680 real changes made)
 (2,537 real changes made)
+(3,974 real changes made)
+(2,133 real changes made)
 
-           |                      Survey wave
-    vplast |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     3,817      2,522      1,902      1,496      2,537 |    12,274 
-         1 |     3,387      3,202      2,710      2,286      4,680 |    16,265 
-         . |     1,041      1,351      1,187        955      1,117 |     5,651 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+    vplast |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     3,817      2,522      1,902      1,496      2,537      2,133 |    14,407 
+         1 |     3,387      3,202      2,710      2,286      4,680      3,974 |    20,239 
+         . |     1,041      1,351      1,187        955      1,117      1,169 |     6,820 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . president vpfirst vpname3
-(34,190 missing values generated)
+(41,466 missing values generated)
 (2,587 real changes made)
 (4,617 real changes made)
 (2,589 real changes made)
@@ -2160,40 +2278,42 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (1,850 real changes made)
 (3,902 real changes made)
 (3,315 real changes made)
+(3,451 real changes made)
+(2,656 real changes made)
 
-           |                      Survey wave
-   vpfirst |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     4,617      3,135      2,353      1,850      3,315 |    15,270 
-         1 |     2,587      2,589      2,259      1,932      3,902 |    13,269 
-         . |     1,041      1,351      1,187        955      1,117 |     5,651 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+   vpfirst |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     4,617      3,135      2,353      1,850      3,315      2,656 |    17,926 
+         1 |     2,587      2,589      2,259      1,932      3,902      3,451 |    16,720 
+         . |     1,041      1,351      1,187        955      1,117      1,169 |     6,820 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //count president questions correct
 . gen presvp=preslast+presfirst+vplast+vpfirst
-(5,651 missing values generated)
+(6,820 missing values generated)
 
 . tab presvp wave, missing
 
-           |                      Survey wave
-    presvp |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |       459        295        245        170        361 |     1,530 
-         1 |     1,940      1,184        805        638      1,100 |     5,667 
-         2 |     1,807      1,241      1,028        797      1,441 |     6,314 
-         3 |       957        807        611        488      1,017 |     3,880 
-         4 |     2,041      2,197      1,923      1,689      3,298 |    11,148 
-         . |     1,041      1,351      1,187        955      1,117 |     5,651 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+    presvp |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |       459        295        245        170        361        279 |     1,809 
+         1 |     1,940      1,184        805        638      1,100        880 |     6,547 
+         2 |     1,807      1,241      1,028        797      1,441      1,190 |     7,504 
+         3 |       957        807        611        488      1,017        777 |     4,657 
+         4 |     2,041      2,197      1,923      1,689      3,298      2,981 |    14,129 
+         . |     1,041      1,351      1,187        955      1,117      1,169 |     6,820 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace presvp=-2 if presvp==. & cg`w'speaktosp==2 & wave==`w'
   3.         replace presvp=-3 if presvp==. & (preslast==. | presfirst==. | vplast==. | ///
 >                 vpfirst==. ) & cg`w'speaktosp==1 & wave==`w'
@@ -2208,63 +2328,65 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (73 real changes made)
 (237 real changes made)
 (122 real changes made)
+(220 real changes made)
+(83 real changes made)
 
 . tab presvp wave, missing
 
-           |                      Survey wave
-    presvp |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -3 |       121         82         75         73        122 |       473 
-        -2 |       284        250        197        182        237 |     1,150 
-         0 |       459        295        245        170        361 |     1,530 
-         1 |     1,940      1,184        805        638      1,100 |     5,667 
-         2 |     1,807      1,241      1,028        797      1,441 |     6,314 
-         3 |       957        807        611        488      1,017 |     3,880 
-         4 |     2,041      2,197      1,923      1,689      3,298 |    11,148 
-         . |       636      1,019        915        700        758 |     4,028 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+    presvp |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -3 |       121         82         75         73        122         83 |       556 
+        -2 |       284        250        197        182        237        220 |     1,370 
+         0 |       459        295        245        170        361        279 |     1,809 
+         1 |     1,940      1,184        805        638      1,100        880 |     6,547 
+         2 |     1,807      1,241      1,028        797      1,441      1,190 |     7,504 
+         3 |       957        807        611        488      1,017        777 |     4,657 
+         4 |     2,041      2,197      1,923      1,689      3,298      2,981 |    14,129 
+         . |       636      1,019        915        700        758        866 |     4,894 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //new version president sum measure, without the extra categories
 . gen presvpr=presvp
-(4,028 missing values generated)
+(4,894 missing values generated)
 
 . replace presvpr=. if presvp==-2
-(1,150 real changes made, 1,150 to missing)
+(1,370 real changes made, 1,370 to missing)
 
 . replace presvpr=0 if presvp==-3
-(473 real changes made)
+(556 real changes made)
 
 . 
 . //total orientation domain, date and president questions
 . gen date_prvp=date_sumr+presvpr
-(5,178 missing values generated)
+(6,264 missing values generated)
 
 . tab date_prvp, missing
 
   date_prvp |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-          0 |        856        2.50        2.50
-          1 |        504        1.47        3.98
-          2 |        652        1.91        5.88
-          3 |      1,065        3.11        9.00
-          4 |      2,364        6.91       15.91
-          5 |      4,922       14.40       30.31
-          6 |      5,380       15.74       46.05
-          7 |      5,266       15.40       61.45
-          8 |      8,003       23.41       84.86
-          . |      5,178       15.14      100.00
+          0 |      1,008        2.43        2.43
+          1 |        590        1.42        3.85
+          2 |        774        1.87        5.72
+          3 |      1,223        2.95        8.67
+          4 |      2,745        6.62       15.29
+          5 |      5,738       13.84       29.13
+          6 |      6,373       15.37       44.50
+          7 |      6,328       15.26       59.76
+          8 |     10,423       25.14       84.89
+          . |      6,264       15.11      100.00
 ------------+-----------------------------------
-      Total |     34,190      100.00
+      Total |     41,466      100.00
 
 . 
 . //executive function domain, clock drawing score
 . gen clock_scorer=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace clock_scorer=cg`w'dclkdraw if wave==`w'
   3.         replace clock_scorer=. if inlist(cg`w'dclkdraw,-2,-9) & wave==`w' //missing
   4.         replace clock_scorer=0 if inlist(cg`w'dclkdraw,-3,-4,-7) & wave==`w' //refused,unable
@@ -2297,22 +2419,27 @@ DATE CORRCT MNTH | -1 Inappl      1 YES       2 NO |     Total
 (139 real changes made)
 (113 real changes made)
 (11 real changes made)
+(7,276 real changes made)
+(480 real changes made, 480 to missing)
+(110 real changes made)
+(73 real changes made)
+(10 real changes made)
 
 . tab clock_scorer wave, missing //left as -1 if inapplicable
 
-clock_scor |                      Survey wave
-        er |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -1 |       636      1,019        915        700        579 |     3,849 
-         0 |       416        250        186        153        204 |     1,209 
-         1 |       332        183        128        125        265 |     1,033 
-         2 |       950        869        606        447        954 |     3,826 
-         3 |     1,991      1,303      1,042        847      1,563 |     6,746 
-         4 |     2,673      2,246      1,891      1,160      2,536 |    10,506 
-         5 |       963        955        834      1,123      1,817 |     5,692 
-         . |       284        250        197        182        416 |     1,329 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+clock_scor |                            Survey wave
+        er |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -1 |       636      1,019        915        700        579        689 |     4,538 
+         0 |       416        250        186        153        204        170 |     1,379 
+         1 |       332        183        128        125        265        197 |     1,230 
+         2 |       950        869        606        447        954        734 |     4,560 
+         3 |     1,991      1,303      1,042        847      1,563      1,183 |     7,929 
+         4 |     2,673      2,246      1,891      1,160      2,536      2,249 |    12,755 
+         5 |       963        955        834      1,123      1,817      1,657 |     7,349 
+         . |       284        250        197        182        416        397 |     1,726 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
@@ -2322,7 +2449,7 @@ clock_scor |                      Survey wave
 . program define recall
   1.         args newv oldv
   2.         gen `newv'=.
-  3.         foreach w in 1 2 3 4 5{
+  3.         foreach w in 1 2 3 4 5 6{
   4.                 replace `newv'=cg`w'`oldv' if wave==`w'
   5.                 replace `newv'=. if inlist(cg`w'`oldv',-2,-1) & wave==`w' //n/a or not asked
   6.                 replace `newv'=0 if inlist(cg`w'`oldv',-7,-3) & wave==`w' //refused or unable
@@ -2332,7 +2459,7 @@ clock_scor |                      Survey wave
 
 . 
 . recall irecall dwrdimmrc
-(34,190 missing values generated)
+(41,466 missing values generated)
 (8,245 real changes made)
 (920 real changes made, 920 to missing)
 (261 real changes made)
@@ -2348,29 +2475,32 @@ clock_scor |                      Survey wave
 (8,334 real changes made)
 (995 real changes made, 995 to missing)
 (194 real changes made)
+(7,276 real changes made)
+(1,086 real changes made, 1,086 to missing)
+(142 real changes made)
 
-           |                      Survey wave
-   irecall |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -9 |         0          0          0          0          9 |         9 
-         0 |       392        261        212        162        283 |     1,310 
-         1 |       169        124        101         78        157 |       629 
-         2 |       496        344        252        203        444 |     1,739 
-         3 |       937        738        608        485        919 |     3,687 
-         4 |     1,539      1,163        911        781      1,417 |     5,811 
-         5 |     1,710      1,294      1,090        866      1,728 |     6,688 
-         6 |     1,262      1,014        856        714      1,322 |     5,168 
-         7 |       594        562        431        376        745 |     2,708 
-         8 |       184        221        194        142        242 |       983 
-         9 |        36         51         27         40         66 |       220 
-        10 |         6         34          5          8          7 |        60 
-         . |       920      1,269      1,112        882        995 |     5,178 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+   irecall |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -9 |         0          0          0          0          9          0 |         9 
+         0 |       392        261        212        162        283        230 |     1,540 
+         1 |       169        124        101         78        157        144 |       773 
+         2 |       496        344        252        203        444        336 |     2,075 
+         3 |       937        738        608        485        919        728 |     4,415 
+         4 |     1,539      1,163        911        781      1,417      1,185 |     6,996 
+         5 |     1,710      1,294      1,090        866      1,728      1,454 |     8,142 
+         6 |     1,262      1,014        856        714      1,322      1,172 |     6,340 
+         7 |       594        562        431        376        745        609 |     3,317 
+         8 |       184        221        194        142        242        253 |     1,236 
+         9 |        36         51         27         40         66         68 |       288 
+        10 |         6         34          5          8          7         11 |        71 
+         . |       920      1,269      1,112        882        995      1,086 |     6,264 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . recall drecall dwrddlyrc
-(34,190 missing values generated)
+(41,466 missing values generated)
 (8,245 real changes made)
 (920 real changes made, 920 to missing)
 (286 real changes made)
@@ -2386,81 +2516,84 @@ clock_scor |                      Survey wave
 (8,334 real changes made)
 (995 real changes made, 995 to missing)
 (215 real changes made)
+(7,276 real changes made)
+(1,086 real changes made, 1,086 to missing)
+(155 real changes made)
 
-           |                      Survey wave
-   drecall |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -9 |         0          0          0          0          9 |         9 
-         0 |     1,395      1,021        832        656      1,228 |     5,132 
-         1 |       589        413        305        270        525 |     2,102 
-         2 |       876        623        479        374        744 |     3,096 
-         3 |     1,216        924        734        634      1,184 |     4,692 
-         4 |     1,411      1,104        921        695      1,391 |     5,522 
-         5 |     1,036        911        731        630      1,176 |     4,484 
-         6 |       526        515        426        363        666 |     2,496 
-         7 |       195        203        182        159        305 |     1,044 
-         8 |        61         74         51         54         81 |       321 
-         9 |        19         13         20         20         30 |       102 
-        10 |         1          5          6          0          0 |        12 
-         . |       920      1,269      1,112        882        995 |     5,178 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+   drecall |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -9 |         0          0          0          0          9          0 |         9 
+         0 |     1,395      1,021        832        656      1,228        991 |     6,123 
+         1 |       589        413        305        270        525        418 |     2,520 
+         2 |       876        623        479        374        744        596 |     3,692 
+         3 |     1,216        924        734        634      1,184        950 |     5,642 
+         4 |     1,411      1,104        921        695      1,391      1,171 |     6,693 
+         5 |     1,036        911        731        630      1,176      1,058 |     5,542 
+         6 |       526        515        426        363        666        615 |     3,111 
+         7 |       195        203        182        159        305        260 |     1,304 
+         8 |        61         74         51         54         81         98 |       419 
+         9 |        19         13         20         20         30         27 |       129 
+        10 |         1          5          6          0          0          6 |        18 
+         . |       920      1,269      1,112        882        995      1,086 |     6,264 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . gen wordrecall0_20=irecall+drecall
-(5,178 missing values generated)
+(6,264 missing values generated)
 
 . 
 . //overall cognitive domain score, assigns cutoffs for each of the domain variables
 . gen clock65=0 if clock_scorer>1 & clock_scorer<=5
-(7,420 missing values generated)
+(8,873 missing values generated)
 
 . replace clock65=1 if inlist(clock_scorer,0,1)
-(2,242 real changes made)
+(2,609 real changes made)
 
 . 
 . gen word65=0 if wordrecall0_20>3 & wordrecall0_20<=20
-(9,344 missing values generated)
+(11,233 missing values generated)
 
 . replace word65=1 if inlist(wordrecall0_20,0,1,2,3)
-(4,157 real changes made)
+(4,960 real changes made)
 
 . 
 . gen datena65=0 if date_prvp>3 & date_prvp<=8
-(8,255 missing values generated)
+(9,859 missing values generated)
 
 . replace datena65=1 if inlist(date_prvp,0,1,2,3)
-(3,077 real changes made)
+(3,595 real changes made)
 
 . 
 . gen domain65=clock65+word65+datena65
-(5,187 missing values generated)
+(6,273 missing values generated)
 
 . tab domain65 wave, missing
 
-           |                      Survey wave
-  domain65 |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     5,577      4,553      3,738      2,919      5,906 |    22,693 
-         1 |     1,071        784        541        551        866 |     3,813 
-         2 |       417        366        326        300        425 |     1,834 
-         3 |       260        103         82         85        133 |       663 
-         . |       920      1,269      1,112        882      1,004 |     5,187 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+           |                            Survey wave
+  domain65 |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     5,577      4,553      3,738      2,919      5,906      5,072 |    27,765 
+         1 |     1,071        784        541        551        866        654 |     4,467 
+         2 |       417        366        326        300        425        358 |     2,192 
+         3 |       260        103         82         85        133        106 |       769 
+         . |       920      1,269      1,112        882      1,004      1,086 |     6,273 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . //now apply to dementia 3 category variable
 . replace dem_3_cat=1 if dem_3_cat==. & inlist(speaktosp,1,-1) & inlist(domain65,2,3)
-(1,424 real changes made)
+(1,659 real changes made)
 
 . replace dem_3_cat=2 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==1
-(3,426 real changes made)
+(3,998 real changes made)
 
 . replace dem_3_cat=3 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==0
-(22,280 real changes made)
+(27,226 real changes made)
 
 . 
 . la def dem3 1"Probable dementia" 2"Possible dementia" 3"No dementia"
@@ -2473,24 +2606,24 @@ clock_scor |                      Survey wave
 . tab dem_3_cat wave, missing
 
          Dementia |
-    likelihood, 3 |                      Survey wave
-       categories |         1          2          3          4          5 |     Total
-------------------+-------------------------------------------------------+----------
-               -1 |       636      1,019        915        700        758 |     4,028 
-Probable dementia |     1,038        840        718        660        960 |     4,216 
-Possible dementia |       996        675        478        498        779 |     3,426 
-      No dementia |     5,575      4,540      3,688      2,873      5,823 |    22,499 
-                . |         0          1          0          6         14 |        21 
-------------------+-------------------------------------------------------+----------
-            Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+    likelihood, 3 |                            Survey wave
+       categories |         1          2          3          4          5          6 |     Total
+------------------+------------------------------------------------------------------+----------
+               -1 |       636      1,019        915        700        758        866 |     4,894 
+Probable dementia |     1,038        840        718        660        960        860 |     5,076 
+Possible dementia |       996        675        478        498        779        572 |     3,998 
+      No dementia |     5,575      4,540      3,688      2,873      5,823      4,975 |    27,474 
+                . |         0          1          0          6         14          3 |        24 
+------------------+------------------------------------------------------------------+----------
+            Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . gen dem_2_cat=1 if inlist(dem_3_cat,1,2)
-(26,548 missing values generated)
+(32,392 missing values generated)
 
 . replace dem_2_cat=0 if dem_3_cat==3
-(22,499 real changes made)
+(27,474 real changes made)
 
 . la var dem_2_cat "Ind prob/possible dementia"
 
@@ -2498,22 +2631,22 @@ Possible dementia |       996        675        478        498        779 |     
 
        Ind |
 prob/possi |
-       ble |                      Survey wave
-  dementia |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |     5,575      4,540      3,688      2,873      5,823 |    22,499 
-         1 |     2,034      1,515      1,196      1,158      1,739 |     7,642 
-         . |       636      1,020        915        706        772 |     4,049 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+       ble |                            Survey wave
+  dementia |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |     5,575      4,540      3,688      2,873      5,823      4,975 |    27,474 
+         1 |     2,034      1,515      1,196      1,158      1,739      1,432 |     9,074 
+         . |       636      1,020        915        706        772        869 |     4,918 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . *************************************************
 . //rate memory
 . gen memory=.
-(34,190 missing values generated)
+(41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2. replace memory=cg`w'ratememry if wave==`w'&proxy_ivw==0 //self interview
   3. replace memory=cp`w'memrygood if wave==`w'&proxy_ivw==1 //proxy interview
   4. 
@@ -2528,9 +2661,11 @@ prob/possi |
 (722 real changes made)
 (7,093 real changes made)
 (779 real changes made)
+(6,002 real changes made)
+(894 real changes made)
 
 . replace memory=. if inlist(memory,-1)
-(272 real changes made, 272 to missing)
+(298 real changes made, 298 to missing)
 
 . la var memory "Rate memory 1=Excell, 5=Poor"
 
@@ -2542,19 +2677,19 @@ prob/possi |
 
       Rate |
     memory |
- 1=Excell, |                      Survey wave
-    5=Poor |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-        -8 |         2         17         20         15         13 |        67 
-        -7 |         4          5          2          0          0 |        11 
- Excellent |       912        685        486        335        770 |     3,188 
- Very good |     2,290      1,837      1,463      1,153      2,249 |     8,992 
-      Good |     2,615      2,269      1,891      1,656      2,799 |    11,230 
-      Fair |     1,314      1,180      1,026        875      1,470 |     5,865 
-      Poor |       472        439        402        388        562 |     2,263 
-         . |       636        643        509        315        471 |     2,574 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+ 1=Excell, |                            Survey wave
+    5=Poor |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+        -8 |         2         17         20         15         13         16 |        83 
+        -7 |         4          5          2          0          0          1 |        12 
+ Excellent |       912        685        486        335        770        583 |     3,771 
+ Very good |     2,290      1,837      1,463      1,153      2,249      1,915 |    10,907 
+      Good |     2,615      2,269      1,891      1,656      2,799      2,516 |    13,746 
+      Fair |     1,314      1,180      1,026        875      1,470      1,332 |     7,197 
+      Poor |       472        439        402        388        562        507 |     2,770 
+         . |       636        643        509        315        471        406 |     2,980 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
@@ -2568,37 +2703,38 @@ prob/possi |
 >         sr_gad2_anxiety), values(1)
 
 . replace sr_numconditions1=. if ivw_type!=1
-(4,028 real changes made, 4,028 to missing)
+(4,894 real changes made, 4,894 to missing)
 
 . la var  sr_numconditions1 "Count medical conditions"
 
 . tab sr_numconditions1 wave, missing
 
      Count |
-   medical |                      Survey wave
-conditions |         1          2          3          4          5 |     Total
------------+-------------------------------------------------------+----------
-         0 |       570        357        233        161        449 |     1,770 
-         1 |     1,163        840        613        444      1,003 |     4,063 
-         2 |     1,685      1,287        957        746      1,556 |     6,231 
-         3 |     1,606      1,275      1,029        854      1,601 |     6,365 
-         4 |     1,107        931        830        719      1,254 |     4,841 
-         5 |       728        652        578        509        791 |     3,258 
-         6 |       389        379        298        285        492 |     1,843 
-         7 |       213        185        183        175        235 |       991 
-         8 |        99         84         90         83        113 |       469 
-         9 |        32         40         43         37         47 |       199 
-        10 |        15         19         20         15         20 |        89 
-        11 |         2          4          8          7         12 |        33 
-        12 |         0          3          2          2          3 |        10 
-         . |       636      1,019        915        700        758 |     4,028 
------------+-------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334 |    34,190 
+   medical |                            Survey wave
+conditions |         1          2          3          4          5          6 |     Total
+-----------+------------------------------------------------------------------+----------
+         0 |       570        357        233        161        449        406 |     2,176 
+         1 |     1,163        840        613        444      1,003        978 |     5,041 
+         2 |     1,685      1,287        957        746      1,556      1,485 |     7,716 
+         3 |     1,606      1,275      1,029        854      1,601      1,487 |     7,852 
+         4 |     1,107        931        830        719      1,254        981 |     5,822 
+         5 |       728        652        578        509        791        581 |     3,839 
+         6 |       389        379        298        285        492        292 |     2,135 
+         7 |       213        185        183        175        235        129 |     1,120 
+         8 |        99         84         90         83        113         48 |       517 
+         9 |        32         40         43         37         47         17 |       216 
+        10 |        15         19         20         15         20          6 |        95 
+        11 |         2          4          8          7         12          0 |        33 
+        12 |         0          3          2          2          3          0 |        10 
+         . |       636      1,019        915        700        758        866 |     4,894 
+-----------+------------------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
 
 
 . 
 . 
-. local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_cancer_new ///
+. local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_cancer_new //
+> /
 > sr_hip_raw sr_hip_ever sr_hip_new sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever sr_htn_new sr_ra_raw ///
 > sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_raw ///
 > sr_lung_dis_ever sr_lung_dis_new sr_dementia_raw sr_dementia_ever sr_dementia_new
@@ -2612,50 +2748,50 @@ conditions |         1          2          3          4          5 |     Total
     health, |
 categorical |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         25        0.08        0.08
-         -7 |          1        0.00        0.09
-  Excellent |      3,419       11.34       11.42
-  Very good |      8,490       28.15       39.57
-       Good |     10,056       33.34       72.91
-       Fair |      6,135       20.34       93.25
-       Poor |      2,036        6.75      100.00
+         -8 |         28        0.08        0.08
+         -7 |          2        0.01        0.08
+  Excellent |      4,107       11.23       11.31
+  Very good |     10,357       28.32       39.63
+       Good |     12,281       33.58       73.21
+       Fair |      7,410       20.26       93.47
+       Poor |      2,387        6.53      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
        Self |
    reported |
 health=fair |
       /poor |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         25        0.08        0.08
-         -7 |          1        0.00        0.09
-          0 |     21,965       72.82       72.91
-          1 |      8,171       27.09      100.00
+         -8 |         28        0.08        0.08
+         -7 |          2        0.01        0.08
+          0 |     26,745       73.13       73.21
+          1 |      9,797       26.79      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
       Heart |
 Attack, Raw |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         42        0.14        0.14
+         -8 |         49        0.13        0.13
          -7 |          1        0.00        0.14
-          0 |     27,900       92.50       92.64
-          1 |      2,219        7.36      100.00
+          0 |     34,143       93.36       93.50
+          1 |      2,379        6.50      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
   Ever Self |
      report |
       Heart |
      Attack |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         65        0.22        0.22
-         -7 |          3        0.01        0.23
-          0 |     25,134       83.33       83.56
-          1 |      4,960       16.44      100.00
+         -8 |         72        0.20        0.20
+         -7 |          3        0.01        0.21
+          0 |     31,377       85.80       86.00
+          1 |      5,120       14.00      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
       Heart |
@@ -2673,23 +2809,23 @@ Self report |
 Self report |
 Stroke, Raw |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         44        0.15        0.15
-         -7 |          1        0.00        0.15
-          0 |     28,287       93.78       93.93
-          1 |      1,830        6.07      100.00
+         -8 |         56        0.15        0.15
+         -7 |          1        0.00        0.16
+          0 |     34,520       94.39       94.55
+          1 |      1,995        5.45      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
   Ever Self |
      report |
      Stroke |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         71        0.24        0.24
-         -7 |          3        0.01        0.25
-          0 |     26,213       86.91       87.15
-          1 |      3,875       12.85      100.00
+         -8 |         83        0.23        0.23
+         -7 |          3        0.01        0.24
+          0 |     32,446       88.72       88.95
+          1 |      4,040       11.05      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
      Stroke |
@@ -2706,23 +2842,23 @@ Self report |
 Self report |
 Cancer, Raw |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         26        0.09        0.09
-         -7 |          3        0.01        0.10
-          0 |     26,127       86.62       86.72
-          1 |      4,006       13.28      100.00
+         -8 |         30        0.08        0.08
+         -7 |          3        0.01        0.09
+          0 |     32,158       87.93       88.02
+          1 |      4,381       11.98      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
   Ever Self |
      report |
      Cancer |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         50        0.17        0.17
-         -7 |          8        0.03        0.19
-          0 |     21,593       71.59       71.78
-          1 |      8,511       28.22      100.00
+         -8 |         54        0.15        0.15
+         -7 |          8        0.02        0.17
+          0 |     27,624       75.53       75.70
+          1 |      8,886       24.30      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
      Cancer |
@@ -2741,12 +2877,12 @@ Self report |
   Fracture, |
         Raw |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         12        0.04        0.04
+         -8 |         15        0.04        0.04
          -7 |          1        0.00        0.04
-          0 |     29,326       97.23       97.27
-          1 |        823        2.73      100.00
+          0 |     35,646       97.47       97.51
+          1 |        910        2.49      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
   Ever Self |
  report Hip |
@@ -2754,12 +2890,12 @@ Self report |
  (since age |
         50) |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         24        0.08        0.08
+         -8 |         31        0.08        0.08
          -7 |          3        0.01        0.09
-          0 |     28,373       94.07       94.16
-          1 |      1,762        5.84      100.00
+          0 |     34,366       93.97       94.06
+          1 |      2,172        5.94      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
         Hip |
@@ -2767,33 +2903,33 @@ Self report |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |          8        0.04        0.04
+         -8 |         11        0.04        0.04
          -7 |          1        0.00        0.04
-          0 |     22,100       97.99       98.03
-          1 |        444        1.97      100.00
+          0 |     28,420       98.13       98.17
+          1 |        531        1.83      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
    sr_heart_dis_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         52        0.17        0.17
-                 -7 |          1        0.00        0.18
-                 No |     23,673       78.49       78.66
-                Yes |      2,554        8.47       87.13
-Previously reported |      3,882       12.87      100.00
+                 -8 |         67        0.18        0.18
+                 -7 |          1        0.00        0.19
+                 No |     28,605       78.22       78.40
+                Yes |      2,714        7.42       85.82
+Previously reported |      5,185       14.18      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
       Heart |
     Disease |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         52        0.17        0.17
-         -7 |          1        0.00        0.18
-          0 |     23,673       78.49       78.66
-          1 |      6,436       21.34      100.00
+         -8 |         67        0.18        0.18
+         -7 |          1        0.00        0.19
+          0 |     28,605       78.22       78.40
+          1 |      7,899       21.60      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
       Heart |
@@ -2801,31 +2937,31 @@ Self report |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         36        0.16        0.16
-         -7 |          1        0.00        0.16
-          0 |     21,373       94.77       94.93
-          1 |      1,143        5.07      100.00
+         -8 |         51        0.18        0.18
+         -7 |          1        0.00        0.18
+          0 |     27,608       95.32       95.50
+          1 |      1,303        4.50      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
          sr_htn_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         34        0.11        0.11
-                 No |      8,953       29.68       29.80
-                Yes |      8,128       26.95       56.74
-Previously reported |     13,047       43.26      100.00
+                 -8 |         37        0.10        0.10
+                 No |     10,739       29.36       29.47
+                Yes |      8,239       22.53       51.99
+Previously reported |     17,557       48.01      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
  high blood |
    pressure |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         34        0.11        0.11
-          0 |      8,953       29.68       29.80
-          1 |     21,175       70.20      100.00
+         -8 |         37        0.10        0.10
+          0 |     10,739       29.36       29.47
+          1 |     25,796       70.53      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
  high blood |
@@ -2833,128 +2969,128 @@ Self report |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         24        0.11        0.11
-          0 |     19,509       86.50       86.61
-          1 |      3,020       13.39      100.00
+         -8 |         27        0.09        0.09
+          0 |     25,805       89.10       89.19
+          1 |      3,131       10.81      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
           sr_ra_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         37        0.12        0.12
-                 -7 |          1        0.00        0.13
-                 No |     11,737       38.91       39.04
-                Yes |      7,110       23.57       62.61
-Previously reported |     11,277       37.39      100.00
+                 -8 |         39        0.11        0.11
+                 -7 |          1        0.00        0.11
+                 No |     13,890       37.98       38.09
+                Yes |      7,393       20.21       58.30
+Previously reported |     15,249       41.70      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
   arthritis |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         37        0.12        0.12
-         -7 |          1        0.00        0.13
-          0 |     11,737       38.91       39.04
-          1 |     18,387       60.96      100.00
+         -8 |         39        0.11        0.11
+         -7 |          1        0.00        0.11
+          0 |     13,890       37.98       38.09
+          1 |     22,642       61.91      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
   arthritis |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         22        0.10        0.10
-          0 |     19,669       87.21       87.31
-          1 |      2,862       12.69      100.00
+         -8 |         24        0.08        0.08
+          0 |     25,794       89.06       89.14
+          1 |      3,145       10.86      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
     sr_osteoprs_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |        106        0.35        0.35
-                 -7 |          1        0.00        0.35
-                 No |     22,716       75.31       75.67
-                Yes |      2,792        9.26       84.92
-Previously reported |      4,547       15.08      100.00
+                 -8 |        120        0.33        0.33
+                 -7 |          1        0.00        0.33
+                 No |     27,319       74.70       75.03
+                Yes |      3,001        8.21       83.24
+Previously reported |      6,131       16.76      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
 osteoporosi |
           s |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |        106        0.35        0.35
-         -7 |          1        0.00        0.35
-          0 |     22,716       75.31       75.67
-          1 |      7,339       24.33      100.00
+         -8 |        120        0.33        0.33
+         -7 |          1        0.00        0.33
+          0 |     27,319       74.70       75.03
+          1 |      9,132       24.97      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
 osteoporosi |
     s since |
   prev year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         79        0.35        0.35
-         -7 |          1        0.00        0.35
-          0 |     21,240       94.18       94.53
-          1 |      1,233        5.47      100.00
+         -8 |         93        0.32        0.32
+         -7 |          1        0.00        0.32
+          0 |     27,427       94.70       95.02
+          1 |      1,442        4.98      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
     sr_diabetes_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         19        0.06        0.06
-                 -7 |          2        0.01        0.07
-                 No |     21,987       72.90       72.97
-                Yes |      3,210       10.64       83.61
-Previously reported |      4,944       16.39      100.00
+                 -8 |         19        0.05        0.05
+                 -7 |          2        0.01        0.06
+                 No |     26,528       72.54       72.59
+                Yes |      3,296        9.01       81.61
+Previously reported |      6,727       18.39      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
    diabetes |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         19        0.06        0.06
-         -7 |          2        0.01        0.07
-          0 |     21,987       72.90       72.97
-          1 |      8,154       27.03      100.00
+         -8 |         19        0.05        0.05
+         -7 |          2        0.01        0.06
+          0 |     26,528       72.54       72.59
+          1 |     10,023       27.41      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
    diabetes |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         17        0.08        0.08
-         -7 |          1        0.00        0.08
-          0 |     21,250       94.22       94.30
-          1 |      1,285        5.70      100.00
+         -8 |         17        0.06        0.06
+         -7 |          1        0.00        0.06
+          0 |     27,574       95.20       95.27
+          1 |      1,371        4.73      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
     sr_lung_dis_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         21        0.07        0.07
+                 -8 |         24        0.07        0.07
                  -7 |          1        0.00        0.07
-                 No |     24,866       82.44       82.51
-                Yes |      2,149        7.12       89.64
-Previously reported |      3,125       10.36      100.00
+                 No |     29,992       82.01       82.08
+                Yes |      2,260        6.18       88.26
+Previously reported |      4,295       11.74      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
        Lung |
     Disease |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         21        0.07        0.07
+         -8 |         24        0.07        0.07
          -7 |          1        0.00        0.07
-          0 |     24,866       82.44       82.51
-          1 |      5,274       17.49      100.00
+          0 |     29,992       82.01       82.08
+          1 |      6,555       17.92      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
        Lung |
@@ -2962,49 +3098,49 @@ Self report |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         16        0.07        0.07
-         -7 |          1        0.00        0.08
-          0 |     21,541       95.51       95.59
-          1 |        995        4.41      100.00
+         -8 |         19        0.07        0.07
+         -7 |          1        0.00        0.07
+          0 |     27,837       96.11       96.18
+          1 |      1,106        3.82      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
     sr_dementia_raw |      Freq.     Percent        Cum.
 --------------------+-----------------------------------
-                 -8 |         26        0.09        0.09
+                 -8 |         31        0.08        0.08
                  -7 |          2        0.01        0.09
-                 No |     27,864       92.38       92.47
-                Yes |      1,102        3.65       96.13
-Previously reported |      1,168        3.87      100.00
+                 No |     33,729       92.23       92.32
+                Yes |      1,249        3.42       95.73
+Previously reported |      1,561        4.27      100.00
 --------------------+-----------------------------------
-              Total |     30,162      100.00
+              Total |     36,572      100.00
 
 Self report |
    Dementia |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         26        0.09        0.09
+         -8 |         31        0.08        0.08
          -7 |          2        0.01        0.09
-          0 |     27,864       92.38       92.47
-          1 |      2,270        7.53      100.00
+          0 |     33,729       92.23       92.32
+          1 |      2,810        7.68      100.00
 ------------+-----------------------------------
-      Total |     30,162      100.00
+      Total |     36,572      100.00
 
 Self report |
    Dementia |
  since prev |
        year |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -8 |         20        0.09        0.09
-         -7 |          2        0.01        0.10
-          0 |     21,886       97.04       97.14
-          1 |        645        2.86      100.00
+         -8 |         25        0.09        0.09
+         -7 |          2        0.01        0.09
+          0 |     28,144       97.17       97.27
+          1 |        792        2.73      100.00
 ------------+-----------------------------------
-      Total |     22,553      100.00
+      Total |     28,963      100.00
 
 . 
 . *************************************************
-. save round_1_5_cleanv2.dta, replace
-file round_1_5_cleanv2.dta saved
+. save round_1_6_cleanv2.dta, replace
+file round_1_6_cleanv2.dta saved
 
 . 
 . *************************************************
@@ -3012,5 +3148,5 @@ file round_1_5_cleanv2.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs3_nhats_cleaning.txt
   log type:  text
- closed on:   7 Apr 2017, 12:53:35
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  11 Sep 2017, 10:41:45
+---------------------------------------------------------------------------------------------------------------------------------------------------

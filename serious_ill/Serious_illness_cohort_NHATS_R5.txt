@@ -921,7 +921,7 @@ renal_dis=0;
 		substr(dx,1,4)='7465' or
 		substr(dx,1,4)='7466' or
 		substr(dx,1,4)='V422' or
-		substr(dx,1,5)='V433')
+		substr(dx,1,4)='V433')
 			and comorbi_3=0 
 		then comorbi_3=1;
 	*Pulmonary Circulation Disorders;
@@ -1096,7 +1096,7 @@ renal_dis=0;
 		then comorbi_16=1;
 	*Lymphoma;
 	if (substr(dx,1,3)='200' or
-		substr(dx,1,4)='201' or
+		substr(dx,1,3)='201' or
 		substr(dx,1,4)='2020' or
 		substr(dx,1,4)='2021' or
 		substr(dx,1,4)='2022' or
@@ -1581,7 +1581,7 @@ if dx~="" then do;
                and charlson_5=0
                then charlson_5=1;
    *Chronic Pulmonary Disease ;
-        if(substr(dx,1,5)='4168' or
+        if(substr(dx,1,4)='4168' or
                substr(dx,1,4)='4169' or
                substr(dx,1,3)='490' or
                substr(dx,1,3)='491' or
@@ -1722,7 +1722,7 @@ if dx~="" then do;
                 substr(dx,1,3)='206' or
                 substr(dx,1,3)='207' or
                 substr(dx,1,3)='208' or
-                substr(dx,1,3)='2386' )
+                substr(dx,1,4)='2386' )
 		and charlson_14=0
                 then charlson_14=1;
 * Moderate or Severe Liver Disease ;
@@ -7156,3 +7156,262 @@ replace npi=0 if missing(npi)
 save "E:\nhats\data\Projects\serious_ill\int_data\npi_ebl.dta", replace
 
 
+
+
+H="HCC"
+libname hcc 'E:\nhats\data\Projects\pal_perf_scale\int_data\hcc';
+
+%macro gethcc (year=,wave=);
+
+data persa(keep=bene_id dob orec);
+set medi.mbsf_06_14;
+if year=&year.;
+dob=birth_date;
+orec=BENE_ENTLMT_RSN_ORIG;
+run;
+
+option nofmterr;
+
+data pers1 (keep=bene_id mcaid nemcaid sex);
+set proj_int.serious_ill_int_dataset;
+if bene_id~='' and wave=&wave.;
+sex=female+1;
+mcaid=0<indexc(buyin_2y_r,"C","B","A")<=12;
+nemcaid=mcaid=1 and indexc(substr(buyin_2y_r,13,12),"C","B","A")=0;
+run;
+
+
+proc sql;
+create table person as select * from
+pers1 a 
+left join 
+persa b
+on a.bene_id=b.bene_id;
+quit;
+
+proc sort nodup data=person out=hcc.person;
+by bene_id;
+run;
+
+data diag(keep=bene_id diag);
+set proj_int.dx_0_1yr;
+if index_year=&year.;
+run;
+
+proc sort nodup data=diag out=hcc.diag;
+by bene_id;
+run;
+
+
+
+
+
+ /*
+    The following is JCL if you are using an IBM-type mainframe:
+
+   //JOBCARD
+   //V1210F1P EXEC SAS9,REGION=8M,
+   // OPTIONS='ERRORS=0,NOCENTER,NEWS'
+   //WORK  DD SPACE=(CYL,(1000,2))
+   //WORK1   DD SPACE=(CYL,(2000,2))
+   //* user-defined the location of formats
+   //LIBRARY DD DISP=SHR,DSN=XXXX.XXXXXXX
+   //*user-defined the location of macros
+   //IN0 DD DISP=SHR,DSN=XXXX.XXXXXX
+   //*the location of person-level file
+   //IN1 DD DISP=SHR,DSN=XXXX.PERSON
+   //*the location of the diagnosis file
+   //IN2 DD DISP=SHR,DSN=XXXX.DIAG
+   //*the location of the file containing all coefficients
+   //INCOEF DD DISP=SHR,DSN=XXXX.HCCCOEFN
+   //*the output file containing person-level scores
+   //OUT DD DISP=(NEW,CATLG,KEEP),
+   //    DSN=XXX.V1210F1P.PERSON,
+   //    SPACE=(TRK,(20,10),RLSE)
+   //SYSIN  DD *
+
+   ******************************************************************
+  If you are using PC-SAS, you must specify the location of the files
+  on your PC in a libname/filename statement.
+ */
+  LIBNAME LIBRARY "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  FILENAME IN0 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  IN1 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  IN2 "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  INCOEF "E:\nhats\data\Projects\pal_perf_scale\int_data\hcc";
+  LIBNAME  OUT "E:\nhats\data\Projects\pal_perf_scale\int_data\";
+ ***********************************************************************
+ *
+ *   DESCRIPTION:
+ *
+ * V1210F1P program creates seventy HCC variables (&CMSHCC) and four
+ * score variables for each person who is present in a person file
+ * supplied by a user.
+ * If a person has at least one diagnosis in DIAG file (supplied by a
+ * user) then HCC variables are created, otherwise HCCs are set to 0 .
+ * Score variables are created using coefficients from 4 final models:
+ * community, institutional, new enrollees, and SNP new enrollees.
+ *
+ * Assumptions about input files:
+ *   - both files are sorted by person ID
+ *
+ *   - person level file has the following variables:
+ *     :&IDVAR   - person ID variable (it is a macro parameter, HICNO
+ *                 for Medicare data)
+ *     :DOB      - date of birth
+ *     :SEX      - sex
+ *     :OREC     - original reason for entitlement
+ *     :MCAID    - Medicaid dummy variable (base year)
+ *     :NEMCAID  - Medicaid dummy variable for new enrollees (predicted
+ *                 year)
+ *
+ *   - diagnosis level file has the following vars:
+ *     :&IDVAR   - person ID variable (it is a macro parameter, HICNO
+ *                 for Medicare data)
+ *     :DIAG     - diagnosis
+ *
+ * The program supplies parameters to a main macro %V1210F1M that calls
+ * other external macros:
+ *
+ *      %AGESEXNV  - create age/sex, originally disabled, disabled vars
+ *      %EDITICD9  - perform edits to diagnosis
+ *      %V12H70M   - assign one ICD9 to multiple CCs
+ *      %V12H70L   - assign labels to HCCs
+ *      %V12H70H   - set HCC=0 according to hierarchies
+ *      %SCOREVAR  - calculate a score variable
+ *
+ *
+ * Program steps:
+ *         step1: include external macros
+ *         step2: define internal macro variables
+ *         step3: merge person and diagnosis files outputting one
+ *                record per person for each input person level record
+ *         step3.1: declaration section
+ *         step3.2: bring regression coefficients
+ *         step3.3: merge person and diagnosis file
+ *         step3.4: for the first record for a person set CC to 0
+ *                  and calculate age
+ *         step3.5: if there are any diagnoses for a person
+ *                  then do the following:
+ *                   - create CC using format $I12101Y09Y10YC
+ *                   - perform ICD9 edits using macro EDITICD9
+ *                   - create additional CC using V12H70M macro
+ *         step3.6: for the last record for a person do the
+ *                  following:
+ *                   - create demographic variables needed
+ *                     for regressions (macro AGESEXNV)
+ *                   - create HCC using hierarchies (macro V12H70H)
+ *                   - create HCC interaction variables
+ *                   - create HCC and DISABL interaction variables
+ *                   - set HCCs and interaction vars to zero if there
+ *                     are no diagnoses for a person
+ *                   - create score for community model
+ *                   - create score for institutional model
+ *                   - create score for new enrollee model
+ *                   - create score for SNP new enrollee model
+ *                   - normalize score if needed
+ *         step4: data checks and proc contents
+ *
+ *   USER CUSTOMIZATION:
+ * A user must supply 2 files with the variables described above and
+ * set the following parameters:
+ *      INP      - SAS input person dataset
+ *      IND      - SAS input diagnosis dataset
+ *      OUTDATA  - SAS output dataset
+ *      IDVAR    - name of person id variable (HICNO for medicare data)
+ *      KEEPVAR  - variables to keep in the output dataset
+ *      SEDITS   - a switch that controls whether to perform edits on 
+ *                 ICD9. 1-YES, 0-NO
+ *      DATE_ASOF- reference date to calculate age. Set to February 1 of 
+ *                 the payment year for consistency with CMS. 
+ *                 The default value in the code below is 1FEB2010.
+ *      FMNAME   - format name (set to I12101Y09Y10YC by default)
+ *      DF       - normalization factor (set to 1 by default)
+ ***********************************************************************;
+
+ %LET INPUTVARS=%STR(DOB MCAID NEMCAID OREC);
+
+ %*demographic variables;
+ %LET DEMVARS  =%STR(AGEF ORIGDS DISABL
+                     F0_34  F35_44 F45_54 F55_59 F60_64 F65_69
+                     F70_74 F75_79 F80_84 F85_89 F90_94 F95_GT
+                     M0_34  M35_44 M45_54 M55_59 M60_64 M65_69
+                     M70_74 M75_79 M80_84 M85_89 M90_94 M95_GT
+                     NEF0_34  NEF35_44 NEF45_54 NEF55_59 NEF60_64
+                     NEF65    NEF66    NEF67    NEF68    NEF69
+                     NEF70_74 NEF75_79 NEF80_84 NEF85_89 NEF90_94
+                     NEF95_GT
+                     NEM0_34  NEM35_44 NEM45_54 NEM55_59 NEM60_64
+                     NEM65    NEM66    NEM67    NEM68    NEM69
+                     NEM70_74 NEM75_79 NEM80_84 NEM85_89 NEM90_94
+                     NEM95_GT);
+
+ %*list of HCCs included in models;
+ %LET CMSHCC = %STR(
+      HCC1      HCC2      HCC5     HCC7       HCC8
+      HCC9      HCC10     HCC15    HCC16      HCC17
+      HCC18     HCC19     HCC21    HCC25      HCC26
+      HCC27     HCC31     HCC32    HCC33      HCC37
+      HCC38     HCC44     HCC45    HCC51      HCC52
+      HCC54     HCC55     HCC67    HCC68      HCC69
+      HCC70     HCC71     HCC72    HCC73      HCC74
+      HCC75     HCC77     HCC78    HCC79      HCC80
+      HCC81     HCC82     HCC83    HCC92      HCC95
+      HCC96     HCC100    HCC101   HCC104     HCC105
+      HCC107    HCC108    HCC111   HCC112     HCC119
+      HCC130    HCC131    HCC132   HCC148     HCC149
+      HCC150    HCC154    HCC155   HCC157     HCC158
+      HCC161    HCC177    HCC164   HCC174     HCC176);
+
+ %*list of CCs that correspond to model HCCs;
+ %LET CMSCC = %STR(
+      CC1       CC2       CC5      CC7        CC8
+      CC9       CC10      CC15     CC16       CC17
+      CC18      CC19      CC21     CC25       CC26
+      CC27      CC31      CC32     CC33       CC37
+      CC38      CC44      CC45     CC51       CC52
+      CC54      CC55      CC67     CC68       CC69
+      CC70      CC71      CC72     CC73       CC74
+      CC75      CC77      CC78     CC79       CC80
+      CC81      CC82      CC83     CC92       CC95
+      CC96      CC100     CC101    CC104      CC105
+      CC107     CC108     CC111    CC112      CC119
+      CC130     CC131     CC132    CC148      CC149
+      CC150     CC154     CC155    CC157      CC158
+      CC161     CC177     CC164    CC174      CC176);
+
+ %LET SCOREVARS=%STR(SCORE_COMMUNITY
+                     SCORE_INSTITUTIONAL
+                     SCORE_NEW_ENROLLEE
+                     SCORE_SNP_NEW_ENROLLEE);
+
+
+ %* include main macro;
+ %INCLUDE IN0(V1210F1M)/SOURCE2;
+
+  %V1210F1M(INP      =IN1.PERSON,
+            IND      =IN2.DIAG,
+            OUTDATA  =PERSONout,
+            IDVAR    =bene_id,
+            KEEPVAR  =bene_id &SCOREVARS,
+            SEDITS   =1,
+            DATE_ASOF="1FEB&wave."D);
+
+
+data out.personout_&wave.;
+set personout;
+wave=&wave.;
+run;
+
+
+%mend;
+
+%gethcc(year=2011,wave=1);
+%gethcc(year=2012,wave=2);
+%gethcc(year=2013,wave=3);
+
+data out.personout;
+set out.personout_1 out.personout_2 out.personout_3;
+run;
+
+proc export data=out.personout outfile="E:\nhats\data\Projects\serious_ill\int_data\personout.dta" replace; run;

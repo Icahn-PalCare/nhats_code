@@ -1,8 +1,8 @@
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- opened on:  10 Aug 2017, 10:37:25
+ opened on:   8 Sep 2017, 16:51:35
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -84,28 +84,33 @@ E:\nhats\data\NHATS working data
 
 . rename sc*eatslfdif sc*eatdif
 
+. rename sc*eatslfoft sc*eatoft
+
 . capture program drop selfcare
 
 . program define selfcare
   1.         args act
   2.         gen adl_`act'_diff=.
   3.         gen adl_`act'_help=.
-  4.         foreach w in 1 2 3 4 5{
-  5.                 replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
-  6.                 replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
-  7.                 replace adl_`act'_help=0 if sc`w'`act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
-  8.                 replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
-  9.                 replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
- 10.                 replace adl_`act'_diff=sc`w'`act'dif>1 if sc`w'`act'dif>0 & wave==`w'
- 11. }
- 12.         tab adl_`act'_help wave, missing
- 13.         tab adl_`act'_help wave if ivw_type==1, missing
- 14.         replace adl_`act'_diff=1 if adl_`act'_help==1
- 15.         
+  4.         gen adl_`act'_not_done=.
+  5.         foreach w in 1 2 3 4 5{
+  6.                 replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
+  7.                 replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
+  8.                 replace adl_`act'_help=0 if sc`w'`act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
+  9.                 replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
+ 10.                 replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
+ 11.                 replace adl_`act'_diff=sc`w'`act'dif>1 if sc`w'`act'dif>0 & wave==`w'
+ 12.                 replace adl_`act'_not_done=sc`w'`act'oft==5 if sc`w'`act'oft>0 & wave==`w'
+ 13. }
+ 14.         tab adl_`act'_help wave, missing
+ 15.         tab adl_`act'_help wave if ivw_type==1, missing
+ 16.         *replace adl_`act'_diff=1 if adl_`act'_help==1
+.         
 . end     
 
 .         
 . selfcare eat
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (420 real changes made)
@@ -114,30 +119,35 @@ E:\nhats\data\NHATS working data
 (1 real change made)
 (2 real changes made)
 (7,540 real changes made)
+(419 real changes made)
 (648 real changes made)
 (5,843 real changes made)
 (55 real changes made)
 (4 real changes made)
 (9 real changes made)
 (6,003 real changes made)
+(359 real changes made)
 (622 real changes made)
 (4,712 real changes made)
 (51 real changes made)
 (3 real changes made)
 (19 real changes made)
 (4,815 real changes made)
+(328 real changes made)
 (548 real changes made)
 (3,858 real changes made)
 (16 real changes made)
 (1 real change made)
 (18 real changes made)
 (3,987 real changes made)
+(299 real changes made)
 (624 real changes made)
 (7,219 real changes made)
 (18 real changes made)
 (0 real changes made)
 (11 real changes made)
 (7,507 real changes made)
+(438 real changes made)
 
 adl_eat_he |                      Survey wave
         lp |         1          2          3          4          5 |     Total
@@ -161,9 +171,9 @@ adl_eat_he |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(2,014 real changes made)
 
 . selfcare bath
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (814 real changes made)
@@ -172,30 +182,35 @@ adl_eat_he |                      Survey wave
 (0 real changes made)
 (3 real changes made)
 (7,141 real changes made)
+(813 real changes made)
 (1,132 real changes made)
 (5,373 real changes made)
 (51 real changes made)
 (0 real changes made)
 (3 real changes made)
 (5,607 real changes made)
+(737 real changes made)
 (1,028 real changes made)
 (4,317 real changes made)
 (55 real changes made)
 (1 real change made)
 (6 real changes made)
 (4,502 real changes made)
+(630 real changes made)
 (868 real changes made)
 (3,544 real changes made)
 (25 real changes made)
 (0 real changes made)
 (4 real changes made)
 (3,693 real changes made)
+(530 real changes made)
 (1,093 real changes made)
 (6,755 real changes made)
 (21 real changes made)
 (0 real changes made)
 (3 real changes made)
 (7,090 real changes made)
+(850 real changes made)
 
 adl_bath_h |                      Survey wave
        elp |         1          2          3          4          5 |     Total
@@ -219,9 +234,9 @@ adl_bath_h |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(3,962 real changes made)
 
 . selfcare toil
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (331 real changes made)
@@ -230,30 +245,35 @@ adl_bath_h |                      Survey wave
 (4 real changes made)
 (6 real changes made)
 (7,474 real changes made)
+(331 real changes made)
 (579 real changes made)
 (5,927 real changes made)
 (27 real changes made)
 (10 real changes made)
 (16 real changes made)
 (5,911 real changes made)
+(285 real changes made)
 (552 real changes made)
 (4,802 real changes made)
 (21 real changes made)
 (6 real changes made)
 (26 real changes made)
 (4,749 real changes made)
+(264 real changes made)
 (469 real changes made)
 (3,946 real changes made)
 (0 real changes made)
 (1 real change made)
 (25 real changes made)
 (3,910 real changes made)
+(242 real changes made)
 (515 real changes made)
 (7,335 real changes made)
 (0 real changes made)
 (0 real changes made)
 (22 real changes made)
 (7,393 real changes made)
+(342 real changes made)
 
 adl_toil_h |                      Survey wave
        elp |         1          2          3          4          5 |     Total
@@ -277,9 +297,9 @@ adl_toil_h |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(1,836 real changes made)
 
 . selfcare dres
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (936 real changes made)
@@ -288,30 +308,35 @@ adl_toil_h |                      Survey wave
 (1 real change made)
 (1 real change made)
 (7,297 real changes made)
+(7,604 real changes made)
 (1,109 real changes made)
 (5,326 real changes made)
 (115 real changes made)
 (0 real changes made)
 (9 real changes made)
 (5,803 real changes made)
+(6,521 real changes made)
 (1,056 real changes made)
 (4,259 real changes made)
 (87 real changes made)
 (0 real changes made)
 (5 real changes made)
 (4,631 real changes made)
+(5,372 real changes made)
 (925 real changes made)
 (3,453 real changes made)
 (59 real changes made)
 (0 real changes made)
 (4 real changes made)
 (3,811 real changes made)
+(4,429 real changes made)
 (1,259 real changes made)
 (6,536 real changes made)
 (68 real changes made)
 (0 real changes made)
 (9 real changes made)
 (7,245 real changes made)
+(7,863 real changes made)
 
 adl_dres_h |                      Survey wave
        elp |         1          2          3          4          5 |     Total
@@ -335,7 +360,6 @@ adl_dres_h |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(3,107 real changes made)
 
 . 
 . la var adl_eat_help "Has help while eating"
@@ -391,24 +415,27 @@ R2 D LAUNDRY SELF AND |                 R2 D LAUNDRY REASN WITH BY OTHERS
   2.         
 .         gen iadl_`act'_help=.
   3.         gen iadl_`act'_diff=.
-  4.         foreach w in 1 2 3 4 5 {
-  5.                 replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  4.         gen iadl_`act'_not_done=.
+  5.         foreach w in 1 2 3 4 5 {
+  6.                 replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,1,3) & wave==`w'
-  6.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3,6) & wave==`w' //did by self
-  7.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  7.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3,6) & wave==`w' //did by self
+  8.                 replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,2,4) & wave==`w'         
-  8.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,4,5,7) & wave==`w' //dkrf
-  9.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
+  9.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,4,5,7) & wave==`w' //dkrf
+ 10.                 replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
 >                         inlist(ha`w'd`act'reas,-7,-8) & wave==`w'
- 10.                 replace iadl_`act'_diff=ha`w'`act'dif>1 if ha`w'`act'dif>0 & wave==`w'
- 11.         }       
- 12.         tab iadl_`act'_help wave, missing
- 13.         tab iadl_`act'_help wave if ivw_type==1, missing
- 14.         replace iadl_`act'_diff=1 if iadl_`act'_help==1
- 15.         end
+ 11.                 replace iadl_`act'_diff=ha`w'`act'dif>1 if ha`w'`act'dif>0 & wave==`w'
+ 12.                 replace iadl_`act'_not_done=ha`w'`act'oft==5 if ha`w'`act'oft>0
+ 13.         }       
+ 14.         tab iadl_`act'_help wave, missing
+ 15.         tab iadl_`act'_help wave if ivw_type==1, missing
+ 16.         *replace iadl_`act'_diff=1 if iadl_`act'_help==1
+.         end
 
 .         
 . hhact laun
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (991 real changes made)
@@ -417,30 +444,35 @@ R2 D LAUNDRY SELF AND |                 R2 D LAUNDRY REASN WITH BY OTHERS
 (3 real changes made)
 (0 real changes made)
 (4,526 real changes made)
+(30,997 real changes made)
 (824 real changes made)
 (3,590 real changes made)
 (1,637 real changes made)
 (5 real changes made)
 (0 real changes made)
 (3,591 real changes made)
+(3,193 real changes made)
 (612 real changes made)
 (2,922 real changes made)
 (1,346 real changes made)
 (2 real changes made)
 (2 real changes made)
 (2,922 real changes made)
+(0 real changes made)
 (511 real changes made)
 (2,389 real changes made)
 (1,135 real changes made)
 (1 real change made)
 (1 real change made)
 (2,389 real changes made)
+(0 real changes made)
 (890 real changes made)
 (4,646 real changes made)
 (2,032 real changes made)
 (7 real changes made)
 (1 real change made)
 (4,647 real changes made)
+(0 real changes made)
 
 iadl_laun_ |                      Survey wave
       help |         1          2          3          4          5 |     Total
@@ -462,9 +494,9 @@ iadl_laun_ |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(3,828 real changes made)
 
 . hhact shop
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (1,546 real changes made)
@@ -473,30 +505,35 @@ iadl_laun_ |                      Survey wave
 (2 real changes made)
 (2 real changes made)
 (4,078 real changes made)
+(31,934 real changes made)
 (1,342 real changes made)
 (3,278 real changes made)
 (1,431 real changes made)
 (4 real changes made)
 (1 real change made)
 (3,277 real changes made)
+(2,256 real changes made)
 (1,103 real changes made)
 (2,676 real changes made)
 (1,100 real changes made)
 (2 real changes made)
 (3 real changes made)
 (2,675 real changes made)
+(0 real changes made)
 (847 real changes made)
 (2,242 real changes made)
 (941 real changes made)
 (3 real changes made)
 (4 real changes made)
 (2,240 real changes made)
+(0 real changes made)
 (1,491 real changes made)
 (4,356 real changes made)
 (1,722 real changes made)
 (1 real change made)
 (6 real changes made)
 (4,356 real changes made)
+(0 real changes made)
 
 iadl_shop_ |                      Survey wave
       help |         1          2          3          4          5 |     Total
@@ -518,9 +555,9 @@ iadl_shop_ |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(6,329 real changes made)
 
 . hhact meal
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (883 real changes made)
@@ -529,30 +566,35 @@ iadl_shop_ |                      Survey wave
 (3 real changes made)
 (2 real changes made)
 (4,916 real changes made)
+(31,461 real changes made)
 (759 real changes made)
 (3,881 real changes made)
 (1,413 real changes made)
 (3 real changes made)
 (0 real changes made)
 (3,879 real changes made)
+(2,729 real changes made)
 (550 real changes made)
 (3,204 real changes made)
 (1,126 real changes made)
 (2 real changes made)
 (2 real changes made)
 (3,202 real changes made)
+(0 real changes made)
 (434 real changes made)
 (2,649 real changes made)
 (951 real changes made)
 (2 real changes made)
 (1 real change made)
 (2,646 real changes made)
+(0 real changes made)
 (776 real changes made)
 (5,038 real changes made)
 (1,755 real changes made)
 (4 real changes made)
 (3 real changes made)
 (5,038 real changes made)
+(0 real changes made)
 
 iadl_meal_ |                      Survey wave
       help |         1          2          3          4          5 |     Total
@@ -574,9 +616,9 @@ iadl_meal_ |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(3,402 real changes made)
 
 . hhact bank
+(34,190 missing values generated)
 (34,190 missing values generated)
 (34,190 missing values generated)
 (1,103 real changes made)
@@ -585,30 +627,35 @@ iadl_meal_ |                      Survey wave
 (28 real changes made)
 (0 real changes made)
 (4,735 real changes made)
+(31,650 real changes made)
 (1,000 real changes made)
 (3,765 real changes made)
 (1,282 real changes made)
 (9 real changes made)
 (0 real changes made)
 (3,766 real changes made)
+(2,540 real changes made)
 (821 real changes made)
 (3,011 real changes made)
 (1,044 real changes made)
 (8 real changes made)
 (0 real changes made)
 (3,012 real changes made)
+(0 real changes made)
 (631 real changes made)
 (2,526 real changes made)
 (873 real changes made)
 (7 real changes made)
 (0 real changes made)
 (2,526 real changes made)
+(0 real changes made)
 (1,043 real changes made)
 (4,920 real changes made)
 (1,587 real changes made)
 (22 real changes made)
 (4 real changes made)
 (4,929 real changes made)
+(0 real changes made)
 
 iadl_bank_ |                      Survey wave
       help |         1          2          3          4          5 |     Total
@@ -630,7 +677,6 @@ iadl_bank_ |                      Survey wave
 -----------+-------------------------------------------------------+----------
      Total |     7,609      6,056      4,884      4,037      7,576 |    30,162 
 
-(4,598 real changes made)
 
 . 
 . la var iadl_laun_help "Rec'd help doing laundry last month"
@@ -685,6 +731,9 @@ iadl_bank_ |                      Survey wave
 . gen iadl_meds_diff=.
 (34,190 missing values generated)
 
+. gen iadl_meds_not_done=.
+(34,190 missing values generated)
+
 . foreach w in 1 2 3 4 5{
   2.         replace iadl_meds_help=1 if inlist(mc`w'dmedssfdf,1,8) & ///
 >                 inlist(mc`w'dmedsreas,1,3) & wave==`w'
@@ -695,38 +744,44 @@ iadl_bank_ |                      Survey wave
   5.         replace iadl_meds_help=-8 if mc`w'dmedssfdf == 7 & wave==`w' 
   6.         replace iadl_meds_help=-8 if inlist(mc`w'dmedssfdf,1,8) & ///
 >                 inlist(mc`w'dmedsreas,-7,-8) & wave==`w'
-  7.         replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0
-  8. }       
+  7.         replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0 & wave==`w'
+  8.         replace iadl_meds_not_done=inlist(mc`w'dmedssfdf,1,8) if wave==`w'
+  9. }       
 (779 real changes made)
 (6,384 real changes made)
 (442 real changes made)
 (2 real changes made)
 (2 real changes made)
-(31,679 real changes made)
+(5,734 real changes made)
+(8,245 real changes made)
 (683 real changes made)
 (4,976 real changes made)
 (396 real changes made)
 (1 real change made)
 (0 real changes made)
-(11,768 real changes made)
+(4,485 real changes made)
+(7,075 real changes made)
 (531 real changes made)
 (3,992 real changes made)
 (359 real changes made)
 (0 real changes made)
 (2 real changes made)
-(7,305 real changes made)
+(3,617 real changes made)
+(5,799 real changes made)
 (414 real changes made)
 (3,266 real changes made)
 (355 real changes made)
 (0 real changes made)
 (2 real changes made)
-(5,905 real changes made)
+(2,987 real changes made)
+(4,737 real changes made)
 (710 real changes made)
 (6,330 real changes made)
 (532 real changes made)
 (1 real change made)
 (2 real changes made)
-(7,726 real changes made)
+(5,710 real changes made)
+(8,334 real changes made)
 
 . 
 . la var iadl_meds_help "Rec'd help taking medications last month"
@@ -764,7 +819,7 @@ medication |
 
 
 . replace iadl_meds_diff=1 if iadl_meds_help==1
-(0 real changes made)
+(3,117 real changes made)
 
 . //other meds questions, for treatment burden
 . gen ind_meds_diff=.
@@ -1477,5 +1532,5 @@ stays last |                      Survey wave
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs4_nhats_cleaning.txt
   log type:  text
- closed on:  10 Aug 2017, 10:37:31
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   8 Sep 2017, 16:51:47
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
