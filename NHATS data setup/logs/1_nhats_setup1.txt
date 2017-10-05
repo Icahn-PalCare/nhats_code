@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:  11 Sep 2017, 10:32:44
+ opened on:   5 Oct 2017, 09:40:37
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -14,7 +14,7 @@
 
 . local r5raw E:\nhats\data\NHATS Public\round_5\
 
-. local r6rawbeta E:\nhats\data\NHATS Public\round_6_beta\
+. local r6raw E:\nhats\data\NHATS Public\round_6\
 
 . local work E:\nhats\data\NHATS working data
 
@@ -27,6 +27,8 @@
 . local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 
 . local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+
+. local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
 
 . local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
@@ -166,8 +168,8 @@ file round_5_1.dta saved
 . clear 
 
 . 
-. //round 6 beta
-. use "`r6rawbeta'NHATS_Round_6B_SP_File.dta"
+. //round 6 
+. use "`r6raw'NHATS_Round_6_SP_File.dta"
 
 . //check to make sure sample ids are unique
 . sort spid
@@ -199,15 +201,18 @@ file round_6_1.dta saved
   2. use round_`w'_1.dta
   3. 
 . //keep selected variables only
-. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
+. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstra
+> t  ///
 >         mo* r`w'd2intvrage hh`w'martlstat ///
->         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
+>         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covt
+> ricar ///
 >         hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
 >         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn*
   4. 
 . if `w'==1 {     
-  5. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
-> ia`w'*  re`w'resistrct 
+  5. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspa
+> nh el`w'higstschl ///
+> ia`w'*  re`w'resistrct re1dcensdiv
   6. }
   7. 
 . if `w'==2 {     
@@ -224,8 +229,8 @@ file round_6_1.dta saved
 >         re4dcensdiv ip4nginslast
  15. }
  16. if `w'==5 {     
- 17. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct
->  ///
+ 17. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspa
+> nh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'*
  18. }       
  19. if `w'==6 {     
@@ -243,8 +248,9 @@ file round_5_ltd.dta saved
 file round_6_ltd.dta saved
 
 . 
-. //check sensitive data files, keep only some variables, merge with ltd datasets
-. foreach w in 1 2 3 4 5 {
+. //check sensitive data files, keep only some variables, merge with ltd datase
+> ts
+. foreach w in 1 2 3 4 5 6{
   2.         use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
   3.         sort spid 
   4.         quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -282,6 +288,12 @@ file round_6_ltd.dta saved
 ------------+-----------------------------------
       Total |      8,334      100.00
 
+        dup |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      7,276      100.00      100.00
+------------+-----------------------------------
+      Total |      7,276      100.00
+
 . 
 . //combine 3 waves into single dataset
 . use round_1_ltd.dta
@@ -303,7 +315,8 @@ file round_6_ltd.dta saved
 . 
 . //merge in sensitive data, use r1 as basis
 . merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
->         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
+>         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1ds
+> pousage ///
 >         rl1primarace rl1hisplatno)      
 
     Result                           # of obs.
@@ -386,13 +399,33 @@ file round_6_ltd.dta saved
 . drop _merge
 
 . 
+. //merge in additional r6 sensitive data
+. merge m:1 spid using "`r6s'NHATS_Round_6_SP_Sen_Dem_File.dta", ///
+>         keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
+(label r5dbirthyr already defined)
+(label r5dbirthmth already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                        12,214
+        from master                    12,214  (_merge==1)
+        from using                          0  (_merge==2)
+
+    matched                            29,252  (_merge==3)
+    -----------------------------------------
+
+. drop _merge
+
 . 
 . //3B?
 . //merge in tracker status information
-. merge m:1 spid using "`r6rawbeta'NHATS_Round_6B_Tracker_File", ///
->         keepusing(yearsample r6status r6spstat r6spstatdtmt r6spstatdtyr r5status r5spstat r5spstatdtmt r5spstatdtyr r4status r4spstat r4spstatdt
-> mt r4spstatdtyr r3status r3spstat r3spstatdtmt r3spstatdtyr ///
->                 r2status r2spstat r2spstatdtmt r2spstatdtyr r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+. merge m:1 spid using "`r6raw'NHATS_Round_6_Tracker_File", ///
+>         keepusing(yearsample r6status r6spstat r6spstatdtmt r6spstatdtyr r6fq
+> statdtmt r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt r4status r4
+> spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt r3status r3spstat r3spstatdtmt 
+> r3spstatdtyr r3fqstatdtmt ///
+>                 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt r1st
+> atus r1spstat r1spstatdtmt r1spstatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
@@ -432,5 +465,5 @@ file round_1_to_6.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:  11 Sep 2017, 10:33:22
----------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   5 Oct 2017, 09:41:21
+-------------------------------------------------------------------------------

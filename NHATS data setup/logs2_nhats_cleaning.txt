@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- opened on:  11 Sep 2017, 10:38:41
+ opened on:   5 Oct 2017, 09:50:18
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -63,8 +63,10 @@ Survey wave |      Freq.     Percent        Cum.
 
 . 
 . foreach w in 2 3 4 5 6{
-  2.         replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w'
-  3.         replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w'
+  2.         replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w
+> '
+  3.         replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w
+> '
   4. }
 (6,056 real changes made)
 (503 real changes made)
@@ -78,21 +80,32 @@ Survey wave |      Freq.     Percent        Cum.
 (486 real changes made)
 
 . 
-. la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interview completed" ///
+. la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interv
+> iew completed" ///
 >         3"SP interview not completed"
 
 . la val ivw_type ivw_type
 
 . tab ivw_type wave, missing
 
-                      |                            Survey wave
-             ivw_type |         1          2          3          4          5          6 |     Total
-----------------------+------------------------------------------------------------------+----------
-Alive, SP interview c |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
-Died, proxy SP LML in |         0        503        523        404        296        486 |     2,212 
-SP interview not comp |       636        516        392        296        462        380 |     2,682 
-----------------------+------------------------------------------------------------------+----------
-                Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+                      |                 Survey wave
+             ivw_type |         1          2          3          4 |     Total
+----------------------+--------------------------------------------+----------
+Alive, SP interview c |     7,609      6,056      4,884      4,037 |    36,572 
+Died, proxy SP LML in |         0        503        523        404 |     2,212 
+SP interview not comp |       636        516        392        296 |     2,682 
+----------------------+--------------------------------------------+----------
+                Total |     8,245      7,075      5,799      4,737 |    41,466 
+
+
+                      |      Survey wave
+             ivw_type |         5          6 |     Total
+----------------------+----------------------+----------
+Alive, SP interview c |     7,576      6,410 |    36,572 
+Died, proxy SP LML in |       296        486 |     2,212 
+SP interview not comp |       462        380 |     2,682 
+----------------------+----------------------+----------
+                Total |     8,334      7,276 |    41,466 
 
 
 . 
@@ -208,26 +221,39 @@ R1 D RESIDENTIAL CARE |  R1 SUBJECT PERSON INTRVW STAT
 (6,896 real changes made)
 (380 real changes made)
 
-. la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml interviews
+. la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml in
+> terviews
 
 . tab sp_ivw_yes wave, missing
 
         SP |
  interview |
-conducted? |                            Survey wave
-     yes=1 |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |       636        516        392        296        462        380 |     2,682 
-         1 |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+conducted? |                      Survey wave
+     yes=1 |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |       636        516        392        296        462 |     2,682 
+         1 |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+        SP |
+ interview |   Survey
+conducted? |    wave
+     yes=1 |         6 |     Total
+-----------+-----------+----------
+         0 |       380 |     2,682 
+         1 |     6,896 |    38,784 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
 . gen lml_ivw_yes = 0
 
 . foreach w in 2 3 4 5 6{
-  2.         replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`w'
+  2.         replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`
+> w'
   3. }
 (503 real changes made)
 (523 real changes made)
@@ -254,50 +280,96 @@ conducted? | LWL interview? yes=1
 . tab lml_ivw_yes wave, missing
 
        LWL |
-interview? |                            Survey wave
-     yes=1 |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     8,245      6,572      5,276      4,333      8,038      6,790 |    39,254 
-         1 |         0        503        523        404        296        486 |     2,212 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+interview? |                      Survey wave
+     yes=1 |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     8,245      6,572      5,276      4,333      8,038 |    39,254 
+         1 |         0        503        523        404        296 |     2,212 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+       LWL |   Survey
+interview? |    wave
+     yes=1 |         6 |     Total
+-----------+-----------+----------
+         0 |     6,790 |    39,254 
+         1 |       486 |     2,212 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
 . tab mo2outoft r2status if wave==2, missing
 
-      R2 MO1 OFTEN GO |                 R2 OVERALL CASE STATUS
-              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple  64 Comple |     Total
-----------------------+-------------------------------------------------------+----------
-           -9 Missing |         0          0          0          0        190 |       190 
-                -8 DK |         2          0          8          0          0 |        10 
-                -7 RF |         1          0          1          0          0 |         2 
-      -1 Inapplicable |         0        326        127          0          0 |       453 
-1 EVERY DAY (7 DAYS A |     3,753          0         42         38          0 |     3,833 
-2 MOST DAYS (5-6 DAYS |       995          0         43          9          0 |     1,047 
-3 SOME DAYS (2-4 DAYS |       743          0         78          9          0 |       830 
-4 RARELY (ONCE A WEEK |       371          0         88          5          0 |       464 
-              5 NEVER |       127          0        116          3          0 |       246 
-----------------------+-------------------------------------------------------+----------
-                Total |     5,992        326        503         64        190 |     7,075 
+      R2 MO1 OFTEN GO |           R2 OVERALL CASE STATUS
+              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple |     Total
+----------------------+--------------------------------------------+----------
+           -9 Missing |         0          0          0          0 |       190 
+                -8 DK |         2          0          8          0 |        10 
+                -7 RF |         1          0          1          0 |         2 
+      -1 Inapplicable |         0        326        127          0 |       453 
+1 EVERY DAY (7 DAYS A |     3,753          0         42         38 |     3,833 
+2 MOST DAYS (5-6 DAYS |       995          0         43          9 |     1,047 
+3 SOME DAYS (2-4 DAYS |       743          0         78          9 |       830 
+4 RARELY (ONCE A WEEK |       371          0         88          5 |       464 
+              5 NEVER |       127          0        116          3 |       246 
+----------------------+--------------------------------------------+----------
+                Total |     5,992        326        503         64 |     7,075 
+
+
+                      | R2 OVERALL
+                      |    CASE
+      R2 MO1 OFTEN GO |   STATUS
+              OUTSIDE | 64 Comple |     Total
+----------------------+-----------+----------
+           -9 Missing |       190 |       190 
+                -8 DK |         0 |        10 
+                -7 RF |         0 |         2 
+      -1 Inapplicable |         0 |       453 
+1 EVERY DAY (7 DAYS A |         0 |     3,833 
+2 MOST DAYS (5-6 DAYS |         0 |     1,047 
+3 SOME DAYS (2-4 DAYS |         0 |       830 
+4 RARELY (ONCE A WEEK |         0 |       464 
+              5 NEVER |         0 |       246 
+----------------------+-----------+----------
+                Total |       190 |     7,075 
 
 
 . tab mo3outoft r3status if wave==3, missing
 
-      R3 MO1 OFTEN GO |                 R3 OVERALL CASE STATUS
-              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple  64 Comple |     Total
-----------------------+-------------------------------------------------------+----------
-           -9 Missing |         0          0          0          0        179 |       179 
-                -8 DK |         5          0         14          0          0 |        19 
-                -7 RF |         1          0          0          0          0 |         1 
-      -1 Inapplicable |         0        213        117          0          0 |       330 
-1 EVERY DAY (7 DAYS A |     2,971          0         38         20          0 |     3,029 
-2 MOST DAYS (5-6 DAYS |       816          0         39         10          0 |       865 
-3 SOME DAYS (2-4 DAYS |       630          0         87          8          0 |       725 
-4 RARELY (ONCE A WEEK |       314          0        130          5          0 |       449 
-              5 NEVER |       101          0         98          3          0 |       202 
-----------------------+-------------------------------------------------------+----------
-                Total |     4,838        213        523         46        179 |     5,799 
+      R3 MO1 OFTEN GO |           R3 OVERALL CASE STATUS
+              OUTSIDE | 60 Comple  61 Comple  62 Comple  63 Comple |     Total
+----------------------+--------------------------------------------+----------
+           -9 Missing |         0          0          0          0 |       179 
+                -8 DK |         5          0         14          0 |        19 
+                -7 RF |         1          0          0          0 |         1 
+      -1 Inapplicable |         0        213        117          0 |       330 
+1 EVERY DAY (7 DAYS A |     2,971          0         38         20 |     3,029 
+2 MOST DAYS (5-6 DAYS |       816          0         39         10 |       865 
+3 SOME DAYS (2-4 DAYS |       630          0         87          8 |       725 
+4 RARELY (ONCE A WEEK |       314          0        130          5 |       449 
+              5 NEVER |       101          0         98          3 |       202 
+----------------------+--------------------------------------------+----------
+                Total |     4,838        213        523         46 |     5,799 
+
+
+                      | R3 OVERALL
+                      |    CASE
+      R3 MO1 OFTEN GO |   STATUS
+              OUTSIDE | 64 Comple |     Total
+----------------------+-----------+----------
+           -9 Missing |       179 |       179 
+                -8 DK |         0 |        19 
+                -7 RF |         0 |         1 
+      -1 Inapplicable |         0 |       330 
+1 EVERY DAY (7 DAYS A |         0 |     3,029 
+2 MOST DAYS (5-6 DAYS |         0 |       865 
+3 SOME DAYS (2-4 DAYS |         0 |       725 
+4 RARELY (ONCE A WEEK |         0 |       449 
+              5 NEVER |         0 |       202 
+----------------------+-----------+----------
+                Total |       179 |     5,799 
 
 
 . 
@@ -326,25 +398,46 @@ interview? |                            Survey wave
 
 . tab proxy_ivw wave, missing
 
- Interview |                            Survey wave
- via proxy |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     7,026      5,595      4,510      3,719      7,093      6,002 |    33,945 
-         1 |       583        964        897        722        779        894 |     4,839 
-         . |       636        516        392        296        462        380 |     2,682 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+ Interview |                      Survey wave
+ via proxy |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719      7,093 |    33,945 
+         1 |       583        964        897        722        779 |     4,839 
+         . |       636        516        392        296        462 |     2,682 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+ Interview |    wave
+ via proxy |         6 |     Total
+-----------+-----------+----------
+         0 |     6,002 |    33,945 
+         1 |       894 |     4,839 
+         . |       380 |     2,682 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . tab proxy_ivw wave if ivw_type==1, missing
 
- Interview |                            Survey wave
- via proxy |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     7,026      5,595      4,510      3,719      7,093      6,002 |    33,945 
-         1 |       583        461        374        318        483        408 |     2,627 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
+ Interview |                      Survey wave
+ via proxy |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,026      5,595      4,510      3,719      7,093 |    33,945 
+         1 |       583        461        374        318        483 |     2,627 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,056      4,884      4,037      7,576 |    36,572 
+
+
+           |   Survey
+ Interview |    wave
+ via proxy |         6 |     Total
+-----------+-----------+----------
+         0 |     6,002 |    33,945 
+         1 |       408 |     2,627 
+-----------+-----------+----------
+     Total |     6,410 |    36,572 
 
 
 . tab proxy_ivw wave if ivw_type==2, missing
@@ -360,7 +453,8 @@ interview? |                            Survey wave
 . 
 . /*missing data convention per user guide
 > For our purposes, code all as missing
-> The following codes were used at the item level for missing data of different types:
+> The following codes were used at the item level for missing data of different
+>  types:
 > -7 = Refusal
 > -8 = Don’t Know
 > -1 = Inapplicable
@@ -585,19 +679,34 @@ Some days (2-4/week) |         0        638 |       638
 . //or not mobile(PD7) in last month so lml has more missingless
 . tab freq_go_out mo2outoft if wave==2 & lml_ivw_yes==1, missing
 
-                     |                                 R2 MO1 OFTEN GO OUTSIDE
-How often go outside |     -8 DK      -7 RF  -1 Inappl  1 EVERY D  2 MOST DA  3 SOME DA  4 RARELY     5 NEVER |     Total
----------------------+----------------------------------------------------------------------------------------+----------
-                  -8 |         8          0          0          0          0          0          0          0 |         8 
-                  -7 |         0          1          0          0          0          0          0          0 |         1 
-           Every day |         0          0          0         42          0          0          0          0 |        42 
-Most days (5-6/week) |         0          0          0          0         43          0          0          0 |        43 
-Some days (2-4/week) |         0          0          0          0          0         78          0          0 |        78 
-              Rarely |         0          0          0          0          0          0         88          0 |        88 
-               Never |         0          0          0          0          0          0          0        116 |       116 
-                   . |         0          0        127          0          0          0          0          0 |       127 
----------------------+----------------------------------------------------------------------------------------+----------
-               Total |         8          1        127         42         43         78         88        116 |       503 
+                     |           R2 MO1 OFTEN GO OUTSIDE
+How often go outside |     -8 DK      -7 RF  -1 Inappl  1 EVERY D |     Total
+---------------------+--------------------------------------------+----------
+                  -8 |         8          0          0          0 |         8 
+                  -7 |         0          1          0          0 |         1 
+           Every day |         0          0          0         42 |        42 
+Most days (5-6/week) |         0          0          0          0 |        43 
+Some days (2-4/week) |         0          0          0          0 |        78 
+              Rarely |         0          0          0          0 |        88 
+               Never |         0          0          0          0 |       116 
+                   . |         0          0        127          0 |       127 
+---------------------+--------------------------------------------+----------
+               Total |         8          1        127         42 |       503 
+
+
+                     |           R2 MO1 OFTEN GO OUTSIDE
+How often go outside | 2 MOST DA  3 SOME DA  4 RARELY     5 NEVER |     Total
+---------------------+--------------------------------------------+----------
+                  -8 |         0          0          0          0 |         8 
+                  -7 |         0          0          0          0 |         1 
+           Every day |         0          0          0          0 |        42 
+Most days (5-6/week) |        43          0          0          0 |        43 
+Some days (2-4/week) |         0         78          0          0 |        78 
+              Rarely |         0          0         88          0 |        88 
+               Never |         0          0          0        116 |       116 
+                   . |         0          0          0          0 |       127 
+---------------------+--------------------------------------------+----------
+               Total |        43         78         88        116 |       503 
 
 
 . 
@@ -722,16 +831,30 @@ Some days (2-4/week) |         0          0          0          0          0    
 
     Anyone |
  ever help |
- you leave |                            Survey wave
-     home? |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |         1         10         17         10         11         14 |        63 
-        -7 |         1          2          1          0          1          1 |         6 
-         0 |     6,429      5,133      4,122      3,384      6,456      5,432 |    30,956 
-         1 |     1,045      1,041        948        798      1,155      1,132 |     6,119 
-         . |       133        373        319        249        249        317 |     1,640 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+ you leave |                      Survey wave
+     home? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         1         10         17         10         11 |        63 
+        -7 |         1          2          1          0          1 |         6 
+         0 |     6,429      5,133      4,122      3,384      6,456 |    30,956 
+         1 |     1,045      1,041        948        798      1,155 |     6,119 
+         . |       133        373        319        249        249 |     1,640 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+    Anyone |
+ ever help |   Survey
+ you leave |    wave
+     home? |         6 |     Total
+-----------+-----------+----------
+        -8 |        14 |        63 
+        -7 |         1 |         6 
+         0 |     5,432 |    30,956 
+         1 |     1,132 |     6,119 
+         . |       317 |     1,640 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . 
@@ -746,45 +869,93 @@ Some days (2-4/week) |         0          0          0          0          0    
   3.         replace out_on_own=mo`w'outslf if wave==`w'
   4. }
 
- R1 MO7 LEFT BY |            Anyone ever help you leave home?
-       YOURSELF |        -8         -7          0          1          . |     Total
-----------------+-------------------------------------------------------+----------
-     -9 Missing |         0          0          0          0        168 |       168 
--1 Inapplicable |         1          1      6,429          0        601 |     7,032 
-   1 MOST TIMES |         0          0          0        184          0 |       184 
-    2 SOMETIMES |         0          0          0        167          0 |       167 
-       3 RARELY |         0          0          0        118          0 |       118 
-        4 NEVER |         0          0          0        576          0 |       576 
-----------------+-------------------------------------------------------+----------
-          Total |         1          1      6,429      1,045        769 |     8,245 
+ R1 MO7 LEFT BY |      Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1 |     Total
+----------------+--------------------------------------------+----------
+     -9 Missing |         0          0          0          0 |       168 
+-1 Inapplicable |         1          1      6,429          0 |     7,032 
+   1 MOST TIMES |         0          0          0        184 |       184 
+    2 SOMETIMES |         0          0          0        167 |       167 
+       3 RARELY |         0          0          0        118 |       118 
+        4 NEVER |         0          0          0        576 |       576 
+----------------+--------------------------------------------+----------
+          Total |         1          1      6,429      1,045 |     8,245 
+
+
+                |   Anyone
+                | ever help
+                | you leave
+ R1 MO7 LEFT BY |   home?
+       YOURSELF |         . |     Total
+----------------+-----------+----------
+     -9 Missing |       168 |       168 
+-1 Inapplicable |       601 |     7,032 
+   1 MOST TIMES |         0 |       184 
+    2 SOMETIMES |         0 |       167 
+       3 RARELY |         0 |       118 
+        4 NEVER |         0 |       576 
+----------------+-----------+----------
+          Total |       769 |     8,245 
 
 (8,245 real changes made)
 
- R2 MO7 LEFT BY |            Anyone ever help you leave home?
-       YOURSELF |        -8         -7          0          1          . |     Total
-----------------+-------------------------------------------------------+----------
-     -9 Missing |         0          0          0          0        190 |       190 
--1 Inapplicable |        10          2      5,133        180        699 |     6,024 
-   1 MOST TIMES |         0          0          0        160          0 |       160 
-    2 SOMETIMES |         0          0          0        118          0 |       118 
-       3 RARELY |         0          0          0        106          0 |       106 
-        4 NEVER |         0          0          0        477          0 |       477 
-----------------+-------------------------------------------------------+----------
-          Total |        10          2      5,133      1,041        889 |     7,075 
+ R2 MO7 LEFT BY |      Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1 |     Total
+----------------+--------------------------------------------+----------
+     -9 Missing |         0          0          0          0 |       190 
+-1 Inapplicable |        10          2      5,133        180 |     6,024 
+   1 MOST TIMES |         0          0          0        160 |       160 
+    2 SOMETIMES |         0          0          0        118 |       118 
+       3 RARELY |         0          0          0        106 |       106 
+        4 NEVER |         0          0          0        477 |       477 
+----------------+--------------------------------------------+----------
+          Total |        10          2      5,133      1,041 |     7,075 
+
+
+                |   Anyone
+                | ever help
+                | you leave
+ R2 MO7 LEFT BY |   home?
+       YOURSELF |         . |     Total
+----------------+-----------+----------
+     -9 Missing |       190 |       190 
+-1 Inapplicable |       699 |     6,024 
+   1 MOST TIMES |         0 |       160 
+    2 SOMETIMES |         0 |       118 
+       3 RARELY |         0 |       106 
+        4 NEVER |         0 |       477 
+----------------+-----------+----------
+          Total |       889 |     7,075 
 
 (7,075 real changes made)
 
- R3 MO7 LEFT BY |            Anyone ever help you leave home?
-       YOURSELF |        -8         -7          0          1          . |     Total
-----------------+-------------------------------------------------------+----------
-     -9 Missing |         0          0          0          0        179 |       179 
--1 Inapplicable |        17          1      4,122        211        532 |     4,883 
-   1 MOST TIMES |         0          0          0        112          0 |       112 
-    2 SOMETIMES |         0          0          0        100          0 |       100 
-       3 RARELY |         0          0          0         82          0 |        82 
-        4 NEVER |         0          0          0        443          0 |       443 
-----------------+-------------------------------------------------------+----------
-          Total |        17          1      4,122        948        711 |     5,799 
+ R3 MO7 LEFT BY |      Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1 |     Total
+----------------+--------------------------------------------+----------
+     -9 Missing |         0          0          0          0 |       179 
+-1 Inapplicable |        17          1      4,122        211 |     4,883 
+   1 MOST TIMES |         0          0          0        112 |       112 
+    2 SOMETIMES |         0          0          0        100 |       100 
+       3 RARELY |         0          0          0         82 |        82 
+        4 NEVER |         0          0          0        443 |       443 
+----------------+--------------------------------------------+----------
+          Total |        17          1      4,122        948 |     5,799 
+
+
+                |   Anyone
+                | ever help
+                | you leave
+ R3 MO7 LEFT BY |   home?
+       YOURSELF |         . |     Total
+----------------+-----------+----------
+     -9 Missing |       179 |       179 
+-1 Inapplicable |       532 |     4,883 
+   1 MOST TIMES |         0 |       112 
+    2 SOMETIMES |         0 |       100 
+       3 RARELY |         0 |        82 
+        4 NEVER |         0 |       443 
+----------------+-----------+----------
+          Total |       711 |     5,799 
 
 (5,799 real changes made)
 
@@ -802,33 +973,67 @@ Some days (2-4/week) |         0          0          0          0          0    
 
 (4,737 real changes made)
 
- R5 MO7 LEFT BY |            Anyone ever help you leave home?
-       YOURSELF |        -8         -7          0          1          . |     Total
-----------------+-------------------------------------------------------+----------
-     -9 Missing |         0          0          0          0        179 |       179 
-          -8 DK |         0          0          0          1          0 |         1 
--1 Inapplicable |        11          1      6,456        127        532 |     7,127 
-   1 MOST TIMES |         0          0          0        154          0 |       154 
-    2 SOMETIMES |         0          0          0        174          0 |       174 
-       3 RARELY |         0          0          0        132          0 |       132 
-        4 NEVER |         0          0          0        567          0 |       567 
-----------------+-------------------------------------------------------+----------
-          Total |        11          1      6,456      1,155        711 |     8,334 
+ R5 MO7 LEFT BY |      Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1 |     Total
+----------------+--------------------------------------------+----------
+     -9 Missing |         0          0          0          0 |       179 
+          -8 DK |         0          0          0          1 |         1 
+-1 Inapplicable |        11          1      6,456        127 |     7,127 
+   1 MOST TIMES |         0          0          0        154 |       154 
+    2 SOMETIMES |         0          0          0        174 |       174 
+       3 RARELY |         0          0          0        132 |       132 
+        4 NEVER |         0          0          0        567 |       567 
+----------------+--------------------------------------------+----------
+          Total |        11          1      6,456      1,155 |     8,334 
+
+
+                |   Anyone
+                | ever help
+                | you leave
+ R5 MO7 LEFT BY |   home?
+       YOURSELF |         . |     Total
+----------------+-----------+----------
+     -9 Missing |       179 |       179 
+          -8 DK |         0 |         1 
+-1 Inapplicable |       532 |     7,127 
+   1 MOST TIMES |         0 |       154 
+    2 SOMETIMES |         0 |       174 
+       3 RARELY |         0 |       132 
+        4 NEVER |         0 |       567 
+----------------+-----------+----------
+          Total |       711 |     8,334 
 
 (8,334 real changes made)
 
- R6 MO7 LEFT BY |            Anyone ever help you leave home?
-       YOURSELF |        -8         -7          0          1          . |     Total
-----------------+-------------------------------------------------------+----------
-     -9 Missing |         0          0          0          0        177 |       177 
-          -8 DK |         0          0          0          2          0 |         2 
--1 Inapplicable |        14          1      5,432        207        520 |     6,174 
-   1 MOST TIMES |         0          0          0        160          0 |       160 
-    2 SOMETIMES |         0          0          0        147          0 |       147 
-       3 RARELY |         0          0          0        115          0 |       115 
-        4 NEVER |         0          0          0        501          0 |       501 
-----------------+-------------------------------------------------------+----------
-          Total |        14          1      5,432      1,132        697 |     7,276 
+ R6 MO7 LEFT BY |      Anyone ever help you leave home?
+       YOURSELF |        -8         -7          0          1 |     Total
+----------------+--------------------------------------------+----------
+     -9 Missing |         0          0          0          0 |       177 
+          -8 DK |         0          0          0          2 |         2 
+-1 Inapplicable |        14          1      5,432        207 |     6,174 
+   1 MOST TIMES |         0          0          0        160 |       160 
+    2 SOMETIMES |         0          0          0        147 |       147 
+       3 RARELY |         0          0          0        115 |       115 
+        4 NEVER |         0          0          0        501 |       501 
+----------------+--------------------------------------------+----------
+          Total |        14          1      5,432      1,132 |     7,276 
+
+
+                |   Anyone
+                | ever help
+                | you leave
+ R6 MO7 LEFT BY |   home?
+       YOURSELF |         . |     Total
+----------------+-----------+----------
+     -9 Missing |       177 |       177 
+          -8 DK |         0 |         2 
+-1 Inapplicable |       520 |     6,174 
+   1 MOST TIMES |         0 |       160 
+    2 SOMETIMES |         0 |       147 
+       3 RARELY |         0 |       115 
+        4 NEVER |         0 |       501 
+----------------+-----------+----------
+          Total |       697 |     7,276 
 
 (7,276 real changes made)
 
@@ -841,7 +1046,8 @@ Some days (2-4/week) |         0          0          0          0          0    
 . replace out_on_own=6 if freq_go_out==5
 (1,342 real changes made)
 
-. la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never"5"NA, reported no help" ///
+. la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never"5"NA, reported
+>  no help" ///
 > 6"NA, never left home"
 
 . la val out_on_own out_on_own
@@ -850,19 +1056,34 @@ Some days (2-4/week) |         0          0          0          0          0    
 
 . tab out_on_own wave if sp_ivw_yes==1, missing
 
-    When left house, |                            Survey wave
-   left by yourself? |         1          2          3          4          5          6 |     Total
----------------------+------------------------------------------------------------------+----------
-                  -8 |         0          0          0          0          1          2 |         3 
-          Most times |       184        160        112         98        154        160 |       868 
-           Sometimes |       167        118        100         83        174        147 |       789 
-              Rarely |       118        106         82         71        132        115 |       624 
-               Never |       576        477        443        370        567        501 |     2,934 
-NA, reported no help |     6,429      5,133      4,122      3,384      6,456      5,432 |    30,956 
- NA, never left home |       133        246        202        230        240        291 |     1,342 
-                   . |         2        319        346        205        148        248 |     1,268 
----------------------+------------------------------------------------------------------+----------
-               Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+    When left house, |                 Survey wave
+   left by yourself? |         1          2          3          4 |     Total
+---------------------+--------------------------------------------+----------
+                  -8 |         0          0          0          0 |         3 
+          Most times |       184        160        112         98 |       868 
+           Sometimes |       167        118        100         83 |       789 
+              Rarely |       118        106         82         71 |       624 
+               Never |       576        477        443        370 |     2,934 
+NA, reported no help |     6,429      5,133      4,122      3,384 |    30,956 
+ NA, never left home |       133        246        202        230 |     1,342 
+                   . |         2        319        346        205 |     1,268 
+---------------------+--------------------------------------------+----------
+               Total |     7,609      6,559      5,407      4,441 |    38,784 
+
+
+    When left house, |      Survey wave
+   left by yourself? |         5          6 |     Total
+---------------------+----------------------+----------
+                  -8 |         1          2 |         3 
+          Most times |       154        160 |       868 
+           Sometimes |       174        147 |       789 
+              Rarely |       132        115 |       624 
+               Never |       567        501 |     2,934 
+NA, reported no help |     6,456      5,432 |    30,956 
+ NA, never left home |       240        291 |     1,342 
+                   . |       148        248 |     1,268 
+---------------------+----------------------+----------
+               Total |     7,872      6,896 |    38,784 
 
 
 . 
@@ -878,19 +1099,30 @@ NA, reported no help |     6,429      5,133      4,122      3,384      6,456    
 . tab needshelp wave, missing
 
     Leaves |
-  home but |                            Survey wave
- with help |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     7,776      6,511      5,294      4,309      7,746      6,645 |    38,281 
-         1 |       469        564        505        428        588        631 |     3,185 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+  home but |                      Survey wave
+ with help |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,776      6,511      5,294      4,309      7,746 |    38,281 
+         1 |       469        564        505        428        588 |     3,185 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+    Leaves |   Survey
+  home but |    wave
+ with help |         6 |     Total
+-----------+-----------+----------
+         0 |     6,645 |    38,281 
+         1 |       631 |     3,185 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
 . *********************************************
 . //has difficulty? when you used your walker,cane,etc? how much difficulty
-. //did you have leaving the house by yourself? 1=none, 2=a little, 3=some, 4=a lot
+. //did you have leaving the house by yourself? 1=none, 2=a little, 3=some, 4=a
+>  lot
 . //inapplicable if don't report using any device to help, so set to 0 here
 . gen hasdifficulty=0
 
@@ -1017,15 +1249,29 @@ NA, reported no help |     6,429      5,133      4,122      3,384      6,456    
     Leaves |
    home on |
    own but |
-       has |                            Survey wave
-difficulty |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |         2          7          3          3          4          8 |        27 
-        -7 |         2          2          1          0          1          1 |         7 
-         0 |     6,638      5,789      4,837      3,923      6,895      6,028 |    34,110 
-         1 |       967        761        566        515        972        859 |     4,640 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+       has |                      Survey wave
+difficulty |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |         2          7          3          3          4 |        27 
+        -7 |         2          2          1          0          1 |         7 
+         0 |     6,638      5,789      4,837      3,923      6,895 |    34,110 
+         1 |       967        761        566        515        972 |     4,640 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+    Leaves |
+   home on |
+   own but |   Survey
+       has |    wave
+difficulty |         6 |     Total
+-----------+-----------+----------
+        -8 |         8 |        27 
+        -7 |         1 |         7 
+         0 |     6,028 |    34,110 
+         1 |       859 |     4,640 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . *********************************************
@@ -1047,14 +1293,28 @@ difficulty |         1          2          3          4          5          6 | 
 needs help |
     or has |
 difficulty |
-     going |                            Survey wave
-   outside |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     6,477      5,469      4,514      3,652      6,619      5,685 |    32,416 
-         1 |     1,129      1,083        890        786      1,249      1,204 |     6,341 
-         . |         3          7          3          3          4          7 |        27 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+     going |                      Survey wave
+   outside |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     6,477      5,469      4,514      3,652      6,619 |    32,416 
+         1 |     1,129      1,083        890        786      1,249 |     6,341 
+         . |         3          7          3          3          4 |        27 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+    Either |
+needs help |
+    or has |
+difficulty |   Survey
+     going |    wave
+   outside |         6 |     Total
+-----------+-----------+----------
+         0 |     5,685 |    32,416 
+         1 |     1,204 |     6,341 
+         . |         7 |        27 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . *********************************************
@@ -1069,13 +1329,23 @@ difficulty |
 . tab independent wave if sp_ivw_yes==1, missing
 
 Independen |
-tly leaves |                            Survey wave
-      home |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     1,841      1,951      1,671      1,416      2,077      2,043 |    10,999 
-         1 |     5,768      4,608      3,736      3,025      5,795      4,853 |    27,785 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+tly leaves |                      Survey wave
+      home |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     1,841      1,951      1,671      1,416      2,077 |    10,999 
+         1 |     5,768      4,608      3,736      3,025      5,795 |    27,785 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+Independen |   Survey
+tly leaves |    wave
+      home |         6 |     Total
+-----------+-----------+----------
+         0 |     2,043 |    10,999 
+         1 |     4,853 |    27,785 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . 
@@ -1129,16 +1399,28 @@ tly leaves |     difficulty going outside
 
 . tab homebound_cat wave if sp_ivw_yes==1, missing
 
-    Homebound status, |                            Survey wave
-          categorical |         1          2          3          4          5          6 |     Total
-----------------------+------------------------------------------------------------------+----------
-Never/Rarely leaves h |       561        710        651        599        761        797 |     4,079 
-Leaves home but never |       342        259        248        211        337        289 |     1,686 
-Leaves home but needs |     1,019        918        719        630      1,073      1,026 |     5,385 
-Independent, not home |     5,681      4,531      3,649      2,974      5,679      4,742 |    27,256 
-                    . |         6        141        140         27         22         42 |       378 
-----------------------+------------------------------------------------------------------+----------
-                Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+    Homebound status, |                 Survey wave
+          categorical |         1          2          3          4 |     Total
+----------------------+--------------------------------------------+----------
+Never/Rarely leaves h |       561        710        651        599 |     4,079 
+Leaves home but never |       342        259        248        211 |     1,686 
+Leaves home but needs |     1,019        918        719        630 |     5,385 
+Independent, not home |     5,681      4,531      3,649      2,974 |    27,256 
+                    . |         6        141        140         27 |       378 
+----------------------+--------------------------------------------+----------
+                Total |     7,609      6,559      5,407      4,441 |    38,784 
+
+
+    Homebound status, |      Survey wave
+          categorical |         5          6 |     Total
+----------------------+----------------------+----------
+Never/Rarely leaves h |       761        797 |     4,079 
+Leaves home but never |       337        289 |     1,686 
+Leaves home but needs |     1,073      1,026 |     5,385 
+Independent, not home |     5,679      4,742 |    27,256 
+                    . |        22         42 |       378 
+----------------------+----------------------+----------
+                Total |     7,872      6,896 |    38,784 
 
 
 . /*binary for never go out, since never/rarely together*/
@@ -1170,25 +1452,45 @@ Independent, not home |     5,681      4,531      3,649      2,974      5,679   
 . tab indeplow wave if sp_ivw_yes==1, missing
 
 Independen |
- t, go out |                            Survey wave
-    rarely |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     7,150      6,199      5,096      4,185      7,413      6,463 |    36,506 
-         1 |       459        360        311        256        459        433 |     2,278 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+ t, go out |                      Survey wave
+    rarely |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     7,150      6,199      5,096      4,185      7,413 |    36,506 
+         1 |       459        360        311        256        459 |     2,278 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+Independen |   Survey
+ t, go out |    wave
+    rarely |         6 |     Total
+-----------+-----------+----------
+         0 |     6,463 |    36,506 
+         1 |       433 |     2,278 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . tab indephigh wave if sp_ivw_yes==1, missing
 
 Independen |
- t, go out |                            Survey wave
-     often |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     2,387      2,388      2,069      1,723      2,652      2,587 |    13,806 
-         1 |     5,222      4,171      3,338      2,718      5,220      4,309 |    24,978 
------------+------------------------------------------------------------------+----------
-     Total |     7,609      6,559      5,407      4,441      7,872      6,896 |    38,784 
+ t, go out |                      Survey wave
+     often |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     2,387      2,388      2,069      1,723      2,652 |    13,806 
+         1 |     5,222      4,171      3,338      2,718      5,220 |    24,978 
+-----------+-------------------------------------------------------+----------
+     Total |     7,609      6,559      5,407      4,441      7,872 |    38,784 
+
+
+Independen |   Survey
+ t, go out |    wave
+     often |         6 |     Total
+-----------+-----------+----------
+         0 |     2,587 |    13,806 
+         1 |     4,309 |    24,978 
+-----------+-----------+----------
+     Total |     6,896 |    38,784 
 
 
 . 
@@ -1197,11 +1499,12 @@ Independen |
 . //demographic information
 . *********************************************
 . *********************************************
-. //age at interview, note this is missing for wave 3 b/c no wave 3 sensitive data yet
+. //age at interview, note this is missing for wave 3 b/c no wave 3 sensitive d
+> ata yet
 . gen age=.
 (41,466 missing values generated)
 
-. foreach w in 1 2 3 4 5{
+. foreach w in 1 2 3 4 5 6{
   2.         replace age=r`w'dintvwrage if wave==`w'
   3.         sum age if wave==`w', detail
   4.         }       
@@ -1285,15 +1588,31 @@ Independen |
 90%           90            104       Variance       281.1363
 95%           93            106       Skewness      -3.270721
 99%           97            107       Kurtosis       15.92062
+(7,276 real changes made)
+
+                             age
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%           -1             -1
+ 5%           -1             -1
+10%           68             -1       Obs               7,276
+25%           72             -1       Sum of Wgt.       7,276
+
+50%           78                      Mean           74.06308
+                        Largest       Std. Dev.      21.50473
+75%           85            104
+90%           90            105       Variance       462.4533
+95%           93            107       Skewness      -2.712013
+99%           98            108       Kurtosis       10.03057
 
 . //for last month of life interviews, use age at death variable
 . tab ivw_type if age==-1, missing
 
                               ivw_type |      Freq.     Percent        Cum.
 ---------------------------------------+-----------------------------------
-Died, proxy SP LML interview completed |      1,726      100.00      100.00
+Died, proxy SP LML interview completed |      2,212      100.00      100.00
 ---------------------------------------+-----------------------------------
-                                 Total |      1,726      100.00
+                                 Total |      2,212      100.00
 
 . replace age=r2ddeathage if ivw_type==2 & r2dintvwrage==-1
 (503 real changes made)
@@ -1302,7 +1621,7 @@ Died, proxy SP LML interview completed |      1,726      100.00      100.00
 
     Variable |        Obs        Mean    Std. Dev.       Min        Max
 -------------+---------------------------------------------------------
-         age |     34,190      76.394    16.91566         -8        107
+         age |     41,466      75.985    17.82843         -8        108
 
 . //some observations that died still have missing age, so set to missing
 . tab ivw_type if inlist(age,-7,-8)
@@ -1326,15 +1645,15 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
       Percentiles      Smallest
  1%           66             65
  5%           67             65
-10%           69             65       Obs              30,162
-25%           72             65       Sum of Wgt.      30,162
+10%           69             65       Obs              36,572
+25%           72             65       Sum of Wgt.      36,572
 
-50%           78                      Mean           78.59923
-                        Largest       Std. Dev.      7.805023
-75%           84            106
-90%           89            106       Variance       60.91839
-95%           92            107       Skewness       .3654863
-99%           97            107       Kurtosis         2.3768
+50%           78                      Mean           78.67169
+                        Largest       Std. Dev.      7.799021
+75%           84            107
+90%           90            107       Variance       60.82472
+95%           92            107       Skewness       .3768395
+99%           97            108       Kurtosis       2.394895
 
 . sum age if ivw_type==2, detail
 
@@ -1343,15 +1662,15 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
       Percentiles      Smallest
  1%           -1             -1
  5%           -1             -1
-10%           -1             -1       Obs               1,722
-25%           -1             -1       Sum of Wgt.       1,722
+10%           -1             -1       Obs               2,208
+25%           -1             -1       Sum of Wgt.       2,208
 
-50%           -1                      Mean            24.0662
-                        Largest       Std. Dev.      39.49596
-75%           76            102
-90%           90            102       Variance       1559.931
-95%           93            103       Skewness       .9662108
-99%           99            103       Kurtosis        1.98817
+50%           -1                      Mean           18.54891
+                        Largest       Std. Dev.       36.3913
+75%           -1            102
+90%           88            102       Variance       1324.327
+95%           92            103       Skewness       1.349578
+99%           98            103       Kurtosis       2.880494
 
 . sum age, detail
 
@@ -1360,15 +1679,15 @@ Died, proxy SP LML interview completed |          4      100.00      100.00
       Percentiles      Smallest
  1%           -1             -1
  5%           66             -1
-10%           68             -1       Obs              34,186
-25%           72             -1       Sum of Wgt.      34,186
+10%           68             -1       Obs              41,462
+25%           72             -1       Sum of Wgt.      41,462
 
-50%           78                      Mean           76.40385
-                        Largest       Std. Dev.      16.89214
-75%           85            106
-90%           90            106       Variance       285.3443
-95%           93            107       Skewness       -3.29187
-99%           98            107       Kurtosis       15.95023
+50%           78                      Mean           75.99308
+                        Largest       Std. Dev.       17.8103
+75%           85            107
+90%           90            107       Variance       317.2069
+95%           93            107       Skewness      -3.185353
+99%           98            108       Kurtosis       14.55205
 
 . 
 . //gender, only asked in round 1
@@ -1508,33 +1827,66 @@ Other (Am Indian/Asian/Nat. Hawaii) |        231        2.80       94.28
 . tab education el1higstschl if wave==1, missing
 
       Education |
-         level, |                                       R1 EL10 HGHST DGREE SCOOL COMPLD
-    categorical | -9 Missin      -8 DK      -7 RF  -1 Inappl   1 NO SCH   2 1ST-8T   3 9TH-12   4 HIGH S   5 VOCATI   6 SOME C |     Total
-----------------+--------------------------------------------------------------------------------------------------------------+----------
-             -8 |         0         86          0          0          0          0          0          0          0          0 |        86 
-             -7 |         0          0         10          0          0          0          0          0          0          0 |        10 
-   <High School |         0          0          0          0         89        900      1,058          0          0          0 |     2,047 
-High School/GED |         0          0          0          0          0          0          0      2,069          0          0 |     2,069 
-   Some College |         0          0          0          0          0          0          0          0        549        942 |     1,818 
-    >=Bachelors |         0          0          0          0          0          0          0          0          0          0 |     1,579 
-              . |       168          0          0        468          0          0          0          0          0          0 |       636 
-----------------+--------------------------------------------------------------------------------------------------------------+----------
-          Total |       168         86         10        468         89        900      1,058      2,069        549        942 |     8,245 
+         level, |      R1 EL10 HGHST DGREE SCOOL COMPLD
+    categorical | -9 Missin      -8 DK      -7 RF  -1 Inappl |     Total
+----------------+--------------------------------------------+----------
+             -8 |         0         86          0          0 |        86 
+             -7 |         0          0         10          0 |        10 
+   <High School |         0          0          0          0 |     2,047 
+High School/GED |         0          0          0          0 |     2,069 
+   Some College |         0          0          0          0 |     1,818 
+    >=Bachelors |         0          0          0          0 |     1,579 
+              . |       168          0          0        468 |       636 
+----------------+--------------------------------------------+----------
+          Total |       168         86         10        468 |     8,245 
 
 
       Education |
-         level, | R1 EL10 HGHST DGREE SCOOL COMPLD
-    categorical |  7 ASSOCI   8 BACHEL   9 MASTER |     Total
-----------------+---------------------------------+----------
-             -8 |         0          0          0 |        86 
-             -7 |         0          0          0 |        10 
-   <High School |         0          0          0 |     2,047 
-High School/GED |         0          0          0 |     2,069 
-   Some College |       327          0          0 |     1,818 
-    >=Bachelors |         0        863        716 |     1,579 
-              . |         0          0          0 |       636 
-----------------+---------------------------------+----------
-          Total |       327        863        716 |     8,245 
+         level, |      R1 EL10 HGHST DGREE SCOOL COMPLD
+    categorical |  1 NO SCH   2 1ST-8T   3 9TH-12   4 HIGH S |     Total
+----------------+--------------------------------------------+----------
+             -8 |         0          0          0          0 |        86 
+             -7 |         0          0          0          0 |        10 
+   <High School |        89        900      1,058          0 |     2,047 
+High School/GED |         0          0          0      2,069 |     2,069 
+   Some College |         0          0          0          0 |     1,818 
+    >=Bachelors |         0          0          0          0 |     1,579 
+              . |         0          0          0          0 |       636 
+----------------+--------------------------------------------+----------
+          Total |        89        900      1,058      2,069 |     8,245 
+
+
+      Education |
+         level, |      R1 EL10 HGHST DGREE SCOOL COMPLD
+    categorical |  5 VOCATI   6 SOME C   7 ASSOCI   8 BACHEL |     Total
+----------------+--------------------------------------------+----------
+             -8 |         0          0          0          0 |        86 
+             -7 |         0          0          0          0 |        10 
+   <High School |         0          0          0          0 |     2,047 
+High School/GED |         0          0          0          0 |     2,069 
+   Some College |       549        942        327          0 |     1,818 
+    >=Bachelors |         0          0          0        863 |     1,579 
+              . |         0          0          0          0 |       636 
+----------------+--------------------------------------------+----------
+          Total |       549        942        327        863 |     8,245 
+
+
+                |  R1 EL10
+                |   HGHST
+                |   DGREE
+      Education |   SCOOL
+         level, |   COMPLD
+    categorical |  9 MASTER |     Total
+----------------+-----------+----------
+             -8 |         0 |        86 
+             -7 |         0 |        10 
+   <High School |         0 |     2,047 
+High School/GED |         0 |     2,069 
+   Some College |         0 |     1,818 
+    >=Bachelors |       716 |     1,579 
+              . |         0 |       636 
+----------------+-----------+----------
+          Total |       716 |     8,245 
 
 
 . 
@@ -1543,7 +1895,8 @@ High School/GED |         0          0          0 |     2,069
 
 . 
 . //income, just wave 1
-. sum ia1totinc, detail //this is the actual reported income, only present 40% sample
+. sum ia1totinc, detail //this is the actual reported income, only present 40% 
+> sample
 
                     R1 IA50 TOTAL INCOME
 -------------------------------------------------------------
@@ -1565,7 +1918,8 @@ High School/GED |         0          0          0 |     2,069
   2.         gen imputed_inc`i'=.
   3.         foreach w in 1 3 5 {
   4.                 replace ia`w'toincim`i'=. if inlist(ia`w'toincim`i',-9,-1)
-  5.                 sum ia`w'toincim`i' if wave==`w',detail //imputed income variables
+  5.                 sum ia`w'toincim`i' if wave==`w',detail //imputed income v
+> ariables
   6.                 replace imputed_inc`i' = ia`w'toincim`i' if wave==`w'
   7. }
   8.                 label var imputed_inc`i' "Imputed Income `i'"
@@ -1900,16 +2254,30 @@ aveincome:  (18626 real changes made)
 
      Speak |
   language |
-other than |                            Survey wave
-  English? |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |        70          0          0          0          0          0 |        70 
-        -7 |         5          0          0          0          0          0 |         5 
-         0 |     6,178          0          0          0          0          0 |     6,178 
-         1 |     1,356          0          0          0          0          0 |     1,356 
-         . |       636      7,075      5,799      4,737      8,334      7,276 |    33,857 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+other than |                      Survey wave
+  English? |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |        70          0          0          0          0 |        70 
+        -7 |         5          0          0          0          0 |         5 
+         0 |     6,178          0          0          0          0 |     6,178 
+         1 |     1,356          0          0          0          0 |     1,356 
+         . |       636      7,075      5,799      4,737      8,334 |    33,857 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+     Speak |
+  language |   Survey
+other than |    wave
+  English? |         6 |     Total
+-----------+-----------+----------
+        -8 |         0 |        70 
+        -7 |         0 |         5 
+         0 |         0 |     6,178 
+         1 |         0 |     1,356 
+         . |     7,276 |    33,857 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -1931,7 +2299,8 @@ other than |                            Survey wave
 . sort spid wave
 
 . by spid (wave): carryforward female race_cat education income_cat ///
-> otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
+> otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, r
+> eplace
 female:  (24887 real changes made)
 race_cat:  (24887 real changes made)
 education:  (27022 real changes made)
@@ -1966,7 +2335,8 @@ imputed_inc5:  (21614 real changes made)
 . label var whiteoth "White Non-Hispanic or other"
 
 . //marital status
-. //wave 2,3, use derived variable which is populated if not asked b/c no change 
+. //wave 2,3, use derived variable which is populated if not asked b/c no chang
+> e 
 . gen maritalstat=hh1martlstat if wave==1
 (33,221 missing values generated)
 
@@ -1992,20 +2362,36 @@ imputed_inc5:  (21614 real changes made)
 
 . tab maritalstat wave, missing
 
-      Marital |                            Survey wave
-       status |         1          2          3          4          5          6 |     Total
---------------+------------------------------------------------------------------+----------
-           -9 |       636      1,020        915        700        758        866 |     4,895 
-           DK |         3          1          2          0          3          0 |         9 
-      Refused |         6          0          0          0          3          0 |         9 
-      Married |     3,647      2,804      2,216      1,784      3,498      2,912 |    16,861 
-  Live w/Part |       151        119         88         73        155        129 |       715 
-    Separated |       128         97         77         69        141        105 |       617 
-     Divorced |       796        631        510        432        901        760 |     4,030 
-      Widowed |     2,578      2,160      1,802      1,522      2,570      2,245 |    12,877 
-Never Married |       300        243        189        157        305        259 |     1,453 
---------------+------------------------------------------------------------------+----------
-        Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+      Marital |                 Survey wave
+       status |         1          2          3          4 |     Total
+--------------+--------------------------------------------+----------
+           -9 |       636      1,020        915        700 |     4,895 
+           DK |         3          1          2          0 |         9 
+      Refused |         6          0          0          0 |         9 
+      Married |     3,647      2,804      2,216      1,784 |    16,861 
+  Live w/Part |       151        119         88         73 |       715 
+    Separated |       128         97         77         69 |       617 
+     Divorced |       796        631        510        432 |     4,030 
+      Widowed |     2,578      2,160      1,802      1,522 |    12,877 
+Never Married |       300        243        189        157 |     1,453 
+--------------+--------------------------------------------+----------
+        Total |     8,245      7,075      5,799      4,737 |    41,466 
+
+
+      Marital |      Survey wave
+       status |         5          6 |     Total
+--------------+----------------------+----------
+           -9 |       758        866 |     4,895 
+           DK |         3          0 |         9 
+      Refused |         3          0 |         9 
+      Married |     3,498      2,912 |    16,861 
+  Live w/Part |       155        129 |       715 
+    Separated |       141        105 |       617 
+     Divorced |       901        760 |     4,030 
+      Widowed |     2,570      2,245 |    12,877 
+Never Married |       305        259 |     1,453 
+--------------+----------------------+----------
+        Total |     8,334      7,276 |    41,466 
 
 
 . 
@@ -2130,16 +2516,29 @@ Never Married |       300        243        189        157        305        259
 
 . tab medicaid wave,missing
 
-           |                            Survey wave
-  Medicaid |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       191        117        200        206        388        197 |     1,299 
-        -7 |        16          6         21          4         16          6 |        69 
-         0 |     6,229      4,947      3,923      3,212      6,069      5,215 |    29,595 
-         1 |     1,173        986        740        615      1,103        992 |     5,609 
-         . |       636      1,019        915        700        758        866 |     4,894 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+  Medicaid |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       191        117        200        206        388 |     1,299 
+        -7 |        16          6         21          4         16 |        69 
+         0 |     6,229      4,947      3,923      3,212      6,069 |    29,595 
+         1 |     1,173        986        740        615      1,103 |     5,609 
+         . |       636      1,019        915        700        758 |     4,894 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+  Medicaid |         6 |     Total
+-----------+-----------+----------
+        -8 |       197 |     1,299 
+        -7 |         6 |        69 
+         0 |     5,215 |    29,595 
+         1 |       992 |     5,609 
+         . |       866 |     4,894 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . tab medicaid if wave==1 & ivw_type==1,missing
@@ -2266,16 +2665,29 @@ Never Married |       300        243        189        157        305        259
 
 . tab medigap wave,missing
 
-           |                            Survey wave
-   Medigap |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       255        176        247        275        440        276 |     1,669 
-        -7 |        21          9         22          4         16          7 |        79 
-         0 |     3,126      2,174      1,649      1,275      2,622      2,058 |    12,904 
-         1 |     4,207      3,697      2,966      2,483      4,498      4,069 |    21,920 
-         . |       636      1,019        915        700        758        866 |     4,894 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+   Medigap |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       255        176        247        275        440 |     1,669 
+        -7 |        21          9         22          4         16 |        79 
+         0 |     3,126      2,174      1,649      1,275      2,622 |    12,904 
+         1 |     4,207      3,697      2,966      2,483      4,498 |    21,920 
+         . |       636      1,019        915        700        758 |     4,894 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+   Medigap |         6 |     Total
+-----------+-----------+----------
+        -8 |       276 |     1,669 
+        -7 |         7 |        79 
+         0 |     2,058 |    12,904 
+         1 |     4,069 |    21,920 
+         . |       866 |     4,894 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -2392,16 +2804,29 @@ Never Married |       300        243        189        157        305        259
 
 . tab mc_partd wave,missing
 
-  Medicare |                            Survey wave
-    Part D |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       335        252        314        346        578        422 |     2,247 
-        -7 |        23          5         21          6         14          8 |        77 
-         0 |     2,676      1,861      1,394      1,079      2,111      1,699 |    10,820 
-         1 |     4,575      3,938      3,155      2,606      4,873      4,281 |    23,428 
-         . |       636      1,019        915        700        758        866 |     4,894 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+  Medicare |                      Survey wave
+    Part D |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       335        252        314        346        578 |     2,247 
+        -7 |        23          5         21          6         14 |        77 
+         0 |     2,676      1,861      1,394      1,079      2,111 |    10,820 
+         1 |     4,575      3,938      3,155      2,606      4,873 |    23,428 
+         . |       636      1,019        915        700        758 |     4,894 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+  Medicare |    wave
+    Part D |         6 |     Total
+-----------+-----------+----------
+        -8 |       422 |     2,247 
+        -7 |         8 |        77 
+         0 |     1,699 |    10,820 
+         1 |     4,281 |    23,428 
+         . |       866 |     4,894 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -2518,16 +2943,29 @@ Never Married |       300        243        189        157        305        259
 . tab tricare wave,missing
 
  Tricare - |
-  veterans |                            Survey wave
- insurance |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       127         65        151        165        274        126 |       908 
-        -7 |        16          5         21          3         12          5 |        62 
-         0 |     7,053      5,636      4,428      3,631      6,860      5,880 |    33,488 
-         1 |       413        350        284        238        430        399 |     2,114 
-         . |       636      1,019        915        700        758        866 |     4,894 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+  veterans |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       127         65        151        165        274 |       908 
+        -7 |        16          5         21          3         12 |        62 
+         0 |     7,053      5,636      4,428      3,631      6,860 |    33,488 
+         1 |       413        350        284        238        430 |     2,114 
+         . |       636      1,019        915        700        758 |     4,894 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+ Tricare - |   Survey
+  veterans |    wave
+ insurance |         6 |     Total
+-----------+-----------+----------
+        -8 |       126 |       908 
+        -7 |         5 |        62 
+         0 |     5,880 |    33,488 
+         1 |       399 |     2,114 
+         . |       866 |     4,894 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -2646,26 +3084,45 @@ Never Married |       300        243        189        157        305        259
 
    Private |
    nursing |
-      home |                            Survey wave
- insurance |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       472        291        334        356        681        454 |     2,588 
-        -7 |        21         10         18          3         18          8 |        78 
-         0 |     5,937      4,431      3,365      2,632      5,273      4,377 |    26,015 
-         1 |     1,179        329        180        147        761        281 |     2,877 
-         . |       636      2,014      1,902      1,599      1,601      2,156 |     9,908 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+      home |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       472        291        334        356        681 |     2,588 
+        -7 |        21         10         18          3         18 |        78 
+         0 |     5,937      4,431      3,365      2,632      5,273 |    26,015 
+         1 |     1,179        329        180        147        761 |     2,877 
+         . |       636      2,014      1,902      1,599      1,601 |     9,908 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+   Private |
+   nursing |   Survey
+      home |    wave
+ insurance |         6 |     Total
+-----------+-----------+----------
+        -8 |       454 |     2,588 
+        -7 |         8 |        78 
+         0 |     4,377 |    26,015 
+         1 |       281 |     2,877 
+         . |     2,156 |     9,908 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
-. //if report nh insurance in prev wave, asked to verify still have it curr wave
+. //if report nh insurance in prev wave, asked to verify still have it curr wav
+> e
 . foreach w in 2 3 4 5 6{
   2. tab ip`w'nginslast if wave==`w' & ip`w'nginsnurs==-1, missing
-  3. replace private_ltc=1 if ip`w'nginslast==1 & ip`w'nginsnurs==-1 & wave==`w'
-  4. replace private_ltc=0 if ip`w'nginslast==2 & ip`w'nginsnurs==-1 & wave==`w'
-  5. replace private_ltc=-7 if ip`w'nginslast==-7 & ip`w'nginsnurs==-1 & wave==`w'
-  6. replace private_ltc=-8 if ip`w'nginslast==-8 & ip`w'nginsnurs==-1 & wave==`w'
+  3. replace private_ltc=1 if ip`w'nginslast==1 & ip`w'nginsnurs==-1 & wave==`w
+> '
+  4. replace private_ltc=0 if ip`w'nginslast==2 & ip`w'nginsnurs==-1 & wave==`w
+> '
+  5. replace private_ltc=-7 if ip`w'nginslast==-7 & ip`w'nginsnurs==-1 & wave==
+> `w'
+  6. replace private_ltc=-8 if ip`w'nginslast==-8 & ip`w'nginsnurs==-1 & wave==
+> `w'
   7. }
 
      R2 IP5A HAVE LTC INS FROM LAST INT |      Freq.     Percent        Cum.
@@ -2742,16 +3199,30 @@ Never Married |       300        243        189        157        305        259
 
    Private |
    nursing |
-      home |                            Survey wave
- insurance |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -8 |       472        305        378        396        716        498 |     2,765 
-        -7 |        21         12         21          4         19         10 |        87 
-         0 |     5,937      4,479      3,413      2,680      5,322      4,454 |    26,285 
-         1 |     1,179      1,260      1,072        957      1,519      1,448 |     7,435 
-         . |       636      1,019        915        700        758        866 |     4,894 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+      home |                      Survey wave
+ insurance |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -8 |       472        305        378        396        716 |     2,765 
+        -7 |        21         12         21          4         19 |        87 
+         0 |     5,937      4,479      3,413      2,680      5,322 |    26,285 
+         1 |     1,179      1,260      1,072        957      1,519 |     7,435 
+         . |       636      1,019        915        700        758 |     4,894 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+   Private |
+   nursing |   Survey
+      home |    wave
+ insurance |         6 |     Total
+-----------+-----------+----------
+        -8 |       498 |     2,765 
+        -7 |        10 |        87 
+         0 |     4,454 |    26,285 
+         1 |     1,448 |     7,435 
+         . |       866 |     4,894 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -2777,18 +3248,32 @@ Never Married |       300        243        189        157        305        259
 
 . tab re1resistrct ht1placedesc if wave==1, missing
 
-      R1 RE1 RESIDNCE |                        R1 HT3 PLACE BEST DESCRIPTION
-     PHYSICAL STRCTUR | -9 Missin  -1 Inappl   1 PRIVAT   2 A GROU   3 ASSIST   4 RELIGI  91 OTHER  |     Total
-----------------------+-----------------------------------------------------------------------------+----------
-           -9 Missing |       168          0          0          0          0          0          0 |       168 
-      -1 Inapplicable |         0        468          0          0          0          0          0 |       468 
- 1 FREE-STANDING (DET |         0          0      5,450         10         14          1          8 |     5,483 
- 2 SINGLE HOUSE BUT A |         0          0        587          5          8          1         14 |       615 
- 3 MOBILE HOME OR TRA |         0        344          0          0          0          0          0 |       344 
- 4 MULTI-UNIT (2+) BU |         0      1,110          0          0          0          0          0 |     1,110 
-   91 OTHER (SPECIFY) |         0         57          0          0          0          0          0 |        57 
-----------------------+-----------------------------------------------------------------------------+----------
-                Total |       168      1,979      6,037         15         22          2         22 |     8,245 
+      R1 RE1 RESIDNCE |        R1 HT3 PLACE BEST DESCRIPTION
+     PHYSICAL STRCTUR | -9 Missin  -1 Inappl   1 PRIVAT   2 A GROU |     Total
+----------------------+--------------------------------------------+----------
+           -9 Missing |       168          0          0          0 |       168 
+      -1 Inapplicable |         0        468          0          0 |       468 
+ 1 FREE-STANDING (DET |         0          0      5,450         10 |     5,483 
+ 2 SINGLE HOUSE BUT A |         0          0        587          5 |       615 
+ 3 MOBILE HOME OR TRA |         0        344          0          0 |       344 
+ 4 MULTI-UNIT (2+) BU |         0      1,110          0          0 |     1,110 
+   91 OTHER (SPECIFY) |         0         57          0          0 |        57 
+----------------------+--------------------------------------------+----------
+                Total |       168      1,979      6,037         15 |     8,245 
+
+
+      R1 RE1 RESIDNCE |  R1 HT3 PLACE BEST DESCRIPTION
+     PHYSICAL STRCTUR |  3 ASSIST   4 RELIGI  91 OTHER  |     Total
+----------------------+---------------------------------+----------
+           -9 Missing |         0          0          0 |       168 
+      -1 Inapplicable |         0          0          0 |       468 
+ 1 FREE-STANDING (DET |        14          1          8 |     5,483 
+ 2 SINGLE HOUSE BUT A |         8          1         14 |       615 
+ 3 MOBILE HOME OR TRA |         0          0          0 |       344 
+ 4 MULTI-UNIT (2+) BU |         0          0          0 |     1,110 
+   91 OTHER (SPECIFY) |         0          0          0 |        57 
+----------------------+---------------------------------+----------
+                Total |        22          2         22 |     8,245 
 
 
 . //derived variable in waves 2, 3
@@ -2805,8 +3290,10 @@ Never Married |       300        243        189        157        305        259
 ----------------------------------------+-----------------------------------
                                   Total |      7,075      100.00
 
-. //per user guide, need to fix this variable since incorrectly coded for 71 obs
-. replace re2dresistrct = re2newstrct if inlist(re2spadrsnew,1,3) & inlist(re2newstrct,1,2,3,4,91)
+. //per user guide, need to fix this variable since incorrectly coded for 71 ob
+> s
+. replace re2dresistrct = re2newstrct if inlist(re2spadrsnew,1,3) & inlist(re2n
+> ewstrct,1,2,3,4,91)
 (71 real changes made)
 
 . 
@@ -2999,19 +3486,35 @@ Never Married |       300        243        189        157        305        259
 . 
 . tab ht_new wave, missing
 
-           |                            Survey wave
-    ht_new |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -9 |       168        190        179        156        179        177 |     1,049 
-        -1 |     1,979        629        429        326      1,202        433 |     4,998 
-         1 |     6,037        150        118        108      3,229        145 |     9,787 
-         2 |        15          4          5          2         14          7 |        47 
-         3 |        22          8          5          6          7          7 |        55 
-         4 |         2          0          0          0          3          0 |         5 
-        91 |        22          5          3          0          3          2 |        35 
-         . |         0      6,089      5,060      4,139      3,697      6,505 |    25,490 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+    ht_new |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168        190        179        156        179 |     1,049 
+        -1 |     1,979        629        429        326      1,202 |     4,998 
+         1 |     6,037        150        118        108      3,229 |     9,787 
+         2 |        15          4          5          2         14 |        47 
+         3 |        22          8          5          6          7 |        55 
+         4 |         2          0          0          0          3 |         5 
+        91 |        22          5          3          0          3 |        35 
+         . |         0      6,089      5,060      4,139      3,697 |    25,490 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+    ht_new |         6 |     Total
+-----------+-----------+----------
+        -9 |       177 |     1,049 
+        -1 |       433 |     4,998 
+         1 |       145 |     9,787 
+         2 |         7 |        47 
+         3 |         7 |        55 
+         4 |         0 |         5 
+        91 |         2 |        35 
+         . |     6,505 |    25,490 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -3023,18 +3526,33 @@ ht_new:  (25490 real changes made)
 . 
 . tab ht_new wave, missing
 
-           |                            Survey wave
-    ht_new |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -9 |       168        214        215        213        222        207 |     1,239 
-        -1 |     1,979      1,861      1,507      1,175      1,974      1,772 |    10,268 
-         1 |     6,037      4,943      4,019      3,298      6,076      5,231 |    29,604 
-         2 |        15         15         17         14         26         25 |       112 
-         3 |        22         21         20         23         21         25 |       132 
-         4 |         2          2          2          2          5          5 |        18 
-        91 |        22         19         19         12         10         11 |        93 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+    ht_new |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168        214        215        213        222 |     1,239 
+        -1 |     1,979      1,861      1,507      1,175      1,974 |    10,268 
+         1 |     6,037      4,943      4,019      3,298      6,076 |    29,604 
+         2 |        15         15         17         14         26 |       112 
+         3 |        22         21         20         23         21 |       132 
+         4 |         2          2          2          2          5 |        18 
+        91 |        22         19         19         12         10 |        93 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+    ht_new |         6 |     Total
+-----------+-----------+----------
+        -9 |       207 |     1,239 
+        -1 |     1,772 |    10,268 
+         1 |     5,231 |    29,604 
+         2 |        25 |       112 
+         3 |        25 |       132 
+         4 |         5 |        18 
+        91 |        11 |        93 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -3067,16 +3585,29 @@ ht_new:  (25490 real changes made)
 . 
 . tab residence wave
 
-           |                            Survey wave
- residence |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-        -9 |       168          0          0          0          0          0 |       168 
-        -1 |       468      1,019        915        428        760        866 |     4,456 
-         1 |     5,483      4,309      3,470      3,019      5,400      4,536 |    26,217 
-         2 |       615        483        383        342        618        521 |     2,962 
-         3 |     1,511      1,264      1,031        948      1,556      1,353 |     7,663 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+ residence |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -9 |       168          0          0          0          0 |       168 
+        -1 |       468      1,019        915        428        760 |     4,456 
+         1 |     5,483      4,309      3,470      3,019      5,400 |    26,217 
+         2 |       615        483        383        342        618 |     2,962 
+         3 |     1,511      1,264      1,031        948      1,556 |     7,663 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+ residence |         6 |     Total
+-----------+-----------+----------
+        -9 |         0 |       168 
+        -1 |       866 |     4,456 
+         1 |     4,536 |    26,217 
+         2 |       521 |     2,962 
+         3 |     1,353 |     7,663 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -3092,15 +3623,27 @@ ht_new:  (25490 real changes made)
 
 . tab residence wave, missing
 
-           |                            Survey wave
- residence |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         1 |     6,037      4,971      4,038      3,312      6,087      5,238 |    29,683 
-         2 |        61         76         73         66         72         74 |       422 
-         3 |     1,511      1,244      1,013        931      1,544      1,345 |     7,588 
-         . |       636        784        675        428        631        619 |     3,773 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+           |                      Survey wave
+ residence |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         1 |     6,037      4,971      4,038      3,312      6,087 |    29,683 
+         2 |        61         76         73         66         72 |       422 
+         3 |     1,511      1,244      1,013        931      1,544 |     7,588 
+         . |       636        784        675        428        631 |     3,773 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+           |   Survey
+           |    wave
+ residence |         6 |     Total
+-----------+-----------+----------
+         1 |     5,238 |    29,683 
+         2 |        74 |       422 
+         3 |     1,345 |     7,588 
+         . |       619 |     3,773 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
@@ -3185,7 +3728,8 @@ Mobile Home/Multi-Unit |      1,345       18.49       91.49
 . foreach w in 1 2 3 4 5 6{
   2. tab hh`w'dlvngarrg if wave==`w' & ivw_type==1, missing
   3. replace livearrang=hh`w'dlvngarrg if wave==`w'
-  4. replace livearrang=1 if (hh`w'dlvngarrg==-9 & hh`w'dhshldnum==1)  & wave==`w'
+  4. replace livearrang=1 if (hh`w'dlvngarrg==-9 & hh`w'dhshldnum==1)  & wave==
+> `w'
   5. replace livearrang=-7 if hh`w'dlvngarrg == -7 & wave == `w'
   6. replace livearrang=-8 if hh`w'dlvngarrg == -8 & wave == `w'
   7. }
@@ -3282,15 +3826,26 @@ Mobile Home/Multi-Unit |      1,345       18.49       91.49
 
 . tab livearrang wave if ivw_type==1, missing
 
-  Living arrangmeent, |                            Survey wave
-          categorical |         1          2          3          4          5          6 |     Total
-----------------------+------------------------------------------------------------------+----------
-                Alone |     2,505      1,972      1,757      1,479      2,620      2,223 |    12,556 
-  With spouse/partner |     3,050      2,285      1,754      1,433      2,884      2,371 |    13,777 
-With spouse/partner + |       688        574        433        354        689        604 |     3,342 
-          With others |     1,366      1,225        940        771      1,383      1,212 |     6,897 
-----------------------+------------------------------------------------------------------+----------
-                Total |     7,609      6,056      4,884      4,037      7,576      6,410 |    36,572 
+  Living arrangmeent, |                 Survey wave
+          categorical |         1          2          3          4 |     Total
+----------------------+--------------------------------------------+----------
+                Alone |     2,505      1,972      1,757      1,479 |    12,556 
+  With spouse/partner |     3,050      2,285      1,754      1,433 |    13,777 
+With spouse/partner + |       688        574        433        354 |     3,342 
+          With others |     1,366      1,225        940        771 |     6,897 
+----------------------+--------------------------------------------+----------
+                Total |     7,609      6,056      4,884      4,037 |    36,572 
+
+
+  Living arrangmeent, |      Survey wave
+          categorical |         5          6 |     Total
+----------------------+----------------------+----------
+                Alone |     2,620      2,223 |    12,556 
+  With spouse/partner |     2,884      2,371 |    13,777 
+With spouse/partner + |       689        604 |     3,342 
+          With others |     1,383      1,212 |     6,897 
+----------------------+----------------------+----------
+                Total |     7,576      6,410 |    36,572 
 
 
 . 
@@ -3319,8 +3874,9 @@ With spouse/partner + |       688        574        433        354        689   
 . save round_1_6_cleanv1.dta, replace
 file round_1_6_cleanv1.dta saved
 
-. local ivars age female race_cat education  income_cat otherlang maritalstat medicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_ne
-> w residence livearrang livealone
+. local ivars age female race_cat education  income_cat otherlang maritalstat m
+> edicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_new residen
+> ce livearrang livealone
 
 . foreach w in `ivars'{
   2. 
@@ -3333,52 +3889,53 @@ file round_1_6_cleanv1.dta saved
   interview |
    or death |      Freq.     Percent        Cum.
 ------------+-----------------------------------
-         -1 |      1,223        3.58        3.58
-         65 |        117        0.34        3.92
-         66 |        638        1.87        5.79
-         67 |        885        2.59        8.37
-         68 |      1,186        3.47       11.84
-         69 |      1,254        3.67       15.51
-         70 |      1,406        4.11       19.62
-         71 |      1,404        4.11       23.73
-         72 |      1,424        4.17       27.90
-         73 |      1,278        3.74       31.64
-         74 |      1,313        3.84       35.48
-         75 |      1,249        3.65       39.13
-         76 |      1,374        4.02       43.15
-         77 |      1,290        3.77       46.92
-         78 |      1,288        3.77       50.69
-         79 |      1,264        3.70       54.39
-         80 |      1,304        3.81       58.20
-         81 |      1,337        3.91       62.11
-         82 |      1,296        3.79       65.90
-         83 |      1,307        3.82       69.73
-         84 |      1,284        3.76       73.48
-         85 |      1,159        3.39       76.87
-         86 |      1,137        3.33       80.20
-         87 |        990        2.90       83.10
-         88 |        914        2.67       85.77
-         89 |        796        2.33       88.10
-         90 |        712        2.08       90.18
-         91 |        681        1.99       92.17
-         92 |        616        1.80       93.97
-         93 |        548        1.60       95.58
-         94 |        406        1.19       96.76
-         95 |        328        0.96       97.72
-         96 |        241        0.70       98.43
-         97 |        166        0.49       98.91
-         98 |        121        0.35       99.27
-         99 |         86        0.25       99.52
-        100 |         68        0.20       99.72
-        101 |         44        0.13       99.85
-        102 |         28        0.08       99.93
-        103 |         14        0.04       99.97
-        104 |          3        0.01       99.98
-        105 |          2        0.01       99.99
+         -1 |      1,709        4.12        4.12
+         65 |        117        0.28        4.40
+         66 |        686        1.65        6.06
+         67 |      1,075        2.59        8.65
+         68 |      1,405        3.39       12.04
+         69 |      1,524        3.68       15.72
+         70 |      1,599        3.86       19.57
+         71 |      1,730        4.17       23.74
+         72 |      1,757        4.24       27.98
+         73 |      1,620        3.91       31.89
+         74 |      1,590        3.83       35.72
+         75 |      1,531        3.69       39.42
+         76 |      1,666        4.02       43.43
+         77 |      1,607        3.88       47.31
+         78 |      1,553        3.75       51.06
+         79 |      1,557        3.76       54.81
+         80 |      1,547        3.73       58.54
+         81 |      1,611        3.89       62.43
+         82 |      1,561        3.76       66.19
+         83 |      1,553        3.75       69.94
+         84 |      1,523        3.67       73.61
+         85 |      1,389        3.35       76.96
+         86 |      1,387        3.35       80.31
+         87 |      1,193        2.88       83.18
+         88 |      1,083        2.61       85.80
+         89 |        985        2.38       88.17
+         90 |        844        2.04       90.21
+         91 |        813        1.96       92.17
+         92 |        746        1.80       93.97
+         93 |        649        1.57       95.53
+         94 |        487        1.17       96.71
+         95 |        399        0.96       97.67
+         96 |        305        0.74       98.41
+         97 |        210        0.51       98.91
+         98 |        144        0.35       99.26
+         99 |        106        0.26       99.52
+        100 |         75        0.18       99.70
+        101 |         52        0.13       99.82
+        102 |         42        0.10       99.92
+        103 |         17        0.04       99.96
+        104 |          5        0.01       99.98
+        105 |          3        0.01       99.98
         106 |          3        0.01       99.99
-        107 |          2        0.01      100.00
+        107 |          3        0.01      100.00
+        108 |          1        0.00      100.00
 ------------+-----------------------------------
-      Total |     34,186      100.00
+      Total |     41,462      100.00
 
      Female |      Freq.     Percent        Cum.
 ------------+-----------------------------------
@@ -3557,5 +4114,5 @@ Lives alone |      Freq.     Percent        Cum.
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs2_nhats_cleaning.txt
   log type:  text
- closed on:  11 Sep 2017, 10:38:57
----------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   5 Oct 2017, 09:50:30
+-------------------------------------------------------------------------------

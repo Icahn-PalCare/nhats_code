@@ -1,8 +1,9 @@
----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  E:\nhats\nhats_code\NHATS data setup\logs\6-add_helper_to_SP_ds-LOG.txt
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\6-add_helper_to_SP_ds-LO
+> G.txt
   log type:  text
- opened on:   8 Sep 2017, 14:37:30
+ opened on:   5 Oct 2017, 09:52:21
 
 . 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
@@ -15,7 +16,7 @@
 
 . local r5raw E:\nhats\data\NHATS Public\round_5\
 
-. local r6rawbeta E:\nhats\data\NHATS Public\round_6\
+. local r6raw E:\nhats\data\NHATS Public\round_6\
 
 . local work E:\nhats\data\NHATS working data
 
@@ -29,6 +30,8 @@
 
 . local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 
+. local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+
 . local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 . 
@@ -41,7 +44,8 @@ E:\nhats\data\NHATS working data
 
 . 
 . local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
->  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw paid ///
+>  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw pai
+> d ///
 >  op_adl* op_iadl* op_nonadl* son daughter oth_fam rc_staff op_doc_help op_sn
 
 . 
@@ -82,9 +86,11 @@ E:\nhats\data\NHATS working data
 . gen rc_staff=0
 
 . forvalues i=1/6 {
-  2.         replace paid=1 if op`i'paidh==1 & ((op`i'relat>=30 & op`i'relat<=40)| ///
+  2.         replace paid=1 if op`i'paidh==1 & ((op`i'relat>=30 & op`i'relat<=4
+> 0)| ///
 >         op`i'relat==92) & wave==`i'
-  3.         foreach x of varlist op`i'*hlp op`i'*hlp1 op`i'*hlp2 op`i'*hlpmst {
+  3.         foreach x of varlist op`i'*hlp op`i'*hlp1 op`i'*hlp2 op`i'*hlpmst 
+> {
   4.                 replace rc_staff=1 if op`i'relat==37 & `x'==1 & wave==`i'
   5. }
   6. }
@@ -259,7 +265,8 @@ E:\nhats\data\NHATS working data
 (187,750 real changes made, 187,750 to missing)
 
 . ***************************************************************
-. //identify primary helper, person with the most hours / month using imputed hours
+. //identify primary helper, person with the most hours / month using imputed h
+> ours
 . sort spid wave opid spouse
 
 . 
@@ -273,13 +280,23 @@ E:\nhats\data\NHATS working data
 
 . tab primary_cg wave, missing
 
-           |                            Survey wave
-primary_cg |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |    31,264     32,449     31,325     29,322     45,616     45,423 |   215,399 
-         1 |     6,833      5,495      4,420      3,694      6,669      5,751 |    32,862 
------------+------------------------------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+           |                      Survey wave
+primary_cg |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |    31,264     32,449     31,325     29,322     45,616 |   215,399 
+         1 |     6,833      5,495      4,420      3,694      6,669 |    32,862 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   248,261 
+
+
+           |   Survey
+           |    wave
+primary_cg |         6 |     Total
+-----------+-----------+----------
+         0 |    45,423 |   215,399 
+         1 |     5,751 |    32,862 
+-----------+-----------+----------
+     Total |    51,174 |   248,261 
 
 
 . 
@@ -288,25 +305,43 @@ primary_cg |         1          2          3          4          5          6 | 
 
 . tab num_primary_cg wave, missing
 
-num_primar |                            Survey wave
-      y_cg |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     4,738      6,594      6,729      6,210      8,886      9,284 |    42,441 
-         1 |    31,436     29,780     27,771     25,671     41,756     40,198 |   196,612 
-         2 |     1,575      1,370      1,116      1,027      1,461      1,574 |     8,123 
-         3 |       258        169        119         78        159         93 |       876 
-         4 |        61         23         10         22         14         12 |       142 
-         5 |        12          0          0          8          0         13 |        33 
-         6 |        17          0          0          0          0          0 |        17 
-         7 |         0          8          0          0          0          0 |         8 
-         9 |         0          0          0          0          9          0 |         9 
------------+------------------------------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+num_primar |                      Survey wave
+      y_cg |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     4,738      6,594      6,729      6,210      8,886 |    42,441 
+         1 |    31,436     29,780     27,771     25,671     41,756 |   196,612 
+         2 |     1,575      1,370      1,116      1,027      1,461 |     8,123 
+         3 |       258        169        119         78        159 |       876 
+         4 |        61         23         10         22         14 |       142 
+         5 |        12          0          0          8          0 |        33 
+         6 |        17          0          0          0          0 |        17 
+         7 |         0          8          0          0          0 |         8 
+         9 |         0          0          0          0          9 |         9 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   248,261 
+
+
+           |   Survey
+num_primar |    wave
+      y_cg |         6 |     Total
+-----------+-----------+----------
+         0 |     9,284 |    42,441 
+         1 |    40,198 |   196,612 
+         2 |     1,574 |     8,123 
+         3 |        93 |       876 
+         4 |        12 |       142 
+         5 |        13 |        33 
+         6 |         0 |        17 
+         7 |         0 |         8 
+         9 |         0 |         9 
+-----------+-----------+----------
+     Total |    51,174 |   248,261 
 
 
 . 
 . //assign relationship to primary helper
-. //if same number of hours for two different helpers, then assign to spouse first
+. //if same number of hours for two different helpers, then assign to spouse fi
+> rst
 . gen prim_helper_cat=1 if primary_cg==1 & spouse==1
 (233,912 missing values generated)
 
@@ -322,14 +357,24 @@ num_primar |                            Survey wave
 
 . tab prim_helper_cat wave, missing
 
-                    |                            Survey wave
-    prim_helper_cat |         1          2          3          4          5          6 |     Total
---------------------+------------------------------------------------------------------+----------
-             Spouse |     3,122      2,386      1,900      1,502      2,990      2,449 |    14,349 
-     Other relative |     2,845      2,278      1,812      1,578      2,668      2,369 |    13,550 
-Other, not relative |    32,130     33,280     32,033     29,936     46,627     46,356 |   220,362 
---------------------+------------------------------------------------------------------+----------
-              Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+                    |                 Survey wave
+    prim_helper_cat |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |    14,349 
+     Other relative |     2,845      2,278      1,812      1,578 |    13,550 
+Other, not relative |    32,130     33,280     32,033     29,936 |   220,362 
+--------------------+--------------------------------------------+----------
+              Total |    38,097     37,944     35,745     33,016 |   248,261 
+
+
+                    |      Survey wave
+    prim_helper_cat |         5          6 |     Total
+--------------------+----------------------+----------
+             Spouse |     2,990      2,449 |    14,349 
+     Other relative |     2,668      2,369 |    13,550 
+Other, not relative |    46,627     46,356 |   220,362 
+--------------------+----------------------+----------
+              Total |    52,285     51,174 |   248,261 
 
 
 . 
@@ -348,13 +393,16 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 (50,897 real changes made)
 (4,281 real changes made)
 
-. label define op_relationship_cat 1 "Spouse/Partner" 2 "Daughter (incl. step-/-in-law)" ///
-> 3 "Son (incl. step-/-in-law)" 4 "Other family" 5 "Paid CG" 6 "Unpaid non-family CG"
+. label define op_relationship_cat 1 "Spouse/Partner" 2 "Daughter (incl. step-/
+> -in-law)" ///
+> 3 "Son (incl. step-/-in-law)" 4 "Other family" 5 "Paid CG" 6 "Unpaid non-fami
+> ly CG"
 
 . label values op_relationship_cat op_relationship_cat
 
 . 
-. //get total number hours/month help received and number of helpers per spid/wave
+. //get total number hours/month help received and number of helpers per spid/w
+> ave
 . egen tot_hrsmonth_help_i=total(op_hrsmth_i), by(spid wave)
 
 . egen n_helpers=count(op_hrsmth_i), by(spid wave)
@@ -399,7 +447,8 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 . replace num_helpers_cat=3 if n_helpers>=7 & n_helpers<.
 (2,346 real changes made)
 
-. label define num_helpers_cat 0 "No helpers" 1 "1-3 helpers" 2 "4-6 helpers" ///
+. label define num_helpers_cat 0 "No helpers" 1 "1-3 helpers" 2 "4-6 helpers" /
+> //
 > 3 "7+ helpers"
 
 . label values num_helpers_cat num_helpers_cat
@@ -412,7 +461,8 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 
 . gen tot_hrswk_paid_i=tot_hrsmonth_paid_i/(52/12)
 
-. label var tot_hrsmonth_paid_i "Hours/month help recived, paid helpers, imputed"
+. label var tot_hrsmonth_paid_i "Hours/month help recived, paid helpers, impute
+> d"
 
 . label var tot_hrswk_paid_i "Hours/week help received, paid helpers, imputed"
 
@@ -422,7 +472,8 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 . label var op_hrswk_i "OP hours/week help SP"
 
 . 
-. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed
+> "
 
 . sum tot_hrsmonth_help_i, detail
 
@@ -450,25 +501,48 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 
     Number |
    helpers |
-  reported |                            Survey wave
-     by SP |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     4,738      6,594      6,729      6,210      8,886      9,284 |    42,441 
-         1 |    15,424     13,403     11,036     10,098     17,418     15,620 |    82,999 
-         2 |     9,665      9,295      9,107      8,489     13,100     12,869 |    62,525 
-         3 |     4,659      4,930      4,928      4,405      6,895      7,244 |    33,061 
-         4 |     2,044      2,071      2,131      2,165      3,400      3,310 |    15,121 
-         5 |       892      1,026      1,091        977      1,462      1,694 |     7,142 
-         6 |       356        372        466        342        470        620 |     2,626 
-         7 |       203         97        148        121        335        375 |     1,279 
-         8 |        73         64         44         64        125         87 |       457 
-         9 |        20         59         65         41        126         71 |       382 
-        10 |        10         22          0         48         40          0 |       120 
-        11 |         0         11          0         41         16          0 |        68 
-        12 |        13          0          0          0         12          0 |        25 
-        13 |         0          0          0         15          0          0 |        15 
------------+------------------------------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+  reported |                      Survey wave
+     by SP |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     4,738      6,594      6,729      6,210      8,886 |    42,441 
+         1 |    15,424     13,403     11,036     10,098     17,418 |    82,999 
+         2 |     9,665      9,295      9,107      8,489     13,100 |    62,525 
+         3 |     4,659      4,930      4,928      4,405      6,895 |    33,061 
+         4 |     2,044      2,071      2,131      2,165      3,400 |    15,121 
+         5 |       892      1,026      1,091        977      1,462 |     7,142 
+         6 |       356        372        466        342        470 |     2,626 
+         7 |       203         97        148        121        335 |     1,279 
+         8 |        73         64         44         64        125 |       457 
+         9 |        20         59         65         41        126 |       382 
+        10 |        10         22          0         48         40 |       120 
+        11 |         0         11          0         41         16 |        68 
+        12 |        13          0          0          0         12 |        25 
+        13 |         0          0          0         15          0 |        15 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   248,261 
+
+
+    Number |
+   helpers |   Survey
+  reported |    wave
+     by SP |         6 |     Total
+-----------+-----------+----------
+         0 |     9,284 |    42,441 
+         1 |    15,620 |    82,999 
+         2 |    12,869 |    62,525 
+         3 |     7,244 |    33,061 
+         4 |     3,310 |    15,121 
+         5 |     1,694 |     7,142 
+         6 |       620 |     2,626 
+         7 |       375 |     1,279 
+         8 |        87 |       457 
+         9 |        71 |       382 
+        10 |         0 |       120 
+        11 |         0 |        68 
+        12 |         0 |        25 
+        13 |         0 |        15 
+-----------+-----------+----------
+     Total |    51,174 |   248,261 
 
 
 . la var prim_helper_cat "Primary helper relationship, missing if no helper"
@@ -477,18 +551,31 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 
      Primary helper |
       relationship, |
-      missing if no |                            Survey wave
-             helper |         1          2          3          4          5          6 |     Total
---------------------+------------------------------------------------------------------+----------
-             Spouse |     3,122      2,386      1,900      1,502      2,990      2,449 |    14,349 
-     Other relative |     2,845      2,278      1,812      1,578      2,668      2,369 |    13,550 
-Other, not relative |    32,130     33,280     32,033     29,936     46,627     46,356 |   220,362 
---------------------+------------------------------------------------------------------+----------
-              Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+      missing if no |                 Survey wave
+             helper |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |    14,349 
+     Other relative |     2,845      2,278      1,812      1,578 |    13,550 
+Other, not relative |    32,130     33,280     32,033     29,936 |   220,362 
+--------------------+--------------------------------------------+----------
+              Total |    38,097     37,944     35,745     33,016 |   248,261 
+
+
+     Primary helper |
+      relationship, |
+      missing if no |      Survey wave
+             helper |         5          6 |     Total
+--------------------+----------------------+----------
+             Spouse |     2,990      2,449 |    14,349 
+     Other relative |     2,668      2,369 |    13,550 
+Other, not relative |    46,627     46,356 |   220,362 
+--------------------+----------------------+----------
+              Total |    52,285     51,174 |   248,261 
 
 
 . 
-. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed
+> "
 
 . sum tot_hrsmonth_help_i, detail
 
@@ -516,25 +603,48 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 
     Number |
    helpers |
-  reported |                            Survey wave
-     by SP |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     4,738      6,594      6,729      6,210      8,886      9,284 |    42,441 
-         1 |    15,424     13,403     11,036     10,098     17,418     15,620 |    82,999 
-         2 |     9,665      9,295      9,107      8,489     13,100     12,869 |    62,525 
-         3 |     4,659      4,930      4,928      4,405      6,895      7,244 |    33,061 
-         4 |     2,044      2,071      2,131      2,165      3,400      3,310 |    15,121 
-         5 |       892      1,026      1,091        977      1,462      1,694 |     7,142 
-         6 |       356        372        466        342        470        620 |     2,626 
-         7 |       203         97        148        121        335        375 |     1,279 
-         8 |        73         64         44         64        125         87 |       457 
-         9 |        20         59         65         41        126         71 |       382 
-        10 |        10         22          0         48         40          0 |       120 
-        11 |         0         11          0         41         16          0 |        68 
-        12 |        13          0          0          0         12          0 |        25 
-        13 |         0          0          0         15          0          0 |        15 
------------+------------------------------------------------------------------+----------
-     Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+  reported |                      Survey wave
+     by SP |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     4,738      6,594      6,729      6,210      8,886 |    42,441 
+         1 |    15,424     13,403     11,036     10,098     17,418 |    82,999 
+         2 |     9,665      9,295      9,107      8,489     13,100 |    62,525 
+         3 |     4,659      4,930      4,928      4,405      6,895 |    33,061 
+         4 |     2,044      2,071      2,131      2,165      3,400 |    15,121 
+         5 |       892      1,026      1,091        977      1,462 |     7,142 
+         6 |       356        372        466        342        470 |     2,626 
+         7 |       203         97        148        121        335 |     1,279 
+         8 |        73         64         44         64        125 |       457 
+         9 |        20         59         65         41        126 |       382 
+        10 |        10         22          0         48         40 |       120 
+        11 |         0         11          0         41         16 |        68 
+        12 |        13          0          0          0         12 |        25 
+        13 |         0          0          0         15          0 |        15 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   248,261 
+
+
+    Number |
+   helpers |   Survey
+  reported |    wave
+     by SP |         6 |     Total
+-----------+-----------+----------
+         0 |     9,284 |    42,441 
+         1 |    15,620 |    82,999 
+         2 |    12,869 |    62,525 
+         3 |     7,244 |    33,061 
+         4 |     3,310 |    15,121 
+         5 |     1,694 |     7,142 
+         6 |       620 |     2,626 
+         7 |       375 |     1,279 
+         8 |        87 |       457 
+         9 |        71 |       382 
+        10 |         0 |       120 
+        11 |         0 |        68 
+        12 |         0 |        25 
+        13 |         0 |        15 
+-----------+-----------+----------
+     Total |    51,174 |   248,261 
 
 
 . la var prim_helper_cat "Primary helper relationship, missing if no helper"
@@ -543,14 +653,26 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 
      Primary helper |
       relationship, |
-      missing if no |                            Survey wave
-             helper |         1          2          3          4          5          6 |     Total
---------------------+------------------------------------------------------------------+----------
-             Spouse |     3,122      2,386      1,900      1,502      2,990      2,449 |    14,349 
-     Other relative |     2,845      2,278      1,812      1,578      2,668      2,369 |    13,550 
-Other, not relative |    32,130     33,280     32,033     29,936     46,627     46,356 |   220,362 
---------------------+------------------------------------------------------------------+----------
-              Total |    38,097     37,944     35,745     33,016     52,285     51,174 |   248,261 
+      missing if no |                 Survey wave
+             helper |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |    14,349 
+     Other relative |     2,845      2,278      1,812      1,578 |    13,550 
+Other, not relative |    32,130     33,280     32,033     29,936 |   220,362 
+--------------------+--------------------------------------------+----------
+              Total |    38,097     37,944     35,745     33,016 |   248,261 
+
+
+     Primary helper |
+      relationship, |
+      missing if no |      Survey wave
+             helper |         5          6 |     Total
+--------------------+----------------------+----------
+             Spouse |     2,990      2,449 |    14,349 
+     Other relative |     2,668      2,369 |    13,550 
+Other, not relative |    46,627     46,356 |   220,362 
+--------------------+----------------------+----------
+              Total |    52,285     51,174 |   248,261 
 
 
 . 
@@ -567,7 +689,8 @@ Other, not relative |    32,130     33,280     32,033     29,936     46,627     
 . //save as op file before dropping down to one obs per spid
 . saveold "E:/nhats/data/NHATS cleaned/op_round_1_6.dta", replace
 (saving in Stata 13 format)
-(FYI, saveold has options version(12) and version(11) that write files in older Stata formats)
+(FYI, saveold has options version(12) and version(11) that write files in
+      older Stata formats)
 file E:/nhats/data/NHATS cleaned/op_round_1_6.dta saved
 
 . 
@@ -610,38 +733,72 @@ Duplicates in terms of spid wave
 
     Number |
    helpers |
-  reported |                            Survey wave
-     by SP |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         1 |     3,356      2,526      1,856      1,529      2,982      2,374 |    14,623 
-         2 |     1,817      1,528      1,326      1,115      1,931      1,718 |     9,435 
-         3 |       764        733        627        516        889        841 |     4,370 
-         4 |       302        266        245        227        379        347 |     1,766 
-         5 |       123        113        116         94        146        161 |       753 
-         6 |        39         38         47         33         44         55 |       256 
-         7 |        22         10         15         10         27         30 |       114 
-         8 |         8          5          4          5         10          6 |        38 
-         9 |         2          5          5          3          9          6 |        30 
-        10 |         1          2          0          3          3          0 |         9 
-        11 |         0          1          0          2          1          0 |         4 
-        12 |         1          0          0          0          1          0 |         2 
-        13 |         0          0          0          1          0          0 |         1 
------------+------------------------------------------------------------------+----------
-     Total |     6,435      5,227      4,241      3,538      6,422      5,538 |    31,401 
+  reported |                      Survey wave
+     by SP |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         1 |     3,356      2,526      1,856      1,529      2,982 |    14,623 
+         2 |     1,817      1,528      1,326      1,115      1,931 |     9,435 
+         3 |       764        733        627        516        889 |     4,370 
+         4 |       302        266        245        227        379 |     1,766 
+         5 |       123        113        116         94        146 |       753 
+         6 |        39         38         47         33         44 |       256 
+         7 |        22         10         15         10         27 |       114 
+         8 |         8          5          4          5         10 |        38 
+         9 |         2          5          5          3          9 |        30 
+        10 |         1          2          0          3          3 |         9 
+        11 |         0          1          0          2          1 |         4 
+        12 |         1          0          0          0          1 |         2 
+        13 |         0          0          0          1          0 |         1 
+-----------+-------------------------------------------------------+----------
+     Total |     6,435      5,227      4,241      3,538      6,422 |    31,401 
+
+
+    Number |
+   helpers |   Survey
+  reported |    wave
+     by SP |         6 |     Total
+-----------+-----------+----------
+         1 |     2,374 |    14,623 
+         2 |     1,718 |     9,435 
+         3 |       841 |     4,370 
+         4 |       347 |     1,766 
+         5 |       161 |       753 
+         6 |        55 |       256 
+         7 |        30 |       114 
+         8 |         6 |        38 
+         9 |         6 |        30 
+        10 |         0 |         9 
+        11 |         0 |         4 
+        12 |         0 |         2 
+        13 |         0 |         1 
+-----------+-----------+----------
+     Total |     5,538 |    31,401 
 
 
 . tab prim_helper_cat wave, missing
 
      Primary helper |
       relationship, |
-      missing if no |                            Survey wave
-             helper |         1          2          3          4          5          6 |     Total
---------------------+------------------------------------------------------------------+----------
-             Spouse |     3,122      2,386      1,900      1,502      2,990      2,449 |    14,349 
-     Other relative |     2,498      2,049      1,649      1,449      2,468      2,186 |    12,299 
-Other, not relative |       815        792        692        587        964        903 |     4,753 
---------------------+------------------------------------------------------------------+----------
-              Total |     6,435      5,227      4,241      3,538      6,422      5,538 |    31,401 
+      missing if no |                 Survey wave
+             helper |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |    14,349 
+     Other relative |     2,498      2,049      1,649      1,449 |    12,299 
+Other, not relative |       815        792        692        587 |     4,753 
+--------------------+--------------------------------------------+----------
+              Total |     6,435      5,227      4,241      3,538 |    31,401 
+
+
+     Primary helper |
+      relationship, |
+      missing if no |      Survey wave
+             helper |         5          6 |     Total
+--------------------+----------------------+----------
+             Spouse |     2,990      2,449 |    14,349 
+     Other relative |     2,468      2,186 |    12,299 
+Other, not relative |       964        903 |     4,753 
+--------------------+----------------------+----------
+              Total |     6,422      5,538 |    31,401 
 
 
 . ***************************************************************
@@ -653,8 +810,10 @@ file helper_by_sp.dta saved
 . use round_1_6_cleanv3, clear
 
 . 
-. merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers n_fam ind_fam ///
->  tot_hrsmonth_* prim_helper_cat ind_pa n_pai tot_hrswk* num_helpers_cat ind_rc_*)
+. merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers n_fam in
+> d_fam ///
+>  tot_hrsmonth_* prim_helper_cat ind_pa n_pai tot_hrswk* num_helpers_cat ind_r
+> c_*)
 
     Result                           # of obs.
     -----------------------------------------
@@ -692,17 +851,28 @@ file helper_by_sp.dta saved
 . tab ind_no_helpers wave, missing
 
  Indicator |
-no Helpers |                            Survey wave
-  reported |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     6,435      5,227      4,241      3,538      6,422      5,538 |    31,401 
-         1 |     1,810      1,848      1,558      1,199      1,912      1,738 |    10,065 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+no Helpers |                      Survey wave
+  reported |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     6,435      5,227      4,241      3,538      6,422 |    31,401 
+         1 |     1,810      1,848      1,558      1,199      1,912 |    10,065 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+ Indicator |   Survey
+no Helpers |    wave
+  reported |         6 |     Total
+-----------+-----------+----------
+         0 |     5,538 |    31,401 
+         1 |     1,738 |    10,065 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . 
-. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+. la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed
+> "
 
 . sum tot_hrsmonth_help_i, detail
 
@@ -730,25 +900,48 @@ no Helpers |                            Survey wave
 
     Number |
    helpers |
-  reported |                            Survey wave
-     by SP |         1          2          3          4          5          6 |     Total
------------+------------------------------------------------------------------+----------
-         0 |     1,810      1,848      1,558      1,199      1,912      1,738 |    10,065 
-         1 |     3,356      2,526      1,856      1,529      2,982      2,374 |    14,623 
-         2 |     1,817      1,528      1,326      1,115      1,931      1,718 |     9,435 
-         3 |       764        733        627        516        889        841 |     4,370 
-         4 |       302        266        245        227        379        347 |     1,766 
-         5 |       123        113        116         94        146        161 |       753 
-         6 |        39         38         47         33         44         55 |       256 
-         7 |        22         10         15         10         27         30 |       114 
-         8 |         8          5          4          5         10          6 |        38 
-         9 |         2          5          5          3          9          6 |        30 
-        10 |         1          2          0          3          3          0 |         9 
-        11 |         0          1          0          2          1          0 |         4 
-        12 |         1          0          0          0          1          0 |         2 
-        13 |         0          0          0          1          0          0 |         1 
------------+------------------------------------------------------------------+----------
-     Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+  reported |                      Survey wave
+     by SP |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+         0 |     1,810      1,848      1,558      1,199      1,912 |    10,065 
+         1 |     3,356      2,526      1,856      1,529      2,982 |    14,623 
+         2 |     1,817      1,528      1,326      1,115      1,931 |     9,435 
+         3 |       764        733        627        516        889 |     4,370 
+         4 |       302        266        245        227        379 |     1,766 
+         5 |       123        113        116         94        146 |       753 
+         6 |        39         38         47         33         44 |       256 
+         7 |        22         10         15         10         27 |       114 
+         8 |         8          5          4          5         10 |        38 
+         9 |         2          5          5          3          9 |        30 
+        10 |         1          2          0          3          3 |         9 
+        11 |         0          1          0          2          1 |         4 
+        12 |         1          0          0          0          1 |         2 
+        13 |         0          0          0          1          0 |         1 
+-----------+-------------------------------------------------------+----------
+     Total |     8,245      7,075      5,799      4,737      8,334 |    41,466 
+
+
+    Number |
+   helpers |   Survey
+  reported |    wave
+     by SP |         6 |     Total
+-----------+-----------+----------
+         0 |     1,738 |    10,065 
+         1 |     2,374 |    14,623 
+         2 |     1,718 |     9,435 
+         3 |       841 |     4,370 
+         4 |       347 |     1,766 
+         5 |       161 |       753 
+         6 |        55 |       256 
+         7 |        30 |       114 
+         8 |         6 |        38 
+         9 |         6 |        30 
+        10 |         0 |         9 
+        11 |         0 |         4 
+        12 |         0 |         2 
+        13 |         0 |         1 
+-----------+-----------+----------
+     Total |     7,276 |    41,466 
 
 
 . la var prim_helper_cat "Primary helper relationship, missing if no helper"
@@ -757,15 +950,28 @@ no Helpers |                            Survey wave
 
      Primary helper |
       relationship, |
-      missing if no |                            Survey wave
-             helper |         1          2          3          4          5          6 |     Total
---------------------+------------------------------------------------------------------+----------
-             Spouse |     3,122      2,386      1,900      1,502      2,990      2,449 |    14,349 
-     Other relative |     2,498      2,049      1,649      1,449      2,468      2,186 |    12,299 
-Other, not relative |       815        792        692        587        964        903 |     4,753 
-                  . |     1,810      1,848      1,558      1,199      1,912      1,738 |    10,065 
---------------------+------------------------------------------------------------------+----------
-              Total |     8,245      7,075      5,799      4,737      8,334      7,276 |    41,466 
+      missing if no |                 Survey wave
+             helper |         1          2          3          4 |     Total
+--------------------+--------------------------------------------+----------
+             Spouse |     3,122      2,386      1,900      1,502 |    14,349 
+     Other relative |     2,498      2,049      1,649      1,449 |    12,299 
+Other, not relative |       815        792        692        587 |     4,753 
+                  . |     1,810      1,848      1,558      1,199 |    10,065 
+--------------------+--------------------------------------------+----------
+              Total |     8,245      7,075      5,799      4,737 |    41,466 
+
+
+     Primary helper |
+      relationship, |
+      missing if no |      Survey wave
+             helper |         5          6 |     Total
+--------------------+----------------------+----------
+             Spouse |     2,990      2,449 |    14,349 
+     Other relative |     2,468      2,186 |    12,299 
+Other, not relative |       964        903 |     4,753 
+                  . |     1,912      1,738 |    10,065 
+--------------------+----------------------+----------
+              Total |     8,334      7,276 |    41,466 
 
 
 . 
@@ -787,15 +993,18 @@ file round_1_6_clean_helper_added.dta saved
 . 
 . saveold round_1_6_clean_helper_added_old.dta, replace
 (saving in Stata 13 format)
-(FYI, saveold has options version(12) and version(11) that write files in older Stata formats)
-  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode and thus may not display well in Stata 13.
+(FYI, saveold has options version(12) and version(11) that write files in
+      older Stata formats)
+  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains
+        unicode and thus may not display well in Stata 13.
 file round_1_6_clean_helper_added_old.dta saved
 
 . 
 . ***************************************************************
 . log close
       name:  <unnamed>
-       log:  E:\nhats\nhats_code\NHATS data setup\logs\6-add_helper_to_SP_ds-LOG.txt
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\6-add_helper_to_SP_ds-LO
+> G.txt
   log type:  text
- closed on:   8 Sep 2017, 14:38:01
----------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   5 Oct 2017, 09:52:49
+-------------------------------------------------------------------------------

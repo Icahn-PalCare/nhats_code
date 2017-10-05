@@ -4,6 +4,9 @@ libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
 
 proc import datafile="E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta" out=steps123 replace; run;
 
+proc import datafile="E:\nhats\data\Projects\IAH\int_data\steps123.dta" out=steps123 replace; run;
+
+
 /* Identifying Inpatient Rehab */
 
 data ip_check (keep = bene_id index_date wave);
@@ -11,6 +14,14 @@ set steps123;
 where ffs_6m = 1 and community_dwelling=1;
 *where community_dwelling=1;
 run;
+
+data ip_check (keep = bene_id index_date wave);
+set steps123;
+where wave=1 and adl_flag=1 and cc_flag=1 and ind_nonelect_adm_12m=1;
+*where community_dwelling=1;
+run;
+
+
 
 data inpatient;
 set claims.ip_06_14;
@@ -113,7 +124,7 @@ run;
 
 data rehab (rename=(admit_date = rehab_admit disch_date = rehab_disch));
 set snf_nhats_short hh_nhats_short;
-format rehab_admit rehab_disch date10.;
+*format rehab_admit rehab_disch date10.;
 run;
 
 
@@ -250,3 +261,57 @@ data homecallsb4_3;
 set homecallsb4_3;
 where cnt = 2; 
 run;
+
+
+data homecallsb4_all;
+set homecallsb4_1 homecallsb4_2 homecallsb4_3;
+run;
+
+proc export data=homecallsb4_all outfile="E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta" replace; run;
+
+data homecallsafter_1;
+set homecallsafter;
+by bene_id;
+where wave = 1;
+cnt + 1;
+if first.bene_id then cnt = 1;
+run;
+
+data homecallsafter_1;
+set homecallsafter_1;
+where cnt = 2; 
+run;
+
+data homecallsafter_2;
+set homecallsafter;
+by bene_id;
+where wave = 2;
+cnt + 1;
+if first.bene_id then cnt = 1;
+run;
+
+data homecallsafter_2;
+set homecallsafter_2;
+where cnt = 2; 
+run;
+
+
+data homecallsafter_3;
+set homecallsafter;
+by bene_id;
+where wave = 3;
+cnt + 1;
+if first.bene_id then cnt = 1;
+run;
+
+data homecallsafter_3;
+set homecallsafter_3;
+where cnt = 2; 
+run;
+
+
+data homecallsafter_all;
+set homecallsafter_1 homecallsafter_2 homecallsafter_3;
+run;
+
+proc export data=homecallsafter_all outfile="E:\nhats\data\Projects\IAH\int_data\homecallsafter.dta" replace; run;

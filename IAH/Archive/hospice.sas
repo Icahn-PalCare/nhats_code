@@ -462,3 +462,6 @@ quit;
 proc freq data=hospice_6; tables n_hs_days_p6m n_hs_days_p12m; run;
 
 proc export data=hospice_6 outfile='E:\nhats\data\Projects\IAH\int_data\hospice_post.dta' replace; run;
+
+
+proc export data=tmp6.personout outfile="E:\nhats\data\Projects\IAH\int_data\hcc_scores.dta" dbms=stata replace; run;

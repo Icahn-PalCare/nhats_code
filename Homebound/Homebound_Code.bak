@@ -7748,7 +7748,8 @@ gen agec2_3=agecat2==3
 label var agec2_2 "Age 75-84"
 label var agec2_3 "Age 85+"
 
-local demovars i.agecat2 female black hisp married n_children i.income_cat ///
+local demovars agec2_2 agec2_3 female black hisp married n_children inccat2 ///
+inccat3 inccat4 ///
 medicaid educ_hs_ind
 local clinivars  srh_fp sr_numconditions1 ///
 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
@@ -7794,13 +7795,17 @@ local i=`i'+1
 local replace replace
 foreach x in hrswk_20 ind_paid_helper ind_4_help {
 	svy: logit hb `x' `vars' if !missing(`x'_w), or
-	qui outreg, stats(e_b p) varlabels
+	qui outreg, stats(e_b p) varlabels ctitles("" "1")
 	logit hb `x' `vars' [pw=`x'_w], or
-	qui outreg, stats(e_b p) varlabels merge
+	qui outreg, stats(e_b p) varlabels merge ctitles("" "2")
 	svy: logit hb `x' `demovars' `clinivars' if !missing(`x'_w), or
-	qui outreg, stats(e_b p) varlabels merge
+	qui outreg, stats(e_b p) varlabels merge ctitles("" "3")
 	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
-	qui outreg using homebound_matched_logits_wave_`wave'.rtf, `replace' stats(e_b p) varlabels merge
+	qui outreg using homebound_matched_logits_wave_`wave'.rtf, ///
+	`replace' stats(e_b p) varlabels merge ctitles("" "4") ///
+	note("Matched and unmatched logistic regressions, odds ratios reported" \ ///
+	"1--Unmatched, matching variables only"\ "2--Matched, matching variables only"\ ///
+	"3--Unmatched, all covariates" \"4--Matched, all covariates")
 	local replace addtable
 }
 
