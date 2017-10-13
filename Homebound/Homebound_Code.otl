@@ -7142,6 +7142,9 @@ replace tot_hrswk_help_i=0 if missing(tot_hrswk_help_i)
 sum tot_hrswk_help_i,d
 restore
 
+foreach x of varlist tot*hrs* {
+replace `x'=0 if missing(`x')
+}
 gen top_quartile_help_helped=tot_hrswk_help_i>=r(p75) & !missing(tot_hrswk_help_i)
 gen hrswk_20=tot_hrswk_help_i>=20 & !missing(tot_hrswk_help_i)
 label var hrswk_20 "Indicator 20+ hours of help/week"
@@ -7171,10 +7174,10 @@ iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
 gen adlcount=0
 gen iadlcount=0
 foreach x in eat bath toil dres ins bed  {
-replace adlcount=1 if adl_`x'_diff==1 | adl_`x'_no==1
+replace adlcount=adlcount+1 if adl_`x'_diff==1 | adl_`x'_no==1
 }
 foreach x in  laun shop meal bank meds {
-replace iadlcount=1 if iadl_`x'_diff==1 | iadl_`x'_no==1
+replace iadlcount=iadlcount+1 if iadl_`x'_diff==1 | iadl_`x'_no==1
 }
 replace adl3=adlcount>=3
 replace iadl3=iadlcount>=3
@@ -7463,8 +7466,9 @@ cd "E:\nhats\data\Projects\Homebound\logs"
 foreach wave in  5 1{
 
 log using propensity_score_matching_wave_`wave'.txt, text replace
-use "E:\nhats\data\Projects\Homebound\hb_nbs_sample_wave_`wave'.dta", clear
-
+use "E:\nhats\data\Projects\Homebound\final_data\hb_nbs_sample_wave_`wave'.dta", clear
+merge 1:1 spid wave using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", nogen ///
+keepusing(region) keep(match master)
 local vars i.agecat2 female black hisp married n_children i.income_cat medicaid educ_hs_ind ///
 srh_fp sr_numconditions1 ///
 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
@@ -7473,12 +7477,13 @@ gen agec2_2=agecat2==2
 gen agec2_3=agecat2==3
 label var agec2_2 "Age 75-84"
 label var agec2_3 "Age 85+"
+tab region, gen(region)
 
 local demovars agec2_2 agec2_3 female black hisp married n_children inccat2 ///
 inccat3 inccat4 ///
 medicaid educ_hs_ind
 local clinivars  srh_fp sr_numconditions1 ///
-sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 region2 region3 region4
 
 
 tokenize hrswk_20 ind_paid_helper ind_4_help
@@ -7488,7 +7493,7 @@ local vars /*age agec2_2*/ agec2_3 female black hisp married /*n_children*/ ///
 medicaid educ_hs_ind srh_fp /*sr_numconditions1*/ cond3 ///
 sr_lung_dis_ever sr_phq2_depressed prob_dem ///
 ///adl_independent iadl_independent //
-adl3 iadl3
+adl3 iadl3 region2
 
 local i=1
 cap drop *score* *_weight*
@@ -7521,17 +7526,26 @@ local i=`i'+1
 local replace replace
 foreach x in hrswk_20 ind_paid_helper ind_4_help {
 	svy: logit hb `x' `vars' if !missing(`x'_w), or
-	qui outreg, stats(e_b p) varlabels ctitles("" "1")
+	qui outreg, stats(e_b p e_ci) varlabels ctitles("" "1")
 	logit hb `x' `vars' [pw=`x'_w], or
-	qui outreg, stats(e_b p) varlabels merge ctitles("" "2")
+	qui outreg, stats(e_b p e_ci) varlabels merge ctitles("" "2")
 	svy: logit hb `x' `demovars' `clinivars' if !missing(`x'_w), or
-	qui outreg, stats(e_b p) varlabels merge ctitles("" "3")
+	qui outreg, stats(e_b p e_ci) varlabels merge ctitles("" "3")
 	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
 	qui outreg using homebound_matched_logits_wave_`wave'.rtf, ///
-	`replace' stats(e_b p) varlabels merge ctitles("" "4") ///
+	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "4") ///
 	note("Matched and unmatched logistic regressions, odds ratios reported" \ ///
 	"1--Unmatched, matching variables only"\ "2--Matched, matching variables only"\ ///
 	"3--Unmatched, all covariates" \"4--Matched, all covariates")
+	local replace addtable
+}
+
+foreach x in hrswk_20  {
+	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
+	qui outreg, stats(e_b p e_ci) varlabels ctitles("" "Orig")
+	logit hb `x' `demovars' `clinivars' metro_ind [pw=`x'_w], or
+	qui outreg using homebound_matched_logits_wave_`wave'.rtf, ///
+	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "Incl Metro") 
 	local replace addtable
 }
 

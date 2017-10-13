@@ -19,13 +19,14 @@ local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
 local r4raw E:\nhats\data\NHATS Public\round_4\
 local r5raw E:\nhats\data\NHATS Public\round_5\
-local r6rawbeta E:\nhats\data\NHATS Public\round_6_beta\
+local r6raw E:\nhats\data\NHATS Public\round_6\
 local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
 local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
@@ -86,8 +87,8 @@ la var wave "Survey wave"
 save round_5_1.dta, replace
 clear 
 
-//round 6 beta
-use "`r6rawbeta'NHATS_Round_6B_SP_File.dta"
+//round 6 
+use "`r6raw'NHATS_Round_6_SP_File.dta"
 //check to make sure sample ids are unique
 sort spid
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -141,7 +142,7 @@ save round_`w'_ltd.dta, replace
 }
 
 //check sensitive data files, keep only some variables, merge with ltd datasets
-foreach w in 1 2 3 4 5 {
+foreach w in 1 2 3 4 5 6{
 	use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
 	sort spid 
 	quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -183,12 +184,16 @@ merge m:1 spid using "`r5s'NHATS_Round_5_SP_Sen_Dem_File.dta", ///
 	keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied)
 drop _merge
 
+//merge in additional r6 sensitive data
+merge m:1 spid using "`r6s'NHATS_Round_6_SP_Sen_Dem_File.dta", ///
+	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
+drop _merge
 
 //3B?
 //merge in tracker status information
-merge m:1 spid using "`r6rawbeta'NHATS_Round_6B_Tracker_File", ///
-	keepusing(yearsample r6status r6spstat r6spstatdtmt r6spstatdtyr r5status r5spstat r5spstatdtmt r5spstatdtyr r4status r4spstat r4spstatdtmt r4spstatdtyr r3status r3spstat r3spstatdtmt r3spstatdtyr ///
-		r2status r2spstat r2spstatdtmt r2spstatdtyr r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+merge m:1 spid using "`r6raw'NHATS_Round_6_Tracker_File", ///
+	keepusing(yearsample r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+		r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 		r1fqstatdt*)
 
 //merge in nsoc tracker information
@@ -223,13 +228,14 @@ local r2raw "E:\nhats\data\NHATS Public\round_2\"
 local r3raw "E:\nhats\data\NHATS Public\round_3\"
 local r4raw "E:\nhats\data\NHATS PUBLIC\round_4\"
 local r5raw "E:\nhats\data\NHATS PUBLIC\round_5\"
-local r6rawbeta "E:\nhats\data\NHATS Public\round_6_beta\"
+local r6raw "E:\nhats\data\NHATS Public\round_6\"
 local work "E:\nhats\data\NHATS working data\"
 local r1s "E:\nhats\data\NHATS Sensitive\r1_sensitive\"
 local r2s "E:\nhats\data\NHATS Sensitive\r2_sensitive\"
 local r3s "E:\nhats\data\NHATS Sensitive\r3_sensitive\"
 local r4s "E:\nhats\data\NHATS Sensitive\r4_sensitive\"
 local r5s "E:\nhats\data\NHATS Sensitive\r5_sensitive\"
+local r6s "E:\nhats\data\NHATS Sensitive\r6_sensitive\"
 
 /* //Rebecca mac file paths
 local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
@@ -287,7 +293,7 @@ keep if _merge==3 //drop obs with no OP entries
 save R5_OPSPlinked.dta, replace
 
 //round 6
-use "`r6rawbeta'NHATS_Round_6B_OP_File.dta", clear
+use "`r6raw'NHATS_Round_6_OP_File.dta", clear
 sort spid opid
 
 merge m:1 spid using round_6_1.dta //bring in sorted sp ivw dataset
@@ -1317,16 +1323,16 @@ program define disease
 	}
 	//create two new variables from this...
 	gen sr_`dis'_ever=sr_`dis'_raw
-	replace sr_`dis'_ever=. if (wave==2 | wave==3| wave==4 | wave==5) & sr_`dis'_raw==0 //set to missing if report no new wave
+	replace sr_`dis'_ever=. if (wave==2 | wave==3| wave==4 | wave==5 | wave==6) & sr_`dis'_raw==0 //set to missing if report no new wave
 	replace sr_`dis'_ever=-7 if sr_`dis'_raw == -7
 	replace sr_`dis'_ever=-8 if sr_`dis'_raw == -8
 
 	sort spid wave
 	by spid (wave): carryforward sr_`dis'_ever if ivw_type==1 , replace
 	
-	replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5) & sr_`dis'_ever == . & sr_`dis'_raw != .
+	replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6) & sr_`dis'_ever == . & sr_`dis'_raw != .
 
-	gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave==4 | wave==5
+	gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave==4 | wave==5 | wave==6
 
 	end
 
@@ -1958,13 +1964,14 @@ local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
 local r4raw E:\nhats\data\NHATS Public\round_4\
 local r5raw E:\nhats\data\NHATS Public\round_5\
-local r6rawbeta E:\nhats\data\NHATS Public\round_6\
+local r6raw E:\nhats\data\NHATS Public\round_6\
 local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
 local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
@@ -2173,13 +2180,14 @@ local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
 local r4raw E:\nhats\data\NHATS Public\round_4\
 local r5raw E:\nhats\data\NHATS Public\round_5\
-local r6rawbeta E:\nhats\data\NHATS Public\round_6\
+local r6raw E:\nhats\data\NHATS Public\round_6\
 local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
 local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
@@ -2681,7 +2689,7 @@ label define homevalue 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K
 6 "300-500K" 7 "500-750K" 8 "$750K+"
 label values homevalue homevalue
 
-forvalues i=1/6{
+forvalues i=1/6 {
 tab hp`i'ownrentot 
 replace ownhome=hp`i'ownrentot==1 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
 replace rent=hp`i'ownrentot==2 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)

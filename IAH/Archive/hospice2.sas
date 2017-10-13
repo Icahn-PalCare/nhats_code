@@ -41,5 +41,32 @@ run;
 
 %hs_drop(days_bef_index=730);
 
+proc sort data=hs_meet_730; by bene_id admit_date; run;
 
+proc sort data=hs_meet_730 out=hospice nodupkey; by bene_id admit_date disch_date; run;
 
+data hospice;
+set hospice;
+diff = disch_date - admit_date;
+run;
+
+proc sql;
+create table hospice1 as select distinct bene_id,
+sum(diff) as n_hs_days
+from hospice
+group by bene_id;
+quit;
+
+proc freq data=hospice1; tables n_hs_days; run;
+
+data test; /*examine outliers with >365 hospice days prior to death */
+set hospice;
+where bene_id="eeeeeee6OMeqOMY";
+run;
+
+data hospice1;
+set hospice1;
+label n_hs_days = "Number of hospice days before death";
+run;
+
+proc export data=hospice1 outfile="E:\nhats\data\Projects\IAH\int_data\hospice_death.dta" replace; run;
