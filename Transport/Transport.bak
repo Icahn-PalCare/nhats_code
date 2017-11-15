@@ -5239,6 +5239,18 @@ merge 1:1 spid using "E:\nhats\data\NHATS public\Round_1\NHATS_Round_1_SP_File_o
 nogen keepusing (*devi sn1dnumsn dt1* pa1*)
 *keep if !missing(howgetdoc)
 
+
+//note 11/14/17--add importance of activities
+gen ind_imp_visit=inlist(pa1impvstfam,1,2) if inrange(pa1impvstfam,-1,5)
+gen ind_imp_relig=inlist(pa1imprelser,1,2) if inrange(pa1imprels,-1,5)
+gen ind_imp_club=inlist(pa1imparclub,1,2) if inrange(pa1imparclub,-1,5)
+gen ind_imp_goout=inlist(pa1impouteny,1,2) if inrange(pa1impouteny,-1,5)
+
+label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
+label var ind_imp_relig "Very/somewhat important to attend religious services"
+label var ind_imp_club "Very/somewhat important to participate in clubs, classes, etc."
+label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
+
 foreach x in out insd bed {
 	gen device_`x'=mo1d`x'devi==2 if inlist(mo1d`x'devi,1,2)
 }
@@ -5335,7 +5347,7 @@ foreach x of varlist dt1geto* {
 	local get `get' `x'
 	local l=`l'+1
 }
-
+replace dt1getoplcs3=0 if !missing(dt1getoplcs7) & missing(dt1getoplcs3)
 local vars `drive' avoids `get' `probs' barrier
 sum `vars'
 local rn : word count `vars'
@@ -5350,11 +5362,11 @@ foreach x of local vars {
 local vars `drive' avoids `get'
 
 local rn : word count `vars' 1 1
-mat tab=J(`rn',9,.)
+mat tab=J(`rn',3,.)
 
 local r=2
 local c=1
-foreach y in "0,1" 1 0 {
+foreach y in "0,1" {
 preserve
 keep if inlist(drives,`y')
 foreach x of local vars {
@@ -5372,9 +5384,38 @@ restore
 }
 mat rownames tab="Frequency" `drive' avoids "Other_transport" `get'
 
-frmttable using transport_tables.rtf, addtable statmat(tab) sdec(0,2,0,0,2,0,0,2,0) varlabels ///
+frmttable using transport_tables.rtf, replace statmat(tab) sdec(0,2,0) varlabels ///
 title("Table 1. Modes of transportation among older community-dwelling Medicare beneficiaries, 2011") ///
-ctitles("" "All" " " "" "Drivers" "" "" "Non-drivers"\"N" "Weighted Percent" "National estimate" ///
+ctitles("" "N" "Weighted Percent" "National estimate") ///
+note("* among those who drive")
+
+
+local rn : word count `vars' 1 1
+mat tab=J(`rn',6,.)
+
+local r=2
+local c=1
+foreach y in 1 0 {
+preserve
+keep if inlist(drives,`y')
+foreach x of local vars {
+	sum `x' if `x'==1
+	mat tab[`r',`c']=r(N)
+	sum `x' [aw=anfinw]
+	mat tab[`r',`c'+1]=r(mean)*100
+	mat tab[`r',`c'+2]=r(sum)
+	local r=`r'+1
+	if "`x'"=="avoids" local r=`r'+1
+}
+local r=2
+local c=`c'+3
+restore
+}
+mat rownames tab="Frequency" `drive' avoids "Other_transport" `get'
+
+frmttable using transport_tables.rtf, addtable statmat(tab) sdec(0,2,0,0,2,0) varlabels ///
+title("Table 1a. Modes of transportation among older community-dwelling Medicare beneficiaries by driver status") ///
+ctitles("" "Drivers" "" "" "Non-drivers"\ ///
 "N" "Weighted Percent" "National estimate" "N" "Weighted Percent" "National estimate") ///
 note("* among those who drive")
 
@@ -5389,6 +5430,14 @@ replace sr_cond_cat=3 if inrange(sr_numcond,5,15)
 label define sr_cond_cat 1 "0-1 SR condition" 2 "2-4 SR conditions" 3 "5+ SR conditions"
 label values sr_cond_cat sr_cond_cat 
 label copy race race_cat
+
+//note,11/14/17--changing to 3-category age
+replace agecat=1 if age<=74
+replace agecat=2 if inrange(age,75,84)
+replace agecat=3 if age>=85 | agecat>=5
+label define agecat 1 "Age <75" 2 "Age 75-84" 3 "Age 85+"
+label values agecat agecat
+
 foreach x in race_cat agecat income_cat education homebound_cat region doc_visit_cat sr_cond_cat {
 	levelsof `x', local(levels)
 	foreach l of local levels {
@@ -5404,7 +5453,7 @@ foreach l of local levels {
 	local lab : label edulbl `l'
 	label var education`l' "`lab'"
 }
-local lab1 65-69
+/*local lab1 65-69
 local lab2 70-74
 local lab3 75-79
 local lab4 80-84
@@ -5414,6 +5463,8 @@ local lab6 90+
 forvalues i=1/6 {
 label var agecat`i' "`lab`i''"
 }
+*/
+
 
 
 local cvars1 age
@@ -5423,7 +5474,7 @@ local catvars1 agecat race_cat
 local catvars2 income_cat education 
 local catvars3 maritalstat 
 local catvars4 homebound_cat
-local ivars2 adl_independent iadl_independent
+local ivars2 adl_impair iadl_impair
 local ivars3 rcfres device_out device_insd device_bed device_eat device_bath ///
 device_toil device_dres device_any has_doc_help sr_diabetes_ever sr_ami_ever sr_lung_dis_ever ///
 sr_htn_ever
@@ -5514,16 +5565,16 @@ title("Table 3. Mode of transport to the doctor by tranpsortation disadvantage a
 	
 //logit model based on significant factors in table 2
 //age race (hispanic) marital status proxy assistive device income
-svy: logit barrier agecat2 agecat3 agecat4 agecat5 agecat6 female black hisp educ_hs_ind income_cat1 income_cat2 ///
-income_cat3 marital_sdw marital_nev prob_dem adl_impair iadl_impair sr_numconditions1 ///
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any
 
  
 outreg, ctitles("" "Odds Ratios") addtable varlabels stats(e_b e_ci p) ///
 title("Table 4. Logistic model of predictors of transportation disadvantage") 
 
-svy: logit barrier i.(agecat2 agecat3 agecat4 agecat5 agecat6 female black hisp educ_hs_ind income_cat0 ///
- marital_sdw marital_nev prob_dem adl_impair iadl_impair c.sr_numconditions1 ///
+svy: logit barrier i.(agecat2 agecat3 female black hisp educ_hs_ind income_cat0 ///
+ marital_mp prob_dem adl_impair iadl_impair c.sr_numconditions1 ///
  device_any)
  
 margins, dydx(*) post
