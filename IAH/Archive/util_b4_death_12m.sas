@@ -94,9 +94,9 @@ by bene_id index_year;
 run;
 
 proc sql;
-create table ip_12m as select a.*,b.icu_days_12m,
-b.n_ip_admit_12m,b.n_hospd_12m,b.n_em_urgent_admit_12m,b.n_em_admit_12m,
-b.n_urgent_admit_12m,b.n_elect_admit_12m,b.n_ED_ip_12m
+create table ip_1yr as select a.*,b.icu_days_1yr,
+b.n_ip_admit_1yr,b.n_hospd_1yr,b.n_em_urgent_admit_1yr,b.n_em_admit_1yr,
+b.n_urgent_admit_1yr,b.n_elect_admit_1yr,b.n_ED_ip_1yr
 from index a
 left join
 ip_365_3 b 
@@ -117,89 +117,89 @@ quit;
 /*Dataset just contains obs with ffs mc 6m and age 65+
 So if missing, set var to 0*/
  data ip ;
- set ip_12m ;
- array list icu_days_12m n_ip_admit_12m n_hospd_12m n_em_urgent_admit_12m 
-	n_em_admit_12m n_urgent_admit_12m n_elect_admit_12m n_ED_ip_12m
-	icu_days_12m n_ip_admit_12m n_hospd_12m n_em_urgent_admit_12m
-	n_em_admit_12m n_urgent_admit_12m n_elect_admit_12m n_ED_ip_12m;
+ set ip_1yr ;
+ array list icu_days_1yr n_ip_admit_1yr n_hospd_1yr n_em_urgent_admit_1yr 
+	n_em_admit_1yr n_urgent_admit_1yr n_elect_admit_1yr n_ED_ip_1yr
+	icu_days_1yr n_ip_admit_1yr n_hospd_1yr n_em_urgent_admit_1yr
+	n_em_admit_1yr n_urgent_admit_1yr n_elect_admit_1yr n_ED_ip_1yr;
  do over list;
  if list=. then list=0;
  end;
 
- if n_ip_admit_12m=0 then ind_hosp_adm_12m=0;
- if n_ip_admit_12m>0 & n_ip_admit_12m~=. then ind_hosp_adm_12m=1;
- label ind_hosp_adm_12m="Indicator for any hospital admission 12m pre ivw";
+ if n_ip_admit_1yr=0 then ind_hosp_adm_1yr=0;
+ if n_ip_admit_1yr>0 & n_ip_admit_1yr~=. then ind_hosp_adm_1yr=1;
+ label ind_hosp_adm_1yr="Indicator for any hospital admission 1yr pre death";
 
- if n_em_urgent_admit_12m=0 then ind_em_ur_adm_12m=0;
- if n_em_urgent_admit_12m>0 & n_em_urgent_admit_12m~=. then ind_em_ur_adm_12m=1;
- label ind_em_ur_adm_12m="Ind any urgent or emergent hospital admission 12m pre ivw";
+ if n_em_urgent_admit_1yr=0 then ind_em_ur_adm_1yr=0;
+ if n_em_urgent_admit_1yr>0 & n_em_urgent_admit_1yr~=. then ind_em_ur_adm_1yr=1;
+ label ind_em_ur_adm_1yr="Ind any urgent or emergent hospital admission 1yr pre death";
 
- if n_em_admit_12m=0 then ind_em_adm_12m=0;
- if n_em_admit_12m>0 & n_em_admit_12m~=. then ind_em_adm_12m=1;
- label ind_em_adm_12m="Ind any emergency hospital admission 12m pre ivw";
+ if n_em_admit_1yr=0 then ind_em_adm_1yr=0;
+ if n_em_admit_1yr>0 & n_em_admit_1yr~=. then ind_em_adm_1yr=1;
+ label ind_em_adm_1yr="Ind any emergency hospital admission 1yr pre death";
 
- if n_urgent_admit_12m=0 then ind_ur_adm_12m=0;
- if n_urgent_admit_12m>0 & n_urgent_admit_12m~=. then ind_ur_adm_12m=1;
- label ind_ur_adm_12m="Ind any urgent hospital admission 12m pre ivw";
+ if n_urgent_admit_1yr=0 then ind_ur_adm_1yr=0;
+ if n_urgent_admit_1yr>0 & n_urgent_admit_1yr~=. then ind_ur_adm_1yr=1;
+ label ind_ur_adm_1yr="Ind any urgent hospital admission 1yr pre death";
 
- if n_elect_admit_12m =0 then ind_elect_adm_12m=0;
- if n_elect_admit_12m >0 & n_elect_admit_12m ~=. then ind_elect_adm_12m=1;
- label ind_elect_adm_12m="Ind any elective hospital admission 12m pre ivw";
+ if n_elect_admit_1yr =0 then ind_elect_adm_1yr=0;
+ if n_elect_admit_1yr >0 & n_elect_admit_1yr ~=. then ind_elect_adm_1yr=1;
+ label ind_elect_adm_1yr="Ind any elective hospital admission 1yr pre death";
 
- if (n_ip_admit_12m - n_elect_admit_12m)=0 then ind_nonelect_adm_12m=0;
- if (n_ip_admit_12m - n_elect_admit_12m)>0 & n_elect_admit_12m~=. then ind_nonelect_adm_12m=1;
- label ind_nonelect_adm_12m="Ind any non-elective hospital admission 12m pre ivw";
+ if (n_ip_admit_1yr - n_elect_admit_1yr)=0 then ind_nonelect_adm_1yr=0;
+ if (n_ip_admit_1yr - n_elect_admit_1yr)>0 & n_elect_admit_1yr~=. then ind_nonelect_adm_1yr=1;
+ label ind_nonelect_adm_1yr="Ind any non-elective hospital admission 1yr pre death";
 
- n_nonelect_adm_12m=(n_ip_admit_12m - n_elect_admit_12m);
- label n_nonelect_adm_12m="total n non-elective ip admit 12m pre ivw";
+ n_nonelect_adm_1yr=(n_ip_admit_1yr - n_elect_admit_1yr);
+ label n_nonelect_adm_1yr="total n non-elective ip admit 1yr pre death";
 
- if n_ED_ip_12m=0 then ind_ED_adm_12m=0;
- if n_ED_ip_12m>0 & n_ED_ip_12m~=. then ind_ED_adm_12m=1;
- label ind_ED_adm_12m="Ind ED use with hospital admission 12m pre ivw, from charges";
+ if n_ED_ip_1yr=0 then ind_ED_adm_1yr=0;
+ if n_ED_ip_1yr>0 & n_ED_ip_1yr~=. then ind_ED_adm_1yr=1;
+ label ind_ED_adm_1yr="Ind ED use with hospital admission 1yr pre death, from charges";
 
- if n_ip_admit_12m=0 then ind_hosp_adm_12m=0;
- if n_ip_admit_12m>0 & n_ip_admit_12m~=. then ind_hosp_adm_12m=1;
- label ind_hosp_adm_12m="Indicator for any hospital admission 12m pre ivw";
+ if n_ip_admit_1yr=0 then ind_hosp_adm_1yr=0;
+ if n_ip_admit_1yr>0 & n_ip_admit_1yr~=. then ind_hosp_adm_1yr=1;
+ label ind_hosp_adm_1yr="Indicator for any hospital admission 1yr pre death";
 
- if n_em_urgent_admit_12m=0 then ind_em_ur_adm_12m=0;
- if n_em_urgent_admit_12m>0 & n_em_urgent_admit_12m~=. then ind_em_ur_adm_12m=1;
- label ind_em_ur_adm_12m="Ind any urgent or emergent hospital admission 12m pre ivw";
+ if n_em_urgent_admit_1yr=0 then ind_em_ur_adm_1yr=0;
+ if n_em_urgent_admit_1yr>0 & n_em_urgent_admit_1yr~=. then ind_em_ur_adm_1yr=1;
+ label ind_em_ur_adm_1yr="Ind any urgent or emergent hospital admission 1yr pre death";
 
- if n_em_admit_12m=0 then ind_em_adm_12m=0;
- if n_em_admit_12m>0 & n_em_admit_12m~=. then ind_em_adm_12m=1;
- label ind_em_adm_12m="Ind any emergency hospital admission 12m pre ivw";
+ if n_em_admit_1yr=0 then ind_em_adm_1yr=0;
+ if n_em_admit_1yr>0 & n_em_admit_1yr~=. then ind_em_adm_1yr=1;
+ label ind_em_adm_1yr="Ind any emergency hospital admission 1yr pre death";
 
- if n_urgent_admit_12m=0 then ind_ur_adm_12m=0;
- if n_urgent_admit_12m>0 & n_urgent_admit_12m~=. then ind_ur_adm_12m=1;
- label ind_ur_adm_12m="Ind any urgent hospital admission 12m pre ivw";
+ if n_urgent_admit_1yr=0 then ind_ur_adm_1yr=0;
+ if n_urgent_admit_1yr>0 & n_urgent_admit_1yr~=. then ind_ur_adm_1yr=1;
+ label ind_ur_adm_1yr="Ind any urgent hospital admission 1yr pre death";
 
- if n_elect_admit_12m =0 then ind_elect_adm_12m=0;
- if n_elect_admit_12m >0 & n_elect_admit_12m ~=. then ind_elect_adm_12m=1;
- label ind_elect_adm_12m="Ind any elective hospital admission 12m pre ivw";
+ if n_elect_admit_1yr =0 then ind_elect_adm_1yr=0;
+ if n_elect_admit_1yr >0 & n_elect_admit_1yr ~=. then ind_elect_adm_1yr=1;
+ label ind_elect_adm_1yr="Ind any elective hospital admission 1yr pre death";
 
- if (n_ip_admit_12m - n_elect_admit_12m)=0 then ind_nonelect_adm_12m=0;
- if (n_ip_admit_12m - n_elect_admit_12m)>0 & n_elect_admit_12m~=. then ind_nonelect_adm_12m=1;
- label ind_nonelect_adm_12m="Ind any non-elective hospital admission 12m pre ivw";
+ if (n_ip_admit_1yr - n_elect_admit_1yr)=0 then ind_nonelect_adm_1yr=0;
+ if (n_ip_admit_1yr - n_elect_admit_1yr)>0 & n_elect_admit_1yr~=. then ind_nonelect_adm_1yr=1;
+ label ind_nonelect_adm_1yr="Ind any non-elective hospital admission 1yr pre death";
 
- n_nonelect_adm_12m=(n_ip_admit_12m - n_elect_admit_12m);
- label n_nonelect_adm_12m="total n non-elective ip admit 12m pre ivw";
+ n_nonelect_adm_1yr=(n_ip_admit_1yr - n_elect_admit_1yr);
+ label n_nonelect_adm_1yr="total n non-elective ip admit 1yr pre death";
 
- if n_ED_ip_12m=0 then ind_ED_adm_12m=0;
- if n_ED_ip_12m>0 & n_ED_ip_12m~=. then ind_ED_adm_12m=1;
- label ind_ED_adm_12m="Ind ED use with hospital admission 12m pre ivw, from charges";
+ if n_ED_ip_1yr=0 then ind_ED_adm_1yr=0;
+ if n_ED_ip_1yr>0 & n_ED_ip_1yr~=. then ind_ED_adm_1yr=1;
+ label ind_ED_adm_1yr="Ind ED use with hospital admission 1yr pre death, from charges";
 
 run;
 
  proc freq;
- table icu_days_12m n_ip_admit_12m n_hospd_12m ind_hosp_adm_12m n_em_urgent_admit_12m ind_em_ur_adm_12m 
-	ind_em_adm_12m ind_ur_adm_12m ind_nonelect_adm_12m n_nonelect_adm_12m n_ED_ip_12m ind_ED_adm_12m 
-	ind_em_adm_12m*ind_ED_adm_12m /missprint;
+ table icu_days_1yr n_ip_admit_1yr n_hospd_1yr ind_hosp_adm_1yr n_em_urgent_admit_1yr ind_em_ur_adm_1yr 
+	ind_em_adm_1yr ind_ur_adm_1yr ind_nonelect_adm_1yr n_nonelect_adm_1yr n_ED_ip_1yr ind_ED_adm_1yr 
+	ind_em_adm_1yr*ind_ED_adm_1yr /missprint;
  run;
 
 proc freq;
-table icu_days_12m n_ip_admit_12m n_hospd_12m ind_hosp_adm_12m n_em_urgent_admit_12m ind_em_ur_adm_12m
-	ind_em_adm_12m ind_ur_adm_12m ind_nonelect_adm_12m n_nonelect_adm_12m n_ED_ip_12m ind_ED_adm_12m 
-	ind_em_adm_12m*ind_ED_adm_12m /missprint;
+table icu_days_1yr n_ip_admit_1yr n_hospd_1yr ind_hosp_adm_1yr n_em_urgent_admit_1yr ind_em_ur_adm_1yr
+	ind_em_adm_1yr ind_ur_adm_1yr ind_nonelect_adm_1yr n_nonelect_adm_1yr n_ED_ip_1yr ind_ED_adm_1yr 
+	ind_em_adm_1yr*ind_ED_adm_1yr /missprint;
 run;
 
 /****************************************************************************/
@@ -225,7 +225,7 @@ run;
 /*3 claim windows are present:
 1. SNF stays fully within the 1 year before interview
 2. Stays that begin before 1 year pre-core but end within 1 year pre-core
-3. Stays that begin within 1 year of core but end after core ivw
+3. Stays that begin within 1 year of core but end after core death
 4. Stays that begin before 1 year and end after interview, LOS=365!
 Get claims that meet 1 *1797*/
 proc sql;
@@ -249,7 +249,7 @@ data snf_meet2_pre_365_1;
 set snf_meet2_pre_365;
 admit_date = index_date-365;
 snf_admit_date_mod = 1;
-label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
+label snf_admit_date_mod = "Admit date mod; at 12 mo from death date";
 run;
 
 proc freq;
@@ -270,7 +270,7 @@ data snf_meet3_pre_365_1;
 set snf_meet3_pre_365;
 disch_date = index_date;
 snf_disch_date_mod = 1;
-label snf_disch_date_mod = "Disch date mod; at ivw date";
+label snf_disch_date_mod = "Disch date mod; at death date";
 run;
 
 proc freq;
@@ -289,10 +289,10 @@ data snf_meet4_pre_365_1;
 set snf_meet4_pre_365;
 disch_date = index_date;
 snf_disch_date_mod = 1;
-label snf_disch_date_mod = "Disch date mod; at ivw date";
+label snf_disch_date_mod = "Disch date mod; at death date";
 admit_date = index_date-365;
 snf_admit_date_mod = 1;
-label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
+label snf_admit_date_mod = "Admit date mod; at 12 mo from death date";
 run;
 
 proc freq;
@@ -330,7 +330,7 @@ run;
 proc sql;
 create table snf_days_pre as select distinct bene_id,index_year,
 sum(calc_snf_LOS)
-	as n_snf_days_12m
+	as n_snf_days_1yr
 	from pre_snf_days_1 group by bene_id,index_year;
 quit;
 
@@ -344,15 +344,15 @@ run;
 
  data snf ;
  set snf_days_pre ;
- array list n_snf_days_12m;
+ array list n_snf_days_1yr;
  do over list;
  if list=. then list=0;
  end; 
 
-if n_snf_days_12m=0 then ind_snf_use_12m=0;
- if n_snf_days_12m>0 & n_snf_days_12m~=. then ind_snf_use_12m=1;
- label ind_snf_use_12m="Indicator for any SNF stay 12m pre ivw";
- label n_snf_days_12m="SNF Days 12m pre ivw";
+if n_snf_days_1yr=0 then ind_snf_use_1yr=0;
+ if n_snf_days_1yr>0 & n_snf_days_1yr~=. then ind_snf_use_1yr=1;
+ label ind_snf_use_1yr="Indicator for any SNF stay 1yr pre death";
+ label n_snf_days_1yr="SNF Days 1yr pre death";
 
 run;
 
@@ -414,7 +414,7 @@ if erdaycnt>0 then ed_op=1;
 if erdaycnt=0 then ed_op=0;
 if obs_stay=. then obs_stay=0;
 if obs_stay>1 then obs_stay=1;
-label obs_stay="Observation stay, 12m pre death";
+label obs_stay="Observation stay, 1yr pre death";
 run;
 
 /*added 7/7/17; pull indicator for ER OP visit that doesn't lead to admission*/
@@ -468,13 +468,13 @@ run;
 proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
 count(case when ed_op=1 then ed_op else . end)
-	as n_ed_op_visits_12m,
+	as n_ed_op_visits_1yr,
 max(obs_stay) as obs_stay
 	from ed_op_1 group by bene_id,index_year;
 quit;
 
 proc freq;
-table n_ed_op_visits_12m obs_stay;
+table n_ed_op_visits_1yr obs_stay;
 run;
 
 
@@ -491,37 +491,37 @@ quit;
 
 data ed ;
 set ed_op_3;
-if n_ed_op_visits_12m=. and comorb_1_0_12m~=. then n_ed_op_visits_12m=0;
-label n_ed_op_visits_12m="Count ED OP visits, 12m pre death";
+if n_ed_op_visits_1yr=. and comorb_1_0_1yr~=. then n_ed_op_visits_1yr=0;
+label n_ed_op_visits_1yr="Count ED OP visits, 1yr pre death";
 
-if n_ed_op_visits_12m=0 then ind_ed_op_12m=0;
-if n_ed_op_visits_12m>0 & n_ed_op_visits_12m~=. then ind_ed_op_12m=1;
-label ind_ed_op_12m="Indicator any ED OP visits, 12m pre death";
+if n_ed_op_visits_1yr=0 then ind_ed_op_1yr=0;
+if n_ed_op_visits_1yr>0 & n_ed_op_visits_1yr~=. then ind_ed_op_1yr=1;
+label ind_ed_op_1yr="Indicator any ED OP visits, 1yr pre death";
 
 if n_ed_op_no_adm=0 then ed_op_wout_adm_ind=0;
 if n_ed_op_no_adm>0 & n_ed_op_no_adm~=. then ed_op_wout_adm_ind=1;
 if ed_op_wout_adm_ind=. then ed_op_wout_adm_ind=0;
-label ed_op_wout_adm_ind="Indicator ED visit not leading to admission, 12m pre death";
+label ed_op_wout_adm_ind="Indicator ED visit not leading to admission, 1yr pre death";
 run;
 
 proc freq;
-table n_ed_op_visits_12m*ind_ed_op_12m;
+table n_ed_op_visits_1yr*ind_ed_op_1yr;
 run;
 
 /*pull indicator for snf and hh use 6m prior*/
 
 proc sql;
-create table snf_12m as select * from
+create table snf_1yr as select * from
 index a
 left join
 proj_int.snf_meet_365 b
 on a.bene_id=b.bene_id and a.index_year=b.index_year;
 quit;
 
-data snf_6ma(keep=bene_id index_year ind_snf_12m);
-set snf_12m;
-if admit_date~=. then ind_snf_12m=1;
-if admit_date=. then ind_snf_12m=0;
+data snf_6ma(keep=bene_id index_year ind_snf_1yr);
+set snf_1yr;
+if admit_date~=. then ind_snf_1yr=1;
+if admit_date=. then ind_snf_1yr=0;
 run;
 
 proc sort data=snf_6ma out=snf_6mb nodupkey;
@@ -529,17 +529,17 @@ by bene_id index_year;
 run;
 
 proc sql;
-create table hh_12m as select * from
+create table hh_1yr as select * from
 index a
 left join
 proj_int.hh_meet_365 b
 on a.bene_id=b.bene_id and a.index_year=b.index_year;
 quit;
 
-data hh_6ma(keep=bene_id index_year ind_hh_12m);
-set hh_12m;
-if admit_date~=. then ind_hh_12m=1;
-if admit_date=. then ind_hh_12m=0;
+data hh_6ma(keep=bene_id index_year ind_hh_1yr);
+set hh_1yr;
+if admit_date~=. then ind_hh_1yr=1;
+if admit_date=. then ind_hh_1yr=0;
 run;
 
 proc sort data=hh_6ma out=hh nodupkey;
@@ -581,4 +581,4 @@ quit;
 proc contents data=proj_int.utilization_pre; 
 run;
 
-proc export data=proj_int.utilization_pre outfile="E:\nhats\data\Projects\IAH\int_data\utilization_12mb4_death.dta" replace; run;
+proc export data=proj_int.utilization_pre outfile="E:\nhats\data\Projects\IAH\int_data\utilization_1yrb4_death.dta" replace; run;

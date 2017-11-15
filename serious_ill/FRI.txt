@@ -133,8 +133,12 @@ foreach x in `dme' ind_fri mult_fri n_fri {
 sum `dme' ind_fri mult_fri n_fri
 tab1 `dme' ind_fri mult_fri n_fri
 
+/*
 gen ind_snf_12m=snf_paid_by_mc_12m>0
 gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
 gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
 label var ind_snf_12m "Any SNF utilization"
 label var ind_hh_ "Any HH utilization"
@@ -177,7 +181,7 @@ foreach x  in cancer dem esrd chf copd diab_compl liver {
 }
 
 
-gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+*gen prob_dem=dem_3_cat==1 if !missing(dem_3)
 label var prob_dem "Probable dementia"
 label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
 label values homebound_cat homebound_cat
@@ -404,3 +408,730 @@ mat colnames tab=`colnames'
 
 frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
 title ("Bivariate Odds Ratios, stratified by characteristics") substat(1) addtable
+
+
+H="ADL & FRI with outcomes"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & ///
+!missing(adl_index), clear
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+local dme cane walker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0*/
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+replace ind_hh_12m=0 if missing(ind_hh_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+/* table 1
+demographics, by SR ADL impairment*/
+
+local cvars age aveincome
+gen age_lt75=age<=74
+gen age_lt85=age>=75 & age<85
+gen age_85=age>=85
+label var age_lt75 "Age 65-74"
+label var age_lt85 "Age 75-84"
+label var age_85 "Age 85+"
+
+tab income_cat, gen(inccat)
+label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
+label values income_cat income_cat
+forvalues i=0/3 {
+local lab : label income_cat `i'
+label var inccat`=`i'+1' "`lab'"
+}
+
+foreach x  in cancer dem esrd chf copd diab_compl liver {
+	local smi `smi' smi_`x'_ind
+}
+
+
+*gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+*label var prob_dem "Probable dementia"
+label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat homebound_cat
+tab homebound, gen(hb)
+forvalues i=1/4 {
+	local lab: label homebound_cat `i'
+	label var hb`i' "`lab'"
+}
+
+gen white_oth=white==1 | other_race==1 if !missing(white)
+label var white_oth "White, non-hispanic or other race"
+label var educ_hs_ind "Education: HS +"
+
+keep if !missing(adl_index)
+gen adl_2=adl_index>=2 if !missing(adl_index)
+gen adl_3=adl_index>=3 if !missing(adl_index)
+label var adl_2 "Dependent in 2+ ADLs"
+label var adl_3 "Dependent in 3+ ADLs"
+local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white_oth black hisp married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi' ind_hosp_adm_12m
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+foreach x of local ivars {
+sum `x' if `x'==1 & adl_impair==1
+}
+local rn : word count `ivars'
+local r=1
+local c=1
+mat tab=J(`rn'+3,3,.)
+
+label var ind_ed_vis_p12m "Indicator any ED use 12m post ivw"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post ivw, mean"
+local coutcomes tot_paid_by_mc_12m
+local ioutcomes ind_hosp_adm_p12m ind_ed_vis_p12m died_12
+local ivars `ivars' ind_fri mult_fri ind_hh_12m ind_snf_12m
+
+local rn : word count `ivars' 
+local r=1
+local c=1
+mat tab=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+
+gen yes=adl_impair==1 | fri_hh_snf_oxy==1
+gen group=1 if adl_impair==1 & fri_hh_snf_oxy==1
+replace group=2 if adl_impair==1 & fri_hh_snf_oxy==0
+replace group=3 if adl_impair==0 & fri_hh_snf_oxy==1
+
+foreach adl in "1,2,3" 1 2 3 {
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') 
+		mat tab[`r',`c']=r(mean)*r(N)
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+1
+}
+mat rownames tab=`ivars' 
+
+frmttable using "`logpath'function_adl_w_outcomes.rtf", statmat(tab) replace title("Sample Characteristics") ///
+ctitles("" "All SR ADL/FRI" "Both" "ADL only" "FRI only") sdec(0) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL")  annotate(stars) asymbol(*,**)
+
+
+local rn : word count `ivars' `coutcomes' `coutcomes' `ioutcomes'
+local r=1
+local c=1
+mat tab=J(`rn'+5,6,.)
+mat stars=J(`rn'+5,6,0)
+
+foreach adl in 1 2 3 {
+	tokenize nothing fri_hh_snf_oxy adl_impair
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+		if `adl'>1 & "`x'"!="adl_impair" {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		if `adl'>2 & "`x'"!="adl_impair" {
+			svy, subpop(if inlist(group,2,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+2]=e(p_Pear)
+			mat stars[`r',`c'+2]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}
+	local r=`r'+2
+	foreach x in `coutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw],d
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'+1,`c']=r(p50)
+		if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): mean `x', over(``adl'')
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.01)+(r(p)<.05)
+}
+		if `adl'>2 {
+			svy, subpop(if inlist(group,2,`adl')): mean `x', over(``adl'')
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+2]=r(p)
+			mat stars[`r',`c'+2]=(r(p)<.01)+(r(p)<.05)
+}
+		
+		local r=`r'+2
+}
+	foreach x in `ioutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+		if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		if `adl'>2 & "`x'"!="adl_impair" {
+			svy, subpop(if inlist(group,2,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+2]=e(p_Pear)
+			mat stars[`r',`c'+2]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}		
+
+	local r=`r'+1
+	sum n if inlist(group,`adl')  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+	if `adl'>1 local c=`c'+1
+}
+mat rownames tab=`ivars' "_" "Outcomes" `coutcomes' "   median" `ioutcomes' "_" "N" "National Estimate"
+
+frmttable using "`logpath'function_adl_w_outcomes.rtf", statmat(tab) addtable title("Sample Characteristics") ///
+ctitles("" "Both" "ADL only" "P (Both/ADL only)" "FRI only" "P (Both/FRI only)" "P (ADL/FRI only)") sdec(2) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL" ///
+"Claims-based indicators include MeADs, home oxygen, and any HH or SNF claims")  annotate(stars) asymbol(*,**)
+
+
+
+H="include nursing home as an outcome?"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & ///
+!missing(adl_index), clear
+merge 1:m bene_id using "E:\nhats\data\CMS_DUA_28016\Merged Stata\mds3_10_14.dta", ///
+keep(match master) keepusing(trgt_dt)
+gen ind_mds=_m==3 & inrange(trgt_dt-ivw_date,0,365)
+drop trgt_dt _m
+duplicates drop
+by spid, sort: gen num=_N
+drop if num==2 & ind_mds==0
+duplicates report spid
+
+replace wave=2
+drop nhres
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta", keep(match master) ///
+keepusing(nhres)
+rename nhres nhres_p1
+replace nhres_p1=0 if missing(nhres_p1)
+label var nhres_p1 "Nursing home resident at next wave"
+replace wave=1
+gen ind_snf_p12m=snf_paid_by_mc_12m>=1 & !missing(snf_paid_by_mc_12m)
+label var ind_snf_p12m "Indicator any SNF use 12m post ivw"
+label var ind_mds "Indicator MDS assessment 12m post ivw"
+label var died_12 "Death within 12m post ivw"
+
+gen ind_nh=ind_snf_p12m==1 | ind_mds==1 | nhres_p1==1
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+local dme cane walker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0*/
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+replace ind_hh_12m=0 if missing(ind_hh_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+/* table 1
+demographics, by SR ADL impairment*/
+
+local cvars age aveincome
+gen age_lt75=age<=74
+gen age_lt85=age>=75 & age<85
+gen age_85=age>=85
+label var age_lt75 "Age 65-74"
+label var age_lt85 "Age 75-84"
+label var age_85 "Age 85+"
+
+tab income_cat, gen(inccat)
+*label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
+label values income_cat income_cat
+forvalues i=0/3 {
+local lab : label income_cat `i'
+label var inccat`=`i'+1' "`lab'"
+}
+
+foreach x  in cancer dem esrd chf copd diab_compl liver {
+	local smi `smi' smi_`x'_ind
+}
+
+
+*gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+*label var prob_dem "Probable dementia"
+*label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat homebound_cat
+tab homebound, gen(hb)
+forvalues i=1/4 {
+	local lab: label homebound_cat `i'
+	label var hb`i' "`lab'"
+}
+
+
+label var educ_hs_ind "Education: HS +"
+
+keep if !missing(adl_index)
+gen adl_2=adl_index>=2 if !missing(adl_index)
+gen adl_3=adl_index>=3 if !missing(adl_index)
+label var adl_2 "Dependent in 2+ ADLs"
+label var adl_3 "Dependent in 3+ ADLs"
+local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white black hisp other_race married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi' ind_hosp_adm_12m
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+foreach x of local ivars {
+sum `x' if `x'==1 & adl_impair==1
+}
+local rn : word count `ivars'
+local r=1
+local c=1
+mat tab=J(`rn'+3,3,.)
+
+label var ind_nh "Any nursing home use 12m post ivw"
+label var ind_ed_vis_p12m "Indicator any ED use 12m post ivw"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post ivw, mean"
+local coutcomes tot_paid_by_mc_12m
+local ioutcomes ind_hosp_adm_p12m ind_ed_vis_p12m died_12 ///
+ind_snf_p12m nhres_p1 ind_mds ind_nh
+local ivars `ivars' ind_fri mult_fri ind_hh_12m ind_snf_12m
+
+local rn : word count `ivars' 
+local r=1
+local c=1
+mat tab=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+
+gen yes=adl_impair==1 | fri_hh_snf_oxy==1
+gen group=1 if adl_impair==1 & fri_hh_snf_oxy==1
+replace group=2 if adl_impair==1 & fri_hh_snf_oxy==0
+replace group=3 if adl_impair==0 & fri_hh_snf_oxy==1
+
+foreach adl in "1,2,3" 1 2 3 {
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') 
+		mat tab[`r',`c']=r(mean)*r(N)
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+1
+}
+mat rownames tab=`ivars' 
+
+frmttable using "`logpath'function_adl_w_outcomes.rtf", statmat(tab) replace title("Sample Characteristics") ///
+ctitles("" "All SR ADL/FRI" "Both" "ADL only" "FRI only") sdec(0) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL")  annotate(stars) asymbol(*,**)
+
+
+local rn : word count `ivars' `coutcomes' `coutcomes' `ioutcomes'
+local r=1
+local c=1
+mat tab=J(`rn'+5,5,.)
+mat stars=J(`rn'+5,5,0)
+
+foreach adl in 1 2 3 {
+	tokenize nothing fri_hh_snf_oxy adl_impair
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+		if `adl'>1 & "`x'"!="adl_impair" {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}
+	local r=`r'+2
+	foreach x in `coutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw],d
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'+1,`c']=r(p50)
+		if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): mean `x', over(``adl'')
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.01)+(r(p)<.05)
+}
+		
+		local r=`r'+2
+}
+	foreach x in `ioutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+		if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}		
+
+	local r=`r'+1
+	sum n if inlist(group,`adl')  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+	if `adl'>1 local c=`c'+1
+}
+mat rownames tab=`ivars' "_" "Outcomes" `coutcomes' "   median" `ioutcomes' "_" "N" "National Estimate"
+
+frmttable using "`logpath'function_adl_w_outcomes.rtf", statmat(tab) addtable title("Sample Characteristics") ///
+ctitles("" "Both" "ADL only" "P" "FRI only" "P") sdec(2) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL" ///
+"Claims-based indicators include MeADs, home oxygen, and any HH or SNF claims")  annotate(stars) asymbol(*,**)
+
+
+
+H="Tables with outcomes, overlapping groups"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & ///
+!missing(adl_index), clear
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+local dme cane walker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0*/
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+replace ind_hh_12m=0 if missing(ind_hh_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+/* table 1
+demographics, by SR ADL impairment*/
+
+local cvars age aveincome
+gen age_lt75=age<=74
+gen age_lt85=age>=75 & age<85
+gen age_85=age>=85
+label var age_lt75 "Age 65-74"
+label var age_lt85 "Age 75-84"
+label var age_85 "Age 85+"
+
+tab income_cat, gen(inccat)
+label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
+label values income_cat income_cat
+forvalues i=0/3 {
+local lab : label income_cat `i'
+label var inccat`=`i'+1' "`lab'"
+}
+
+foreach x  in cancer dem esrd chf copd diab_compl liver {
+	local smi `smi' smi_`x'_ind
+}
+
+
+*gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+*label var prob_dem "Probable dementia"
+label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat homebound_cat
+tab homebound, gen(hb)
+forvalues i=1/4 {
+	local lab: label homebound_cat `i'
+	label var hb`i' "`lab'"
+}
+
+
+label var educ_hs_ind "Education: HS +"
+gen white_oth=white==1 | other_race==1 if !missing(white)
+label var white_oth "White, non-hispanic or other race"
+keep if !missing(adl_index)
+gen adl_2=adl_index>=2 if !missing(adl_index)
+gen adl_3=adl_index>=3 if !missing(adl_index)
+label var adl_2 "Dependent in 2+ ADLs"
+label var adl_3 "Dependent in 3+ ADLs"
+local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white_oth black hisp married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi' ind_hosp_adm_12m
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+foreach x of local ivars {
+sum `x' if `x'==1 & adl_impair==1
+}
+local rn : word count `ivars'
+local r=1
+local c=1
+mat tab=J(`rn'+3,3,.)
+
+label var ind_ed_vis_p12m "Indicator any ED use 12m post ivw"
+label var tot_paid_by_mc_12m "Total paid by MC 12m post ivw, mean"
+local coutcomes tot_paid_by_mc_12m
+local ioutcomes ind_hosp_adm_p12m ind_ed_vis_p12m died_12
+local ivars `ivars' ind_fri mult_fri ind_hh_12m ind_snf_12m
+
+local rn : word count `ivars' 
+local r=1
+local c=1
+mat tab=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+
+gen yes=adl_impair==1 | fri_hh_snf_oxy==1
+gen group=1 if adl_impair==1 & fri_hh_snf_oxy==1
+replace group=2 if adl_impair==1 & fri_hh_snf_oxy==0
+replace group=3 if adl_impair==0 & fri_hh_snf_oxy==1
+
+foreach adl in 1 "1,2" "1,3" {
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') 
+		mat tab[`r',`c']=r(mean)*r(N)
+		local r=`r'+1
+}
+
+	local r=1
+	local c=`c'+1
+}
+mat rownames tab=`ivars' 
+
+frmttable using "`logpath'function_adl_fri_overlapping.rtf", statmat(tab) replace title("Sample Characteristics") ///
+ctitles("" "Both" "Any ADL" "Any FRI") sdec(0) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL")  annotate(stars) asymbol(*,**)
+
+
+local rn : word count `ivars' `coutcomes' `coutcomes' `ioutcomes'
+local r=1
+local c=1
+mat tab=J(`rn'+5,3,.)
+mat stars=J(`rn'+5,3,0)
+
+foreach adl in 1 "1,2" "1,3" {
+	tokenize nothing fri_hh_snf_oxy adl_impair
+	foreach x in `ivars' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+	/*	if `adl'>1 & "`x'"!="adl_impair" {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}*/
+		local r=`r'+1
+}
+	local r=`r'+2
+	foreach x in `coutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw],d
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'+1,`c']=r(p50)
+	/*	if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): mean `x', over(``adl'')
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.01)+(r(p)<.05)
+}*/
+		
+		local r=`r'+2
+}
+	foreach x in `ioutcomes' {
+		sum `x' if inlist(group,`adl') [aw=anfinw]
+		mat tab[`r',`c']=r(mean)*100
+/*		if `adl'>1 {
+			svy, subpop(if inlist(group,1,`adl')): tab `x' ``adl''
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}*/
+		local r=`r'+1
+}		
+
+	local r=`r'+1
+	sum n if inlist(group,`adl')  [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+	*if `adl'>1 local c=`c'+1
+}
+mat rownames tab=`ivars' "_" "Outcomes" `coutcomes' "   median" `ioutcomes' "_" "N" "National Estimate"
+
+frmttable using "`logpath'function_adl_fri_overlapping.rtf", statmat(tab) addtable title("Sample Characteristics") ///
+ctitles("" "Both" "Any ADL" "Any FRI") sdec(2) varlabels ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare & SR ADL impairment" ///
+"ADL impairment defined as having assistance in 1+ ADL" ///
+"Claims-based indicators include MeADs, home oxygen, and any HH or SNF claims")  annotate(stars) asymbol(*,**)
+

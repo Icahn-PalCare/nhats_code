@@ -1,6 +1,4 @@
-*use "E:\nhats\data\Projects\IAH\final_data\IAH_sample_ebl.dta" , clear
-
-*use "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", clear
+use "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", clear
 
 cap drop _m
 merge 1:1 bene_id index_date using "E:\nhats\data\Projects\IAH\int_data\iah_rehab_flag.dta", keepus(snf hh ip_rehab)
@@ -12,6 +10,9 @@ foreach x of varlist snf_rehab hh_rehab ip_rehab {
 
 replace `x' = 0 if `x'==.
 }
+
+gen iah_pacute = 0
+replace iah_pacute = 1 if snf_rehab==1 | hh_rehab==1 | ip_rehab==1
 
 gen iah_all = 0
 replace iah_all = 1 if iah_chronic==1 & iah_adl==1 & iah_nonelect==1 & iah_pacute==1
@@ -85,9 +86,6 @@ replace `x' = 0 if `x'==.
 
 save "E:\nhats\data\Projects\IAH\final_data\IAH_final_sample.dta", replace
 
-gen iah_pacute = 0
-replace iah_pacute = 1 if snf_rehab | hh_rehab | ip_rehab
-
 label var iah_pacute "Post Acute Care 12m prior"
 
 cap drop _m
@@ -138,3 +136,19 @@ replace n_hs_days = 1 if n_hs_days==0
 
 
 save "E:\nhats\data\Projects\IAH\final_data\IAH_final_sample.dta", replace
+
+local p12m icu_days_p12m ind_ed_adm_p12m ind_ed_op_p12m ind_ed_vis_p12m ind_elect_adm_p12m ///
+ind_em_adm_p12m ind_em_ur_adm_p12m ind_hosp_adm_p12m ind_hs_p12m ind_icu_p12m ///
+ind_nonelect_adm_p12m ind_snf_use_p12m ind_ur_adm_p12m mult_ed_vis_p12m mult_ip_adm_p12m ///
+n_ed_ip_p12m n_ed_op_visits_p12m n_ed_vis_p12m n_elect_admit_p12m n_em_admit_p12m ///
+n_em_urgent_admit_p12m n_hospd_p12m n_ip_admit_p12m n_nonelect_adm_p12m n_snf_days_p12m ///
+n_urgent_admit_p12m proc_p12m
+
+foreach x of local p12m { 
+
+gen `x'_death = 0
+replace `x'_death = `x' if died_12==1
+
+}
+
+

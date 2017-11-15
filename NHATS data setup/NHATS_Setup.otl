@@ -2173,7 +2173,6 @@ capture log close
 clear all
 set more off
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
-log using "`logs'7-variable construction-LOG.txt", text replace
 
 local r1raw E:\nhats\data\NHATS Public\round_1\
 local r2raw E:\nhats\data\NHATS Public\round_2\
@@ -2253,6 +2252,9 @@ label var hhm "Number of household members"
 
 //age categorical
 
+sort spid wave
+by spid: replace age=age[_n-1]+1 if missing(age)
+
 gen agecat = .
 forvalues i=1/6 {
 replace agecat= r`i'd2intvrage if wave==`i'
@@ -2327,6 +2329,13 @@ label var numcigsever "Number of cigarettes/day when smoked"
 label var numcigsnow "Number of cigarettes/day currently"
 label var smoke_start_age "Age started smoking"
 label var smoke_stop_age "Age stopped smoking"
+
+//pain
+gen ind_pain=.
+forvalues i=1/6 {
+	replace ind_pain=ss`i'painb==1 if inrange(ss`i'painb,0,2) & wave==`i'
+}
+label var ind_pain "Bothered by pain"
 
 //weight
 
@@ -2407,7 +2416,7 @@ foreach w in 1 2 3 4 5 6{
 	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
 	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
 	replace adl_ins_diff=0 if mo`w'insddif==1 & wave==`w'
-	replace adl_ins_diff==1 if mo`w'insddif>1 & wave==`w'
+	replace adl_ins_diff=1 if mo`w'insddif>1 & wave==`w'
 	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
 	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
 	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
@@ -2446,7 +2455,7 @@ forvalues i=1/6 {
 	replace ivw_month=r`i'spstatdtmt if wave==`i'
 	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
 	replace ivw_year=r`i'spstatdtyr if wave==`i'
-	replace ivw_year=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtyr==.
+	replace ivw_year=201`i' if wave==`i' & r`i'spstatdtyr==.
 }
 replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.

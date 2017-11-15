@@ -761,6 +761,241 @@ run;
 %pb_drop(days_aft_index=730);
  
 
+H="Dartmouth chronic diseases"
+/*Add indicator variables for the Dartmouth chronic diseases */
+
+/*Dartmouth code
+
+This program reads through the diagnosis codes of patient abstract records in a hospital
+    file and identifies whether the record belongs to one (or more) of 9 different chronic 
+	diseases from the Dartmouth Index.  The groups are identified by using the Enhanced ICD-9-CM
+    diagnosis codes from pdf "List of ICD-9_CM codes by Chronic Disease Category 
+	(Nine chronic conditions used in the dartmouth atlas of health care 2008) from March 3, 2008*/
+
+
+/****************************************************************************/
+/* Rename variables macro                                                   */
+/****************************************************************************/
+
+%macro rename(lib,dsn,pre);
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "Before Renaming All Variables";
+run;
+proc sql noprint;
+select nvar into :num_vars
+from dictionary.tables
+where libname="&LIB" and
+memname="&DSN";
+select distinct(name) into :var1-
+:var%TRIM(%LEFT(&num_vars))
+from dictionary.columns
+where libname="&LIB" and
+memname="&DSN";
+quit;
+run;
+proc datasets library=&LIB;
+modify &DSN;
+rename
+%do i=1 %to &num_vars;
+&&var&i=&&var&i.._&pre 
+%end;
+;
+quit;
+run;
+options pageno=1 nodate;
+proc contents data=&lib..&dsn;
+title "After Renaming All Variables";
+run;
+%mend rename;
+
+
+%macro dartmouth(range1=,range2=);
+
+data dx_dartmouth;
+set proj_int.dx_&range1._&range2.(rename=(diag=dx_0));
+dx=trim(left(dx_0));
+
+if dx~="" then do;
+
+*initialize variables;
+   dartmouth_1=0;
+   dartmouth_1a=0;
+   dartmouth_1b=0;
+   dartmouth_2=0;
+   dartmouth_3=0;
+   dartmouth_4=0;
+   dartmouth_5=0;
+   dartmouth_6=0;
+      dartmouth_7=0;
+	     dartmouth_8=0;
+		    dartmouth_9=0;
+			   dartmouth_10=0;
+			      dartmouth_11=0;
+				     dartmouth_12=0;
+					    dartmouth_13=0;
+						   dartmouth_14=0;
+						      dartmouth_15=0;
+							     dartmouth_16=0;
+								    dartmouth_17=0;
+
+*do over dx;
+	*Cancer with poor prognosis;
+	if (substr(dx,1,4) in('1500','1501','1502','1503','1504','1505','1508','1509','1510','1511','1512',
+			 	'1513','1514','1515','1516','1518','1519','1550','1551','1552','1570','1571',
+			 	'1572','1573','1574','1578','1579','1580','1588','1589','1620','1622','1623',
+			 	'1624','1625','1628','1629','1630','1631','1638','1639','1830','1832','1833',
+			 	'1834','1835','1838','1839','1910','1911','1912','1913','1914','1915','1916',
+			 	'1917','1918','1919','2890') 
+		or substr(dx,1,5) in('20400','20410','20420','20480','20490','20500','20510',
+				'20520','20530','20580','20590','20600','20610','20620','20680','20690','20700',
+				'20710','20720','20780','20800','20810','20820','20880'))
+               and dartmouth_1a=0
+               then dartmouth_1a=1;
+	*Metastatic Cancer;
+	if (substr(dx,1,4) in('1960','1961','1962','1963','1965','1966','1968','1969','1970','1971','1972',
+				'1973','1974','1975','1976','1977','1978','1980','1981','1982','1983','1984',
+				'1985','1986','1987','1990','1991') or 
+		substr(dx,1,5) in('19881','19882','19889'))
+				and dartmouth_1b=0
+				then dartmouth_1b=1;
+	*Malignant Cancer, Leukemia;
+	if dartmouth_1a=1 or dartmouth_1b=1 then dartmouth_1=1;
+	*COPD;
+	if (substr(dx,1,3) in('494','496','501','515') or
+		substr(dx,1,4) in('4911,4918,4919,4920,4928,4940,4941,5064') or
+		substr(dx,1,5) in('49120,49121,49122,49310,49311,49312,49320,49321,49322,49390,49391,49392'))
+				and dartmouth_2=0
+				then dartmouth_2=1;
+	*CAD;
+	if (substr(dx,1,3)='412' or
+		substr(dx,1,4) in('4111','4118','4130','4139','4140','4148','4149') or
+		substr(dx,1,5) in('41181','41189','41400','41401','41402','41403','41404','41405','41406','41407'))
+				and dartmouth_3=0
+				then dartmouth_3=1;
+	*CHF;
+	if (substr(dx,1,4) in('4280','4281','4282','4283','4284','4289') or
+		substr(dx,1,5) in('42820','42821','42822','42823','42830','42831','42832','42833','42840','42841',
+								'42842','42843','40201','40211','40291','39891','40401','40403','40411','40491',
+								'40493'))
+				and dartmouth_4=0
+				then dartmouth_4=1;
+	*PVD;
+	if (substr(dx,1,4) in('4400','4401','4403','4408','4409','4410','4411','4412','4413','4414','4415','4416',
+								'4417','4419','4439') or
+		substr(dx,1,5) in('44020','44021','44022','44023','44024','44029','44030','44031','44032','44100','44101','44102','44103'))
+				and dartmouth_5=0
+				then dartmouth_5=1;
+	*Severe Chronic Liver Disease;
+	if substr(dx,1,4) in('5712','5715','5716','5723')
+				and dartmouth_6=0
+				then dartmouth_6=1;
+	*Diabetes w/ End Organ Damage;
+	if ((substr(dx,1,3)='250' and substr(dx,4,1) in('4','5','6','7','9') and substr(dx,5,1) in('0','1','2','3')) or
+		substr(dx,1,4)='3572' or
+		substr(dx,1,5) in('36641','36201','36202'))
+				and dartmouth_7=0
+				then dartmouth_7=1;
+	*Renal Failure;
+	if (substr(dx,1,3)='585' or
+		substr(dx,1,4) in('5851','5852','5853','5854','5855','5856','5859','V451','V560','V568') or
+		substr(dx,1,5) in('40301','40311','40391'))
+				and dartmouth_8=0
+				then dartmouth_8=1;
+	*Dementia;
+	if (substr(dx,1,3)='797' or
+		substr(dx,1,4) in('2900','2903','2908','2909','2940','2941','2948','2949','3310','3312') or
+		substr(dx,1,5) in('29101','29011','29012','29013','29020','29021','29040','29041','29042',
+								'29043','29410','29411'))
+				and dartmouth_9=0
+				then dartmouth_9=1;
+
+end;
+
+run;
+
+/*get count of each comorbidity for each id-core year combination*/
+proc sql;
+create table cha_test1 as
+select distinct bene_id,index_year,
+sum(dartmouth_1a) as dmouth_a,
+sum(dartmouth_1b) as dmouth_b,
+sum(dartmouth_1) as cha_1,
+sum(dartmouth_2) as cha_2,
+sum(dartmouth_3) as cha_3,
+sum(dartmouth_4) as cha_4,
+sum(dartmouth_5) as cha_5,
+sum(dartmouth_6) as cha_6,
+sum(dartmouth_7) as cha_7,
+sum(dartmouth_8) as cha_8,
+sum(dartmouth_9) as cha_9
+from dx_dartmouth
+group by bene_id,index_year;
+quit;
+
+/*convert counts of diagnoses for each comorbidity to indicator variables*/ 
+data dartmouth_1(keep=bene_id index_year dmouth_1-dmouth_9 dmouth_index dmouth_index_wt);
+set cha_test1;
+array list_cha cha_1-cha_9;
+array list_cha_bin dmouth_1-dmouth_9 ;
+
+do over list_cha;
+  list_cha_bin=0;
+
+  if list_cha>0 then do;
+    list_cha_bin=1;
+   end;
+
+end;
+/*replace cancer subtypes with indicators*/
+if dmouth_a>1 then dmouth_a=1;
+if dmouth_b>1 then dmouth_b=1;
+/*note this dmouth_index count count is not weighted for morbidity*/
+dmouth_index=dmouth_1+dmouth_2+dmouth_3+dmouth_4+dmouth_5+dmouth_6+dmouth_7+dmouth_8+dmouth_9;
+
+
+label dmouth_a ="Poor prognosis cancer, Dartmouth";
+label dmouth_b ="Metastatic cancer, Dartmouth";
+label dmouth_1 ="Malignant Cancer or Leukemia, Dartmouth";
+label dmouth_2 ="Chronic Pulmonary Disease, Dartmouth";
+label dmouth_3 ="CAD, Dartmouth";
+label dmouth_4 ="CHF, Dartmouth";
+label dmouth_5 ="PVD, Dartmouth";
+label dmouth_6 ="Severe Chronic Liver Disease, Dartmouth";
+label dmouth_7 ="Diabetes w/ End Organ Damage, Dartmouth";
+label dmouth_8 ="Renal Failure, Dartmouth";
+label dmouth_9 ="Dementia, Dartmouth";
+label dmouth_index ="Count Chronic Diseases, Dartmouth";
+
+run;
+
+/*merge into list of obs with ffs mc 6m prior to ivw*/
+proc sort data=dartmouth_1 out=test nodupkey;
+by bene_id index_year;
+run;
+
+
+
+%rename(WORK,TEST,&range1._&range2);
+
+data proj_int.dmouth_&range1._&range2.(rename =(bene_id_&range1._&range2=bene_id
+index_year_&range1._&range2=index_year));
+set test;
+keep bene_id_&range1._&range2 dmouth: index_year:;
+run;
+proc sort data=proj_int.dmouth_&range1._&range2.;
+by bene_id index_year;
+run;
+
+%mend;
+
+%dartmouth(range1=0, range2=6m);
+%dartmouth(range1=0, range2=1yr);
+
+
+
+proc freq; run;
+
 H="Elixhauser comorbidities"
 /*Note elixhauser comorbidities diagnosis lists are modified for the 
 purposes of this project, do not copy and paste this Elixhauser code 
@@ -2599,11 +2834,129 @@ proc freq;
 table n_ed_op_visits_12m*ind_ed_op_12m;
 run;
 
+data hh(keep=bene_id index_year ind_hh_12m);
+set proj_int.hh_meet_365;
+ind_hh_12m=1;
+run;
+
 proc sort data=ip out=ip nodupkey; by bene_id index_year; run;
 proc sort data=snf out=snf nodupkey; by bene_id index_year; run;
 proc sort data=esrd out=esrd nodupkey; by bene_id index_year; run;
 proc sort data=oxygen out=oxygen nodupkey; by bene_id index_year; run;
 proc sort data=ed out=ed nodupkey; by bene_id index_year; run;
+proc sort data=hh out=hh nodupkey; by bene_id index_year; run;
+
+
+/*housecalls
+
+housecall codes (from Bruce Kinosian from CMS on 8/16/17) are 99341-99350
+and dom care codes are 99324-99328 and 99334-99337
+
+POS codes are 12 13 14
+
+*/
+
+%macro pb_pre (days=,suf=);
+
+proc sql;
+create table pb_meet_&days.d_bef as select * from
+proj_int.index a
+left join medi.pb_09_14 b
+on a.bene_id=b.bene_id and admit_date<=index_date<=admit_date+&days;
+quit;
+
+
+data hc;
+set pb_meet_&days.d_bef;
+array this hcpcscd1-hcpcscd13;
+code=0;
+do over this;
+if in(this,"99324","99325","99326","99327","99328","99334","99335","99336","99337", 
+	"99341","99342","99343","99344","99345","99346","99347","99348","99349","99350") and code=0 
+	then code=1;
+end;
+array that pos1-pos13;
+place=0;
+do over that;
+if in(that,"12","13","14") and place=0 then place=1;
+end;
+housecall=place=1 and code=1;
+run;
+
+proc sql; 
+create table hc_&suf as select distinct bene_id, index_date,
+sum(housecall) as n_housecalls_&suf
+from hc
+group by bene_id, index_date;
+quit;
+
+%mend;
+
+/*housecalls
+
+housecall codes (from Bruce Kinosian from CMS on 8/16/17) are 99341-99350
+and dom care codes are 99324-99328 and 99334-99337
+
+POS codes are 12 13 14
+
+*/
+
+%macro pb_post (days=,suf=);
+
+proc sql;
+create table pb_meet_&days.d_bef as select * from
+proj_int.index a
+left join medi.pb_09_14 b
+on a.bene_id=b.bene_id and admit_date>=index_date>=admit_date-&days;
+quit;
+
+
+data hc;
+set pb_meet_&days.d_bef;
+array this hcpcscd1-hcpcscd13;
+code=0;
+do over this;
+if in(this,"99324","99325","99326","99327","99328","99334","99335","99336","99337", 
+	"99341","99342","99343","99344","99345","99346","99347","99348","99349","99350") and code=0 
+	then code=1;
+end;
+array that pos1-pos13;
+place=0;
+do over that;
+if in(that,"12","13","14") and place=0 then place=1;
+end;
+housecall=place=1 and code=1;
+run;
+
+proc sql; 
+create table hc_&suf as select distinct bene_id, index_date,
+sum(housecall) as n_housecalls_&suf
+from hc group by bene_id, index_date;
+quit;
+
+%mend;
+
+%pb_pre(days=365,suf=n12m);
+%pb_pre(days=90,suf=n3m);
+%pb_post(days=365,suf=p12m);
+%pb_post(days=90,suf=p3m);
+
+proc sql;
+create table pb as select * from
+proj_int.index a
+left join 
+hc_n3m b
+on a.bene_id=b.bene_id and a.index_date=b.index_date
+left join
+hc_n12m c
+on a.bene_id=c.bene_id and a.index_date=c.index_date
+left join 
+hc_p3m d
+on a.bene_id=d.bene_id and a.index_date=d.index_date
+left join
+hc_p12m e
+on a.bene_id=e.bene_id and a.index_date=e.index_date;
+quit;
 
 proc sql;
 create table proj_int.utilization_pre as select * 
@@ -2622,11 +2975,19 @@ oxygen e
 on trim(left(a.bene_id))=trim(left(e.bene_id)) and a.index_year=e.index_year
 left join 
 ed f
-on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_year;
+on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_year
+left join
+hh g
+on trim(left(a.bene_id))=trim(left(g.bene_id)) and a.index_year=g.index_year
+left join 
+pb h
+on trim(left(a.bene_id))=trim(left(h.bene_id)) and a.index_year=h.index_year;
 quit;
 
 proc contents data=proj_int.utilization_pre; 
 run;
+
+
 
 H="classify SI based on primary dx"
 /*recoded as a macro and use either the primary diagnosis or admitting diagnoses AD_DGNS */
@@ -3177,9 +3538,11 @@ left join
 %mend;
 
 /*Runs macro to get total for the SNF claims*/
+%mp(days_start=0,days_after_core=730,source=snf,equ=,name=24m );
 %mp(days_start=0,days_after_core=365,source=snf,equ=,name=12m );
 %mp(days_start=0,days_after_core=183,source=snf,equ=,name=6m );
 /*Runs macro to get total for the inpatient (not SNF) claims*/
+%mp(days_start=0,days_after_core=730,source=ip,equ=~,name=24m );
 %mp(days_start=0,days_after_core=365,source=ip,equ=~,name=12m );
 %mp(days_start=0,days_after_core=183,source=ip,equ=~,name=6m );
 
@@ -3241,7 +3604,13 @@ left join
 /******************************************************************/
 /* Run the macro over the mc claims files for 2 index_dates prior to death*/
 /******************************************************************/
- %all_other(source=op,month_n=_12m,days_start=0,days_after_core=365);
+ %all_other(source=op,month_n=_24m,days_start=0,days_after_core=730);
+  %all_other(source=pb,month_n=_24m,days_start=0,days_after_core=730);
+   %all_other(source=hh,month_n=_24m,days_start=0,days_after_core=730);
+    %all_other(source=hs,month_n=_24m,days_start=0,days_after_core=730);
+     %all_other(source=dm,month_n=_24m,days_start=0,days_after_core=730);
+
+%all_other(source=op,month_n=_12m,days_start=0,days_after_core=365);
   %all_other(source=pb,month_n=_12m,days_start=0,days_after_core=365);
    %all_other(source=hh,month_n=_12m,days_start=0,days_after_core=365);
     %all_other(source=hs,month_n=_12m,days_start=0,days_after_core=365);
@@ -3258,7 +3627,8 @@ left join
 /******************************************************************/
 *first merge 12m and 6m spending into single dataset;
 data proj_int.mc_costs_all;
-merge ip_12m_post snf_12m_post hh_12m_post hs_12m_post pb_12m_post op_12m_post dm_12m_post
+merge ip_24m_post snf_24m_post hh_24m_post hs_24m_post pb_24m_post op_24m_post dm_24m_post
+ip_12m_post snf_12m_post hh_12m_post hs_12m_post pb_12m_post op_12m_post dm_12m_post
  ip_6m_post snf_6m_post hh_6m_post hs_6m_post pb_6m_post op_6m_post dm_6m_post;
 by bene_id index_date;
 run;
@@ -3894,7 +4264,7 @@ run;
 H="combine with interviews into one dataset"
 data proj_int.index;
 set proj_int.index;
-if index_date = . then delete;
+if index_year = . then delete;
 run;
 
 
@@ -3935,7 +4305,10 @@ proj_int.mc_costs_all j
 on a.bene_id=j.bene_id and a.index_year=j.index_year
 left join
 proj_int.fri k
-on a.bene_id=k.bene_id and a.index_year=k.index_year;
+on a.bene_id=k.bene_id and a.index_year=k.index_year
+left join 
+proj_int.dmouth_0_1yr l
+on a.bene_id=l.bene_id and a.index_year=l.index_year;
 quit;
 
 proc sql;
@@ -4606,10 +4979,14 @@ smi_nh_ind==1) if missing(criteria_c)
 
 gen criteria_all=1
 gen criteria_none=criteria_a==0
-gen tot_paid_by_mc_12m=0
+
+foreach y in 12 24 {
+gen tot_paid_by_mc_`y'm=0
 foreach x in ip snf hh hs pb op dm {
-replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
+replace tot_paid_by_mc_`y'=tot_paid_by_mc_`y'+`x'_paid_by_mc_`y'm
 }
+}
+
 gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
 foreach x of varlist *_op_* *icu_* {
 replace `x'=0 if missing(`x')
@@ -7415,3 +7792,808 @@ set out.personout_1 out.personout_2 out.personout_3;
 run;
 
 proc export data=out.personout outfile="E:\nhats\data\Projects\serious_ill\int_data\personout.dta" replace; run;
+
+H="table of comorbidity combos"
+putexcel set "E:\nhats\data\Projects\serious_ill\logs\dartmouth_freq.xls", replace
+tokenize A B C D E F G H I J K L M N
+local lab1 Cancer
+local lab2 COPD
+local lab3 CAD
+local lab4 CHF
+local lab5 PVD
+local lab6 Liver
+local lab7 Diabetes
+local lab8 Renal
+local lab9 Dementia
+forvalues i=1/9{
+putexcel ``i''1="`lab`i''"
+}
+local row=2
+putexcel `10'1="Combo Name" `11'1="Frequency" `12'1="Mean spending" `13'1="% Hospitalized" `14'1="% mortality"
+forvalues i=1/9 {
+forvalues j=1/9 {
+forvalues k=1/9 {
+if `i'<`j' & `j'<`k' {
+gen dart`i'`j'`k'= dmouth_`i'==1 & dmouth_`j'==1 & dmouth_`k'==1 if !missing(dmouth_1)
+label var dart`i'`j'`k' "`lab`i'', `lab`j'', `lab`k''"
+qui sum dart`i'`j'`k'
+if r(mean)==0 drop dart`i'`j'`k'
+if r(mean)!=0 {
+putexcel ``i''`row'="" ``j''`row'="" ``k''`row'="", fpattern(solid, yellow)
+local lab : var label dart`i'`j'`k'
+putexcel `10'`row'="`lab'"
+putexcel `11'`row'=`r(mean)'*`r(N)'
+sum tot_paid_by_mc_12m if dart`i'`j'`k'==1
+putexcel `12'`row'=`r(mean)'
+sum ind_hosp_adm_p12m if dart`i'`j'`k'==1
+putexcel `13'`row'=`r(mean)'*100
+sum died_12 if dart`i'`j'`k'==1
+putexcel `14'`row'=`r(mean)'*100
+local row=`row'+1
+}
+}
+}
+}
+}
+
+putexcel set "E:\nhats\data\Projects\serious_ill\logs\charls_freq.xls", replace
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+
+local lab1 "AMI"
+local lab2 "CHF"
+local lab3 "PVD"
+local lab4 Cerebrovascular
+local lab5 Dementia
+local lab6 COPD
+local lab7 Rheumatic
+local lab8 Peptic ulceer
+local lab9 Diabetes w/o complications
+local lab10 Diabetes w/ complications
+local lab14 Cancer
+local lab16 Metastatic cancer
+local lab17 HIV/AIDS
+local lab12 Hemi-/paraplegia
+local lab13 Renal
+local lab14 Malignancy
+local lab11 `lab10'
+local lab10 `lab9'
+local lab9 Liver
+local lab9 Mild liver
+local lab15 Mod/sev liver
+forvalues i=1/17{
+putexcel ``i''1="`lab`i''"
+}
+local row=2
+capture drop dart*
+
+putexcel `18'1="Combo Name" `19'1="Frequency" `20'1="Mean spending" `21'1="% Hospitalized" `22'1="% mortality"
+forvalues i=1/17 {
+forvalues j=1/17 {
+forvalues k=1/17 {
+if `i'<`j' & `j'<`k' {
+gen dart`i'`j'`k'= charls_`i'_==1 & charls_`j'_==1 & charls_`k'_==1 if !missing(charls_1_)
+label var dart`i'`j'`k' "`lab`i'', `lab`j'', `lab`k''"
+qui sum dart`i'`j'`k'
+if r(mean)==0 drop dart`i'`j'`k'
+if r(mean)!=0 {
+putexcel ``i''`row'="" ``j''`row'="" ``k''`row'="", fpattern(solid, yellow)
+local lab : var label dart`i'`j'`k'
+putexcel `18'`row'="`lab'"
+putexcel `19'`row'=`r(mean)'*`r(N)'
+sum tot_paid_by_mc_12m if dart`i'`j'`k'==1
+putexcel `20'`row'=`r(mean)'
+sum ind_hosp_adm_p12m if dart`i'`j'`k'==1
+putexcel `21'`row'=`r(mean)'*100
+sum died_12 if dart`i'`j'`k'==1
+putexcel `22'`row'=`r(mean)'*100
+local row=`row'+1
+}
+}
+}
+}
+}
+
+
+
+
+H="check on SMI for Claire 11/2/17"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+cd "`work'"
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_4_MetNonmet_STATA\NHATS_Round_1_4_MetNonmet.dta", clear
+forvalues i=1/4 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+//recoding all refuse, dk, na, as missing
+destring *, replace
+foreach x of varlist * {
+	replace `x'=. if inlist(`x',-1,-7,-8,-9)
+}
+
+//how do you get to the doctor?
+gen howgetdoc=.
+forvalues i=1/9 {
+	forvalues j=1/6 {
+		replace howgetdoc=`i' if mc`j'hwgtregd`i'==1 & wave==`j'
+}
+}
+label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" 8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
+label values howgetdoc howgetdoc
+//marital status-3 vars: married, married_or_partnered
+
+gen married=maritalstat==1 if maritalstat!=. //married
+gen marital_sep=maritalstat==3 if !mi(maritalstat)
+gen marital_div=maritalstat==4 if !mi(maritalstat)
+gen marital_wid=maritalstat==5 if !mi(maritalstat)
+gen marital_nev=maritalstat==6 if !mi(maritalstat)
+gen marriedpartnered=married
+replace marriedpartnered=1 if maritalstat==2 //living with a partner
+gen marital_sd=marital_sep
+replace marital_sd=1 if marital_div==1
+
+label var married "Married"
+label var marriedpartnered "Married or Live w/ Partner"
+
+//lives with spouse
+gen resspouse=.
+forvalues i=1/6 {
+	replace resspouse=hh`i'livwthspo==1 if wave==`i' & hh`i'livwthspo>0
+	replace resspouse=0 if marriedpart==0
+}
+label var resspouse "Lives with Spouse/Partner"
+
+//household members
+gen hhm=.
+forvalues i=1/6 {
+	replace hhm=hh`i'dhshldnum if hh`i'dhshldnum>0 & wave==`i'
+}
+label var hhm "Number of household members"
+
+//age categorical
+
+gen agecat = .
+forvalues i=1/6 {
+replace agecat= r`i'd2intvrage if wave==`i'
+}
+replace agecat=. if agecat==-1
+label values agecat r1d2intvrage
+label var agecat "Age, 5 yr categories"
+
+//activities past month
+
+gen attrelig=. //attend services
+gen imprelig=. //importance of religious services
+gen visitfrfam=. //visit fr. fam.
+gen impvisit=. //importance of visiting friends & fam
+gen attclub=. //participate in club, organized activity, class, etc.
+gen impclub=. //importance of such activities
+gen vigact=. //vigorous activities
+
+forvalues i=1/6 {
+	replace attrelig=pa`i'attrelser==1 if pa`i'attrelser>0 & wave==`i'
+	replace imprelig=pa`i'imprelser if pa`i'imprelser>0 & wave==`i' 
+	replace visitfrfam=pa`i'vistfrfam==1 if pa`i'vistfrfam>0 & wave==`i'
+	replace impvisit=pa`i'impvstfam if pa`i'impvstfam>0 & wave==`i'
+	replace attclub=pa`i'clbmtgrac==1 if pa`i'clbmtgrac>0 & wave==`i'
+	replace impclub=pa`i'imparclub if pa`i'imparclub>0 & wave==`i'
+	replace vigact=pa`i'vigoractv==1 if pa`i'vigoractv>0 & wave==`i'
+}
+
+gen religvimp=imprelig==1 if imprelig!=. //very important binary
+
+label var attrelig "Past mo. Attend religious services"
+label var imprelig "Importance of religious services"
+label var religvimp "Religious services very important, yes/no"
+label var visitfrfam "Past mo. visit friends or family"
+label var impvisit "Importance of visiting friends/family"
+label var attclub "Past mo. participate in clubs/classes/organized activities"
+label var impclub "Importance of club/class/etc. participation"
+label var vigact "Past mo. engage in vigorous activity"
+
+label values imprelig pa1imprelser
+label values impvisit pa1impvstfam
+label values impclub pa1imparclub
+
+//smokin'
+gen smokedever=. 
+gen smoke_start_age=.
+gen smoke_stop_age=.
+forvalues i=1(4)5 {
+	replace smokedever=sd`i'smokedreg==1 if wave==`i' & sd`i'smokedreg>0
+	replace smoke_start_age=sd`i'agesrtsmk if wave==`i' & sd`i'agesrtsmk>0
+	replace smoke_stop_age=sd`i'agelstsmk if wave==`i' & sd`i'agelstsmk>0
+}
+
+sort spid wave
+by spid: carryforward smoke*, replace
+gen smokesnow=.
+by spid, sort: egen numcigsever=max(sd1numcigday)
+gen numcigsnow=.
+
+
+forvalues i=1/6 {
+	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
+	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
+}
+replace smokedever=1 if smokesnow==1
+replace smokesnow=0 if smokedever==0
+replace numcigsnow=0 if smokesnow==0
+
+label var smokedever "Ever smoked"
+label var smokesnow "Smokes now"
+label var numcigsever "Number of cigarettes/day when smoked"
+label var numcigsnow "Number of cigarettes/day currently"
+label var smoke_start_age "Age started smoking"
+label var smoke_stop_age "Age stopped smoking"
+
+//weight
+
+gen wgt_curr=.
+gen height_ft=.
+gen height_in=.
+
+forvalues i=1/6 {
+	replace wgt_curr=hw`i'currweigh if hw`i'currweigh>0 & wave==`i'
+	replace height_ft=hw`i'howtallft if hw`i'howtallft>0 & wave==`i'
+	replace height_in=hw`i'howtallin if hw`i'howtallin>0 & wave==`i'
+}
+
+label var wgt_curr "Current weight, lbs."
+label var height_ft "Current height, feet"
+label var height_in "Current height, inches"
+
+gen bmi=(wgt_curr/((height_ft*12+height_in)^2))*703
+
+label var bmi "Current BMI"
+
+//get the per round weight, cluster, and strata vars (and why is moved created like that?)
+gen moved=.
+rename w1varunit varunit
+rename w1varstrat varstrat
+rename w1anfinwgt0 anfinwgt
+
+forvalues i=2/6 {
+	replace moved=w`i'_moved if wave==`i'
+	foreach x in anfinwgt varstrat varunit {
+		replace `x'=w`i'`x' if wave==`i'
+}
+drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
+}
+
+******************************************
+/*these are taken from Rebecca's code*/
+
+gen community_dwelling = 0
+replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+gen SP_completed = 0
+replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
+
+gen nhres=r1dresid==4 if r1dresid!=.
+gen rcfres=inlist(r1dresid,2,3) if r1dresid!=.
+gen res_care=r1dresid>1 if r1dresid!=.
+gen sp_status=1 
+gen deceased=0
+gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
+label var prob_dem "Indicator probable dementia"
+forvalues i=2/6 {
+	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
+	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
+	replace rcfres=inlist(r`i'dresid,2,3,7) if wave==`i'
+	replace deceased=inlist(r`i'status,62,86) if wave>=`i'
+}
+
+replace sp_status=2 if res_care==1
+replace sp_status=3 if nhres==1
+replace sp_status=4 if deceased==1
+label var sp_status "Residential status"
+label var nhres "Nursing Home Resident"
+label var rcfres "Residential Care, excl. NH"
+label var res_care "Residential Care, incl. NH"
+label define sp_status 1 "Non-res care community" 2 "Res-care not NH" 3 "NH resident" ///
+4 "Deceased"
+label values sp_status sp_status
+
+//these ADL variables were missing previously
+gen adl_ins_help = .
+gen adl_ins_diff=.
+gen adl_ins_not_done=.
+
+foreach w in 1 2 3 4 5 6{
+	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
+	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==1 & wave==`w'
+	replace adl_ins_diff=1 if mo`w'insddif>1 & !missing(mo`w'insddif) & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
+	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
+	replace adl_ins_not_done=inlist(mo`w'dinsdsfdf,1,8) if wave==`w'
+}
+
+*replace adl_ins_dif=1 if adl_ins_help==1
+label var adl_ins_help "Received help getting around inside"
+
+gen adl_bed_help = .
+gen adl_bed_diff=.
+gen adl_bed_not_done=.
+foreach w in 1 2 3 4 5 6{
+	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
+	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==1 & wave==`w'
+	replace adl_bed_diff=1 if mo`w'beddif>1  & !missing(mo`w'beddif) & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_diff=-7 if mo`w'beddif==-7 & wave==`w'
+	replace adl_bed_diff=-8 if mo`w'beddif==-8 & wave==`w'
+	replace adl_bed_not_done=inlist(mo`w'dbedsfdf,1,8) if wave==`w'
+}
+label var adl_bed_help "Received help getting out of bed"
+*replace adl_bed_diff=1 if adl_bed_help==1
+//construct date of ivw--use 1st of month for all, because only have mo & yr
+
+gen ivw_day=1
+label define ivw_day 1 "Not provided" 
+label values ivw_day ivw_day
+gen ivw_month=.
+gen ivw_year=.
+forvalues i=1/6 {
+	replace ivw_month=r`i'spstatdtmt if wave==`i'
+	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
+	replace ivw_year=r`i'spstatdtyr if wave==`i'
+	replace ivw_year=201`i' if wave==`i' & r`i'spstatdtyr==.
+}
+replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
+replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
+
+
+gen adl_index=0
+foreach i in eat bath toil dres bed ins {
+replace adl_index=adl_index+adl_`i'_help if adl_`i'_help>0
+}
+*gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_help+adl_bed_help
+replace adl_index=. if adl_index<0
+gen adl_independent=adl_index==0 if adl_index!=.
+gen adl_impair=adl_index>0 if adl_index!=.
+gen iadl_index=iadl_laun_help+iadl_shop_help+iadl_bank_help+iadl_meal_help+iadl_meds_help
+replace iadl_index=. if iadl_index<0
+gen iadl_independent=iadl_index==0 if iadl_index!=.
+gen iadl_impair=iadl_index>0 if iadl_index!=.
+foreach x in adl iadl {
+	egen `x'_diff_index=rowtotal(`x'*diff)
+	gen `x'_diff_ind=`x'_diff_index>=1 if !missing(`x'_diff_index)
+}
+label var adl_independent "Independent in ADLs"
+label var adl_impair "Help with 1+ ADL"
+label var adl_index "Index of help w/ ADLs"
+label var iadl_independent "Independent in IADLs"
+label var iadl_impair "Help with 1+ IADL"
+label var iadl_index "Index of help w/ IADLs"
+
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
+
+//addition of variables from Eric's homebound code
+gen meals_wheels=.
+gen noone_talk=.
+gen restrnt_takeout=.
+
+forvalues i=1/6 {
+replace meals_wheels=ha`i'dmealwhl if wave==`i'
+replace noone_talk=fl`i'noonetalk if wave==`i'
+replace restrnt_takeout=ha`i'dmealtkot if wave==`i'
+foreach x in meals_wheels noone_talk restrnt_takeout {
+replace `x'=0 if `x'==.
+}
+}
+
+//pull in date of death, constructed from claims and nhats
+merge m:1 spid using "E:\nhats\data\CMS_DUA_28016\death_date.dta", nogen
+
+gen died_12=mofd(death_date)-mofd(ivw_date)<=12
+gen died_24=mofd(death_date)-mofd(ivw_date)<=24
+//note-the following has been superseded by the death date using claims
+/*
+
+//use status to get death
+gen died_12=.
+gen died_24=.
+forvalues i=1/3 {
+replace died_12=inlist(r`=`i'+1'status,62,86) if wave==`i' & r`=`i'+1'status!=79
+}
+forvalues i=1/2 {
+replace died_24=inlist(r`=`i'+2'status,62,86) if wave==`i' & !inlist(r`=`i'+2'status,79,.)
+}
+replace died_24=1 if died_12==1
+
+foreach i in 12 24 {
+label var died_`i' "SP died w/in `i' months, per future wave status"
+}*/
+
+//update 8/2/17--pulled in nhats dod to share off server
+
+//look at death month & year. don't have, so set date to last of month
+gen dd=.
+replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+gen nhats_death_day=. 
+forvalues i=2/4 {
+	foreach j in mth yr {
+		replace pd`i'`j'died=. if pd`i'`j'<0
+}
+	replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+	replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
+	replace nhats_death_day=28 if inlist(pd`i'm,2)
+	replace dd=mdy(pd`i'mthdied,nhats_death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
+}
+
+by spid, sort: egen nhats_death_date=max(dd)
+label var nhats_death_date "SP death date, from tracker (day imputed)"
+format nhats_death_date %td
+gen nhats_death_month=month(nhats_death_date)
+gen nhats_death_year=year(nhats_death_date)
+foreach x in month year {
+label var nhats_death_date "SP death `x', from tracker"
+}
+
+drop dd
+
+gen eligible_nsoc=fl1dnsoc==1
+gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
+gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
+gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
+label var eligible  "Eligible for NSOC interview, wave 1 tracker"
+label var complete  "Completed Interview"
+label var total_caregiver_comp "Total Caregivers that Completed Interview"
+label var total_caregiver_elig "Total Caregivers Eligible for NSOC"
+rename r*status round*status
+
+//adverse consequences of unmet need
+
+gen adverse=0
+forvalues i=1/6 {
+	foreach x of varlist ha`i'*out sc`i'*out {
+		replace adverse=1 if `x'==1 & wave==`i'
+}
+}
+label var adverse "Any adverse consequence of unmet need (excluding mobility)"
+
+//limited favorite activity
+capture drop lim_fav
+gen lim_fav=.
+
+forvalues i=1/5 { 
+	replace lim_fav=pa`i'helmfvact==1 if pa`i'helmfvact>=0 & wave==`i'
+}
+label var lim_fav "Last month ever kept from favorite activity by health/function"
+
+
+capture drop lim_fav_yr
+////NEW limited favorite activity
+gen lim_fav_yr=.
+//forvalues i=6 {
+	replace lim_fav_yr=pa6fvactlimyr==1 if pa6fvactlimyr>=0 & wave==6
+//}
+label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
+
+
+//social cohesion
+gen cohesion_knowwell=.
+gen cohesion_willing=.
+gen cohesion_peop=.
+
+forvalues i=1/6 {
+	foreach x in know will peop {
+		replace cohesion_`x'=cm`i'`x' if !missing(cm`i'`x') & wave==`i'
+}
+}
+gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
+if missing(cohesion_k)|missing(cohesion_w) | missing(cohesion_p)
+
+label var cohesion_knowwell "People know each other well in the community"
+label var cohesion_w "People are willing to help each other in the commmunity"
+label var cohesion_p "People can be trusted in the community"
+label define cohesion_ 1 "Agree a lot" 2 "Agree a little" 3 "Do not agree"
+label values cohesion_* cohesion_
+label var cohesion "High community cohesion (Highest on all 3 statements)"
+
+gen home_disorder_insd=.
+gen home_disorder_outsd=.
+gen home_disorder_area=.
+gen home_disorder_clutter=.
+
+forvalues i=1/6 {
+	foreach x of varlist ir`i'condihom* ir`i'condhome* ir`i'areacond* ir`i'clutter* {
+		replace `x'=. if `x'==7
+		qui sum `x'
+		if r(max)==2 replace `x'=`x'==1 if !missing(`x')
+		if inlist(r(max),3,4) replace `x'=`x'>1 if !missing(`x')
+}
+
+	egen insd=rowtotal(ir`i'condihom*)
+	egen outsd=rowtotal(ir`i'condhome*)
+	egen area=rowtotal(ir`i'areacond*)
+	egen clutter=rowtotal(ir`i'clutter*)
+	foreach x in insd outsd area clutter {
+		replace home_disorder_`x'=`x'>=1 if wave==`i' & !missing(`x')
+		drop `x'
+}
+}
+
+label var home_disorder_insd "Disorder in home (peelng paint, pests, brkn furniture or floorbrds, trippng hazards)"
+label var home_disorder_outsd "Disorder outside (brkn windows, foundation, bricks/siding, roof, steps)"
+label var home_disorder_clutter "Disorder in home (clutter in interview or other rooms)"
+label var home_disorder_area "Disorder in immed area (litter/glass/graffiti/vacant houses/stores/foreclosures)"	
+
+//economic well-being
+foreach x of varlist ew* {
+	replace `x'=. if `x'<0
+}
+
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	gen `x'=.
+}
+
+forvalues i=1/6 {
+gen creditdebt`i'=inlist(ew`i'pycredbal,2,3) | !missing(ew`i'crecardeb) if ///
+ !missing(ew`i'pycredbal) | !missing(ew`i'crecardeb)
+gen medcreditdebt`i'=ew`i'credcdmed==1 if !missing(ew`i'credcdmed)
+gen medbillsovertime`i'=ew`i'medpaovtm==1 if !missing(ew`i'medpaovtm)
+gen medpaynotcash`i'=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | ///
+!missing(medcreditdebt)
+
+gen finhlpfam`i'=ew`i'finhlpfam==1 if !missing(ew`i'finhlpfam)
+gen fingftfam`i'= ew`i'fingftfam==1 if !missing(ew`i'finhlpfam)
+gen govtasst`i'=ew`i'progneed1==1 | ew`i'progneed2==1 | ew`i'progneed3==1 if !missing(ew`i'progneed1) ///
+| !missing(ew`i'progneed2) | !missing(ew`i'progneed3)
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	replace `x'=`x'`i' if wave==`i'
+	drop `x'`i'
+}
+}
+replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | !missing(medcreditdebt)
+
+label var creditdebt "Has credit card debt or does not pay off in full monthly"
+label var medpaynotcash "Has medical credit card debt or pays bills over time"
+label var govtasst "Receives foodstamps or other food or gas/energy assistance"
+
+//home ownership
+
+local homevars ownhome rent mortgagepaidoff paysmortgage mortpaymt ///
+timeinmort owedonmort homevalue rentpaid section8
+
+foreach x of local homevars {
+	gen `x'=.
+}
+
+label var ownhome "SP owns home"
+label var rent "SP rents"
+label var mortgagepaidoff "Mortgage is paid off"
+label var mortpaymt "Mortgage payment"
+label define mortpaymt 1 "<$250" 2 "$250-499" 3 "$500-999" 4 "$1000+"
+label values mortpaymt mortpaymt
+label var timeinmort "Time left in mortgage"
+label define timeinmort 1 "5 years" 2 "10 years" 3 "Longer than 10 years"
+label values timeinmort timeinmort
+label var owedonmort "Amount left on mortgage"
+label define owedonmort 1 "<$50,000" 2 "$50,000-99,999.99" 3 "$100,000+"
+label values owedonmort owedonmort
+label var homevalue "Home value"
+label define homevalue 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K" ///
+6 "300-500K" 7 "500-750K" 8 "$750K+"
+label values homevalue homevalue
+
+forvalues i=1/6 {
+tab hp`i'ownrentot 
+replace ownhome=hp`i'ownrentot==1 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+replace rent=hp`i'ownrentot==2 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+tab hp`i'mrtpadoff 
+replace mortgagepaidoff=hp`i'mrtpadoff==1 if !missing(hp`i'mrtpadoff)
+replace paysmortgage=hp`i'mrtpadoff==2 if !missing(hp`i'mrtpadoff)
+tab hp`i'mortpaymt 
+replace mortpaymt= hp`i'mortpaymt if wave==`i'
+qui replace mortpaymt=1 if wave==`i' & hp`i'mthlymort<250
+qui replace mortpaymt=2 if wave==`i' & hp`i'mthlymort>=250 & hp`i'mthlymort<=499
+qui replace mortpaymt=3 if wave==`i' & hp`i'mthlymort>=500 & hp`i'mthlymort<1000
+qui replace mortpaymt=4 if wave==`i' & hp`i'mthlymort>=1000 & !missing(hp`i'mthlymort)
+tab hp`i'whnpayoff 
+replace timeinmort=hp`i'whnpayoff if wave==`i'
+tab hp`i'amoutowed 
+replace owedonmort=hp`i'amoutowed if wave==`i'
+qui replace owedonmort=1 if wave==`i' & hp`i'amtstlowe<50000 
+qui replace owedonmort=2 if wave==`i' & hp`i'amtstlowe>=50000 & hp`i'amtstlowe<=100000
+qui replace owedonmort=3 if wave==`i' & hp`i'amtstlowe>=100000 & !missing(hp`i'amtstlowe)
+tab hp`i'homvalamt 
+replace homevalue= hp`i'homvalamt if wave==`i'
+qui replace homevalue=1 if wave==`i' & hp`i'homevalue<50000 & hp`i'homevalue>=0
+qui replace homevalue=2 if wave==`i' & hp`i'homevalue>=50000 & hp`i'homevalue<75000
+qui replace homevalue=3 if wave==`i' & hp`i'homevalue>=75000 & hp`i'homevalue<100000
+qui replace homevalue=4 if wave==`i' & hp`i'homevalue>=100000 & hp`i'homevalue<200000
+qui replace homevalue=5 if wave==`i' & hp`i'homevalue>=200000 & hp`i'homevalue<300000
+qui replace homevalue=6 if wave==`i' & hp`i'homevalue>=300000 & hp`i'homevalue<500000
+qui replace homevalue=7 if wave==`i' & hp`i'homevalue>=500000 & hp`i'homevalue<750000
+qui replace homevalue=8 if wave==`i' & hp`i'homevalue>=750000 & !missing(hp`i'homevalue)
+
+tab hp`i'rentamou 
+replace rentpaid =hp`i'rentamou if wave==`i'
+qui replace rentpaid=1 if wave==`i' & hp`i'rentamt<250 & hp`i'rentamt>=0
+qui replace rentpaid=2 if wave==`i' & hp`i'rentamt>=250 & hp`i'rentamt<=499
+qui replace rentpaid=3 if wave==`i' & hp`i'rentamt>=500 & hp`i'rentamt<1000
+qui replace rentpaid=4 if wave==`i' & hp`i'rentamt>=1000 & !missing(hp`i'rentamt)
+qui replace rentpaid=4 if inlist(rentpaid,5,6)
+replace mortpaymt=4 if inlist(mortpaymt,5,6)
+tab hp1sec8pubsn
+replace section8=hp`i'sec8pubsn==1 if wave==`i' & (!missing(hp`i'sec8pubsn) |ownhome==1 | rent==1)
+}
+
+label var rentpaid "Amount rent paid"
+label define rentpaid 1 "<$250" 2 "250-499" 3 "500-999" 4 "$1000+"
+label values rentpaid rentpaid
+label var section8 "Indicator lives in Section 8 housing"
+label var medcreditdebt "Has Medical credit card debt"
+label var medbillsovertime "Pays Medical bills over time"
+label var finhlpfam "Received financial help/gifts from family"
+label var fingftfam "Provided financial help/gifts to family"
+label var paysmortgage "Pays a mortgage"
+gen n_social_network=.
+forvalues i=1/6 {
+	replace n_social_network=sn`i'dnumsn if sn`i'dnumsn>=0 & wave==`i'
+}
+label var n_social_network "Number in social network"
+
+gen division=.
+forvalues w=1/6 {
+	replace division=re`w'dcensdiv if re`w'dcensdiv>0 & wave==`w'
+}
+gen region=division 
+recode region (1 2=1) (3 4=2) (5/7=3) (8 9=4)
+
+la define region 1 "Northeast" 2 "Midwest" 3 "South" 4 "West"
+label values region region
+
+gen adlclaire=0
+forvalues w=1/6 {
+	foreach x in mo`w'outhlp mo`w'insdhlp mo`w'bedhlp sc`w'eathlp sc`w'bathhlp ///
+	sc`w'toilhlp sc`w'dreshlp {
+		replace adlclaire=1 if `x'==1
+}
+	foreach x in mo`w'outdif mo`w'insddif mo`w'beddif sc`w'eatdif sc`w'bathdif ///
+	sc`w'toildif sc`w'dresdif {
+		replace adlclaire=1 if inlist(`x',2,3,4)
+}
+}
+
+//and now drop all raw variables
+forvalues i=1/6 {
+	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
+	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'*
+}
+
+drop el1* rl1* ia1* pd2* pd3* pd4* ia3* ia5*
+
+rename round*status r*status
+
+svyset varunit [pw=anfinwgt], strat(varstrat)
+
+sort spid wave
+by spid: carryforward educ*, replace
+label var educ_hs_ind "Education: HS+"
+/*
+*saveold "E:\nhats\data\NHATS cleaned\sp_round_1_6", replace
+
+drop death_* died_12 died_24
+
+gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
+
+foreach x in 12 24 {
+	gen nhats_died_`x'=time2d<=`x' if !lml
+}
+
+drop time2d 
+
+*save "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta", replace
+*/
+
+merge 1:m spid wave using "E:\nhats\data\projects\serious_ill\final_data\serious_ill_nhats_sample.dta"
+preserve
+
+
+sort spid wave
+by spid: egen fadl=min(cond(adlclaire==1,wave,.))
+gen inci=wave==fadl & inrange(wave,2,4)
+cap by spid: gen recovered=adlclaire[_n+1]==0
+label var recovered "No ADL impairment next wave (Claire's definition)"
+by spid: gen rec2=adl_impair[_n+1]==0
+label var rec2 "No ADL dependence (help) next wave"
+keep if ffs_12==1
+label var adl_impair "Dependence in 1+ ADL"
+label var adlclaire "Impairment in 1+ ADL"
+
+local vars n died_12 adlclaire adl_impair rec2 recovered female age1 age2 age4 age6 white black hisp other_race ///
+educ_hs_ind nhres type1 type2 type3 marriedpartnered livealone smi_cancer_ind smi_esrd_ind smi_copd_ind ///
+smi_chf_ind smi_dem_ind smi_diab_compl_ind smi_liver_ind el_ge3_comorb_1yr ///
+ sr_phq2_depressed sr_gad2_anxiety
+recode agecat (3=2) (5=4)
+label define agecat 1 "<70" 2 "70-79" 4 "80-89" 6 "90+", modify
+foreach i in 1 2 4 6 {
+cap gen age`i'=agecat==`i'
+local lab : label agecat `i'
+label var age`i' "`lab'"
+}
+
+gen va_private=medigap==1 | tricare==1
+gen type=3 if va_private==1
+replace type=1 if medicaid==1
+replace type=2 if missing(type)
+label define type 1 "Medicaid" 2 "Medicare only" 3 "Other"
+label values type type
+foreach i in 1 2 3 {
+gen type`i'=type==`i'
+local lab : label type `i'
+label var type`i' "`lab'"
+}
+gen n=1
+*gen ffs_12m=cont_ffs_n_mos>=6 if !missing(cont_ffs_n_mos)
+*keep if ffs_12m==1
+drop if wave==5
+local rn : word count `vars'
+
+mat tab=J(`rn',4,.)
+local r=1
+local c=1
+
+foreach x of local vars {
+foreach y in 1 "0,1" { 
+	qui sum `x' if inlist(inci,`y')
+	mat tab[`r',`c']=r(mean)*r(N)
+	qui sum `x' if inlist(inci,`y') [aw=anfinw]
+	mat tab[`r',`c'+1]=r(mean)*100
+	local c=`c'+2
+}
+	local c=1 
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "E:\nhats\data\projects\serious_ill\logs\incident_adl_for_claire.rtf", ///
+replace  statmat(tab) title(Observations of incident ADL disability) ///
+ctitles("" "Incident ADL"""  "All 12m FFS" \"""n" "Weighted %" "n" "Weighted %") sdec(0,2,0,2) varlabels ///
+note("Restricted to those with 12m FFS prior to interview (waves 1-4)")
+
+tab wave
