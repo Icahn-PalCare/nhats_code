@@ -1,8 +1,34 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
+H="NHATS Serious Illness"
+/*HRS variables are processed in file HRS_Processing.txt
+1998-2012 Core interviews
+2002-2012 Exit interviews
+Restricted data received in March 2015
+
+Note elixhauser comorbidities diagnosis lists are modified for the 
+purposes of this project, do not copy and paste this Elixhauser code 
+for use in other projects!!
+
+******************************************************************
+
+/*nhats cleaned path*/
+libname nhats 'E:\nhats\data\NHATS cleaned';
+
+/*medicare xwalk and claims path*/
+libname medi 'E:\nhats\data\cms_DUA_28016\merged';
+
+/*project data paths*/
+libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
+libname proj_fin 'E:\nhats\data\projects\serious_ill\final_data';
+libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
+
+
+
+
 H="get index date"
 /*Import NHATS Cleaned Dataset for Rounds 1-5*/
-proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_5.dta" out=proj_int.nhats replace; run;
+proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" out=proj_int.nhats replace; run;
 
 
 data index1;
@@ -37,32 +63,6 @@ quit;
 proc sort data=index out=proj_int.index nodupkey;
 by spid bene_id index_year;
 run;
-
-H="NHATS Serious Illness"
-/*HRS variables are processed in file HRS_Processing.txt
-1998-2012 Core interviews
-2002-2012 Exit interviews
-Restricted data received in March 2015
-
-Note elixhauser comorbidities diagnosis lists are modified for the 
-purposes of this project, do not copy and paste this Elixhauser code 
-for use in other projects!!
-
-******************************************************************
-
-/*nhats cleaned path*/
-libname nhats 'E:\nhats\data\NHATS cleaned';
-
-/*medicare xwalk and claims path*/
-libname medi 'E:\nhats\data\cms_DUA_28016\merged';
-
-/*project data paths*/
-libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
-libname proj_fin 'E:\nhats\data\projects\serious_ill\final_data';
-libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
-
-
-
 
 H="get continuous ffs after index date"
 /*determine Spouse ffs medicare before R's death using the 
@@ -989,12 +989,11 @@ run;
 
 %mend;
 
-%dartmouth(range1=0, range2=6m);
+*%dartmouth(range1=0, range2=6m);
 %dartmouth(range1=0, range2=1yr);
 
 
 
-proc freq; run;
 
 H="Elixhauser comorbidities"
 /*Note elixhauser comorbidities diagnosis lists are modified for the 
@@ -2437,6 +2436,9 @@ sum(icu_days) as icu_days_&suffix. label="total icu days &suffix. pre ivw ivw",
 count(*) as n_ip_admit_&suffix. label="total n of hospital admit &suffix. pre ivw ivw",
 /*total Hospital LOS*/
 sum(adj_los) as n_hospd_&suffix. label="total hospital days &suffix. pre ivw ivw",
+/*ICU stays*/
+count(case when icu_days>0 then 1 else . end) as n_icu_stays_&suffix. 
+	label="ICU stays &suffix pre ivw",
 /*count urgent or emergency admissions*/
 count(case when em_urgent_admit=1 then em_urgent_admit else . end) as n_em_urgent_admit_&suffix. 
 	label="total n of urgent/emergent hospital admit &suffix. pre ivw ivw",
@@ -2479,7 +2481,7 @@ run;
 
 
 proc sql;
-create table ip_6m as select a.*,b.icu_days_6m,
+create table ip_6m as select a.*,b.icu_days_6m,b.n_icu_stays_6m,
 b.n_ip_admit_6m,b.n_hospd_6m,b.n_em_urgent_admit_6m,b.n_em_admit_6m,
 b.n_urgent_admit_6m,b.n_elect_admit_6m,b.n_ED_ip_6m
 from proj_int.index a
@@ -2493,7 +2495,7 @@ by bene_id index_year;
 run;
 
 proc sql;
-create table ip1 as select a.*,b.icu_days_12m,
+create table ip1 as select a.*,b.icu_days_12m,b.n_icu_stays_12m,
 b.n_ip_admit_12m,b.n_hospd_12m,b.n_em_urgent_admit_12m,b.n_em_admit_12m,
 b.n_urgent_admit_12m,b.n_elect_admit_12m,b.n_ED_ip_12m
 from ip_6m a
@@ -2787,6 +2789,7 @@ data oxygen1(keep=bene_id index_year oxygen);
 set proj_int.dm_meet_365;
 oxygen=0;
 if h_o2>0 then oxygen=1;
+if oxygen=1;
 run;
 
 proc sort data=oxygen1 out=oxygen nodupkey;
@@ -2810,9 +2813,7 @@ count(case when ed_op=1 then ed_op else . end)
 	from ed_op_1 group by bene_id,index_year;
 quit;
 
-proc freq;
-table n_ed_op_visits_12m;
-run;
+
 
 
 proc sort data=ed_op_2 nodupkey;
@@ -2822,16 +2823,12 @@ run;
 
 data ed ;
 set ed_op_2;
-if n_ed_op_visits_12m=. and comorb_1_0_1yr~=. then n_ed_op_visits_12m=0;
+if n_ed_op_visits_12m=. then n_ed_op_visits_12m=0;
 label n_ed_op_visits_12m="Count ED OP visits, 1yr pre ivw";
 
 if n_ed_op_visits_12m=0 then ind_ed_op_12m=0;
 if n_ed_op_visits_12m>0 & n_ed_op_visits_12m~=. then ind_ed_op_12m=1;
 label ind_ed_op_12m="Indicator any ED OP visits, 1 yr pre ivw";
-run;
-
-proc freq;
-table n_ed_op_visits_12m*ind_ed_op_12m;
 run;
 
 data hh(keep=bene_id index_year ind_hh_12m);
@@ -3694,12 +3691,16 @@ sum(icu_days) as icu_days_&suffix. label="total icu days &suffix. post ivw",
 count(*) as n_ip_admit_&suffix. label="total n of hospital admit &suffix. post ivw",
 /*total Hospital LOS*/
 sum(adj_los) as n_hospd_&suffix. label="total hospital days &suffix. post ivw",
+
 /*count urgent or emergency admissions*/
 count(case when em_urgent_admit=1 then em_urgent_admit else . end) as n_em_urgent_admit_&suffix. 
 	label="total n of urgent/emergent hospital admit &suffix. post ivw",
 /*count of emergency admissions, from admission type code*/
 count(case when em_admit=1 then em_admit else . end) as n_em_admit_&suffix. 
 	label="total n of emergent hospital admit &suffix. post ivw",
+/*ICU stays*/
+count(case when icu_days>0 then 1 else . end) as n_icu_stays_&suffix. 
+	label="ICU stays &suffix post ivw",
 /*count of urgent admissions, from admission type code*/
 count(case when urgent_admit=1 then urgent_admit else . end) as n_urgent_admit_&suffix. 
 	label="total n of urgent hospital admit &suffix. post ivw",
@@ -3736,7 +3737,7 @@ run;
 
 
 proc sql;
-create table ip_p6m as select a.*,b.icu_days_p6m,
+create table ip_p6m as select a.*,b.icu_days_p6m,b.n_icu_stays_p6m,
 b.n_ip_admit_p6m,b.n_hospd_p6m,b.n_em_urgent_admit_p6m,b.n_em_admit_p6m,
 b.n_urgent_admit_p6m,b.n_elect_admit_p6m,b.n_ED_ip_p6m
 from proj_int.index a
@@ -3750,7 +3751,7 @@ by bene_id index_year;
 run;
 
 proc sql;
-create table ip1 as select a.*,b.icu_days_p12m,
+create table ip1 as select a.*,b.icu_days_p12m,b.n_icu_stays_p12m,
 b.n_ip_admit_p12m,b.n_hospd_p12m,b.n_em_urgent_admit_p12m,b.n_em_admit_p12m,
 b.n_urgent_admit_p12m,b.n_elect_admit_p12m,b.n_ED_ip_p12m
 from ip_p6m a
@@ -3763,7 +3764,7 @@ quit;
 So if missing, set var to 0*/
  data ip ;
  set ip1 ;
- array list icu_days_p6m n_ip_admit_p6m n_hospd_p6m n_em_urgent_admit_p6m 
+ array list icu_days_p6m n_icu_stays_p6m n_icu_stays_p12m n_ip_admit_p6m n_hospd_p6m n_em_urgent_admit_p6m 
 	n_em_admit_p6m n_urgent_admit_p6m n_elect_admit_p6m n_ED_ip_p6m
 	icu_days_p12m n_ip_admit_p12m n_hospd_p12m n_em_urgent_admit_p12m
 	n_em_admit_p12m n_urgent_admit_p12m n_elect_admit_p12m n_ED_ip_p12m;
@@ -3835,17 +3836,7 @@ So if missing, set var to 0*/
 
 run;
 
- proc freq;
- table icu_days_p6m n_ip_admit_p6m n_hospd_p6m ind_hosp_adm_p6m n_em_urgent_admit_p6m ind_em_ur_adm_p6m 
-	ind_em_adm_p6m ind_ur_adm_p6m ind_nonelect_adm_p6m n_nonelect_adm_p6m n_ED_ip_p6m ind_ED_adm_p6m 
-	ind_em_adm_p6m*ind_ED_adm_p6m /missprint;
- run;
 
-proc freq;
-table icu_days_p12m n_ip_admit_p12m n_hospd_p12m ind_hosp_adm_p12m n_em_urgent_admit_p12m ind_em_ur_adm_p12m
-	ind_em_adm_p12m ind_ur_adm_p12m ind_nonelect_adm_p12m n_nonelect_adm_p12m n_ED_ip_p12m ind_ED_adm_p12m 
-	ind_em_adm_p12m*ind_ED_adm_p12m /missprint;
-run;
 
 /****************************************************************************/
 /****************************************************************************/
@@ -4261,6 +4252,65 @@ proc freq;
 tables hc;
 run;
 
+H="get hospice details"
+/*need to get--
+	hospice los
+	first hospice date
+	died on hospice
+	live discharges*/
+
+data index;
+set proj_int.index;
+run;
+
+
+data hs1 (keep=bene_id live_disch died_on_hs los admit_date);
+set medi.hs_09_14;
+live_disch=PTNT_DSCHRG_STUS_CD='01';
+died_on_hs=PTNT_DSCHRG_STUS_CD='40' or PTNT_DSCHRG_STUS_CD='41';
+los=disch_date-admit_date;
+run;
+
+proc sql;
+create table hs2 as select unique bene_id,
+sum(live_disch) as n_live_disch,
+sum(died_on_hs) as n_died_on_hs,
+sum(los) as hs_los
+from hs1 group by bene_id;
+quit;
+
+proc sort data=hs1 out=hs3 nodupkey;
+by bene_id admit_date;
+run;
+proc sort data=hs3 out=hs4 nodupkey;
+by bene_id;
+run;
+
+data hs5(keep=bene_id first_hs);
+set hs4;
+first_hs=admit_date;
+run;
+
+proc sql;
+create table hs6 as select * from
+index a 
+left join
+hs2 b
+on a.bene_id=b.bene_id
+left join
+hs5 c
+on a.bene_id=c.bene_id;
+quit;
+
+data proj_int.hs;
+set hs6;
+hs_los=hs_los+1;
+ind_live_disch=n_live_disch>=1;
+ind_died_hs=n_died_on_hs>=1;
+format hs_los date9.;
+run;
+
+
 H="combine with interviews into one dataset"
 data proj_int.index;
 set proj_int.index;
@@ -4308,7 +4358,10 @@ proj_int.fri k
 on a.bene_id=k.bene_id and a.index_year=k.index_year
 left join 
 proj_int.dmouth_0_1yr l
-on a.bene_id=l.bene_id and a.index_year=l.index_year;
+on a.bene_id=l.bene_id and a.index_year=l.index_year
+left join
+proj_int.hs m
+on a.bene_id=m.bene_id and a.index_year=m.index_year;
 quit;
 
 proc sql;
@@ -6877,7 +6930,7 @@ from op group by bene_id;
 quit;
 
 data alla;
-set ip snf pb op;
+set ip snf pb /*op*/;
 where date~=.;
 format date date9.;
 run;
@@ -6900,10 +6953,10 @@ allc b
 on a.bene_id=b.bene_id
 left join ip_cd c
 on a.bene_id=c.bene_id
-left join op_adm d
+/*left join op_adm d
 on a.bene_id=d.bene_id
 left join op_cd e
-on a.bene_id=e.bene_id
+on a.bene_id=e.bene_id*/
 left join pb_adm f
 on a.bene_id=f.bene_id
 left join pb_cd g
@@ -6914,13 +6967,13 @@ run;
 
 data all;
 set alld;
-array list ip_contact_days snf_contact_days op_adm_days op_contact_days pb_adm_days pb_contact_days contact_days;
+array list ip_contact_days snf_contact_days /*op_adm_days op_contact_days*/ pb_adm_days pb_contact_days contact_days;
 do over list;
 if list=. then list=0;
 end;
 run;
 
-proc export data=all outfile="E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_op_pb.dta" replace; run;
+proc export data=all outfile="E:\data\\Dartmouth_misc\contact days working data\nhats_ip_snf_and_pb.dta" replace; run;
 
 
 H="stata compare to hrs"
@@ -7428,7 +7481,7 @@ run;
 
 proc sort data = npi_count nodup; by bene_id; run; /* cleaned data claims data, ready to be matched with NHATS to filter out wave2 */
 
-
+**save "E:\nhats\data\Projects\serious_ill\int_data\npi_countv2.dta", replace
 
 
 H="# Unique Providers (wave 2)"
@@ -7466,6 +7519,8 @@ egen npi_count = count(npi), by(bene_id)
 merge m:1 spid using "E:\nhats\data\projects\serious_ill\int_data\treatment_burden.dta"
 
 duplicates drop spid ,force
+
+**save "E:\nhats\data\projects\serious_ill\int_data\treatment_burdennpi.dta", replace
 
 H="npi count (evan)"
 use spid bene_id ivw_date wave sp_ivw lml using "E:\nhats\data\Projects\serious_ill\int_data\serious_ill_int_dataset1.dta" if wave==2 & sp_ivw==1 & lml==0, clear
@@ -8531,13 +8586,23 @@ drop time2d
 
 merge 1:m spid wave using "E:\nhats\data\projects\serious_ill\final_data\serious_ill_nhats_sample.dta"
 preserve
+
+
 sort spid wave
-cap by spid: gen recovered=adl_impair[_n+1]==0
-keep if inci==1
-local vars n died_12 recovered female age1 age2 age4 age6 white black hisp other_race ///
+by spid: egen fadl=min(cond(adlclaire==1,wave,.))
+gen inci=wave==fadl & inrange(wave,2,4)
+cap by spid: gen recovered=adlclaire[_n+1]==0
+label var recovered "No ADL impairment next wave (Claire's definition)"
+by spid: gen rec2=adl_impair[_n+1]==0
+label var rec2 "No ADL dependence (help) next wave"
+keep if ffs_12==1
+label var adl_impair "Dependence in 1+ ADL"
+label var adlclaire "Impairment in 1+ ADL"
+
+local vars n died_12 adlclaire adl_impair rec2 recovered female age1 age2 age4 age6 white black hisp other_race ///
 educ_hs_ind nhres type1 type2 type3 marriedpartnered livealone smi_cancer_ind smi_esrd_ind smi_copd_ind ///
 smi_chf_ind smi_dem_ind smi_diab_compl_ind smi_liver_ind el_ge3_comorb_1yr ///
-sr_phq2_depressed sr_gad2_anxiety
+ sr_phq2_depressed sr_gad2_anxiety
 recode agecat (3=2) (5=4)
 label define agecat 1 "<70" 2 "70-79" 4 "80-89" 6 "90+", modify
 foreach i in 1 2 4 6 {
@@ -8568,10 +8633,10 @@ local r=1
 local c=1
 
 foreach x of local vars {
-foreach y in 0 1 { 
-	qui sum `x' if ffs_12==`y'
+foreach y in 1 "0,1" { 
+	qui sum `x' if inlist(inci,`y')
 	mat tab[`r',`c']=r(mean)*r(N)
-	qui sum `x' if ffs_12==`y' [aw=anfinw]
+	qui sum `x' if inlist(inci,`y') [aw=anfinw]
 	mat tab[`r',`c'+1]=r(mean)*100
 	local c=`c'+2
 }
@@ -8581,8 +8646,9 @@ foreach y in 0 1 {
 
 mat rownames tab=`vars'
 
-frmttable, statmat(tab) title(Observations of incident ADL disability) ///
-ctitles("" "n" "Weighted %") sdec(0,2,0,2) varlabels ///
+frmttable using "E:\nhats\data\projects\serious_ill\logs\incident_adl_for_claire.rtf", ///
+replace  statmat(tab) title(Observations of incident ADL disability) ///
+ctitles("" "Incident ADL"""  "All 12m FFS" \"""n" "Weighted %" "n" "Weighted %") sdec(0,2,0,2) varlabels ///
 note("Restricted to those with 12m FFS prior to interview (waves 1-4)")
 
 tab wave

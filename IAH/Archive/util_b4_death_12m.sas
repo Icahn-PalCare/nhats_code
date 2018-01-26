@@ -581,4 +581,4 @@ quit;
 proc contents data=proj_int.utilization_pre; 
 run;
 
-proc export data=proj_int.utilization_pre outfile="E:\nhats\data\Projects\IAH\int_data\utilization_1yrb4_death.dta" replace; run;
+proc export data=proj_int.utilization_pre outfile="E:\nhats\data\Projects\IAH\int_data\utilization_1yrb4_deathv2.dta" replace; run;

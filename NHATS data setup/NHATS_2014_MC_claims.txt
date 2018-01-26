@@ -196,11 +196,11 @@ run;
 
 /*ip*/
 data ip;
-set cumu.inpatient_base_claims_j_09_14;
+set cumu.inpatient_base_claims_j_06_14;
 run;
 
 data ip_rc;
-set cumu.inpatient_revenue_center_j_09_14(keep=bene_id clm_id hcpcs_cd clm_line_num);
+set cumu.inpatient_revenue_center_j_06_14(keep=bene_id clm_id hcpcs_cd clm_line_num);
 run;
 
 proc sort data=ip_rc;
@@ -232,7 +232,7 @@ set cumu.outpatient_base_claims_j_09_14;
 run;
 
 data op_rev;
-set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt);
+set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
 if rev_cntr='0762' then obs_stay1=1;
 if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
 run;
@@ -253,13 +253,20 @@ sum(poss_obs_stay1) as poss_obs_stay
 from op_rev group by bene_id, clm_id;
 quit;
 
+proc transpose data=op_rev out=op_rev_wide3 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
 proc sql;
 create table op_09_142 as select *
 from op_09_14 a 
 left join op_rev_wide1 b
 on a.bene_id=b.bene_id and a.clm_id=b.clm_id
 left join op_rev_wide2 c
-on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join op_rev_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
 quit;
 
 data merged.op_09_14;

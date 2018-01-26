@@ -9988,7 +9988,7 @@ tempfile dme
 save `dme'
 
 
-use "`datapath'\serious_ill_nhats_sample.dta"
+use "`datapath'\serious_ill_nhats_sample.dta" 
 merge 1:1 spid index_date using `dme', gen(dmem) keep(match master)
 merge 1:1 bene_id using "E:\nhats\data\Projects\pal_perf_scale\int_data\personout", ///
 keep(match master)
@@ -10014,7 +10014,7 @@ gen dem_probable=dem_3_cat==1
  -same 1yr outcomes
 */
 
-sum tot_paid_by_mc_12m,d
+sum tot_paid_by_mc_12m [aw=anfinw],d
 gen ind_top10=tot_paid_by_mc_12m>=r(p90) if !missing(tot_paid_by_mc_12m)
 label var ind_top10 "Top 10% of MC costs"
 
@@ -10091,7 +10091,7 @@ gen group5=smi_count>=1 & adl_impair==1 if !missing(smi_count)
 gen group6=group5==1 & group3==1
 egen screener_2=rowtotal(`nextlev')
 replace screener_2=screener_2>2 & !missing(screener_2)
-local out ind_top10 ind_hosp_adm_p12m died_12 screener_2
+local out ind_top10 died_12 ind_hosp_adm_p12m screener_2
 
 /*
 local rn : word count `coutcomes' `ioutcomes'
@@ -10128,12 +10128,16 @@ sdec(`sdec') title("Outcomes") ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME"
 rtitles("Mean Spending"\"	SD"\"Top 10% Spending"\"	%" ///
 "Died within 1 year"\"	 %"\"Hospitalization within 1 year"\"	%")
 */
-sum score_com,d
+sum score_com [aw=anfinw],d
 gen hcc_top10=score_com>=r(p90) if !missing(score_com)
 local xvars ind_top10 hcc_top10 died_12 ind_hosp_adm_p12m screener_2 adl_impair
 local rn : word count `xvars' `coutcomes'
 
 gen group7=hcc_top10
+
+forvalues i=1/7 {
+	*replace group`i'=0 if !sp_ivw
+}
 
 mat tab=J(`rn'*3,7,.)
 local r=2
@@ -10177,7 +10181,7 @@ label var group5 "SMI & ADL"
 label var group6 "SMI, hosp, & ADL" 
 label var group7 "HCC Top 10%"
 local rn : word count `out'
-mat tab=J(`rn'*6+3,7,.)
+mat tab=J(`rn'*7+3,7,.)
 local r=2
 local c=1
 
@@ -10190,14 +10194,17 @@ foreach x in `out' {
 		mat tab[`r'+3,`c']=(cell[1,1]/(cell[1,1]+cell[1,2]))*100
 		roctab `x' group`i'
 		mat tab[`r'+4,`c']=r(area)
+		qui logit `x' group`i' c.age##c.age i.race female medicaid 
+		qui lroc
+		mat tab[`r'+5,`c']=r(area)
 		sum group`i' if group`i'==1 [aw=anfin]
-		mat tab[`r'+5,`c']=r(N)
-		mat tab[`r'+6,`c']=r(sum)	
+		mat tab[`r'+6,`c']=r(N)
+		mat tab[`r'+7,`c']=r(sum)	
 		sum group`i'   [aw=anfin]
-		mat tab[`r'+7,`c']=r(mean)*100
+		mat tab[`r'+8,`c']=r(mean)*100
 		local c=`c'+1
 }
-	local r=`r'+6
+	local r=`r'+7
 
 	local c=1
 }
@@ -10205,15 +10212,24 @@ foreach x in `out' {
 
 
 frmttable using condition_tables_sens_spec.rtf, statmat(tab) ///
-varlabels addtable sdec(2) title("Sensitivity and Specificity"\"     PPV"\"     NPV") ///
- rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
- "Death within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
- "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC"\ ///
- "2+ on screener"\"	Sensitivity"\"	Specificity"\"     PPV"\"     NPV"\"	ROC AUC" \ ///
+varlabels addtable sdec(2) title("Sensitivity and Specificity"\"	PPV"\"	NPV") ///
+ rtitles("Top 10% spending" \"	Sensitivity"\"	Specificity"\"	PPV"\"	NPV"\"	ROC AUC"\"	ROC AUC, adjusted"\ ///
+ "Death within 1 year" \"	Sensitivity"\"	Specificity"\"	PPV"\"	NPV"\"	ROC AUC"\"	ROC AUC, adjusted"\ ///
+ "Hospitalization within 1 year" \"	Sensitivity"\"	Specificity"\"	PPV"\"	NPV"\"	ROC AUC"\"	ROC AUC, adjusted"\ ///
+ "2+ on screener"\"	Sensitivity"\"	Specificity"\"	PPV"\"	NPV"\"	ROC AUC" \ "	ROC AUC, adjusted"\ ///
  "N" \"Nat'l Estimate"\"% of FFS Medicare") ///
 ctitles("" "Cond & hosp" "Cond, hosp, HH/SNF/DME" "SMI & hosp" "SMI, hosp, HH/SNF/DME" ///
-"SMI & ADL" "SMI, hosp, & ADL" "HCC Top 10%") landscape
-
-
-
+"SMI & ADL" "SMI, hosp, & ADL" "HCC Top 10%") landscape ////
+note("Adjusted Area Under the Curve covariates include age, race, sex, and Medicaid status")
+/*
+capture log close
+log using logits
+foreach y of local out {
+	outreg, clear
+	forvalues i=1/7 {
+		qui reg `y' i.agecat female medicaid group`i'
+		qui outreg, merge
+}
+	outreg, replay
+}
 

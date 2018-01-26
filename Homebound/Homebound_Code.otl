@@ -6952,7 +6952,7 @@ payment sources
 
 foreach wave in 1 5 {
 use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_SP_File.dta", clear
-keep spid cs`wave'dnumchild ho`wave'entrst hh`wave'dhshldnum
+keep spid cs`wave'dnumchild ho`wave'entrst hh`wave'dhshldnum mo* sc* ha* mc*
 rename cs`wave' n_children
 label var n_ch "Number of children"
 rename ho`wave' stairs_ind
@@ -6965,6 +6965,23 @@ replace `x'=. if `x'<0
 
 local kidvars n_children stairs_ind livesalone_ind
 gen ind_kids=n_children>=1 if !missing(n_children)
+rename (mo`wave'* sc`wave'* ha`wave'* mc`wave'*) (* * * *)
+rename (eatslfdif toiloft bathoft) (eatdif toilslf bathslf)
+
+foreach x in eat toil insd bed dres bath {
+	gen `x'=inlist(`x'slf,3,4) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen adlcount=rowtotal(eat toil insd bed dres bath)
+gen medswout=0
+foreach x in laun meds shop meal bank {
+	drop `x'
+	gen `x'=inlist(d`x'reas,1,3) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen iadlcount=rowtotal(laun meds shop meal bank)
+
+gen device_mobility=inlist(insdwalk,1,2) | inlist(outwalk,1,2) | inlist(insdwl,1,2) ///
+| inlist(outwl,1,2) | inlist(insdsct,1,2) | inlist(outsct,1,2) 
+
 tempfile kids
 save `kids'
 
@@ -7003,7 +7020,7 @@ keep spid opid paid* op_*
 tempfile paid
 save `paid'
 gen wave=`wave'
-merge 1:m spid opid wave using "E:\nhats\data\NHATS Cleaned\op_round_1_5", ///
+merge 1:m spid opid wave using "E:\nhats\data\NHATS Cleaned\op_round_1_6", ///
 keep(match master) gen(opmer)
 merge 1:1 spid opid using `paid', keep(match master) gen(paidm)
 foreach x of varlist paid_by* {
@@ -7063,7 +7080,7 @@ local logpath "E:\nhats\data\projects\Homebound\logs"
 
 cd "`datapath'"
 
-use op_round_1_5 if wave==`wave' & opishelp==1, clear
+use op_round_1_6 if wave==`wave' & opishelp==1, clear
 tokenize spouse daughter son otherfamily paid otherinformal
 drop spouse daughter son paid
 forvalues i=1/6 {
@@ -7086,9 +7103,8 @@ duplicates drop
 tempfile hours
 save `hours'
 
-use sp_round_1_5, clear
-merge 1:1 spid wave using sp_round_1_6, nogen keep(match master) keepusing(region)
-by spid, sort: carryforward metro, replace
+use sp_round_1_6, clear
+
 gen n=1
 gen cond_cat=1 if sr_numcond<=1
 replace cond_cat=2 if inrange(sr_numcon,2,4)
@@ -7169,21 +7185,22 @@ fall_last_month prob_dementia dem_2_cat adl_diff_ind adl_independent iadl_diff_i
 adl1 adl2 adl3 iadl1 iadl2 iadl3 adl_eat_help adl_bath_help adl_toil_help ///
 adl_dres_help adl_ins_help adl_bed_help iadl_laun_help ///
 iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
- reg_doc_seen sr_hosp_ind ind_paid_helper `paidvars'
+ reg_doc_seen sr_hosp_ind ind_paid_helper `paidvars' device_mobility
 
-gen adlcount=0
+/*note 1/12/18--changed adl/iadl definitions
+/*gen adlcount=0
 gen iadlcount=0
 foreach x in eat bath toil dres ins bed  {
 replace adlcount=adlcount+1 if adl_`x'_diff==1 | adl_`x'_no==1
 }
 foreach x in  laun shop meal bank meds {
 replace iadlcount=iadlcount+1 if iadl_`x'_diff==1 | iadl_`x'_no==1
-}
-replace adl3=adlcount>=3
+}*/
+*/replace adl3=adlcount>=3
 replace iadl3=iadlcount>=3
 
-label var adl3 "Difficulty/not done in 3+ ADLs"
-label var iadl3 "Difficulty/not done in 3+ IADLs"
+label var adl3 "3+ ADLs"
+label var iadl3 "3+ IADLs"
 gen missingany=0
 foreach i in 0 1 {
 di "SP ivw=`i'"
@@ -7463,45 +7480,61 @@ capture log close
 
 cd "E:\nhats\data\Projects\Homebound\logs"
 
-foreach wave in  5 1{
+foreach wave in  5 1 {
 
 log using propensity_score_matching_wave_`wave'.txt, text replace
-use "E:\nhats\data\Projects\Homebound\final_data\hb_nbs_sample_wave_`wave'.dta", clear
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_`wave'_fullish.dta" ///
+if homebound_cat<3, clear
 merge 1:1 spid wave using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", nogen ///
 keepusing(region) keep(match master)
 local vars i.agecat2 female black hisp married n_children i.income_cat medicaid educ_hs_ind ///
 srh_fp sr_numconditions1 ///
 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
-
-gen agec2_2=agecat2==2
-gen agec2_3=agecat2==3
+gen ind_4_help=n_helpers>=4
+gen hb=homebound_cat==1
+gen agec2_2=inlist(agecat,3,4)
+gen agec2_3=agecat>4
 label var agec2_2 "Age 75-84"
 label var agec2_3 "Age 85+"
-tab region, gen(region)
+cap tab region, gen(region)
 
 local demovars agec2_2 agec2_3 female black hisp married n_children inccat2 ///
 inccat3 inccat4 ///
 medicaid educ_hs_ind
 local clinivars  srh_fp sr_numconditions1 ///
-sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 region2 region3 region4
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility metro_ind region2 region3 region4
 
 
 tokenize hrswk_20 ind_paid_helper ind_4_help
 
-local vars /*age agec2_2*/ agec2_3 female black hisp married /*n_children*/ ///
+local vars age female black hisp married /*n_children*/ ///
 /*inccat2 inccat3*/ inccat4 ///
-medicaid educ_hs_ind srh_fp /*sr_numconditions1*/ cond3 ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1*/  cond2 cond3 ///
 sr_lung_dis_ever sr_phq2_depressed prob_dem ///
 ///adl_independent iadl_independent //
-adl3 iadl3 region2
+adl3 iadl3 region2 metro_ind // region3 region4 //metro_ind region2 //region3 region4
 
+if `wave'==5 local vars /*agec2_2 agec2_3*/ age female black hisp married /*n_children*/ ///
+/*inccat2 inccat3 inccat4*/ aveincome ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1 cond2*/ cond3 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem ///
+///adl_independent iadl_independent //
+adl3 iadl3 region2 region3 region4 //metro_ind //region2 region3 region4
+
+local vars agec2_2 agec2_3 female black hisp married inccat4 medicaid educ_hs_ind srh_fp ///
+cond2 cond3 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility ///
+region2 region3 region4 metro_ind
+
+sum `vars'
+
+foreach x of local vars {
+	replace `x'=0 if missing(`x')
+	}
 local i=1
 cap drop *score* *_weight*
 //implement radius matching
 foreach x in hrswk_20 ind_paid_helper ind_4_help {
-pscore ``i'' `vars', pscore(`x'_score) logit
-
-
+pscore ``i'' `vars' , pscore(`x'_score) logit
 *******************************************************************
 
 
@@ -7515,7 +7548,15 @@ local caliper cal_ps1
 //rule of thumb 0.2*sd, try 0.02* sd
 psmatch2  ``i'' ,outcome(homebound) pscore(`x'_score) radius caliper(`=`caliper'') logit
 di "``i''"
-pstest `vars',treated(``i'') both hist
+/*
+logit ``i'' `vars'
+predict p
+replace `x'_score=p
+drop p
+replace _we=(`x'/`x'_score)+((1-`x')/(1-`x'_score))
+*/
+
+pstest `vars',treated(``i'') both hist mw(_w)
 rename _we `x'_weight
 rename _sup `x'_sup
 psgraph, treated(``i'') pscore(`x'_score) support(`x'_sup)

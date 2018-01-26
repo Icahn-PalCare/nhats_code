@@ -113,20 +113,16 @@ run;
 %hh_drop(days_bef_index=183);
 %dm_drop(days_bef_index=183);
 %hs_drop(days_bef_index=183);
+
 %ip_drop(days_bef_index=365);
-%ip_drop(days_bef_index=730);
-%snf_drop(days_bef_index=365);
-%snf_drop(days_bef_index=730);
-%hh_drop(days_bef_index=365);
-%hh_drop(days_bef_index=730);
-%hs_drop(days_bef_index=365);
-%hs_drop(days_bef_index=730);
-%dm_drop(days_bef_index=365);
-%dm_drop(days_bef_index=730);
 %op_drop(days_bef_index=365);
-%op_drop(days_bef_index=730);
 %pb_drop(days_bef_index=365);
-%pb_drop(days_bef_index=730);
+%snf_drop(days_bef_index=365);
+%hh_drop(days_bef_index=365);
+%dm_drop(days_bef_index=365);
+%hs_drop(days_bef_index=365);
+
+
 
 
 
@@ -300,7 +296,7 @@ run;
 /*1 and 2 years pre-interview: proj_int.dx_0_1yr, proj_int.dx_0_2yr */
 %dx_time_range(range1=0, range2=6m, days_bef_core=183);
 %dx_time_range(range1=0, range2=1yr, days_bef_core=365);
-%dx_time_range(range1=0, range2=2yr, days_bef_core=730);
+*%dx_time_range(range1=0, range2=2yr, days_bef_core=730);
 
 
 

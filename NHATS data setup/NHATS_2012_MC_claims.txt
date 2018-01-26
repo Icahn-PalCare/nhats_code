@@ -226,7 +226,7 @@ set cumu.outpatient_base_claims_j_09_14;
 run;
 
 data op_rev;
-set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt);
+set cumu.outpatient_rev_center_j_09_14(keep=bene_id clm_id rev_cntr_dt hcpcs_cd);
 run;
 
 proc sort data=op_rev;
@@ -238,11 +238,17 @@ by bene_id clm_id;
 var rev_cntr_dt;
 run;
 
+proc transpose data=op_rev out=op_rev_wide2 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
 proc sql;
 create table merged.op_09_14 as select *
 from op_09_14 a 
 left join op_rev_wide1 b
-on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join op_rev_wide2 c
+on a.bene_id=b.bene_id and a.clm_id=c.clm_id;
 quit;
 
 /*pb*/
