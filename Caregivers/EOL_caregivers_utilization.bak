@@ -1,4 +1,4 @@
-= V4 Outline MultiLine NoSorting TabWidth=30
+= V4 Outline MultiLine Nosorting Tabwidth=30
 
 H="Original code"
 clear all 
@@ -216,75 +216,3 @@ sdec(2) varlabels
 	
 
 log close
-
-
-H="newer"
-clear all
-set more off
-capture log close
-
-
-local datapath "E:\nhats\data\projects\serious_ill\final_data"
-local logpath "E:\nhats\data\projects\serious_ill\logs"
-cd `logpath'
-
-
-use "E:\nhats\data\nhats cleaned\op_round_1_6.dta" if wave<=3, clear
-replace prim_helper_cat=op_relations if primary_cg==1
-label values prim_helper_cat op_relationship_cat
-keep if primary_cg==1
-by spid wave, sort: egen hasspouse=max(spouse)
-drop if hasspouse & !spouse
-gen kid=inrange(prim_,2,3)
-by spid wave, sort: egen haskid=max(kid)
-drop if haskid & !kid
-gen othfm=prim_==4
-by spid wave, sort: egen hasoth=max(othfm)
-drop if hasoth & !othfm
-gen friend=prim_h==6
-by spid wave, sort: egen hasfriend=max(friend)
-drop if hasfr & !friend
-duplicates drop spid wave prim_helper, force
-keep spid prim_helper_cat wave
-by spid wave, sort: replace prim_=7 if _N>1
-by spid wave: keep if _n==1
-label define op_relationship_cat 7 "Son and daughter tied", modify
-tempfile op
-save `op'
-
-use `datapath'\serious_ill_nhats_sample.dta if wave<=3 & sp_ivw & !lml, clear
-duplicates drop spid wave hs_los, force
-drop prim*
-merge 1:1 spid wave using `op'
-/*identify the group we want to use subpop command
- -die w/in 12m (for the 14 who have 2 ivws in the year prior to death, take the earlier one)
- -no use of hs pre ivw
- -ffs not important because all HS claims are visible
- */
- 
-gen hs_prior=first_hs<ivw_date
-gen pop=died_12 & !hs_prior 
-sort spid pop ivw_date
-by spid pop: replace pop=0 if _n>1 & pop==1
-duplicates report spid if pop
-//reweight so later waves aren't overweighted
-gen orig_weight=anfinw
-sum anfinw if wave==1
-local w=r(mean)
-forvalues i=1/3 {
-sum anfinw if wave==`i'
-replace anfinw=anfinw*`w'/r(mean) if wave==`i'
-}
-svyset varunit [pw=anfinw],strat(varstrat)
-
-gen ind_hs=!missing(first_hs)
-sum hs_los if pop,d
-replace hs_los=0 if !ind_hs
-tab hs_prior if pop
-tab ind_hs if pop
-*hist hs_los if pop
-gen ind_help=n_helpers>0
-tab ind_help if pop
-
-//table 1
-

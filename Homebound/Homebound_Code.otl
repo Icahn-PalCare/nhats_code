@@ -6932,6 +6932,15 @@ log close
 
 
 
+H="****************************************"
+
+
+H="The tabs below are for Jenny's paper"
+
+
+H="****************************************"
+
+
 H="create wave 1 and 5 datasets and run tables 1"
 /*
 7/11/17 update
@@ -7361,13 +7370,16 @@ foreach l of local levels {
 		foreach x of local cvars`round' {
 		di "`x'"
 			sum `x' if homebound_cat==`l' [aw=anfinw]
+			local `x'`l'=r(mean)
+			local sd`x'`l'=r(sd)
 			mat tab1[`r',`c']=r(mean)
 			mat tab1[`r',`c'+1]=r(sd)
 			if `l'>1 {
-			svy: reg `x' homebound_cat if inlist(homebound_cat,1,`l')
+			mat tab1[`r',`c'+2]=(``x'`l''-``x'1')/sqrt((`sd`x'`l''+`sd`x'1')/2)
+			/*svy: reg `x' homebound_cat if inlist(homebound_cat,1,`l')
 			test 
 			mat tab1[`r',`c'+2]=r(p)
-			mat stars[`r',`c'+2]=(r(p)<.0`wave')+(r(p)<.01)
+			mat stars[`r',`c'+2]=(r(p)<.0`wave')+(r(p)<.01)*/
 }
 		local r=`r'+1
 		di "`r'"
@@ -7375,11 +7387,13 @@ foreach l of local levels {
 		foreach x of local ivars`round' {
 			di "`x'"
 			sum `x' if homebound_cat==`l' [aw=anfinw]
+			local `x'`l'=r(mean)
 			mat tab1[`r',`c']=r(mean)*100
 			if `l'>1 {
-				svy: tab `x' homebound_cat if inlist(homebound_cat,1,`l')
+				mat tab1[`r',`c'+1]=(``x'`l''-``x'1')/sqrt((``x'`l''*(1-``x'`l'') + ``x'1'*(1-``x'1'))/2)
+/*				svy: tab `x' homebound_cat if inlist(homebound_cat,1,`l')
 				mat tab1[`r',`c'+1]=(e(p_Pear))
-				mat stars[`r',`c'+1]=(e(p_Pear)<.0`wave')+(e(p_Pear)<.01)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.0`wave')+(e(p_Pear)<.01)*/
 }
 		local r=`r'+1
 }
@@ -7548,13 +7562,16 @@ local caliper cal_ps1
 //rule of thumb 0.2*sd, try 0.02* sd
 psmatch2  ``i'' ,outcome(homebound) pscore(`x'_score) radius caliper(`=`caliper'') logit
 di "``i''"
-/*
+
 logit ``i'' `vars'
 predict p
 replace `x'_score=p
 drop p
 replace _we=(`x'/`x'_score)+((1-`x')/(1-`x'_score))
-*/
+egen sow=total(_we)
+replace _we=_we/sow
+drop sow
+
 
 pstest `vars',treated(``i'') both hist mw(_w)
 rename _we `x'_weight
@@ -7573,7 +7590,7 @@ foreach x in hrswk_20 ind_paid_helper ind_4_help {
 	svy: logit hb `x' `demovars' `clinivars' if !missing(`x'_w), or
 	qui outreg, stats(e_b p e_ci) varlabels merge ctitles("" "3")
 	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
-	qui outreg using homebound_matched_logits_wave_`wave'.rtf, ///
+	qui outreg using homebound_matched_logits_wave_`wave'2.rtf, ///
 	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "4") ///
 	note("Matched and unmatched logistic regressions, odds ratios reported" \ ///
 	"1--Unmatched, matching variables only"\ "2--Matched, matching variables only"\ ///
@@ -7585,11 +7602,131 @@ foreach x in hrswk_20  {
 	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
 	qui outreg, stats(e_b p e_ci) varlabels ctitles("" "Orig")
 	logit hb `x' `demovars' `clinivars' metro_ind [pw=`x'_w], or
-	qui outreg using homebound_matched_logits_wave_`wave'.rtf, ///
+	qui outreg using homebound_matched_logits_wave_`wave'2.rtf, ///
 	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "Incl Metro") 
 	local replace addtable
 }
 
 log close
 
+}
+
+
+H="before/after match table"
+capture log close
+
+
+cd "E:\nhats\data\Projects\Homebound\logs"
+
+foreach wave in  5 1 {
+
+log using propensity_score_matching_wave_`wave'.txt, text replace
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_`wave'_fullish.dta" ///
+if homebound_cat<3, clear
+merge 1:1 spid wave using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", nogen ///
+keepusing(region) keep(match master)
+local vars i.agecat2 female black hisp married n_children i.income_cat medicaid educ_hs_ind ///
+srh_fp sr_numconditions1 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
+gen ind_4_help=n_helpers>=4
+gen hb=homebound_cat==1
+gen agec2_2=inlist(agecat,3,4)
+gen agec2_3=agecat>4
+label var agec2_2 "Age 75-84"
+label var agec2_3 "Age 85+"
+cap tab region, gen(region)
+
+local demovars agec2_2 agec2_3 female black hisp married n_children inccat2 ///
+inccat3 inccat4 ///
+medicaid educ_hs_ind
+local clinivars  srh_fp sr_numconditions1 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility metro_ind region2 region3 region4
+
+
+tokenize hrswk_20 ind_paid_helper ind_4_help
+
+local vars age female black hisp married /*n_children*/ ///
+/*inccat2 inccat3*/ inccat4 ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1*/  cond2 cond3 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem ///
+///adl_independent iadl_independent //
+adl3 iadl3 region2 metro_ind // region3 region4 //metro_ind region2 //region3 region4
+
+if `wave'==5 local vars /*agec2_2 agec2_3*/ age female black hisp married /*n_children*/ ///
+/*inccat2 inccat3 inccat4*/ aveincome ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1 cond2*/ cond3 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem ///
+///adl_independent iadl_independent //
+adl3 iadl3 region2 region3 region4 //metro_ind //region2 region3 region4
+
+local vars agec2_2 agec2_3 female black hisp married inccat4 medicaid educ_hs_ind srh_fp ///
+cond2 cond3 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility ///
+region2 region3 region4 metro_ind
+
+sum `vars'
+
+foreach x of local vars {
+	replace `x'=0 if missing(`x')
+	}
+local i=1
+cap drop *score* *_weight*
+//implement radius matching
+foreach x in hrswk_20 {
+pscore ``i'' `vars' , pscore(`x'_score) logit
+*******************************************************************
+
+
+gen logit`x'score=ln(`x'_score/(1-`x'_score))
+sum logit`x'score
+
+sca cal_ps1=r(sd)*0.02
+sca list cal_ps1
+local caliper cal_ps1
+
+//rule of thumb 0.2*sd, try 0.02* sd
+psmatch2  ``i'' ,outcome(homebound) pscore(`x'_score) radius caliper(`=`caliper'') logit
+di "``i''"
+
+logit ``i'' `vars'
+predict p
+replace `x'_score=p
+drop p
+replace _we=(`x'/`x'_score)+((1-`x')/(1-`x'_score))
+
+
+pstest `vars',treated(``i'') both hist mw(_w)
+rename _we `x'_weight
+rename _sup `x'_sup
+psgraph, treated(``i'') pscore(`x'_score) support(`x'_sup)
+
+local rn : word count `vars'
+mat tab=J(`rn',6,.)
+local r=1
+local c=1
+
+local weight anfinw
+foreach time in 1 2 {
+	if `time'==2 local weight `x'_weight
+	forvalues i=0/1 {
+		foreach y of local vars {
+			sum `y' if `x'==`i' [aw=`weight']
+			mat tab[`r',`c']=r(mean)*100
+			local `y'`i'=r(mean)
+			if `i'==1 {
+				mat tab[`r',`c'+1]=abs((``y'0'-``y'1')/sqrt((``y'0'*(1-``y'0') + ``y'1'*(1-``y'1'))/2))
+}
+			local r=`r'+1
+}
+	local r=1
+	local c=`c'+1
+}
+	local c=`c'+1
+}
+
+mat rownames tab=`vars'
+frmttable using prepost_table_match_vars_wave_`wave', statmat(tab) replace ///
+ctitles("" "" "Pre-match" "" "" "Post-match" \ "" "<20 hrs/wk" "20+" "Std Diff" ///
+ "<20 hrs/wk" "20+" "Std Diff") title("Matching variables, before and after weighting")
+ }
+log close
 }

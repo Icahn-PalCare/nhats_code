@@ -2203,10 +2203,39 @@ label var metro_ind "Lives in metropolitan area"
 tempfile metro
 save `metro'
 
-
+cd "`work'"
 use round_1_6_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
-cd "`work'"
+
+
+///// 3/2/18 --Adding in meal skippped questions
+
+capture drop mealskip*
+gen mealskip=.
+forvalues w=2/6 {
+replace mealskip=0 if ew`w'mealskip1==-1 | ew`w'mealskip1==2 
+replace mealskip=1 if  ew`w'mealskip1==1
+}
+label var mealskip "No Money, Meals Skipped"
+
+
+capture drop mealskipnum*
+gen mealskipnum=.
+
+forvalues w=2/6 {
+replace mealskipnum=0 if ew`w'mealskip2==-1 
+replace mealskipnum=1 if  ew`w'mealskip2==4
+replace mealskipnum=2 if  ew`w'mealskip2==3
+replace mealskipnum=3 if  ew`w'mealskip2==2
+replace mealskipnum=4 if  ew`w'mealskip2==1
+}
+
+label var mealskipnum "How Often Meals Skipped"
+label define mealskipnum1 0 "Inapplicable" 1 "A Few Days" 2 "Several Days(less than half)" ///
+3 "More than Half the Days" 4 " Nearly Every Day"
+label values mealskipnum mealskipnum1
+
+
 
 ///// 12/5/17 --Adding in Cancer 
 
@@ -2300,19 +2329,20 @@ gen miss=0
 gen ind_transp_disadv=.
 
 forvalues w=1/6 {
-replace ind_transp_disadv=0 if dt`w'oftedrive==. | inlist(dt`w'oftedrive,5,6) & wave==`w'
+replace ind_transp_disadv=0 if (dt`w'oftedrive==. | inlist(dt`w'oftedrive,5,6)) & wave==`w'
 local probs pa`w'trkpfrvis pa`w'trprrelsr pa`w'trprkpfgr pa`w'trprgoout
 foreach x in `probs' {
 replace ind_transp_disadv=1 if `x'==1 & wave==`w'
 gen `x'2=`x'==1 if `x'>=0 & !missing(`x') & wave==`w'
 replace `x'=`x'2
 drop `x'2
-replace miss=miss+1 if missing(`x') 
+replace miss=miss+1 if missing(`x') & wave==`w'
 }
 }
 replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
 replace ind_transp_disadv=. if miss==4
 label var ind_transp_disadv "Any transportation disadvantage"
+drop miss
 
 local lab1 Walked
 local lab2 Got ride

@@ -93,12 +93,47 @@ local logpath "E:\nhats\data\Projects\serious_ill\logs\"
 cd `datapath'
 log using `logpath'\nhats_dme_function.txt, text replace
 
+use serious_ill_nhats_sample if wave==1
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+gen nomiss=!missing(adl_index)
+label var nomiss "With responses to ADL questions"
+label var sp_ivw_yes "SP interview conducted"
+
+mat tab=J(5,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "`logpath'function.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
 use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & ///
 !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+
 svyset varunit [pw=anfinw], strata(varstrat)
 *replace adl_impair=0 if adl_index==1
-local dme cane walker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
 gen n=1
+
+label var caneorwalker "Cane or walker from DME"
 label var cane "Cane from DME"
 label var walker "Walker from DME"
 label var commode "Commode from DME"
@@ -140,6 +175,7 @@ gen ind_hh_12m=hh_paid_by_mc_12m>0
 
 gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
 gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
 label var ind_snf_12m "Any SNF utilization"
 label var ind_hh_ "Any HH utilization"
 label var ind_snf_or_hh "Any HH or SNF utilization"
@@ -191,7 +227,10 @@ forvalues i=1/4 {
 	label var hb`i' "`lab'"
 }
 
-
+local help
+foreach x of varlist adl*help {
+	local help `help' `x'
+}
 label var educ_hs_ind "Education: HS +"
 
 keep if !missing(adl_index)
@@ -199,10 +238,12 @@ gen adl_2=adl_index>=2 if !missing(adl_index)
 gen adl_3=adl_index>=3 if !missing(adl_index)
 label var adl_2 "Dependent in 2+ ADLs"
 label var adl_3 "Dependent in 3+ ADLs"
+local cvars age
 local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
 female white black hisp other_race married educ_hs_ind proxy ///
-medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 /*iadl_independent*/ `pps' `ind_indication' ///
-`dmouth' `smi' ind_hosp_adm_12m
+medicaid medigap srh_fp adl_impair hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 ///
+`help' /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi' `device' ind_hosp_adm_12m
 local ipps pps100 pps90 pps80 ///
 pps70 pps60 pps50 pps40 pps30 
 local cout tot_paid_by_mc_12m n_hospd_p12m
@@ -210,30 +251,57 @@ local iout ind_hosp_adm_p12m died_12
 foreach x of local ivars {
 sum `x' if `x'==1 & adl_impair==1
 }
-local rn : word count `ivars'
+local rn : word count `cvars' `ivars'
 local r=1
 local c=1
-mat tab=J(`rn'+3,3,.)
+mat tab=J(`rn'+3,6,.)
+mat stars=J(`rn'+3,6,0)
 
-foreach adl in "0,1" 0 1 {
+gen adl_impair1=1
+gen adl_impair2=1 if adl_impair==0
+gen adl_impair3=1 if adl_impair==1
+gen adl_impair4=1 if adl_index>=2 & !missing(adl_index)
+forvalues adl=1/4 {
+	replace adl_impair`adl'=0 if missing(adl_impair`adl')
+	foreach x in `cvars' {
+		sum `x' if inlist(adl_impair`adl',1) [aw=anfinw]
+		mat tab[`r',`c']=r(mean)
+		if `adl'>2 {
+			svy, subpop(if adl_impair2==1 | adl_impair`adl'==1): mean `x', ///
+			over(adl_impair2)
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+}
 	foreach x in `ivars' {
-		sum `x' if inlist(adl_impair,`adl') [aw=anfinw]
-		mat tab[`r',`c']=r(mean)*100
+		qui sum `x' if inlist(adl_impair`adl',1)
+		local denom=r(mean)*r(N)
+		sum `x' if inlist(adl_impair`adl',1) [aw=anfinw]
+		if `denom'>=11 mat tab[`r',`c']=r(mean)*100
+		if `adl'>2 {
+			svy, subpop(if adl_impair2==1 | adl_impair`adl'==1): tab `x' adl_impair2
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
 		local r=`r'+1
 }
 	local r=`r'+1
-	sum n if inlist(adl_impair,`adl') [aw=anfinw]
+	sum n if inlist(adl_impair`adl',1) [aw=anfinw]
 	mat tab[`r',`c']=r(N)
 	mat tab[`r'+1,`c']=r(sum)
 	local r=1
 	local c=`c'+1
+	if `adl'==3 local c=`c'+1
 }
-mat rownames tab=`ivars' "_" "N" "National Estimate"
+mat rownames tab=`cvars' `ivars' "_" "N" "National Estimate"
 
-frmttable using "`logpath'function.rtf", statmat(tab) replace title("Sample Characteristics") ///
-ctitles("" "Full Sample" "Non-ADL dependent" "ADL dependent") sdec(2) varlabels ///
+frmttable using "`logpath'function.rtf", statmat(tab) addtable title("Sample Characteristics") ///
+ctitles("" "Full Sample" "Non-ADL dependent" "ADL dependent 1+" "P" "ADL dependent 2+" "P") ///
+sdec(2) varlabels annotate(stars) asymbol(*,**) ///
  note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare" ///
-"ADL impairment defined as having assistance in 1+ ADL") 
+"ADL impairment defined as having assistance in 1+ ADL")
 
 /*table 2
 Weighted %
@@ -265,7 +333,7 @@ local c=1
 foreach i in "0,1" "0" "1" {
 	foreach x of local vars {
 		sum `x' if inlist(adl_impair,`i')
-		mat tab`dem'[`r',`c']=r(mean)*r(N)
+		if r(mean)*r(N)>=11	mat tab`dem'[`r',`c']=r(mean)*r(N)
 		sum `x' if inlist(adl_impair,`i') [aw=anfinw]
 		*mat tab`dem'[`r',`c'+1]=r(mean)*100
 		if "`i'"=="1" & !inlist("`x'","bedpan","urinal"){
@@ -417,7 +485,7 @@ capture log close
 
 local intpath "E:\nhats\data\Projects\serious_ill\int_data"
 local datapath "E:\nhats\data\Projects\serious_ill\final_data"
-local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+local logpath "E:\nhats\data\Projects\IAH\logs\"
 
 cd `datapath'
 log using `logpath'\nhats_dme_function.txt, text replace
@@ -915,7 +983,7 @@ capture log close
 
 local intpath "E:\nhats\data\Projects\serious_ill\int_data"
 local datapath "E:\nhats\data\Projects\serious_ill\final_data"
-local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+local logpath "E:\nhats\data\Projects\IAH\logs\"
 
 cd `datapath'
 log using `logpath'\nhats_dme_function.txt, text replace
@@ -1135,3 +1203,144 @@ ctitles("" "Both" "Any ADL" "Any FRI") sdec(2) varlabels ///
 "ADL impairment defined as having assistance in 1+ ADL" ///
 "Claims-based indicators include MeADs, home oxygen, and any HH or SNF claims")  annotate(stars) asymbol(*,**)
 
+
+
+H="tables for graphs"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+log using `logpath'\nhats_dme_function_table2.txt, text replace
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & ///
+!missing(adl_index), clear
+svyset varunit [pw=anfinw], strata(varstrat)
+local dme cane walker commode urinal bedpan tub_toil_dev lift bed chair 
+
+
+
+gen n=1
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0*/
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+replace ind_hh_12m=0 if missing(ind_hh_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+/* table 1
+demographics, by SR ADL impairment*/
+
+local cvars age aveincome
+gen age_lt75=age<=74
+gen age_lt85=age>=75 & age<85
+gen age_85=age>=85
+label var age_lt75 "Age 65-74"
+label var age_lt85 "Age 75-84"
+label var age_85 "Age 85+"
+
+
+rename adl_impair adl_any_help
+rename adl_independent adl_no_help
+gen adl_full_help=1
+label var adl_full "Full Sample"
+
+local adls
+foreach x in bath dres toil bed ins eat any no {
+	local adls `adls' adl_`x'_help
+}
+
+
+gen cane_or_walker=cane==1 | walker==1
+label var cane_or_walker
+
+local cols1  cane_or_walker tub_toil_dev bed chair commode lift ind_fri 
+
+local cols2  oxy ind_snf_12m ind_hh_12m ind_snf_or_hh_12m hh_snf_oxy fri_hh_snf_oxy 
+
+local rn : word count `adls'
+local cn1 : word count `cols1' n
+local cn2 : word count `cols2' n
+
+di `cn2'
+
+local replace replace
+
+foreach i in 1 2 {
+
+mat tab`i'=J(`rn',`cn`i'',.)
+local r=1
+local c=2
+
+foreach x of local adls {
+	sum n if `x'==1
+	mat tab`i'[`r',1]=r(N)
+	foreach y of local cols`i' {
+		sum `y' if `x'==1
+		mat tab`i'[`r',`c']=r(mean)*100
+		local c=`c'+1
+}
+	local c=2
+	local r=`r'+1
+}
+
+mat rownames tab`i'=`adls'
+mat colnames tab`i'=N `cols`i''
+
+frmttable using "E:\nhats\data\Projects\serious_ill\logs\tables_for_chart.doc", `replace' varlabels ///
+sdec(0,2) statmat(tab`i')
+local replace addtable
+}

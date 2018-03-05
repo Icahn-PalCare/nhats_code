@@ -2899,6 +2899,7 @@ data oxygen1(keep=bene_id index_year oxygen);
 set proj_int.dm_meet_183;
 oxygen=0;
 if h_o2>0 then oxygen=1;
+if oxygen=1;
 run;
 
 proc sort data=oxygen1 out=oxygen nodupkey;
@@ -2969,14 +2970,10 @@ proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
 count(case when ed_op=1 then ed_op else . end)
 	as n_ed_op_visits_6m,
+sum(obs_stay) as n_obs_stay,
 max(obs_stay) as obs_stay
 	from ed_op_1 group by bene_id,index_year;
 quit;
-
-proc freq;
-table n_ed_op_visits_6m obs_stay;
-run;
-
 
 proc sort data=ed_op_2 nodupkey;
 by bene_id index_year;
@@ -3001,7 +2998,9 @@ label ind_ed_op_6m="Indicator any ED OP visits, 6m pre ivw";
 if n_ed_op_no_adm=0 then ed_op_wout_adm_ind=0;
 if n_ed_op_no_adm>0 & n_ed_op_no_adm~=. then ed_op_wout_adm_ind=1;
 if ed_op_wout_adm_ind=. then ed_op_wout_adm_ind=0;
-label ed_op_wout_adm_ind="Indicator ED visit not leading to admission";
+label ed_op_wout_adm_ind="Indicator ED visit not leading to admission, 6m pre ivw";
+label n_obs_stay="N obs stays not leading to admission, 6m pre ivw";
+label obs_stay="Indicator obs stay not leading to admission, 6m pre ivw";
 run;
 
 proc freq;
@@ -10232,4 +10231,272 @@ foreach y of local out {
 }
 	outreg, replay
 }
+
+
+
+H="******************************"
+
+
+H="sample derivation for x-wave dataset"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\pal_perf_scale\int_data"
+local datapath "E:\nhats\data\Projects\pal_perf_scale\final_data"
+local logpath "E:\nhats\data\Projects\pal_perf_scale\logs"
+
+cd `datapath'
+log using `logpath'\sample_derivation.txt, text replace
+
+use `intpath'\serious_ill_int_dataset1.dta, clear
+
+*****************************************
+//variable cleaning and construction
+*****************************************
+foreach x of varlist adl*help {
+replace `x'=. if sp_ivw_==0
+replace adl_independent=0 if `x'==1
+replace adl_impair=1 if `x'==1
+}
+//set comorb/serill to zero if missing (because no entry in the pb file)
+foreach x of varlist comorb* cc* smi* {
+	replace `x'=0 if `x'==. & cont_ffs_n_mos>=12
+}
+
+
+replace el_ge3=comorb_all>3 if !missing(comorb_all)
+replace adl_impair=1 if nhres==1
+
+/*update 7/24/17--include neurodeg and cva*/
+replace smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + ///
+smi_copd_ind + smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind ///
++ neurodeg + cva
+replace ser_med_illness=smi_count>0 if missing(ser_med_illness) & !missing(smi_count)
+replace criteria_a=smi_count>0 if !missing(smi_count) & missing(criteria_a)
+replace criteria_a=1 if adl_impair==1
+replace criteria_b=criteria_a==1 & (ind_em_ur_adm_6m==1 | smi_nh_ind==1) if missing(criteria_b)
+replace criteria_c=ser_med_illness==1 & adl_impair==1 & (ind_em_ur_adm_6m==1 | ///
+smi_nh_ind==1) if missing(criteria_c)
+foreach x in neurodeg cva {
+rename `x' smi_`x'
+}
+
+gen criteria_all=1
+gen criteria_none=criteria_a==0
+gen tot_paid_by_mc_12m=0
+foreach x in ip snf hh hs pb op dm {
+replace tot_paid_by=tot_paid_by+`x'_paid_by_mc_12m
+}
+gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
+foreach x of varlist *_op_* *icu_* {
+replace `x'=0 if missing(`x')
+}
+
+gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
+gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
+gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
+gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
+gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
+
+*****************************************
+//sample derivation
+*****************************************
+gen wave1=wave==1
+gen ffs_6m=cont_ffs_n_mos>=6 if !missing(cont_ffs_n_mos)
+gen ab_6m=part_ab_n_mos>=6
+gen hmo_6m=non_hmo_d_n_mos>=6
+label var ab_6m "6m AB Medicare before ivw"
+label var hmo_6m "6m w/o HMO before ivw"
+label var wave1 "Wave 1 Interview"
+label var ffs_6m "6m continuous FFS before ivw"
+*local samplevars wave1 sp_ivw_yes ab_6m hmo_6m ffs_6m 
+local samplevars wave1 ab_6m hmo_6m ffs_6m 
+
+local rn : word count `samplevars'
+local r=1
+local c=1
+mat samp=J(`rn',2,.)
+
+foreach x in `samplevars' {
+	if "`x'"!="wave1" keep if `x'==1
+	sum `x'
+	mat samp[`r',`c']=r(N)
+	local r=`r'+1
+}
+
+mat rownames samp=`samplevars'
+
+frmttable, statmat(samp) ctitles("" "N") title("Sample Derivation") sdec(0) ///
+varlabels
+
+save serious_ill_nhats_sample_xwave, replace
+
+foreach x of varlist comorb* cc* ser_med *smi* criteria* {
+	replace `x'=0 if `x'==.
+}
+
+
+H="3/2/18 quick look at utilization thresholds"
+clear all 
+set more off
+capture log close
+
+local d12m "E:\nhats\data\Projects\serious_ill\final_data"
+cd `d12m'
+local d6m "E:\nhats\data\Projects\pal_perf_scale\final_data"
+
+cd `d6m'
+use serious_ill_nhats_sample_xwave, clear
+sort spid wave
+by spid: replace anfinw=. if wave>1 & !missing(wave[_n-1])
+by spid: carryforward anfinw, replace
+keep if wave<=3 & !nhres & sp_ivw==1 & !lml & cont_ffs_n_mos>=6
+svyset varunit [pw=anfinw], strata(varstrat)
+egen n_hosp=rowtotal(n_obs n_ip_admit_6m)
+gen ind_hosp=n_hosp>=1 & !missing(n_hosp)
+gen n_events=n_hosp+n_ed_op_visits_6m
+gen group=1 if smi_dem==1
+replace group=2 if smi_canc==1 & missing(group)
+replace group=3 if missing(group)
+
+ 
+local A "6m, 1+ hospitalization, N"
+local B "6m, 2+ events (1 hosp), N"
+local C "12m, 1+ hospitalization, N"
+local D "12m, 2+ events (1 hosp), N"
+local E "12m, 2+ hospitalizations, N"
+local F "12m, 3+ hospitalizations, N"
+
+tokenize A B C D E F
+local vars tot_paid_by_mc_12m ind_hosp_adm_p12m died_12 
+
+local rows
+
+forvalues i=1/6 {
+local rows `rows' `i' `vars'
+}
+di "`rows'"
+local rn : word count `rows'
+mat tab=J(`rn',3,.)
+mat stars=J(`rn',3,0)
+local r=2
+local c=1
+
+forvalues g=1/3 {
+	forvalues time=1/2 {
+		if `time'==3 replace n_events=n_hosp
+		sum tot_paid_by_mc_12m if criteria_smi==1 & ind_hosp==1 & group==`g' & n_events>=`time' /*[aw=anfinw]*/
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'-1,`c']=r(N)
+		if `g'==0 {
+			svy, subpop(if criteria_smi==1 & ind_hosp==1 & inlist(group,1,`g') & n_events>=`time'): reg tot_paid_by_mc_12m ///
+			group
+			test
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.01)+(r(p)<.05)
+
+}
+		local r=`r'+1
+		foreach x in ind_hosp_adm_p12m died_12 {
+			sum `x' if criteria_smi==1 & ind_hosp==1 & group==`g' & n_events>=`time' /*[aw=anfinw]*/
+			mat tab[`r',`c']=r(mean)*100
+			if `g'==0 {
+			svy, subpop(if criteria_smi==1 & ind_hosp==1 & inlist(group,1,`g') & n_events>=`time'): tab `x' group 
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+
+}
+	local r=`r'+1
+
+}
+	local r=`r'+1
+
+}
+	local r=2
+	local c=`c'+1
+	if `g'==0 local c=`c'+1
+}
+
+di `r'
+di `c'
+local r=10
+local c=1
+
+cd `d12m'
+use serious_ill_nhats_sample, clear
+sort spid wave
+by spid: replace anfinw=. if wave>1 & !missing(wave[_n-1])
+by spid: carryforward anfinw, replace
+keep if wave<=3 & !nhres & sp_ivw==1 & !lml & cont_ffs_n_mos>=12 
+egen n_hosp=rowtotal(n_obs n_ip_admit_12m)
+gen ind_hosp=n_hosp>=1 & !missing(n_hosp)
+gen n_events=n_hosp+n_ed_op_visits_12m
+
+gen group=1 if smi_dem==1
+replace group=2 if smi_canc==1 & missing(group)
+replace group=3 if missing(group)
+svyset varunit [pw=anfinw], strata(varstrat)
+
+
+forvalues g=1/3 {
+	forvalues time=1/4 {
+		if `time'==3 replace n_events=n_hosp
+		sum tot_paid_by_mc_12m if criteria_smi==1 & ind_hosp==1 & group==`g' & n_events>=`time' /*[aw=anfinw]*/
+		mat tab[`r',`c']=r(mean)
+		mat tab[`r'-1,`c']=r(N)
+		if `g'==0 {
+			svy, subpop(if criteria_smi==1 & ind_hosp==1 & inlist(group,1,`g') & n_events>=`time'): reg tot_paid_by_mc_12m ///
+			i.group
+			test
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.01)+(r(p)<.05)
+
+}
+		local r=`r'+1
+		foreach x in ind_hosp_adm_p12m died_12 {
+			sum `x' if criteria_smi==1 & ind_hosp==1 & group==`g' & n_events>=`time' /*[aw=anfinw]*/
+			mat tab[`r',`c']=r(mean)*100
+			if `g'==0 {
+			svy, subpop(if criteria_smi==1 & ind_hosp==1 & inlist(group,1,`g') & n_events>=`time'): tab `x' group 
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+
+}
+	local r=`r'+1
+
+}
+	local r=`r'+1
+}
+	local r=10
+	local c=`c'+1
+	if `g'==0 local c=`c'+1
+}
+
+label var tot_paid_by_mc_12m "Total paid by MC 12m post ivw, mean"
+label var died_12 "Died within 1 year"
+local rtitles A tot_paid_by_mc_12m ind_hosp_adm_p12m died_12
+forvalues i=2/6 {
+	local rtitles  `rtitles' ``i'' tot_paid_by_mc_12m ind_hosp_adm_p12m died_12
+}
+di "`rtitles'"
+mat rownames tab=`rtitles'
+
+frmttable using "E:\nhats\data\projects\serious_ill\logs\thresholds_outcomes_table.rtf", ///
+replace statmat(tab) ctitles("" "Dementia" "Cancer" "Other") ///
+sdec(0\2\2\2\0\2\2\2\0\2\2\2\0\2\2\2\0\2\2\2\0\2\2\2) varlabels rtitles("`A'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year"\ ///
+"`B'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year"\ ///
+"`C'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year"\ ///
+"`D'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year"\ ///
+"`E'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year"\ ///
+"`F'"\"Total paid by MC 12m post ivw, mean"\ ///
+"Any hospital admission 12m post ivw, %"\"Died within 1 year") ///
+note("Wave 1-3 NHATS community-dwelling with FFS and 1+ SMI 6 or 12m pre-ivw"\ ///
+"Hospitalizations include obs stays, events are hospitalizations or ED visits") ///
+title("One-year outcomes among the seriously ill with utilization")
 

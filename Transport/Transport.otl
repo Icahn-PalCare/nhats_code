@@ -5656,6 +5656,12 @@ replace ind_imp_relig=. if !inrange(pa5imprels,-1,5)
 replace ind_imp_club=. if !inrange(pa5imparclub,-1,5)
 replace ind_imp_goout=. if !inrange(pa5impouteny,-1,5)
 
+//note 3/1/18--correct so it's coded very important
+replace ind_imp_visit=0 if inlist(pa5impvstfam,2)
+replace ind_imp_relig=0 if inlist(pa5imprels,2)
+replace ind_imp_club=0 if inlist(pa5imparclub,2)
+replace ind_imp_goout=0 if inlist(pa5impouteny,2)
+
 label var ind_imp_visit "Very important to visit in person with friends/family"
 label var ind_imp_relig "Very important to attend religious services"
 label var ind_imp_club "Very important to participate in clubs, classes, etc."
@@ -5670,6 +5676,7 @@ label var ind_imp_any "Indicator any activity very important"
 local imp
 foreach x of varlist ind_imp* {
 	local imp `imp' `x'
+	replace `x'=0 if missing(`x') & !missing(imp_index)
 }
 
 replace anfinw=anfinw*6855860/5671878 if !female & age<70
@@ -5986,7 +5993,7 @@ ctitles("" "No transportation disadvantage" "" "Transportation Disadvantage" \ "
 title("Table 3. Mode of transport to the doctor by tranpsortation disadvantage among non-drivers")
 
 *drop if proxy
-
+restore
 //logit model based on significant factors in table 2
 //age race (hispanic) marital status proxy assistive device income
 svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
@@ -6006,4 +6013,45 @@ margins, dydx(*) post
 outreg using transport_tables_wave5.rtf, merge addtable varlabels stats(b ci p) ///
 title("Table 4. Logistic model of predictors of transportation disadvantage") ///
 ctitles("" "AMEs")
+
+//3/1/18--add importance of activities
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any
+ 
+ outreg,  ctitles("" "1") varlabels stats(e_b e_ci p) ///
+title("Table 4. Logistic model of predictors of transportation disadvantage")
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any ind_imp_any
+ 
+ outreg,  ctitles("" "2") varlabels stats(e_b e_ci p) ///
+title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+merge
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any ind_imp_club
+ 
+ outreg,  ctitles("" "3") addtable varlabels stats(e_b e_ci p) ///
+title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+merge 
+
+preserve
+drop ind_imp_any
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any ind_imp*
+ 
+ outreg,  ctitles("" "4") addtable varlabels stats(e_b e_ci p) ///
+title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+merge 
+restore
+
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any ind_imp*
+ 
+ outreg using transport_tables_wave5.rtf,  ctitles("" "5") addtable varlabels stats(e_b e_ci p) ///
+title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+merge 
 

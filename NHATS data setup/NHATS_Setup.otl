@@ -2203,10 +2203,56 @@ label var metro_ind "Lives in metropolitan area"
 tempfile metro
 save `metro'
 
-
+cd "`work'"
 use round_1_6_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
-cd "`work'"
+
+///// 3/5/18 --Adding in FRI questions 
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9
+replace `x'_nhats=0 if fl1`x'==-1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (-1 2=0) (-9 -8 -7=.), gen(com_nhats)
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if sc1dbathdevi==-1 | sc1dbathdevi==1 | sc1dtoildevi==-1 | sc1dtoildevi==1
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2
+
+///// 3/2/18 --Adding in meal skippped questions
+
+capture drop mealskip*
+gen mealskip=.
+forvalues w=2/6 {
+replace mealskip=0 if ew`w'mealskip1==-1 | ew`w'mealskip1==2 
+replace mealskip=1 if  ew`w'mealskip1==1
+}
+label var mealskip "No Money, Meals Skipped"
+
+
+capture drop mealskipnum*
+gen mealskipnum=.
+
+forvalues w=2/6 {
+replace mealskipnum=0 if ew`w'mealskip2==-1 
+replace mealskipnum=1 if  ew`w'mealskip2==4
+replace mealskipnum=2 if  ew`w'mealskip2==3
+replace mealskipnum=3 if  ew`w'mealskip2==2
+replace mealskipnum=4 if  ew`w'mealskip2==1
+}
+
+label var mealskipnum "How Often Meals Skipped"
+label define mealskipnum1 0 "Inapplicable" 1 "A Few Days" 2 "Several Days(less than half)" ///
+3 "More than Half the Days" 4 " Nearly Every Day"
+label values mealskipnum mealskipnum1
+
+
 
 ///// 12/5/17 --Adding in Cancer 
 

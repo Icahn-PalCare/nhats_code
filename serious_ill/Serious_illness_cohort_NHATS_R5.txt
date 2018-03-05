@@ -27,7 +27,7 @@ libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
 
 
 H="get index date"
-/*Import NHATS Cleaned Dataset for Rounds 1-5*/
+/*Import NHATS Cleaned Dataset for Rounds 1-6*/
 proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" out=proj_int.nhats replace; run;
 
 
@@ -64,13 +64,8 @@ proc sort data=index out=proj_int.index nodupkey;
 by spid bene_id index_year;
 run;
 
-H="get continuous ffs after index date"
-/*determine Spouse ffs medicare before R's death using the 
-claims denominator files
+H="get continuous ffs before index date"
 
-Several sets of variables created, looking back 6m, 12m, 18m, 24m from R's death
-
-Also pulls in spouse date of death where available in the claims s_claims_dod*/
 
 /*sort claims denominator file*/
 
@@ -186,13 +181,8 @@ set all_insurance3;
 run;
 
 
-H="get continuous ffs before index date"
-/*determine Spouse ffs medicare before R's death using the 
-claims denominator files
+H="get continuous ffs after index date"
 
-Several sets of variables created, looking back 6m, 12m, 18m, 24m from R's death
-
-Also pulls in spouse date of death where available in the claims s_claims_dod*/
 
 /*sort claims denominator file*/
 
@@ -397,7 +387,7 @@ run;
 %macro op_drop(days_bef_index=);
 data proj_int.op_meet_&days_bef_index.;
 set op_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
-PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt);
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt obs_stay);
 run;
 %mend op_drop;
 
@@ -2797,9 +2787,11 @@ by bene_id index_year;
 run;
 proc contents data=medi.op_06_12; run;
 data ed_op_1;
-set proj_int.op_meet_365(keep=bene_id admit_date disch_date index_date index_year erdaycnt);
+set proj_int.op_meet_365(keep=bene_id admit_date disch_date index_date index_year erdaycnt obs_stay);
 if erdaycnt>0 then ed_op=1;
 if erdaycnt=0 then ed_op=0;
+if obs_stay=. then obs_stay=0;
+if obs_stay>1 then obs_stay=1;
 run;
 
 proc freq;
@@ -2809,7 +2801,9 @@ run;
 proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
 count(case when ed_op=1 then ed_op else . end)
-	as n_ed_op_visits_12m
+	as n_ed_op_visits_12m,
+sum(obs_stay) as n_obs_stay_12m,
+max(obs_stay) as obs_stay_12m
 	from ed_op_1 group by bene_id,index_year;
 quit;
 
@@ -2829,6 +2823,12 @@ label n_ed_op_visits_12m="Count ED OP visits, 1yr pre ivw";
 if n_ed_op_visits_12m=0 then ind_ed_op_12m=0;
 if n_ed_op_visits_12m>0 & n_ed_op_visits_12m~=. then ind_ed_op_12m=1;
 label ind_ed_op_12m="Indicator any ED OP visits, 1 yr pre ivw";
+
+if n_obs_stay_12m=. then n_obs_stay_12m=0;
+label n_obs_stay_12m="Number obs stays, 1 yr pre ivw";
+
+if n_obs_stay_12m=. then obs_stay_12m=0;
+label obs_stay_12m="Indicator any obs stay, 1 yr pre ivw";
 run;
 
 data hh(keep=bene_id index_year ind_hh_12m);

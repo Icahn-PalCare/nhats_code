@@ -5717,6 +5717,297 @@ run;
 proc export data=homecallsafter_all outfile="E:\nhats\data\Projects\IAH\int_data\homecallsafter.dta" replace; run;
 
 
+H="Home calls - version 2"
+libname claims "E:\nhats\data\CMS_DUA_28016\Merged";
+libname line "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+
+proc import datafile="E:\nhats\data\Projects\IAH\final_data\IAH_final_sample_old.dta" out=nhats replace; run; 
+
+data nhats (keep = spid bene_id wave ffs_6m index_date);
+set nhats;
+run;
+
+/*
+data carrier_pflag;
+set claims.pb_09_14;
+pos1flag = 0;
+array dx pos1--pos13;
+do over dx;
+if dx in:(12,13,14) then pos1flag = 1;
+output;
+end;
+run;
+
+*/
+
+data carrier;
+set claims.pb_09_14;
+array dx hcpcscd1--hcpcscd13;
+do over dx;
+cptcodes=dx;
+output;
+end;
+/*
+pos1flag = 0;
+if pos1 in:(12,13,14) then pos1flag = 1;
+if pos2 in:(12,13,14) then pos1flag = 1;
+if pos3 in:(12,13,14) then pos1flag = 1;
+if pos4 in:(12,13,14) then pos1flag = 1;
+if pos5 in:(12,13,14) then pos1flag = 1;
+if pos6 in:(12,13,14) then pos1flag = 1;
+if pos7 in:(12,13,14) then pos1flag = 1;
+if pos8 in:(12,13,14) then pos1flag = 1;
+if pos9 in:(12,13,14) then pos1flag = 1;
+if pos10 in:(12,13,14) then pos1flag = 1;
+if pos11 in:(12,13,14) then pos1flag = 1;
+if pos12 in:(12,13,14) then pos1flag = 1;
+if pos13 in:(12,13,14) then pos1flag = 1;
+*/
+run;
+
+
+data carrierline (keep = bene_id clm_id LINE_PLACE_OF_SRVC_CD cptcodes hcpcs_cd);
+set line.bcarrier_line_j_09_14;
+cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
+run;
+
+data carrierline;
+set carrierline;
+cptflag = 0;
+posflag = 0;
+if 99341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337 then cptflag=1;
+if LINE_PLACE_OF_SRVC_CD in:(12,13,14) then posflag=1;
+run;
+
+data carrierline;
+set carrierline;
+both = 0;
+if cptflag = 1 and posflag = 1 then both = 1;
+run;
+
+
+proc sql;
+create table carrier2 as select a.*, b.admit_date, b.disch_date
+from carrierline a
+inner join carrier b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+proc sql;
+create table carrier3 as select a.*, b.*
+from carrier2 a
+inner join nhats b
+on a.bene_id=b.bene_id and -90<=b.index_date-a.admit_date<=90;
+quit;
+
+
+data carrier3;
+set carrier3;
+where ffs_6m = 1;
+run;
+
+proc freq data=carrierline; tables cptflag posflag both; run;
+
+/* both */
+
+data bothclaims;
+set carrier3;
+where both = 1;
+same = 0;
+if hcpcs_cd = cptcodes then same = 1; /*checking if the cptcodes from from carrier claims is the same as the hcpcs_cd code in carrier line */
+run;
+
+proc sort data=bothclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+/* gen single line per claim for annual count */
+
+proc sort data=bothclaims out=annual nodupkey; by bene_id clm_id; run;
+
+data annual;
+set annual;
+year = year(admit_date);
+run;
+
+proc sql;
+create table annual_1 as select distinct bene_id, year,
+sum(both) as housecalls_count
+from annual
+group by bene_id, year;
+quit;
+
+data annual_1;
+set annual_1;
+if year = 2011 then wave = 1;
+if year = 2012 then wave = 2;
+if year = 2013 then wave = 3;
+run;
+
+proc export data=annual_1 outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" dbms=stata replace; run;
+
+proc freq data=bothclaims order=freq; tables hcpcs_cd; run;
+
+proc sort data=bothclaims nodupkey; by bene_id wave; run;
+
+
+data both_beneid (keep= bene_id wave bflag);
+set bothclaims;
+bflag = 1;
+run;
+
+proc freq data=both_beneid; tables wave; run;
+
+proc export data=both_beneid outfile="E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta" replace; run;
+
+proc sort data=both_beneid out=test nodupkey; by bene_id; run;
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.bflag
+from cptclaims a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if bflag = 1 then delete;
+cflag = 1;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+proc sort data=cptclaims out=test nodupkey; by bene_id; run;
+
+proc export data=cptclaims outfile="E:\nhats\data\Projects\IAH\int_data\cpt+only.dta" replace; run;
+
+
+/*pos only */
+
+data posclaims;
+set carrier3;
+where posflag = 1 and both=0;
+run;
+
+proc sql;
+create table posclaims1 as select a.*, b.cflag
+from posclaims a
+left join cptclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+proc sql;
+create table posclaims2 as select a.*, b.bflag
+from posclaims1 a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data posclaims;
+set posclaims2;
+if cflag = 1 or bflag = 1 then delete;
+run;
+
+
+
+proc sort data=posclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+proc freq data=posclaims order=freq; tables hcpcs_cd; run;
+
+ 
+proc sort data=posclaims nodupkey; by bene_id wave; run;
+
+proc freq data=posclaims; tables wave; run;
+
+
+proc sort data=posclaims nodupkey; by bene_id; run;
+
+
+proc export data=posclaims outfile="E:\nhats\data\Projects\IAH\int_data\pos+only.dta" replace; run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.pflag
+from cptclaims a
+left join posclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if pflag = 1 then delete;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+
+/* none */
+
+data noclaims;
+set carrier3;
+where cpt
+
+
+data carrier2 (keep = cptcodes hcpcs_cd) ;
+set carrier2;
+where posflag = 1 or pos1flag = 1;
+run;
+
+data carrier2 (keep = hcpcs_cd);
+set carrier2;
+run;
+*/
+
+proc sort data=carrier2 nodup; by hcpcs_cd; run;
+
+
+proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
+
+
 H="Get life sustaining procedures"
 libname proj_int 'E:\nhats\data\projects\pal_perf_scale\int_data';
 
@@ -6120,6 +6411,1435 @@ gen `x'_death = 0
 replace `x'_death = `x' if died_12==1
 
 }
+
+
+H="IAH Table 1"
+use "E:\nhats\nhats_code\IAH\Archive\unique_nocptpos.dta", clear 
+
+cap drop _m
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta", keepus(bflag)
+cap drop _m
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\cpt+only.dta", keepus(cflag)
+cap drop _m
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\pos+only.dta", keepus(posflag)
+drop homebound*
+/*
+preserve
+capture gen none = 1
+replace none =0 if bflag==1 | cflag==1 |posflag==1
+
+keep if community_dwelling==1 & ffs_6m==1
+
+replace ind_snf_use_p12m = 0 if ind_snf_use_p12m==.
+
+capture gen ind_icu_p12m = 0
+replace ind_icu_p12m = 1 if icu_days_p12m>0
+label var ind_icu_p12m "ICU use 12m post ivw"
+
+label var iah_adl "IAH - 2+ ADL Impairment"
+label var iah_chronic "IAH - 2+ Chronic Conditions"
+label var iah_nonelect "IAH - Nonelective admission 12m pre ivw"
+label var iah_pacute "IAH - Post Acute Care 12m prior"
+
+label var tot_paid_by_mc_12m "Total Paid by Medicare 12m post ivw"
+label var died_12 "Died within 12m post ivw"
+
+local sr_con adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help adl_bed_diff
+foreach x of local sr_con {
+tab `x'
+replace `x' = 0 if `x'==.
+}
+
+label var adl_ins_diff "Difficulty getting around inside"
+label var adl_bed_diff "Difficulty getting out of bed"
+label var iah_all "IAH - All Criteria Met"
+label var adl_eat_diff "Difficulting Eating"
+label var adl_bath_diff "Difficulty bathing"
+label var adl_dres_diff "Has Difficulty Dressing"
+
+capture egen recent_yr = max(index_year), by(bene_id)
+
+keep if recent_yr==index_year
+
+save unique_nocptpos.dta, replace 
+
+append using cpt+pos.dta
+capture gen ind_cpt = 1
+
+keep bene_id wave ind_cpt 
+
+save cpt+pos.dta, replace
+
+restore, preserve
+*/
+capture gen northeast = 0
+replace northeast = 1 if re1dcensdiv==1 | re1dcensdiv==2 | re2dcensdiv==1 | re2dcensdiv==2 | re3dcensdiv==1 | re3dcensdiv==2
+
+capture gen midwest = 0
+replace midwest = 1 if re1dcensdiv==3 | re1dcensdiv==4 | re2dcensdiv==3 | re2dcensdiv==4 | re3dcensdiv==3 | re3dcensdiv==4
+
+capture gen west = 0
+replace west = 1 if re1dcensdiv==8 | re1dcensdiv==9 | re2dcensdiv==8 | re2dcensdiv==9 | re3dcensdiv==8 | re3dcensdiv==9
+
+capture gen south = 0
+replace south = 1 if northeast==0 & west==0 & midwest==0
+
+cap drop _m
+*merge m:1 bene_id using cpt+pos.dta, keepus(ind_cpt)
+
+cap drop _m
+
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta"
+drop if _m==2
+label var housecalls_count "Ave. number of house calls in calendar year of interview"
+
+replace housecalls_count = 0 if housecalls_count==.
+
+cap drop _m
+drop adl_bed_diff adl_ins_diff
+cap drop _m
+merge m:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta", keepus(homebound* adl_bed_diff adl_ins_diff) 
+keep if _m==3
+
+cap drop _m
+drop anfinwgt
+
+merge 1:1 spid using "E:\nhats\data\NHATS cleaned\wave1.dta", keepus(anfinwgt)
+keep if _m==3
+
+levelsof homebound_cat, local(levels)
+local hb
+foreach l of local levels {
+	gen homebound`l'=homebound_cat==`l'
+	local lab : label hb `l'
+	label var homebound`l' "`lab'"
+	local hb `hb' homebound`l'
+}
+
+svyset varunit [pweight=anfinwgt], strata(varstrat)
+
+label var adl_bed_diff "Difficulty getting out of bed"
+label var adl_ins_diff "Difficulty getting around inside"
+gen ind_one_hc=housecalls_count==1
+gen ind_no_hc=housecalls_count==0
+label var ind_no_hc "No housecalls"
+gen ind_lt3_hc=inlist(housecalls_count,1,2)
+gen ind_gt2_hc=inrange(housecalls_count,3,365)
+label var ind_one_hc "Exactly one housecall"
+label var ind_lt3_hc "1 or 2 housecalls"
+label var ind_gt2_hc "3+ Housecalls"
+local cvars1 age aveincome
+local ivars1 female white black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
+`hb' medicaid metro_ind northeast midwest south west
+local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever ///
+sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
+sr_diabetes_ever sr_dementia_ever prob_dem
+local ivars3 ind_no_hc ind_one_hc ind_lt3_hc ind_gt2_hc adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff ///
+adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help ///
+adl_bed_diff ind_hosp_adm_p12m ind_ed_adm_p12m ind_icu_p12m died_12
+local cvars2 tot_paid_by_mc_12m housecalls_count
+
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy: mean `x', over(ind_cpt)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy: mean `x', over(ind_cpt)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy: tab `x' ind_cpt, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy: mean `x', over(ind_cpt)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy: tab `x' ind_cpt, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy: mean `x', over(ind_cpt)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy: tab `x' ind_cpt, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy: mean `x', over(ind_cpt)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if ind_cpt==1
+mat tab1[`r',1]=r(min)
+local ++r
+mat tab1[`r',1]=r(max)
+local ++r
+mat tab1[`r',1]=2
+local ++r
+
+
+sum age if ind_cpt==1
+mat tab1[`r',1] = r(N)
+
+sum age if ind_cpt==0
+mat tab1[`r',2] = r(N)
+local ++r 
+svy, subpop(if ind_cpt==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+svy, subpop(if ind_cpt==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+
+frmttable using "E:\nhats\data\projects\IAH\logs\table1_weighted_evan.doc", replace statmat(tab1) ///
+varlabels title("Table 1: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted)") ///
+ctitles("" "CPT+POS" "No House Calls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+gen hb=homebound1
+
+foreach cpt in 1 0 {
+
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1
+mat tab1[`r',1]=r(min)
+local ++r
+mat tab1[`r',1]=r(max)
+local ++r
+mat tab1[`r',1]=2
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "1+ Housecall"
+if `cpt'==0 local housecall "No Housecalls"
+frmttable using "E:\nhats\data\projects\IAH\logs\table1_weighted_evan.doc", addtable statmat(tab1) ///
+varlabels title("Table 1: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted) & `housecall'") ///
+ctitles("" "Homebound" "Non-Homebound") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+
+preserve
+foreach cpt in 1  {
+replace hb=ind_one_hc==1
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1
+mat tab1[`r',1]=r(min)
+local ++r
+mat tab1[`r',1]=r(max)
+local ++r
+mat tab1[`r',1]=2
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "1+ Housecall"
+if `cpt'==0 local housecall "No Housecalls"
+frmttable using "E:\nhats\data\projects\IAH\logs\table1_weighted_evan.doc", addtable statmat(tab1) ///
+varlabels title("Table 1: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted) & `housecall'") ///
+ctitles("" "One Housecall" "2+ Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+restore
+
+preserve
+
+
+foreach cpt in 1  {
+gen cpt2=ind_cpt
+replace ind_cpt=hb
+replace hb=cpt2
+//replace hb=ind_one_hc==1
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1
+mat tab1[`r',1]=r(min)
+local ++r
+mat tab1[`r',1]=r(max)
+local ++r
+mat tab1[`r',1]=2
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "Homebound only"
+if `cpt'==0 local housecall "No Housecalls"
+frmttable using "E:\nhats\data\projects\IAH\logs\table1_weighted_evan.doc", addtable statmat(tab1) ///
+varlabels title("Table 1: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted) & `housecall'") ///
+ctitles("" "One Housecall" "2+ Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+restore
+
+
+
+
+H="Probable Dementia house calls"
+/* Stata */
+
+use "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", clear
+
+keep if prob_dem==1
+keep spid bene_id index_date wave
+
+save "E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta"
+
+/* SAS      */
+
+libname claims "E:\nhats\data\CMS_DUA_28016\Merged";
+libname line "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+
+proc import datafile="E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta" out=nhats replace; run; 
+
+data nhats;
+set nhats;
+run;
+
+/*
+data carrier_pflag;
+set claims.pb_09_14;
+pos1flag = 0;
+array dx pos1--pos13;
+do over dx;
+if dx in:(12,13,14) then pos1flag = 1;
+output;
+end;
+run;
+
+*/
+
+data carrier;
+set claims.pb_09_14;
+array dx hcpcscd1--hcpcscd13;
+do over dx;
+cptcodes=dx;
+output;
+end;
+/*
+pos1flag = 0;
+if pos1 in:(12,13,14) then pos1flag = 1;
+if pos2 in:(12,13,14) then pos1flag = 1;
+if pos3 in:(12,13,14) then pos1flag = 1;
+if pos4 in:(12,13,14) then pos1flag = 1;
+if pos5 in:(12,13,14) then pos1flag = 1;
+if pos6 in:(12,13,14) then pos1flag = 1;
+if pos7 in:(12,13,14) then pos1flag = 1;
+if pos8 in:(12,13,14) then pos1flag = 1;
+if pos9 in:(12,13,14) then pos1flag = 1;
+if pos10 in:(12,13,14) then pos1flag = 1;
+if pos11 in:(12,13,14) then pos1flag = 1;
+if pos12 in:(12,13,14) then pos1flag = 1;
+if pos13 in:(12,13,14) then pos1flag = 1;
+*/
+run;
+
+
+data carrierline (keep = bene_id clm_id LINE_PLACE_OF_SRVC_CD cptcodes hcpcs_cd);
+set line.bcarrier_line_j_09_14;
+cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
+run;
+
+data carrierline;
+set carrierline;
+cptflag = 0;
+posflag = 0;
+if 99341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337 then cptflag=1;
+if LINE_PLACE_OF_SRVC_CD in:(12,13,14) then posflag=1;
+run;
+
+data carrierline;
+set carrierline;
+both = 0;
+if cptflag = 1 and posflag = 1 then both = 1;
+run;
+
+
+proc sql;
+create table carrier2 as select a.*, b.admit_date, b.disch_date
+from carrierline a
+inner join carrier b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+proc sql;
+create table carrier3 as select a.*, b.*
+from carrier2 a
+inner join nhats b
+on a.bene_id=b.bene_id and -183<=b.index_date-a.admit_date<=183;
+quit;
+
+
+data carrier3;
+set carrier3;
+*where ffs_6m = 1;
+where both = 1;
+run;
+
+proc sort data=carrier3; by spid wave; run;
+proc sort data=carrier3 nodupkey; by spid; run;
+
+proc freq data=carrier3; tables ffs_6m ffs_12m; run;
+
+/* both */
+
+data bothclaims;
+set carrier3;
+where both = 1;
+same = 0;
+if hcpcs_cd = cptcodes then same = 1; /*checking if the cptcodes from from carrier claims is the same as the hcpcs_cd code in carrier line */
+run;
+
+proc sort data=bothclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+/* gen single line per claim for annual count */
+
+proc sort data=bothclaims out=annual nodupkey; by bene_id clm_id; run;
+
+data annual;
+set annual;
+year = year(admit_date);
+run;
+
+proc sql;
+create table annual_1 as select distinct bene_id, year,
+sum(both) as housecalls_count
+from annual
+group by bene_id, year;
+quit;
+
+data annual_1;
+set annual_1;
+if year = 2011 then wave = 1;
+if year = 2012 then wave = 2;
+if year = 2013 then wave = 3;
+run;
+
+proc export data=annual_1 outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" dbms=stata replace; run;
+
+proc freq data=bothclaims order=freq; tables hcpcs_cd; run;
+
+proc sort data=bothclaims nodupkey; by bene_id wave; run;
+
+
+data both_beneid (keep= bene_id wave bflag);
+set bothclaims;
+bflag = 1;
+run;
+
+proc freq data=both_beneid; tables wave; run;
+
+proc export data=both_beneid outfile="E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta" replace; run;
+
+proc sort data=both_beneid out=test nodupkey; by bene_id; run;
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.bflag
+from cptclaims a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if bflag = 1 then delete;
+cflag = 1;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+proc sort data=cptclaims out=test nodupkey; by bene_id; run;
+
+proc export data=cptclaims outfile="E:\nhats\data\Projects\IAH\int_data\cpt+only.dta" replace; run;
+
+
+/*pos only */
+
+data posclaims;
+set carrier3;
+where posflag = 1 and both=0;
+run;
+
+proc sql;
+create table posclaims1 as select a.*, b.cflag
+from posclaims a
+left join cptclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+proc sql;
+create table posclaims2 as select a.*, b.bflag
+from posclaims1 a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data posclaims;
+set posclaims2;
+if cflag = 1 or bflag = 1 then delete;
+run;
+
+
+
+proc sort data=posclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+proc freq data=posclaims order=freq; tables hcpcs_cd; run;
+
+ 
+proc sort data=posclaims nodupkey; by bene_id wave; run;
+
+proc freq data=posclaims; tables wave; run;
+
+
+proc sort data=posclaims nodupkey; by bene_id; run;
+
+
+proc export data=posclaims outfile="E:\nhats\data\Projects\IAH\int_data\pos+only.dta" replace; run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.pflag
+from cptclaims a
+left join posclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if pflag = 1 then delete;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+
+/* none */
+
+data noclaims;
+set carrier3;
+where cpt
+
+
+data carrier2 (keep = cptcodes hcpcs_cd) ;
+set carrier2;
+where posflag = 1 or pos1flag = 1;
+run;
+
+data carrier2 (keep = hcpcs_cd);
+set carrier2;
+run;
+*/
+
+proc sort data=carrier2 nodup; by hcpcs_cd; run;
+
+
+proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
+
+
+H="Prob Dem - HRS"
+/*2000-2012 medicare claims*/
+libname claims 'E:\data\cms_DUA_24548_2012';
+libname raw 'E:\data\cms_DUA_24548_2012\received_20150327';
+
+data carrier;
+set raw.pb_1998 raw.pb_1999 raw.pb_2000 raw.pb_2001 raw.pb_2002 raw.pb_2003 raw.pb_2004 raw.pb_2005 raw.pb_2006 raw.pb_2007 raw.pb_2008 raw.pb_2009 raw.pb_2010 raw.pb_2011 raw.pb_2012;
+run;
+
+proc contents data=carrier short; run;
+
+
+data carrier (keep = bid_hrs_21 from_dt thru_dt PLCRVC01--PLCRVC13) ;
+set carrier;
+run;
+
+proc import datafile="E:\data\IAH - Dementia\core_pdem.dta" out=nhats replace; run; /*technically HRS but too lazy to change */ 
+
+data nhats;
+set nhats;
+run;
+
+
+data carrier_pflag;
+set carrier;
+pos1flag = 0;
+array dx PLCRVC01--PLCRVC13;
+do over dx;
+if dx in:(12,13,14) then pos1flag = 1;
+end;
+run;
+
+
+proc freq data=carrier_pflag; tables pos1flag; run;
+
+data carrier_pflag;
+set carrier_pflag;
+if pos1flag = 0 then delete;
+run;
+
+proc contents data=tmp1.pb_2008; run;
+
+data carrier;
+set claims.pb_2000_2012;
+run;
+
+proc sql;
+create table carrier_new as select a.*, b.pos1flag
+from carrier a
+inner join carrier_pflag b
+on a.bid_hrs_21=b.bid_hrs_21 and a.from_dt=b.from_dt and a.thru_dt=b.thru_dt;
+quit;
+
+
+data carrier_new;
+set carrier_new;
+array dx HCPSCD01--HCPSCD13;
+do over dx;
+hcpcs_cd = dx;
+output;
+end;
+run;
+
+data carrier_new;
+set carrier_new;
+cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
+run;
+
+data carrier_new;
+set carrier_new;
+cptflag = 0;
+if 99341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337 then cptflag=1;
+run;
+
+data carrier_new;
+set carrier_new;
+where cptflag = 1 and pos1flag = 1;
+run;
+
+proc sort data=carrier_new nodup; by bid_hrs_21; run;
+
+
+
+/****************************************************************/
+/*Add HRS xwalk ID to the claims datasets
+Creates 2 datasets, one with the 6 month cc and elix 
+and one with 12 month cc and elix */
+/****************************************************************/
+
+/*HRS - CMS crosswalk initial processing*/
+data crosswalk_1;
+set claims.cmsxref2012;
+keep bid_hrs_21 hhid pn hhidpn hhidnew pnnew;
+/*create id variable as concat of hhid and pn*/
+length hhidpn $9 hhidnew $6 pnnew $3;
+hhidnew=trim(hhid);
+pnnew=trim(pn);
+hhidpn=hhidnew||pnnew;
+run;
+
+data crosswalk_1a;
+set crosswalk_1(keep=bid_hrs_21 hhidpn);
+run;
+
+proc sort data=crosswalk_1a nodupkey; by bid_hrs_21; run; 
+
+proc sql;
+create table hrs as select a.*, b.bid_hrs_21
+from nhats a
+inner join crosswalk_1a b
+on a.id=b.hhidpn;
+quit;
+
+
+proc sql;
+create table carrier_calls as select a.*, b.cptflag, b.pos1flag, b.admit_year
+from hrs a
+inner join carrier_new b
+on a.bid_hrs_21=b.bid_hrs_21 and -183<=a.c_ivw_date-b.admit_date<=183;
+quit;
+
+
+
+proc sort data=carrier_calls; by bid_hrs_21 admit_year; run;
+
+
+data dn_file (keep = bid_hrs_21 admit_year buyin12 hmoind12 hmo_mo buyin_mo orec esrd_ind bene_dob);
+set claims.dn_2000_2012 (rename=(year = admit_year));
+run;
+
+
+proc sort data=dn_file; by bid_hrs_21 admit_year; run;
+
+proc sql;
+create table carrier_calls2 as select a.*, b.*
+from carrier_calls a 
+inner join dn_file b
+on a.bid_hrs_21=b.bid_hrs_21 and a.admit_year=b.admit_year;
+quit;
+
+
+/* Trim buyin and hmo variables to only reflect time before dialysis */
+data hrs_dial_y2;
+set carrier_calls;
+surg_month=month(c_ivw_month);
+if length(trim(left(buyin12)))>=6 and surg_month>0 then do;
+buyin_sy=substr(trim(left(buyin12)),1,surg_month); * creating buyin/hmo variable for the months before index date in same year;
+hmo_sy=substr(trim(left(HMOIND12)),1,surg_month);
+end;
+else do;
+buyin_sy=trim(left(buyin12));
+hmo_sy=trim(left(HMOIND12));
+end;
+run;
+proc means n;
+var surg_month;
+run;
+
+
+proc sql;
+create table dn_surg_y_bef as select
+a.bid_hrs_21,a.admit_year as surg_year,b.year as surg_year_bef,b.year,b.buyin12,b.HMOIND12
+from hrs_dial_final a inner join
+merged.dn_2000_2012 b
+on trim(left(a.bid_hrs_21))=trim(left(b.bid_hrs_21))
+and a.admit_year-b.year=1 order by bid_hrs_21,admit_year;
+quit;
+
+
+proc sql;
+create table all_insurance as select a.*,b.buyin12 as buyin_bef,b.HMOIND12 as hmo_bef from
+hrs_dial_y2 a
+left join
+dn_surg_y_bef b
+on trim(left(a.bid_hrs_21))=trim(left(b.bid_hrs_21));
+quit;
+
+
+data all_insurance2;
+set all_insurance;
+buyin_2y=trim(left(buyin_bef))||trim(left(buyin_sy));
+hmo_2y=trim(left(hmo_bef))||trim(left(hmo_sy));
+
+/*create 12 month variables*/
+buyin_2y_r=reverse(trim(buyin_2y));
+hmo_2y_r=reverse(trim(hmo_2y));
+
+if length(buyin_2y_r)>5 then buyin_1y_r=substr(trim(left(buyin_2y)),1,6);
+if length(hmo_2y_r)>5 then hmo_1y_r=substr(trim(left(hmo_2y)),1,6);
+
+if length(buyin_2y_r)<6 then buyin_1y_r="";
+if length(hmo_2y_r)<6 then hmo_1y_r="";
+
+buyin_1y=reverse(trim(buyin_1y_r));
+hmo_1y=reverse(trim(hmo_1y_r));
+
+/*create indicator variable for mc coverage 0=no, 1=yes*/
+if length(buyin_1y)=6 then do;
+if indexc(buyin_1y,"0","1","2","A","B") then part_ab_1y=0;
+if indexc(buyin_1y,"0","1","2","A","B")=0 then part_ab_1y=1;
+end;
+/*create indicator variable for hmo coverage 0=no, 1=yes*/
+if length(hmo_1y)=6 then do;
+hmo_d_1y= 0;
+if index(hmo_1y,"000000") then hmo_d_1y=1;
+end;
+
+/*create 6 month variable*/
+if length(buyin_2y_r)>0 then buyin_6m_r=substr(trim(left(buyin_2y)),1,6);
+if length(hmo_2y_r)>0 then hmo_6m_r=substr(trim(left(hmo_2y)),1,6);
+
+if length(buyin_2y_r)<1 then buyin_6m_r="";
+if length(hmo_2y_r)<1 then hmo_6m_r="";
+
+buyin_6m=reverse(trim(buyin_6m_r));
+hmo_6m=reverse(trim(hmo_6m_r));
+
+/*create indicator variable for mc coverage 6 mo. 0=no, 1=yes*/
+if length(buyin_6m)=1 then do;
+if indexc(buyin_6m,"0","1","2","A","B") then part_ab_6m=0;
+if indexc(buyin_6m,"0","1","2","A","B")=0 then part_ab_6m=1;
+end;
+if length(hmo_6m)=1 then do;
+if index(hmo_6m,"0") then hmo_d_6m=0;
+if index(hmo_6m,"0")=0 then hmo_d_6m=1;
+end;
+
+run;
+
+
+
+
+
+
+
+data carrier3;
+set carrier3;
+*where ffs_6m = 1;
+where both = 1;
+run;
+
+proc sort data=carrier3; by spid wave; run;
+proc sort data=carrier3 nodupkey; by spid; run;
+
+proc freq data=carrier3; tables ffs_6m ffs_12m; run;
+
+/* both */
+
+data bothclaims;
+set carrier3;
+where both = 1;
+same = 0;
+if hcpcs_cd = cptcodes then same = 1; /*checking if the cptcodes from from carrier claims is the same as the hcpcs_cd code in carrier line */
+run;
+
+proc sort data=bothclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+/* gen single line per claim for annual count */
+
+proc sort data=bothclaims out=annual nodupkey; by bene_id clm_id; run;
+
+data annual;
+set annual;
+year = year(admit_date);
+run;
+
+proc sql;
+create table annual_1 as select distinct bene_id, year,
+sum(both) as housecalls_count
+from annual
+group by bene_id, year;
+quit;
+
+data annual_1;
+set annual_1;
+if year = 2011 then wave = 1;
+if year = 2012 then wave = 2;
+if year = 2013 then wave = 3;
+run;
+
+proc export data=annual_1 outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" dbms=stata replace; run;
+
+proc freq data=bothclaims order=freq; tables hcpcs_cd; run;
+
+proc sort data=bothclaims nodupkey; by bene_id wave; run;
+
+
+data both_beneid (keep= bene_id wave bflag);
+set bothclaims;
+bflag = 1;
+run;
+
+proc freq data=both_beneid; tables wave; run;
+
+proc export data=both_beneid outfile="E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta" replace; run;
+
+proc sort data=both_beneid out=test nodupkey; by bene_id; run;
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.bflag
+from cptclaims a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if bflag = 1 then delete;
+cflag = 1;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+proc sort data=cptclaims out=test nodupkey; by bene_id; run;
+
+proc export data=cptclaims outfile="E:\nhats\data\Projects\IAH\int_data\cpt+only.dta" replace; run;
+
+
+/*pos only */
+
+data posclaims;
+set carrier3;
+where posflag = 1 and both=0;
+run;
+
+proc sql;
+create table posclaims1 as select a.*, b.cflag
+from posclaims a
+left join cptclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+proc sql;
+create table posclaims2 as select a.*, b.bflag
+from posclaims1 a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data posclaims;
+set posclaims2;
+if cflag = 1 or bflag = 1 then delete;
+run;
+
+
+
+proc sort data=posclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+proc freq data=posclaims order=freq; tables hcpcs_cd; run;
+
+ 
+proc sort data=posclaims nodupkey; by bene_id wave; run;
+
+proc freq data=posclaims; tables wave; run;
+
+
+proc sort data=posclaims nodupkey; by bene_id; run;
+
+
+proc export data=posclaims outfile="E:\nhats\data\Projects\IAH\int_data\pos+only.dta" replace; run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.pflag
+from cptclaims a
+left join posclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if pflag = 1 then delete;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+
+/* none */
+
+data noclaims;
+set carrier3;
+where cpt
+
+
+data carrier2 (keep = cptcodes hcpcs_cd) ;
+set carrier2;
+where posflag = 1 or pos1flag = 1;
+run;
+
+data carrier2 (keep = hcpcs_cd);
+set carrier2;
+run;
+*/
+
+proc sort data=carrier2 nodup; by hcpcs_cd; run;
+
+
+proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
 
 
 H="***************************"
