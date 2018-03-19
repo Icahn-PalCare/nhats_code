@@ -2194,8 +2194,8 @@ local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 
 //7/13/17--add in metro/nonmetro var
-use "E:\nhats\data\NHATS Public\NHATS_Round_1_4_MetNonmet_STATA\NHATS_Round_1_4_MetNonmet.dta", clear
-forvalues i=1/4 {
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
 gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
 }
 reshape long metro_ind, i(spid) j(wave)
@@ -2207,50 +2207,250 @@ cd "`work'"
 use round_1_6_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
-///// 3/5/18 --Adding in FRI questions 
+///// 3/14/18 --Adding in Frailty underlying series
+
+//activities done twice
+
+forvalues i=1/2{
+capture drop gripsc`i'
+egen gripsc`i'= rowmax(gr*grp`i'rdng)
+egen walksec`i'= rowmax(wa*wlkc`i'secs)
+egen walkhndr`i'=rowmax(wa*wlk`i'hndr)
+replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
+replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
+replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
+}
+
+label var gripsc1 "GRP1 Display Reading"
+label var gripsc2 "GRP2 Display Reading"
+label var walksec1 "Secs Hld Walking Course1"
+label var walksec2 "Secs Hld Walking Course2"
+label var walkhndr1 "Hnrds Hld Walking Course1"
+label var walkhndr2 "Hnrds Hld Walking Course2"
+/*
+forvalues i=1/2{
+capture drop walk`i'
+if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
+if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
+replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
+}
+rename walk1 walksec
+rename walk2 walkhnrds
+label var walk1 "Secs Hld Walking Course)
+*/
+
+foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
+capture drop `x'
+gen `x'=.
+forvalues w=1/6 {
+replace `x'=r`w'd`x' if  inlist( r`w'd`x', 0, 1, 2, 3, 4)
+}
+}
+
+label var origwksc "Original Walk Score"
+label var nhatswksc "NHATS Walk Score"
+label var nhatsgrav "NHATS Avg. Grip Score"
+label var nhatsgrb "NHATS Best Grip Score"
+
+
+local a lst10pnds trytolose 
+local b evrgowalk vigoractv
+
+foreach x in `a' `b'{
+capture drop `x'
+gen `x'=.
+}
+
+forvalues w=1/6{
+foreach x in `a'{
+replace `x'=0 if inlist(hw`w'`x', 2, -8, -7) 
+replace `x'=1 if hw`w'`x'==1
+}
+foreach y in `b'{
+replace `y'=0 if inlist(pa`w'`y', 2, -8, -7) 
+replace `y'=1 if pa`w'`y'==1
+}
+}
+
+label var lst10pnds "Lost 10 Pounds in Last Yr."
+label var trytolose "Were You Trying to Lose Weight"
+label var evrgowalk "Ever Go Walking for Exercise"
+label var vigoractv "Ever Vigorous Activities"
+
+
+capture drop unwgtloss lowphysact
+gen unwgtloss=. 
+gen lowphysact=.
+replace unwgtloss=0 if lst10pnds==0 | trytolose==1
+replace unwgtloss=1 if lst10pnds==1 & trytolose==0
+replace lowphysact=0 if evrgowalk==1 | vigoractv==1
+replace lowphysact=1 if evrgowalk==0 & vigoractv==0
+
+label var unwgtloss "Unintentional Weight Loss"
+label var lowphysact "Low Physical Activity"
+
+capture drop lowenrgy
+egen lowenrgy=rowmax(ss*lowenergy)
+replace lowenrgy=. if inlist(lowenrgy, -9, -8, -7, -1)
+replace lowenrgy=0 if lowenrgy==2
+label var lowenrgy "Low Energy in Last Month"
+
+
+///// 3/7/18 --Adding in Well-Being questions 
+/// Inapplicable is people who have no interview, had a proxy, or died. turned to missing. 
+
+foreach j in 1 2 4 {
+	forvalues i=1/4 {
+		capture drop wbq`j'`i'
+		gen wbq`j'`i'=.
+	}
+}
+drop wbq44
+
+forvalues w=1/6 {
+forvalues i=1/4 {
+	replace wbq1`i'=1 if wb`w'offelche`i'==4 
+	replace wbq1`i'=2 if wb`w'offelche`i'==3 
+	replace wbq1`i'=3 if wb`w'offelche`i'==2 
+	replace wbq1`i'=4 if wb`w'offelche`i'==1 
+	replace wbq1`i'=0 if wb`w'offelche`i'==5 
+	replace wbq1`i'=5 if wb`w'offelche`i'==-7 | wb`w'offelche`i'==-8
+	}
+	}
+
+label var wbq11 "Often you Feel Cheerful"
+rename wbq11 oftcheer 
+label define oftcheer 0 "Never" 1 "Rarely (Once a Week or Less)" 2 "Some Days(2-4 Days a Week)" ///
+3 "Most Days(5-6 Days a Week)" 4 "Every Day (7 Days a Week)" 5 "RF/DK"
+label values oftcheer oftcheer
+label var wbq12 "Often you Feel Bored"
+rename wbq12 oftbored
+label values oftbored oftcheer
+label var wbq13 "Often you Feel Full of Life"
+rename wbq13 oftfol
+label values oftfol oftcheer
+label var wbq14 "Often you Feel Upset"
+rename wbq14 oftupset
+label values oftupset oftcheer
+
+
+forvalues w=1/6 {
+	forvalues i=1/4 {
+	replace wbq2`i'=1 if wb`w'truestme`i'==3 
+	replace wbq2`i'=2 if wb`w'truestme`i'==2 
+	replace wbq2`i'=3 if wb`w'truestme`i'==1 
+	replace wbq2`i'=4 if wb`w'truestme`i'==-7 | wb`w'truestme`i'==-8
+	}
+}
+
+label var wbq21 "Life has Meaning Purpose"
+rename wbq21 lifemean 
+label define lifemean 1 "Agree Not at All" 2 "Agree a Little" 3 "Agree A Lot" 4 "RF/DK"
+label values lifemean lifemean
+label var wbq22 "Feels Confident"
+rename wbq22 confident
+label values confident lifemean
+label var wbq23 "Gave up Improving Life"
+rename wbq23 giveup
+label values giveup lifemean
+label var wbq24 "Likes Living Situation"
+rename wbq24 livingsit
+label values livingsit lifemean
+
+forvalues w=1/6 {
+	forvalues i=1/3 {
+	replace wbq4`i'=1 if wb`w'agrwstmt`i'==3 
+	replace wbq4`i'=2 if wb`w'agrwstmt`i'==2 
+	replace wbq4`i'=3 if wb`w'agrwstmt`i'==1 
+	replace wbq4`i'=4 if wb`w'agrwstmt`i'==-7 | wb`w'agrwstmt`i'==-8
+	}
+}
+
+label var wbq41 "Self Determination"
+rename wbq41 selfdeter 
+label values selfdeter lifemean
+label var wbq42 "Want-Finds Way to Do"
+rename wbq42 findway
+label values findway lifemean
+label var wbq43 "Easily Adjust to Change"
+rename wbq43 adjchg
+label values adjchg lifemean
+	
+
+capture drop agefeel
+egen agefeel= rowmax(wb*ageyofeel) 
+replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
+label var agefeel "Age you Feel Most Times"
+
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
 
 foreach x in cane walker wheelchr {
 capture drop `x'_nhats
 gen `x'_nhats=fl1`x'
-replace `x'_nhats=. if fl1`x'==-9
-replace `x'_nhats=0 if fl1`x'==-1
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
 label var `x'_nhats "`x' from NHATS"
 }
 
 capture drop com_nhats
-recode sc1usvartoi1 (-1 2=0) (-9 -8 -7=.), gen(com_nhats)
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
 
 capture drop bathtoi_nhats
-gen bathtoi_nhats=. if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
-replace bathtoi_nhats=0 if sc1dbathdevi==-1 | sc1dbathdevi==1 | sc1dtoildevi==-1 | sc1dtoildevi==1
+gen bathtoi_nhats=. //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if sc1dbathdevi==1 | sc1dtoildevi==1
 replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2
 
-///// 3/2/18 --Adding in meal skippped questions
 
-capture drop mealskip*
-gen mealskip=.
-forvalues w=2/6 {
-replace mealskip=0 if ew`w'mealskip1==-1 | ew`w'mealskip1==2 
-replace mealskip=1 if  ew`w'mealskip1==1
+///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
+//missing if in NH-FQ, dead, in NH-FQ R1 & R2
+
+capture drop mealskip1 nopayhous nopayutil nopaymed
+local ew mealskip1 nopayhous nopayutil nopaymed
+foreach x in `ew'{
+gen `x'=.
 }
-label var mealskip "No Money, Meals Skipped"
 
+foreach x in `ew'{
+forvalues w=2/6 {
+replace `x'=0 if ew`w'`x'==2 
+replace `x'=1 if ew`w'`x'==1
+replace `x'=2 if ew`w'`x'==-7 | ew`w'`x'==-8
+}
+}
 
-capture drop mealskipnum*
+label var mealskip1 "No Money, Meals Skipped"
+label var nopayhous "No Money for Housing"
+label var nopayutil "No Money for Utilities"
+label var nopaymed "No Money for Medical"
+
+label define mealskip 0 "No" 1 "Yes" 2 "RF/DK"
+foreach x in `ew' {
+label values `ew' mealskip
+}
+rename mealskip1 mealskip
+
+capture drop mealskipnum
 gen mealskipnum=.
 
 forvalues w=2/6 {
-replace mealskipnum=0 if ew`w'mealskip2==-1 
-replace mealskipnum=1 if  ew`w'mealskip2==4
-replace mealskipnum=2 if  ew`w'mealskip2==3
-replace mealskipnum=3 if  ew`w'mealskip2==2
-replace mealskipnum=4 if  ew`w'mealskip2==1
+replace mealskipnum=0 if ew`w'mealskip2==-1 & ew`w'mealskip1==2
+replace mealskipnum=1 if ew`w'mealskip2==4
+replace mealskipnum=2 if ew`w'mealskip2==3
+replace mealskipnum=3 if ew`w'mealskip2==2
+replace mealskipnum=4 if ew`w'mealskip2==1
+replace mealskipnum=5 if ew`w'mealskip2==-7 | ew`w'mealskip2==-8
 }
 
 label var mealskipnum "How Often Meals Skipped"
-label define mealskipnum1 0 "Inapplicable" 1 "A Few Days" 2 "Several Days(less than half)" ///
-3 "More than Half the Days" 4 " Nearly Every Day"
+label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)" ///
+3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
 label values mealskipnum mealskipnum1
+
+
+
+
 
 
 
@@ -2763,7 +2963,7 @@ forvalues i=1/6 {
 }
 }
 gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
-if missing(cohesion_k)|missing(cohesion_w) | missing(cohesion_p)
+if !missing(cohesion_k) | !missing(cohesion_w) | !missing(cohesion_p)
 
 label var cohesion_knowwell "People know each other well in the community"
 label var cohesion_w "People are willing to help each other in the commmunity"
@@ -2932,7 +3132,7 @@ label values region region
 forvalues i=1/6 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
-	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'*
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'*
 }
 
 drop el1* rl1* ia1* pd2* pd3* pd4* ia3* ia5*

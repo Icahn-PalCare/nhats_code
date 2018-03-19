@@ -1,5 +1,8 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
+H="Not using Original Code anymore"
+
+
 H="Original code"
 clear all 
 set more off
@@ -225,9 +228,9 @@ capture log close
 
 
 local datapath "E:\nhats\data\projects\serious_ill\final_data"
-local logpath "E:\nhats\data\projects\serious_ill\logs"
+cd `datapath'
+local logpath "E:\nhats\data\projects\caregivers\logs"
 cd `logpath'
-
 
 use "E:\nhats\data\nhats cleaned\op_round_1_6.dta" if wave<=3, clear
 replace prim_helper_cat=op_relations if primary_cg==1
@@ -252,7 +255,8 @@ label define op_relationship_cat 7 "Son and daughter tied", modify
 tempfile op
 save `op'
 
-use `datapath'\serious_ill_nhats_sample.dta if wave<=3 & sp_ivw & !lml, clear
+use `datapath'\serious_ill_nhats_sample.dta if wave<=3 & sp_ivw==1 & !lml & ///
+n_helper>=1  & !nhres, clear
 duplicates drop spid wave hs_los, force
 drop prim*
 merge 1:1 spid wave using `op'
@@ -263,7 +267,7 @@ merge 1:1 spid wave using `op'
  */
  
 gen hs_prior=first_hs<ivw_date
-gen pop=died_12 & !hs_prior 
+gen pop=died_12==1 & !hs_prior 
 sort spid pop ivw_date
 by spid pop: replace pop=0 if _n>1 & pop==1
 duplicates report spid if pop
@@ -285,6 +289,169 @@ tab ind_hs if pop
 *hist hs_los if pop
 gen ind_help=n_helpers>0
 tab ind_help if pop
-
+gen hrswk_20=tot_hrswk_help_i>=20 & !missing(tot_hrswk_help_i)
+gen ind_4_help=n_helpers>=4
+label var hrswk_20 "20+ hours of help per week (all sources)"
+label var ind_4_help "4+ helpers (incl. paid CGs)"
+label var ind_help "Any helpers"
+gen ind_solo_inf=n_help==n_paid+1
+label var ind_solo_inf "Has solo informal caregiver"
+gen ind_solo_solo=n_help==1 & n_paid==0
+label var ind_solo_s "Has solo inf. & no paid CGs"
+levelsof prim_, local(levels)
+local prim
+foreach l of local levels {
+gen prim`l'=prim_==`l'
+local lab : label op_relationship_cat `l'
+label var prim`l' "Primary helper : `lab'"
+local prim `prim' prim`l'
+}
+gen prim8=n_helpers==0
+label var prim8 "No helpers listed"
+local prim `prim' prim8
+forvalues i=1/4 {
+local lab : label region `i'
+gen `lab'=region==`i'
+label var `lab' "`lab'"
+rename `lab', l
+}
+gen n=1
 //table 1
+gen onlypaid=n_paid==n_help
+label var onlypaid "Paid caregivers only"
+gen ind_noone=n_social==0
+label var ind_noone "Nobody in social network"
+local cvars1 age
+local cvars2 aveincome
+local cvars3 sr_numconditions1 n_helpers tot_hrswk_help_i
+local ivars1 female white black hisp other_race married livealone ind_noone ///
+educ_hs_ind medicaid medigap
+local ivars2 creditdebt medpaynotcash govtasst proxy srh_fp 
+local ivars3 ind_help ind_paid_helper ind_solo_inf ind_4_help hrswk_20 `prim' ///
+adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_impair iadl_impair ///
+metro_ind northeast midwest south
 
+gen full_samp=1
+
+
+//for unweighted, just keep the population
+keep if pop==1
+
+label var full_samp "Full 12m mortality"
+local colvars /*ind_solo_inf ind_solo_solo*/ onlypaid hrswk_20 ind_4_help 
+tokenize `colvars'
+
+local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1
+
+mat tab=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+foreach group in "0,1" 0 1 {
+	forvalues i=1/3 {
+		foreach x of local cvars`i' {
+			sum `x' if inlist(ind_hs,`group')
+			mat tab[`r',`c']=r(mean)
+			if "`group'"=="1" {
+				ttest `x', by(ind_hs)
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`i' {
+			sum `x' if inlist(ind_hs,`group')
+			mat tab[`r',`c']=r(mean)*100
+			if "`group'"=="1" {
+				tab `x' ind_hs, chi2
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+}
+	sum n if inlist(ind_hs,`group')
+	mat tab[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+mat rownames tab=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' N
+
+frmttable using eol_cg_hs_table_1.rtf, replace statmat(tab) title("Sample Characteristics by Hospice Use") ///
+ctitles("" "Full Sample" "No Hospice" "Yes Hospice" "P") varlabels ///
+note("Waves 1-3 NHATS community-dwelling sample with 12m mortality and no hospice prior to ivw" ///
+"If multiple ivws in 12m prior to death, earliest is taken" ///
+"P-values diff. btwn Yes/No hospice, unweighted sample") annotate(stars) ///
+asymbol(*,**)
+
+
+mat tab=J(`rn',8,.)
+mat stars=J(`rn',8,0)
+
+local r=1
+local c=1
+
+forvalues group=1/3 {
+	gen group`group'=``group''==1
+	forvalues i=1/3 {
+		foreach x of local cvars`i' {
+			sum `x' if inlist(group`group',1)
+			mat tab[`r',`c']=r(mean)
+*			if "`group'"=="1" {
+				ttest `x', by(group`group')
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+*}
+			local r=`r'+1
+}
+		foreach x of local ivars`i' {
+			sum `x' if inlist(group`group',1)
+			mat tab[`r',`c']=r(mean)*100
+*			if "`group'"=="1" {
+				tab `x' group`group', chi2
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+*}
+			local r=`r'+1
+}
+}
+	sum n if inlist(group`group',1)
+	mat tab[`r',`c']=r(N)
+	local r=1
+	local c=`c'+2
+}
+
+mat rownames tab=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' N
+mat colnames tab=`1' P `2' P `3' P `4' P
+frmttable using eol_cg_hs_table_1.rtf, addtable statmat(tab) ///
+title("Sample Characteristics By CG Resources/Use") varlabels ///
+note("Waves 1-3 NHATS community-dwelling sample with 12m mortality and no hospice prior to ivw" ///
+"If multiple ivws in 12m prior to death, earliest is taken" ///
+"P-values diff. btwn Yes/No for each indicator, unweighted sample") annotate(stars) ///
+asymbol(*,**)
+
+mat tab=J(5,3,.)
+mat stars=J(5,3,0)
+
+local r=1
+local c=1
+
+foreach x in `colvars' {
+	forvalues i=0/1 {
+		sum ind_hs if `x'==`i'
+		mat tab[`r',`i'+1]=r(mean)*100
+}
+	*tab ind_hs `x', chi2
+	ttest `x', by(ind_hs)
+	mat tab[`r',3]=r(p)
+	mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+	local r=`r'+1
+}
+mat rownames tab=`colvars'
+
+frmttable using eol_cg_hs_table_1.rtf, addtable statmat(tab) ///
+title("Hospice Use by CG Resources/Use") varlabels ///
+ctitles("" "No hospice" "Yes Hospice" "P") sdec(2) annotate(stars) asymbol(*,**) 

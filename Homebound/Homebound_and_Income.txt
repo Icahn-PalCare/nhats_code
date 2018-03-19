@@ -4195,6 +4195,8 @@ gen hbw=wave if homebound==1
 gen nhw=wave if nhres==1
 by spid, sort: egen firsthb=min(hbw)
 by spid, sort: egen firstnh=min(nhw)
+replace firsthb=firsthb-1
+replace firstnh=firstnh-1
 gen everhb=!missing(firsthb)
 gen evernh=!missing(firstnh)
 label var everhb "Ever HB"
@@ -4375,7 +4377,7 @@ by spid, sort: egen lastwave=max(wave)
 *keep if wave==1 
 tab lastwave
 *keep if inrange(homebound_cat,2,4)
-gen time=lastwave
+gen time=lastwave-1
 gen first_hb_or_nh=firsthb
 replace first_hb=firstnh if firstnh<firsthb
 replace time=first_hb_or_nh if !missing(first_hb_or_nh)
@@ -4388,7 +4390,7 @@ replace ultimate=2 if evernh==1 & !ultimate
 replace ultimate=2 if firstnh<firsthb
 replace ultimate=3 if !missing(death_date) & !ultimate
 stset time, failure(everhb)
-sts graph, by(income_cat)
+sts graph if wave==1, by(income_cat)
 graph save km_hb, replace
 graph export km_hb.pdf, replace
 
@@ -4421,24 +4423,24 @@ local vars `age' c.aveincome##c.aveincome female black hisp married ind_noone `e
 medicaid prob_dem `cond' adl_diff_ind srh_fp ///
 ind_paid_helper metro_ind northeast midwest south ind_replenish
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars' //, nohr mgale(mg)
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars' //, nohr mgale(mg)
 *stcoxkm. by(income_cat)
 qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
 
-stphplot, by(income_cat) adjust(`age'  female black hisp married  ind_noone  `ed'  ///
+stphplot if wave==1, by(income_cat) adjust(`age'  female black hisp married  ind_noone  `ed'  ///
 medicaid prob_dem `cond' adl_diff_ind srh_fp ind_paid_helper ///
 metro_ind northeast midwest south)
-stphplot, by(income_cat)
+stphplot if wave==1, by(income_cat)
 
 gen timenh=firstnh
-replace timenh=lastwave if missing(firstnh)
+replace timenh=lastwave-1 if missing(firstnh)
 stset timenh, failure(evernh)
 sts graph, by(income_cat)
 graph save km_nh, replace
 graph export km_nh.pdf, replace
 
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars'
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars'
 
 qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
 
@@ -4449,7 +4451,7 @@ graph save km_either, replace
 graph export km_either.pdf, replace
 
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars'
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars'
 
 qui outreg using homebound_income_cox_models__xtra_ses_cats, merge ///
 ctitles("" "HB or NH") varlabels  ///

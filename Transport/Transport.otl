@@ -5596,7 +5596,10 @@ ctitles("" "AMEs")
 
 
 
-H="run for wave 5"
+H="***************************"
+
+
+H="tables for Miriam's paper"
 /*per Katherine's ask, 
 -limit sample drop dr not seen home visit and other from analyses and rerun
 
@@ -6020,20 +6023,21 @@ marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any
  
  outreg,  ctitles("" "1") varlabels stats(e_b e_ci p) ///
-title("Table 4. Logistic model of predictors of transportation disadvantage")
+title("Supp Table 1. Logistic model of predictors of transportation disadvantage") 
+
 svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
 marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any ind_imp_any
  
  outreg,  ctitles("" "2") varlabels stats(e_b e_ci p) ///
-title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+title("Supp Table 1. Logistic model of predictors of transportation disadvantage") ///
 merge
 svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
 marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any ind_imp_club
  
  outreg,  ctitles("" "3") addtable varlabels stats(e_b e_ci p) ///
-title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+title("Supp Table 1. Logistic model of predictors of transportation disadvantage") ///
 merge 
 
 preserve
@@ -6043,7 +6047,7 @@ marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any ind_imp*
  
  outreg,  ctitles("" "4") addtable varlabels stats(e_b e_ci p) ///
-title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+title("Supp Table 1. Logistic model of predictors of transportation disadvantage") ///
 merge 
 restore
 
@@ -6052,6 +6056,34 @@ marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
  device_any ind_imp*
  
  outreg using transport_tables_wave5.rtf,  ctitles("" "5") addtable varlabels stats(e_b e_ci p) ///
-title("Table 4. Logistic model of predictors of transportation disadvantage") ///
+title("Supp Table 1. Logistic model of predictors of transportation disadvantage") ///
 merge 
 
+//3/9/18--sens analyses that add proxy as covariate and that drop proxies altogether
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any
+
+ 
+outreg,addtable varlabels stats(e_b e_ci p) ///
+title("Supp Table 2. Logistic model of predictors of transportation disadvantage")  ///
+ctitles("" "1")
+
+svy, subpop(if proxy==0): logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any
+
+ 
+outreg, addtable varlabels stats(e_b e_ci p) /// 
+title("Supp Table 2. Logistic model of predictors of transportation disadvantage") ///
+ctitles("" "2") merge
+
+
+svy: logit barrier agecat2 agecat3  female black hisp educ_hs_ind income_cat0 ///
+marital_mp prob_dem adl_impair iadl_impair sr_numconditions1 ///
+ device_any proxy
+
+ 
+ outreg using transport_tables_wave5.rtf,  ctitles("" "3") addtable varlabels stats(e_b e_ci p) ///
+title("Supp Table 2. Logistic model of predictors of transportation disadvantage") ///
+merge 
