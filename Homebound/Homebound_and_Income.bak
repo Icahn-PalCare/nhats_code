@@ -4195,6 +4195,8 @@ gen hbw=wave if homebound==1
 gen nhw=wave if nhres==1
 by spid, sort: egen firsthb=min(hbw)
 by spid, sort: egen firstnh=min(nhw)
+replace firsthb=firsthb-1
+replace firstnh=firstnh-1
 gen everhb=!missing(firsthb)
 gen evernh=!missing(firstnh)
 label var everhb "Ever HB"
@@ -4375,6 +4377,889 @@ by spid, sort: egen lastwave=max(wave)
 *keep if wave==1 
 tab lastwave
 *keep if inrange(homebound_cat,2,4)
+gen time=lastwave-1
+gen first_hb_or_nh=firsthb
+replace first_hb=firstnh if firstnh<firsthb
+replace time=first_hb_or_nh if !missing(first_hb_or_nh)
+
+gen ind_helper_any=n_helpers>0
+label var ind_helper_any "Any helpers"
+gen dies=!missing(death_date)
+gen ultimate=everhb==1
+replace ultimate=2 if evernh==1 & !ultimate
+replace ultimate=2 if firstnh<firsthb
+replace ultimate=3 if !missing(death_date) & !ultimate
+stset time, failure(everhb)
+sts graph if wave==1, by(income_cat)
+graph save km_hb, replace
+graph export km_hb.pdf, replace
+
+forvalues i=1/6 {
+local lab : label r1d2intvrage `i'
+label define agecat `i' "`lab'", modify
+}
+
+
+foreach x in agecat income_cat {
+levelsof `x', local(levels)
+foreach l of local levels {
+	gen `x'`l'=`x'==`l'
+	local lab : label `x' `l'
+	label var `x'`l' "`lab'"
+}
+}
+
+forvalues i=2/6 {
+	local age `age' agecat`i'
+}
+
+forvalues i=1/3 {
+	local inc `inc' income_cat`i'
+}
+
+local cond sr_cond_cat2 sr_cond_cat3
+
+local vars `age' c.aveincome##c.aveincome female black hisp married ind_noone `ed' ///
+medicaid prob_dem `cond' adl_diff_ind srh_fp ///
+ind_paid_helper metro_ind northeast midwest south ind_replenish
+
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars' //, nohr mgale(mg)
+*stcoxkm. by(income_cat)
+qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
+
+stphplot if wave==1, by(income_cat) adjust(`age'  female black hisp married  ind_noone  `ed'  ///
+medicaid prob_dem `cond' adl_diff_ind srh_fp ind_paid_helper ///
+metro_ind northeast midwest south)
+stphplot if wave==1, by(income_cat)
+
+gen timenh=firstnh
+replace timenh=lastwave-1 if missing(firstnh)
+stset timenh, failure(evernh)
+sts graph, by(income_cat)
+graph save km_nh, replace
+graph export km_nh.pdf, replace
+
+
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars'
+
+qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
+
+gen either=everhb==1 | evernh==1
+stset time, failure(either)
+sts graph, by(income_cat)
+graph save km_either, replace
+graph export km_either.pdf, replace
+
+
+svy, subpop(if wave==1 /*&  inrange(homebound_cat,2,4)*/): stcox `vars'
+
+qui outreg using homebound_income_cox_models__xtra_ses_cats, merge ///
+ctitles("" "HB or NH") varlabels  ///
+title(Cox proportional hazard models) stats(e_b p) replace ///
+note("Among wave 1/5 non-homebound community dwelling SPs")
+
+
+
+H="tables incl. fin. strain rd.2"
+clear all
+set more off
+capture log close
+
+
+cd "E:\nhats\data\projects\Homebound\logs"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" if lml==0, clear
+
+/*
+//reweight so later waves aren't overweighted
+gen orig_weight=anfinw
+sum anfinw if wave==2
+gen n=1
+sum n if wave==2 [aw=anfinw]
+local w=r(sum)
+forvalues i=2/6 {
+sum n if wave==`i' [aw=anfinw]
+replace anfinw=anfinw*`w'/r(sum) if wave==`i'
+}
+svyset [pw=n]
+drop n
+*/
+//reset wave to 1/2 from 5/6 to run for 2015 cohort
+replace wave=wave-3 if year==2015
+gen ind_replenish=year==2015
+label var ind_replenish "2015 Replenishment Cohort"
+
+gen ind_noone=n_social==0
+label var ind_noone "SR nobody in social network"
+sort spid wave
+*by spid: keep if prob_dem[1]==1
+by spid: egen firstdem=min(cond(prob_dem==1,wave,.))
+xtset spid wave
+replace homebound_cat=. if nhres==1
+gen homebound=homebound==1 if !missing(homebound) & !nhres
+gen hbw=wave if homebound==1
+gen nhw=wave if nhres==1
+by spid, sort: egen firsthb=min(hbw)
+by spid, sort: egen firstnh=min(nhw)
+gen everhb=!missing(firsthb)
+gen evernh=!missing(firstnh)
+label var everhb "Ever HB"
+label var evernh "Ever NH"
+*drop if firsthb==1 | missing(homebou)
+by spid: gen hbnextwave=homebound[_n+1]
+by spid: gen nhnextwave=nhres[_n+1]
+gen inchbnextwave=firsthb==wave+1 & homebound==0
+gen incnhnextwave=firstnh==wave+1 & nhres==0
+replace adl_diff_ind=1 if adl_impair==1
+label var adl_diff_ind "ADL difficulty or impairment"
+
+gen wherelandgroup=1 if missing(firsthb) & missing(firstnh)
+replace wherelandgroup=2 if !missing(firsthb) 
+replace wherelandgroup=3 if !missing(firstnh) 
+replace wherelandgroup=4 if !missing(firstnh) & firsthb<firstnh
+label define wherelandgroup 1 "Never homebound or NH resident" 2 "Future HB" ///
+3 "Future NH resident" 4 "Homebound, then NH"
+label values wherelandgroup wherelandgroup
+
+sort spid wave
+by spid: drop if nhres[_n-1]==1 
+by spid: drop if homebound_cat[_n-1]==. & wave!=1
+
+
+gen nwstatus=.
+forvalues i=2/5 {
+replace nwstatus=r`=`i'+1'status if wave==`i'
+}
+replace nwstatus=r6status if year==2015 & wave==2
+tab nwstat
+tab r2status
+replace nwstatus=1 if inlist(nwstatus,60,63) & !missing(hbne)
+replace nwstatus=4 if inlist(nwstatus,61)
+replace nwstatus=6 if inlist(nwstatus,62,86)
+replace nwstatus=7 if nwstatus>7
+replace nwstatus=6 if died_12==1 & nwstatus==7
+label define nwstatus 1 "Community, not homebound" 2 "Homebound, not incident" ///
+3 "Incident homebound" 4 "NH Resident, not incident" ///
+5 "Incident NH" 6 "Died" 7 "LFU"
+label values nwstatus nwstatus
+replace nwstatus=2 if hbne==1
+replace nwstatus=3 if inchb==1
+replace nwstat=4 if nhne==1
+replace nwstat=5 if incnhne==1
+label var nwstat "Status next wave"
+replace died_12=0 if nwstatus<=5
+label var died_12 "Died prior to next wave"
+
+gen northeast=region==1
+gen midwest=region==2
+gen south=region==3
+gen west=region==4
+label var northe "Northeast"
+label var midw "Midwest"
+label var south "South"
+label var west "West"
+gen sr_cond_cat=1 if sr_numcond<2
+replace sr_cond_cat=2 if inrange(sr_numcond,2,4)
+replace sr_cond_cat=3 if inrange(sr_numcond,5,15)
+label define sr_cond_cat 1 "0-1 SR condition" 2 "2-4 SR conditions" 3 "5+ SR conditions"
+label values sr_cond_cat sr_cond_cat
+tab sr_cond_cat, gen(sr_cond_cat)
+forvalues i=1/3 {
+local lab: label sr_cond_cat `i'
+label var sr_cond_cat`i' "`lab'"
+}
+
+gen status=1 if sp_ivw==1 & !missing(homebound)
+replace status=2 if homebound==1
+replace status=3 if nhres==1
+replace status=4 if status==1 & (firsthb<wave | firstnh<wave)
+label define status 1 "Community, not HB" 2 "Homebound" 3 "NH resident" 4 ///
+"Community, previously HB or NH resident"
+label values status status
+label var status "Status this wave"
+
+
+foreach x in nopayhous nopayutil nopaymed mealskip  {
+replace `x'=. if `x'==2
+}
+replace mealskipnum=. if mealskipnum==5
+gen fin_strain=.
+replace fin_strain=0 if nopayhous==0 & nopayutil==0 & nopaymed==0 & mealskip==0 
+replace fin_strain=1 if nopayhous==1 | nopayutil==1 | nopaymed==1 | mealskip==1
+label var fin_strain "Financial Strain"
+
+gen any_asst= govtasst
+replace any_asst=1 if section8==1
+replace any_asst=1 if meals_wheels==1
+label var any_asst "Recieved any public assistance"
+
+
+
+tab wave nwstat if wave<=4, row
+tab nwsta status if wave==2 
+
+sum aveincome
+forvalues i=1/4 {
+gen inccat`i'=income_cat==`i'-1
+local lab : label income_cat `=`i'-1'
+label var inccat`i' "Income: `lab'"
+}
+gen prob_dementia=dem_3==1 if !missing(dem_3)
+label var prob_dementia "Probable dementia"
+
+by spid, sort: gen persontime=_N
+replace persontime=firsthb if firsthb<persontime
+replace persontime=firstnh if firstnh<persontime
+label var persontime "Waves contributing information"
+
+local cvars1 age
+local cvars2 n_social_network persontime aveincome n_helpers n_paid_helpers tot_hrsmonth_help_i ///
+tot_hrsmonth_paid_i 
+local ivars1 female white black hisp other_race married livealone educ_hs_ind proxy ind_noone
+local ivars2 ind_any_helpers ind_paid_helper top_quartile_help_helped ///
+medicaid medigap srh_fp nhres ///
+sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
+sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever ///
+prob_dementia dem_2_cat adl_diff_ind adl_independent iadl_diff_ind iadl_independent 
+local ivars3 adl1 adl2 adl3 iadl1 iadl2 iadl3 adl_eat_help adl_bath_help adl_toil_help ///
+adl_dres_help adl_ins_help adl_bed_help iadl_laun_help ///
+iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
+ reg_doc_seen sr_hosp_ind
+gen lfunextwave=nwstatus==7
+label var lfune "Lost to follow up prior to next wave"
+local cvars1 age
+local cvars2 persontime  aveincome
+local ivars1 female white black hisp other_race married 
+label var inchb "Incident Homebound Next Wave"
+label var incnh "Incident Nursing Home Next Wave"
+local ivars2 inccat1 inccat2 inccat3 inccat4 creditdebt medpaynotcash govtasst proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_impair iadl_impair ///
+sr_cond_cat1 sr_cond_cat2 sr_cond_cat3 sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
+sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever ///
+prob_dementia dem_2_cat adl_diff_ind adl_independent inchbnextwave incnhnextwave ///
+lfunextwave died_12 everhb evernh metro_ind northeast midwest south ind_replenish ///
+fin_strain creditdebt medcreditdebt medpaynotcash finhlpfam meals_wheels mealskip nopayhous nopayutil nopaymed any_asst
+label var meals_wheels "Meals on Wheels"
+
+gen n=1
+
+forvalues i=1/7 {
+gen group`i'=nwstatus==`i'
+}
+
+
+preserve
+drop group*
+forvalues i=1/3 {
+gen group`i'=status==`i'
+}
+tab nwstatus,gen(nw)
+levelsof nwstatus, local(levels)
+
+foreach l of local levels {
+local lab : label nwstatus `l'
+label var nw`l' "`lab'"
+local nw `nw' nw`l'
+}
+
+
+*keep if wave==2 
+gen group_all=1
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',8,.)
+mat stars=J(`rn',8,0)
+local r=1
+local c=1
+foreach i in _all 1 2 3 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1  & wave==2 & year==2011  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","4") {
+				svy, subpop(if wave==2 & year==2011 &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & wave==2 & year==2011  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","4") {
+				svy, subpop(if wave==2 & year==2011  &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1 & wave==2 & year==2011  [aw=anfin],d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","4") {
+				svy, subpop(if wave==2 & year==2011  &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1 & wave==2 & year==2011  [aw=anfin],d 
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1 & wave==2 & year==2011  [aw=anfin]
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","4") {
+				svy, subpop(if wave==2 & year==2011  &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & wave==2 & year==2011  [aw=anfin]
+	mat tab1[`r',`c']=r(N)
+	*mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+2
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_not_incl_2015_samp_weighted, replace statmat(tab1) ///
+ title("Sample Characteristics by Status at Wave") ///
+ ctitles("" "All" "" "Community" "" "Homebound" "P-value" "Nursing Home" "P-value") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Wave 2 NHATS sample" ///
+ "64 Nursing Home residents have completed an SP interview" )
+ restore
+ 
+ /*
+preserve
+keep if status==1
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',7,.)
+mat stars=J(`rn',5,0)
+local r=1
+local c=1
+forvalues i=1/7 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1 & wave==2  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","3","4") {
+				qui ttest `x' if group`i'==1 | group1==1, by(group`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & wave==2  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2  & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","3","4") {
+			qui ttest `x' if group`i'==1 | group1==1, by(group`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2  & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & wave==2  [aw=anfin]
+	
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_incl_2015_samp_unweighted, addtable statmat(tab1) ///
+ title("Sample Characteristics by next wave status") ///
+ ctitles("" "Community" "HB, Not Incident" "Incident HB" "NH, Not Incident" "Incident NH" ///
+ "Died" "LFU") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Cross-wave NHATS community-dwelling sample, by next-wave status")
+
+restore
+preserve
+keep if status==1
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+drop group*
+forvalues i=1/4 {
+gen group`i'=inccat`i'
+local lab`i' : var label inccat`i'
+}
+
+forvalues i=1/4 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1 & wave==2  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","3","4") {
+				qui ttest `x' if group`i'==1 | group1==1, by(group`i')
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & wave==2  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2  & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","3","4") {
+			qui ttest `x' if group`i'==1 | group1==1, by(group`i')
+			mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2  & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat stars[`r',`c']=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & wave==2  [aw=anfin]
+	
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_incl_2015_samp_unweighted, addtable statmat(tab1) ///
+ title("Sample Characteristics by Income category") ///
+ ctitles("" "`lab1'" "`lab2'" "`lab3'" "`lab4'") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Cross-wave NHATS community-dwelling sample, by income group")
+restore*/
+
+
+
+
+local cvars1 age 
+local ivars1 female
+preserve
+drop group*
+*keep if status==1 & wave==2  & nwstatus<=5
+replace wherela=2 if wherela==4
+tab wherela, gen(group)
+forvalues i=1/3 {
+local lab : label wherelandgroup `i'
+label var group`i' "`lab'"
+}
+tab1 group*
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',6,.)
+mat stars=J(`rn',6,0)
+local r=1
+local c=1
+forvalues i=1/3 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1 & wave==2  & status==1 & year==2011  & nwstatus<=5 [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & year==2011  & status==1 & wave==2  & nwstatus<=5 [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1 & status==1 & wave==2 & year==2011 & nwstatus<=5,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1 & year==2011 & wave==2 ,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1 & status==1 & wave==2  & nwstatus<=5 & year==2011
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & year==2011  & status==1 & wave==2  & nwstatus<=5 [aw=anfin]
+	
+	mat tab1[`r',`c']=r(N)
+	*mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+2
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_not_incl_2015_samp_weighted, addtable statmat(tab1) ///
+ title("Sample Characteristics by future homebound status") ///
+ ctitles("" "Never Homebound or NH res" "" "Future HB" "P-value" "Future NH" "P-value") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Wave 2 community-dwelling sample, by ultimate homebound status" ///
+ "Excludes those Lost to Follow up or dead prior to wave 2" ///
+ "Future status evaluated at HB or NH, or final wave prior to dropout/wave 6")
+
+restore
+replace wherela=2 if wherela==4
+preserve
+tab wherela, gen(whereland)
+forvalues i=1/3 {
+local lab : label wherelandgroup `i'
+label var whereland`i' "`lab'"
+}
+*keep if status==1 & wave==2 
+
+local ivars2 inccat1 inccat2 inccat3 inccat4 creditdebt medpaynotcash govtasst ///
+ whereland1 whereland2 whereland3 proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_impair iadl_impair ///
+sr_cond_cat1 sr_cond_cat2 sr_cond_cat3 sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
+sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever ///
+prob_dementia dem_2_cat adl_diff_ind adl_independent inchbnextwave incnhnextwave ///
+died_12 lfunextwave everhb evernh metro_ind northeast midwest south ind_replenish ///
+fin_strain creditdebt medcreditdebt medpaynotcash finhlpfam meals_wheels mealskip nopayhous nopayutil nopaymed any_asst
+
+
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',8,.)
+mat stars=J(`rn',8,0)
+local r=1
+local c=1
+
+drop group*
+forvalues i=1/4 {
+gen group`i'=inccat`i'
+local lab`i' : var label inccat`i'
+}
+
+forvalues i=1/4 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1 & wave==2 & year==2011 & status==1  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & wave==2 & year==2011 & status==1 & wave==2  [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1 & status==1 & year==2011 & wave==2 ,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1 & year==2011 & wave==2 ,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1 & status==1 & wave==2 & year==2011
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & wave==2 & year==2011 [aw=anfin]
+	
+	mat tab1[`r',`c']=r(N)
+	*mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+2
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_not_incl_2015_samp_weighted, addtable statmat(tab1) ///
+ title("Sample Characteristics by Income category") ///
+ ctitles("" "`lab1'" "" "`lab2'" "P-value" "`lab3'" "P-value" "`lab4'" "P-value") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Wave 2 community-dwelling sample, by income group")
+restore
+preserve
+*keep if status==1 & wave==2  & nwstatus<=5
+tab wherela, gen(whereland)
+forvalues i=1/3 {
+local lab : label wherelandgroup `i'
+label var whereland`i' "`lab'"
+}
+
+
+local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
+di `rn'
+mat tab1=J(`rn',8,.)
+mat stars=J(`rn',8,0)
+local r=1
+local c=1
+
+drop group*
+forvalues i=1/4 {
+gen group`i'=inccat`i'
+local lab`i' : var label inccat`i'
+}
+
+forvalues i=1/4 {
+	foreach round in 1 2 {
+		foreach x of local cvars`round' {
+			qui sum `x' if group`i'==1 & year==2011  & status==1 & wave==2  & nwstatus<=5 [aw=anfin]
+			mat tab1[`r',`c']=r(mean)
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			qui sum `x' if group`i'==1 & year==2011  & status==1 & wave==2  & nwstatus<=5 [aw=anfin]
+			mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	foreach x of local coutcomes {
+		qui sum `x' if group`i'==1 & status==1 & wave==2 & year==2011 & nwstatus<=5,d
+		mat tab1[`r',`c']=r(mean)
+		if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): reg `x' group`i' 
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+*		if "`x'"=="tot_paid_by_mc_12m_wi_n0" {
+			qui sum `x' if group`i'==1 & wave==2 & year==2011,d
+			mat tab1[`r',`c']=r(p50)
+			local r=`r'+1
+*}
+}
+	foreach x of local ioutcomes {
+		qui sum `x' if group`i'==1 & status==1 & wave==2 & year==2011 & nwstatus<=5
+		mat tab1[`r',`c']=r(mean)*100
+			if inlist("`i'","2","3","4") {
+				svy, subpop(if status==1 & wave==2 & year==2011 & nwstatus<=5 &group`i'==1 | group1==1): tab `x' group`i' 
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+			local r=`r'+1
+}
+	qui sum n if group`i'==1 & wave==2 & year==2011 [aw=anfin]
+	
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+2
+}
+
+foreach x in `coutcomes' {
+local rnames `rnames' "`x'" "Median"
+}
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' "_" N "Estimate"
+
+frmttable using sample_characteristics_not_incl_2015_samp_weighted, addtable statmat(tab1) ///
+ title("Sample Characteristics by Income category") ///
+ ctitles("" "`lab1'" "" "`lab2'" "P-value" "`lab3'" "P-value" "`lab4'" "P-value") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("Wave 2 community-dwelling sample, by income group" ///
+ "Excluding those LFU or dead prior to wave 2")
+restore
+preserve
+
+sort spid wave
+by spid: drop if wave>year+2010 & status[_n-1]!=1
+xtset spid wave
+drop if l.status!=1 & wave>1
+
+local r=1
+local c=2
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+putexcel set homebound_over_time.xlsx, replace
+levelsof nwstatus, local(levels)
+putexcel A`r'="Next-wave status among community-dwelling SPs who have never been homebound or nursing home residents" 
+
+
+forvalues timethrough=1/2 {
+putexcel B`=`r'+2'="Community, not homebound" C`=`r'+2'="Homebound, not incident" D`=`r'+2'="Incident homebound" ///
+E`=`r'+2'="NH resident, not incident" F`=`r'+2'="Incident NH" G`=`r'+2'="Died" H`=`r'+2'="LFU" ///
+I`=`r'+2'="Total Community dwelling in wave"
+local r=`r'+3
+forvalues i=2/5 {
+	qui sum status if wave==`i' & year==2011 & status==1 & !missing(homebound_cat)
+	local denom=r(N)
+	qui putexcel A`r'="Wave `i'" A`=`r'+1'="N" A`=`r'+2'="% of non-homebound"
+	local r=`r'+1
+	foreach l of local levels {
+		qui sum nwstatus if nwstatus==`l' & wave==`i' & status==1 & year==2011
+		qui putexcel ``c''`r'=(r(N))
+		qui putexcel ``c''`=`r'+1'=(r(N)/`denom'*100), nformat(number_d2)
+		local c=`c'+1
+}
+	putexcel ``c''`r'=`denom'
+	local r=`r'+3
+	local c=2
+}
+restore
+preserve
+replace status=1 if status==4
+local r=`r'+4
+putexcel A`r'="Next-wave status among all community-dwelling SPs" 
+}
+
+
+
+
+restore
+label var educ_hs_ind "Education: HS+"
+preserve
+*log using homebound_income_cox_log.txt, text replace
+drop if missing(homebound_cat) & !nhres
+by spid, sort: egen lastwave=max(wave)
+*keep if wave==2 
+tab lastwave
+*keep if inrange(homebound_cat,2,4)
 gen time=lastwave
 gen first_hb_or_nh=firsthb
 replace first_hb=firstnh if firstnh<firsthb
@@ -4417,17 +5302,18 @@ forvalues i=1/3 {
 
 local cond sr_cond_cat2 sr_cond_cat3
 
-local vars `age' c.aveincome##c.aveincome female black hisp married ind_noone `ed' ///
+local vars `age' `inc' female black hisp married ind_noone educ_hs_ind  ///
 medicaid prob_dem `cond' adl_diff_ind srh_fp ///
-ind_paid_helper metro_ind northeast midwest south ind_replenish
+ind_paid_helper metro_ind northeast midwest south ind_replenish ///
+fin_strain creditdebt medcreditdebt medpaynotcash finhlpfam any_asst
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars' //, nohr mgale(mg)
+svy, subpop(if wave==2 & year==2011 &  inrange(homebound_cat,2,4)): stcox `vars' //, nohr mgale(mg)
 *stcoxkm. by(income_cat)
 qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
 
-stphplot, by(income_cat) adjust(`age'  female black hisp married  ind_noone  `ed'  ///
+stphplot, by(income_cat) adjust(`age'  female black hisp married  ind_noone  educ_hs_ind  ///
 medicaid prob_dem `cond' adl_diff_ind srh_fp ind_paid_helper ///
-metro_ind northeast midwest south)
+metro_ind northeast midwest south fin_strain any_asst)
 stphplot, by(income_cat)
 
 gen timenh=firstnh
@@ -4438,7 +5324,7 @@ graph save km_nh, replace
 graph export km_nh.pdf, replace
 
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars'
+svy, subpop(if wave==2 & year==2011 &  inrange(homebound_cat,2,4)): stcox `vars'
 
 qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
 
@@ -4448,11 +5334,58 @@ sts graph, by(income_cat)
 graph save km_either, replace
 graph export km_either.pdf, replace
 
+local vars `age' `inc' female black hisp married  ind_noone  educ_hs_ind  ///
+medicaid prob_dem `cond' adl_diff_ind srh_fp ///
+ind_paid_helper metro_ind northeast midwest south ind_replenish ///
+fin_strain any_asst
 
-svy, subpop(if wave==1 &  inrange(homebound_cat,2,4)): stcox `vars'
+svy, subpop(if wave==2 & year==2011 &  inrange(homebound_cat,2,4)): stcox `vars'
 
-qui outreg using homebound_income_cox_models__xtra_ses_cats, merge ///
+qui outreg using homebound_income_cox_models_not_incl_2015_samp_weighted, merge ///
 ctitles("" "HB or NH") varlabels  ///
 title(Cox proportional hazard models) stats(e_b p) replace ///
-note("Among wave 1/5 non-homebound community dwelling SPs")
+note("Among wave 2 non-homebound community dwelling SPs")
+capture drop p hb2 nh2 either2
+predict p 
+sum `vars' if missing(p)
 
+sort spid wave
+by spid: gen hb2=inlist(nwstat,2,3) if nwstat<7
+by spid: gen nh2=inlist(nwstat,4,5) if nwstat<7
+gen either2=hb2==1 | nh2==1 if !missing(hb2)
+svy, subpop(if wave==2 & year==2011 & inrange(homebound_cat,2,4)): logit hb2 `vars'
+qui outreg, stats(e_b p) ctitles("" "Homebound") varlabels
+svy, subpop(if wave==2 & year==2011 & inrange(homebound_cat,2,4)): logit nh2 `vars'
+qui outreg, stats(e_b p) ctitles("" "Nursing Home") varlabels merge
+svy, subpop(if wave==2 & year==2011 & inrange(homebound_cat,2,4)): logit either2 `vars'
+qui outreg, stats(e_b p) ctitles("" "HB or NH") varlabels merge
+
+outreg using homebound_income_logit_not_incl_2015_samp_unweighted, replay replace ///
+title(Logistic regression on next wave status) ///
+note("Among wave 2 non-homebound community dwelling SPs")
+
+//competing risk regressions (competing for nh/death for hb, hb/death for nh)
+//set death_date=. if dies after one of these others
+replace everhb=0 if ultimate!=1
+stset time, failure(everhb)
+stcrreg `vars' if wave==2 & year==2011 & inrange(homebound_cat,2,4), ///
+compete(ultimate==0 2 3)
+
+qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
+
+replace evernh=0 if ultimate!=2
+stset timenh, failure(evernh)
+stcrreg `vars' if wave==2 & year==2011 & inrange(homebound_cat,2,4), ///
+compete(ultimate==0 1 3)
+
+qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
+
+
+stset time, failure(either)
+stcrreg `vars' if wave==2 & year==2011 & inrange(homebound_cat,2,4), ///
+compete(ultimate==0 3)
+
+qui outreg using homebound_income_competing_risks_regs_not_incl_2015_samp_weighted, merge ///
+ctitles("" "HB or NH") varlabels  ///
+title(Competing risk regressions) stats(e_b p) replace ///
+note("Among wave 2 non-homebound community dwelling SPs")

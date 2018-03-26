@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:  15 Mar 2018, 09:58:59
+ opened on:  26 Mar 2018, 16:46:42
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -200,43 +200,46 @@ file round_6_1.dta saved
 . foreach w in 1 2 3 4 5 6{
   2. use round_`w'_1.dta
   3. 
+. if `w'!=1 local pd pd* 
+  4. 
 . //keep selected variables only
 . local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
->         mo* r`w'd2intvrage hh`w'martlstat  r`w'dorig* r`w'dnhats* ///
+>         mo* r`w'd2intvrage hh`w'martlstat ///
 >         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 >         hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
->         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* wb* gr* wa* 
-  4. 
+>         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
+>         r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb*
+  5. 
 . if `w'==1 {     
-  5. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
+  6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
 > ia`w'*  re`w'resistrct re1dcensdiv
-  6. }
-  7. 
+  7. }
+  8. 
 . if `w'==2 {     
-  8. keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
+  9. keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
 >         re2dadrscorr re2dcensdiv ip2nginslast
-  9. }
- 10. 
+ 10. }
+ 11. 
 . if `w'==3 {     
- 11. keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
+ 12. keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
 >         re3dcensdiv ip3nginslast ia*
- 12. }
- 13. if `w'==4 {     
- 14. keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
+ 13. }
+ 14. if `w'==4 {     
+ 15. keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
 >         re4dcensdiv ip4nginslast
- 15. }
- 16. if `w'==5 {     
- 17. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew r
+ 16. }
+ 17. if `w'==5 {     
+ 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew r
 > e5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'*
- 18. }       
- 19. if `w'==6 {     
- 20. keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
+ 19. }       
+ 20. if `w'==6 {     
+ 21. keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
 >         re6dcensdiv ip6nginslast
- 21.         
+ 22.         
 . }
- 22. save round_`w'_ltd.dta, replace
- 23. }
+ 23. save round_`w'_ltd.dta, replace
+ 24. }
 file round_1_ltd.dta saved
 file round_2_ltd.dta saved
 file round_3_ltd.dta saved
@@ -312,8 +315,7 @@ file round_6_ltd.dta saved
 . //merge in sensitive data, use r1 as basis, added in cancer vars
 . merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
 >         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
->         rl1primarace rl1hisplatno hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
-> hc1cancerty6 hc1cancerty7 hc1cancerty8) 
+>         rl1primarace rl1hisplatno hc1cancerty*) 
 
     Result                           # of obs.
     -----------------------------------------
@@ -459,5 +461,5 @@ file round_1_to_6.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:  15 Mar 2018, 09:59:47
+ closed on:  26 Mar 2018, 16:47:22
 ---------------------------------------------------------------------------------------------------------------------------------------

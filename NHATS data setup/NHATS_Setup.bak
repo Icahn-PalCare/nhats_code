@@ -2219,7 +2219,7 @@ egen walkhndr`i'=rowmax(wa*wlk`i'hndr)
 replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
 replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
 replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
-}co
+}
 
 label var gripsc1 "GRP1 Display Reading"
 label var gripsc2 "GRP2 Display Reading"
@@ -2227,7 +2227,17 @@ label var walksec1 "Secs Hld Walking Course1"
 label var walksec2 "Secs Hld Walking Course2"
 label var walkhndr1 "Hnrds Hld Walking Course1"
 label var walkhndr2 "Hnrds Hld Walking Course2"
-
+/*
+forvalues i=1/2{
+capture drop walk`i'
+if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
+if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
+replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
+}
+rename walk1 walksec
+rename walk2 walkhnrds
+label var walk1 "Secs Hld Walking Course)
+*/
 
 foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
 capture drop `x'
@@ -2279,7 +2289,11 @@ replace lowphysact=1 if evrgowalk==0 & vigoractv==0
 label var unwgtloss "Unintentional Weight Loss"
 label var lowphysact "Low Physical Activity"
 
-
+capture drop lowenrgy
+egen lowenrgy=rowmax(ss*lowenergy)
+replace lowenrgy=. if inlist(lowenrgy, -9, -8, -7, -1)
+replace lowenrgy=0 if lowenrgy==2
+label var lowenrgy "Low Energy in Last Month"
 
 
 ///// 3/7/18 --Adding in Well-Being questions 
@@ -2435,11 +2449,6 @@ label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)"
 label values mealskipnum mealskipnum1
 
 
-
-
-
-
-
 ///// 12/5/17 --Adding in Cancer 
 
 // recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
@@ -2451,6 +2460,7 @@ sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_h
 
 //keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 //sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had
+
 
 //recoding all refuse, dk, na, as missing
 destring *, replace
@@ -2949,7 +2959,7 @@ forvalues i=1/6 {
 }
 }
 gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
-if !missing(cohesion_k)| !missing(cohesion_w) | !missing(cohesion_p)
+if !missing(cohesion_k) | !missing(cohesion_w) | !missing(cohesion_p)
 
 label var cohesion_knowwell "People know each other well in the community"
 label var cohesion_w "People are willing to help each other in the commmunity"

@@ -104,12 +104,15 @@ clear
 foreach w in 1 2 3 4 5 6{
 use round_`w'_1.dta
 
+if `w'!=1 local pd pd* 
+
 //keep selected variables only
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 	mo* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
-	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt*
+	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
+	r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb*
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
@@ -161,8 +164,7 @@ append using round_6_ltd.dta
 //merge in sensitive data, use r1 as basis, added in cancer vars
 merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
 	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
-	rl1primarace rl1hisplatno hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
-hc1cancerty6 hc1cancerty7 hc1cancerty8)	
+	rl1primarace rl1hisplatno hc1cancerty*)	
 
 drop _merge
 
@@ -2207,9 +2209,34 @@ cd "`work'"
 use round_1_6_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
+
+///// 3/26/18 --Adding in Hospice and place died variables.
+
+egen placedied=rowmax(pd*placedied)
+label value pd2placedied placedied
+label var placedied "Place of Death"
+replace placedied=. if inlist(placedied,-1,-8)
+replace placedied=6 if placedied==91
+
+egen hospice1=rowmax(pd*hospice1)
+egen hospice2=rowmax(pd*hospice2)
+egen hospicelml=rowmax(pd*hospcelml)
+
+replace hospice2=. if inlist(hospice2,-1,-8) 
+
+foreach x in hospice1 hospicelml {
+replace `x'=. if inlist(`x',-1,-8)
+replace `x'=0 if `x'==2
+} 
+ 
+label var hospice1 "Hopsice at Nursing Home"
+label var hospice2 "Hospice Other Place"
+label var hospicelml "Hospice Care in Last Month"
+ 
+ 
 ///// 3/14/18 --Adding in Frailty underlying series
 
-//activities done twice
+//activities done twice (grip test, walk test..)
 
 forvalues i=1/2{
 capture drop gripsc`i'
@@ -2449,11 +2476,6 @@ label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)"
 label values mealskipnum mealskipnum1
 
 
-
-
-
-
-
 ///// 12/5/17 --Adding in Cancer 
 
 // recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
@@ -2466,8 +2488,9 @@ sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_h
 //keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 //sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had
 
+
 //recoding all refuse, dk, na, as missing
-destring *, replace
+qui destring *, replace
 foreach x of varlist * {
 	replace `x'=. if inlist(`x',-1,-7,-8,-9)
 }
