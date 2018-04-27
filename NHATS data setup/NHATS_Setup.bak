@@ -1,5 +1,152 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
+H="Death date from NHATS and claims"
+/*
+//sas code to pull dod from the mbsf (note-there is no information in the ndi 
+
+libname medi 'E:\nhats\data\CMS_DUA_28016\merged';
+
+proc import out=xwalka
+	    datafile = "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta" replace;
+run;
+
+data xwalkb;
+set medi.nhats2bene_xwalk_11;
+run;
+
+proc sql;
+create table xwalk as select * from
+xwalka a inner join 
+xwalkb b
+on a.nhats_cms_num=b.nhats_cms_num;
+quit;
+
+data death1;
+set medi.mbsf_06_12 (keep=bene_id death_date);
+if death_date~=.;
+run;
+
+proc sort data=death1 out=death2 nodupkey;
+by bene_id death_date;
+run;
+
+proc sql;
+create table death as select a.spid, b.* 
+from 
+xwalk a
+left join 
+death2 b
+on a.bene_id=b.bene_id;
+quit;
+proc export data=death outfile="E:\nhats\data\CMS_DUA_28016\mbsf_dod.dta" replace; run;
+*/
+
+//merge with nhats survey data
+
+use spid using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", clear
+duplicates drop
+merge 1:m spid using "E:\nhats\data\CMS_DUA_28016\mbsf_dod.dta", nogen ///
+keepusing(spid death_date admit)
+duplicates drop 
+rename death_date dd_claims
+
+by spid, sort: drop if missing(dd) & _N>1
+forvalues i=2/6 {
+	merge 1:1 spid using "E:\nhats\data\NHATS Public\round_`i'\nhats_round_`i'_tracker_file", ///
+	nogen keep(match master) keepusing(r`i'status r`i'spstatdt*)
+	merge 1:1 spid using "E:\nhats\data\NHATS Sensitive\r`i'_sensitive\nhats_round_`i'_sp_sen_dem_file", ///
+	nogen keep(match master)
+}
+keep spid *died *status dd* adm *spstat*
+
+//look at death month & year. don't have, so set date to last of month
+gen dd_nhats=.
+replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+gen death_day=. 
+forvalues i=2/6 {
+	foreach j in mth yr {
+		replace pd`i'`j'died=. if pd`i'`j'<0
+}
+	replace death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+	replace death_day=30 if inlist(pd`i'm,4,6,9,11)
+	replace death_day=28 if inlist(pd`i'm,2)
+	replace dd_nh=mdy(pd`i'mthdied,death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
+}
+gen dd_present_nhats=dd_nhats!=.
+gen dd_present_claims=dd_claims!=.
+gen mcdy=year(dd_claims)
+gen nhdy=year(dd_nhats)
+tab dd_pres*,m
+tab nhdy mcdy,m
+gen match=month(dd_nhats)==month(dd_claims) & year(dd_nhats)==year(dd_claims)
+tab match
+/*preserve
+keep if dd_present_claims | nhdy<2013
+*/
+tab dd_pres*,m
+tab nhdy mcdy,m
+tab match
+forvalues i=2/5 {
+tab r`i'status
+}
+
+*keep if dd_present_n!=dd_present_c
+tab match
+gen last_ivw_date=.
+forvalues i=2/6 {
+tab r`i'status
+replace last_ivw_date=mdy(r`i'spstatdtm,1,r`i'spstatdtyr) if inlist(r`i'status,60,61,63) 
+
+}
+format last_ivw dd_cl dd_nh %td
+gen time=admit-dd_nhats
+gen nhdm=month(dd_nhats)
+gen mcdm=month(dd_claims)
+gen conflict1=admit>dd_nhats & admit!=.
+gen conflict1a=admit>dd_claims & admit!=.
+gen nhonly=dd_present_nh & !dd_present_claims & nhdy<2013
+gen conflict2=last_ivw>dd_claims & last_ivw!=.
+gen claimsonly=dd_present_claims & nhdy>2012
+
+preserve
+keep if !missing(dd_claims) | nhdy<2013
+//800 deaths from either claims or nhats, 621 (77.63%) match month and year
+tab match
+tab conflict1
+//52 cases with a claim after death (nhats), 24 with a claim >31 days after death
+tab conflict1a
+//67 cases with a claim after death (claims), 25 with a claim>31 days after death
+
+//following the method used for HRS, we will take claims death date.  if there's 
+//a death date in nhats only (14 cases), that will be used.  if there's a claim 
+//after the nhats death date, the last claim date is used.
+
+restore
+drop death_day
+gen death_date=dd_claims
+replace death_date=dd_nhats if dd_claims==.
+replace death_date=last if last>dd_nhats & dd_claims==. & !missing(last)
+label var death_date "SP death date, from tracker (day imputed)"
+format death_date %td
+gen death_month=month(death_date)
+gen death_year=year(death_date)
+foreach x in month year {
+label var death_date "SP death `x', from claims or tracker"
+}
+gen death_source=1 if death_date==dd_claims 
+replace death_source=2 if death_date==last & dd_claims==.
+replace death_source=3 if death_date==dd_nhats & dd_claims==.
+replace death_source=4 if death_date==dd_claims & dd_claims==dd_nhats 
+replace death_source=. if missing(death_date)
+
+label define death_source 1 "MBSF" 2 "last claim after NHATS DOD" 3 "NHATS" 4 "Both"
+label values death_source death_source
+
+keep spid death*
+save "E:\nhats\data\CMS_DUA_28016\death_date.dta", replace
+
+
+
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
 /*Combines rounds 1 and 2 sample person SP interview files,
 sensitive demo files and the round 2 cumulative tracker file case 
@@ -104,12 +251,15 @@ clear
 foreach w in 1 2 3 4 5 6{
 use round_`w'_1.dta
 
+if `w'!=1 local pd pd* 
+
 //keep selected variables only
 local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 	mo* r`w'd2intvrage hh`w'martlstat ///
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
-	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt*
+	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
+	r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb*
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
@@ -161,8 +311,7 @@ append using round_6_ltd.dta
 //merge in sensitive data, use r1 as basis, added in cancer vars
 merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
 	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
-	rl1primarace rl1hisplatno hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
-hc1cancerty6 hc1cancerty7 hc1cancerty8)	
+	rl1primarace rl1hisplatno hc1cancerty*)	
 
 drop _merge
 
@@ -1983,7 +2132,7 @@ use R1_hrs_imputed_added.dta
 
 local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw paid ///
- op_adl* op_iadl* op_nonadl* son daughter oth_fam rc_staff op_doc_help op_sn
+ op_adl* op_iadl* op_nonadl* son daughter oth_fam rc_staff op_doc_help op_sn op_age
 
 qui append using R2_hrs_imputed_added.dta
  
@@ -1996,6 +2145,11 @@ qui append using R5_hrs_imputed_added.dta
 qui append using R6_hrs_imputed_added.dta
  
 tab wave opishelper_allw, missing
+
+//  age categories
+egen op_age=rowmax(op*dage)
+label val op_age op2dage 
+replace op_age=. if inlist(op_age, -8, -7, -1, .) 
 
 //identify paid helpers and staff at residence (not helpers)
 gen paid=0
@@ -2207,9 +2361,46 @@ cd "`work'"
 use round_1_6_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
+
+////// 4/2/2018--Adding in income quartile
+sort wave
+forvalues w=1/6 {
+xtile income_quart`w'=aveincome if wave==`w', nq(4) 
+}
+egen income_quart=rowmax(income_quart*)
+
+forvalues w=1/6{
+drop income_quart`w'
+}
+
+label var income_quart "Quartile of Income"
+///// 3/26/18 --Adding in Hospice and place died variables.
+
+egen placedied=rowmax(pd*placedied)
+label value pd2placedied placedied
+label var placedied "Place of Death"
+replace placedied=. if inlist(placedied,-1,-8)
+replace placedied=6 if placedied==91
+
+egen hospice1=rowmax(pd*hospice1)
+egen hospice2=rowmax(pd*hospice2)
+egen hospicelml=rowmax(pd*hospcelml)
+
+replace hospice2=. if inlist(hospice2,-1,-8) 
+
+foreach x in hospice1 hospicelml {
+replace `x'=. if inlist(`x',-1,-8)
+replace `x'=0 if `x'==2
+} 
+ 
+label var hospice1 "Hopsice at Nursing Home"
+label var hospice2 "Hospice Other Place"
+label var hospicelml "Hospice Care in Last Month"
+ 
+ 
 ///// 3/14/18 --Adding in Frailty underlying series
 
-//activities done twice
+//activities done twice (grip test, walk test..)
 
 forvalues i=1/2{
 capture drop gripsc`i'
@@ -2463,7 +2654,7 @@ sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_h
 
 
 //recoding all refuse, dk, na, as missing
-destring *, replace
+qui destring *, replace
 foreach x of varlist * {
 	replace `x'=. if inlist(`x',-1,-7,-8,-9)
 }
@@ -3128,10 +3319,10 @@ label values region region
 forvalues i=1/6 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
-	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'*
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'*
 }
 
-drop el1* rl1* ia1* pd2* pd3* pd4* ia3* ia5*
+drop el1* rl1* ia1* pd2* pd3* pd4* pd5* pd6* ia3* ia5*
 
 rename round*status r*status
 
