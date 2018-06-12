@@ -1,0 +1,1179 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="OASIS "
+capture log close
+set more off
+*cd
+//log using oasis_nhats_claims.smcl, replace
+
+use "E:\nhats\data\CMS_DUA_28016\xwalk.dta" , replace
+duplicates tag nhats_cms_num, gen(tag)
+tab tag
+drop if tag==1
+drop tag
+tempfile xwalk
+save "`xwalk'"
+
+
+use "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" if wave<=3, replace 
+gen index_date=ivw_date
+gen index_month=ivw_month
+gen index_year=ivw_year
+
+drop if lml_ivw_yes==1
+drop if sp_ivw_yes==0
+drop if proxy_ivw==1 & nhres==1
+
+gen a=1
+sum a  
+local a=r(N)
+//total number of observations across rounds 1-3 removing lml proxy nh res. 
+di `a'
+
+by spid, sort: gen h=_n==1
+sum h if h==1
+local h=r(N)
+di `h'
+
+merge m:1 spid using "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta"
+//lose the 2015 cohort 
+keep if _merge==3
+drop _merge
+
+
+
+
+merge m:1 nhats_cms_num using "`xwalk'"
+sort spid wave
+keep if _merge==3
+drop _merge
+
+gen b=1 
+sum b
+local b=r(N)
+//total number with 2011 cohort merged with crosswalks
+di `b'
+
+by spid, sort: gen i=_n==1
+sum i if i==1
+local i=r(N) 
+di `i'
+
+tempfile merged
+save "`merged'"
+
+**
+use "E:\nhats\data\CMS_DUA_28016\Merged Stata\hh_09_14.dta" , replace
+keep if inrange(disch_date,td(01apr2010),td(01nov2014))
+keep bene_id admit_date disch_date 
+gen claim_hh=1
+tempfile hh_09_14
+save "`hh_09_14'"
+
+
+use "`merged'", replace
+joinby bene_id using "`hh_09_14'" , unmatched(master) 
+gen claim=0
+replace claim=1 if claim_hh==1
+
+gen d=1 
+sum d
+local d=r(N)
+//total observations including all NHATS and matched claims. 
+di `d'
+
+by spid, sort: gen j=_n==1
+sum j if j==1
+local j=r(N) 
+di `j'
+
+gen flag_prior_claim=1 if inrange(disch,ivw_date-365, ivw_date) & claim==1
+capture drop days
+gen days= abs(ivw_date-disch)
+
+sort spid wave flag_prior_claim days
+capture drop tag
+by spid wave: gen tag=cond(_N==1,0,_n)
+
+drop if tag>=2
+
+
+gen e=1 
+sum e
+local e=r(N)
+//total observations matched removing claims over 1 year prior. 
+di `e'
+
+by spid, sort: gen k=_n==1
+sum k if k==1
+local k=r(N) 
+di `k'
+
+
+tempfile nhats_hh
+save "`nhats_hh'"
+
+***
+use "E:\nhats\data\CMS_DUA_28016\Merged Stata\hha_assessment_summary_09_14.dta", replace
+//rename m0030_soc_dt admit_date
+//rename m0906_dc_tr_dth_dt disch_date
+
+local adls m1810_cu_dress_upr m1820_cu_dress_low m1830_crnt_bathg m1840_cur_toiltg ///
+m1845_cur_toiltg_hygn m1850_cur_trnsfrng m1860_crnt_ambltn m1870_cu_feeding
+
+
+foreach x in `adls' {
+replace `x'="." if `x'=="**" | `x'==" "
+destring `x', replace
+}
+
+sort bene_id m0030_soc_dt asmt_eff_date, stable
+by bene_id m0030_soc_dt: carryforward m1810_cu_dress_upr m1820_cu_dress_low m1830_crnt_bathg m1840_cur_toiltg ///
+m1845_cur_toiltg_hygn m1850_cur_trnsfrng m1860_crnt_ambltn m1870_cu_feeding, replace
+
+
+****
+
+
+capture drop *_new
+foreach x in `adls' {
+gen `x'_new=.
+replace `x'_new=0 if inlist(`x', 0, 1)
+replace `x'_new=1 if inlist(`x', 2, 3, 4, 5, 6)
+}
+
+capture drop dress_new toilet_new
+gen dress_new=. 
+replace dress_new=1 if m1810_cu_dress_upr_new==1 | m1820_cu_dress_low_new==1
+replace dress_new=0 if m1810_cu_dress_upr_new==0 & m1820_cu_dress_low_new==0
+
+gen toilet_new=. 
+replace toilet_new=1 if m1840_cur_toiltg_new==1 | m1845_cur_toiltg_hygn_new==1
+replace toilet_new=0 if m1840_cur_toiltg_new==0 & m1845_cur_toiltg_hygn_new==0
+
+capture drop m1810_cu_dress_upr_new m1820_cu_dress_low_new m1845_cur_toiltg_hygn_new m1840_cur_toiltg_new
+capture drop adl_index_hha
+egen adl_index_hha=rowtotal(toilet_new dress_new m1870_cu_feeding_new m1860_crnt_ambltn_new ///
+m1850_cur_trnsfrng_new m1830_crnt_bathg_new)
+
+egen miss_adl=rowmiss(toilet_new dress_new m1870_cu_feeding_new m1860_crnt_ambltn_new ///
+m1850_cur_trnsfrng_new m1830_crnt_bathg_new)
+
+capture drop adl_imp_hha
+gen adl_imp_hha=1 if adl_index_hha>=1 & adl_index_hha!=. & miss_adl!=6
+replace adl_imp_hha=0 if adl_index_hha==0 & miss_adl==0
+
+sort bene_id m0030_soc_dt m0906_dc_tr_dth_dt, stable
+capture drop last
+by bene_id m0030_soc_dt: gen last=_n==1
+keep if last==1
+
+keep if inrange(m0906_dc_tr_dth_dt, td(01apr2010),td(01nov2014))
+*****
+tempfile hha_09_14
+save "`hha_09_14'"
+
+//this is hh not hha; 4 claims were dropped
+//use "`hh_09_14'", replace
+//duplicates drop bene_id admit_date disch_date, force
+
+use "`nhats_hh'", replace 
+rename _merge merge1
+
+joinby bene_id using "`hha_09_14'", unmatched(master)
+
+gen f=1 
+sum f
+local f=r(N)
+//total observations matched removing claims over 1 year prior. 
+di `f'
+
+by spid, sort: gen l=_n==1
+sum l if l==1
+local l=r(N) 
+di `l'
+
+gen flag_prior_hha=1 if inrange(m0906_dc_tr_dth_dt,ivw_date-365, ivw_date)
+gen days_hha=abs(m0906_dc_tr_dth_dt-ivw_date) 
+sort spid wave flag_prior_hha days_hha
+capture drop tag1
+by spid wave: gen tag1=cond(_N==1,0,_n)
+
+drop if tag1>=2
+
+//check for no dups 
+egen newid= group(spid wave)
+codebook newid
+drop newid
+
+///looks good 
+gen g=1 
+sum g
+local g=r(N)
+//total observations matched removing claims over 1 year prior. 
+di `g'
+
+by spid, sort: gen m=_n==1
+sum m if m==1
+local m=r(N) 
+di `m'
+
+//Adl Change
+replace adl_dres_help=1 if dresoft==5
+replace adl_dres_help=1 if bedwout==1
+replace adl_ins_help =1 if oflvslepr==5
+egen adl_index1= rowtotal(adl_*_help)
+gen adl_impair1=.
+replace adl_impair1=0 if adl_index1<1
+replace adl_impair1=1 if adl_index1>0
+
+
+//replace claim=0 if claim==.
+//claim1 is basically flag_prior_claim but with 0's for no prior claim or no claim
+gen claim1=0
+replace claim1=1 if flag_prior_claim==1
+
+tab adl_impair claim1 , matcell(claim)
+tab adl_impair adl_imp_hha if days_hha<365 & flag_prior_hha==1, matcell(imp_hha)
+//using help vars for adls nhats
+tab adl_toil_help toilet_new if days_hha<365 & flag_prior_hha==1, matcell(toil)
+tab adl_dres_help dress_new if days_hha<365 & flag_prior_hha==1, matcell(dres)
+tab adl_bath_help m1830_crnt_bathg_new if days_hha<365 & flag_prior_hha==1, matcell(bath)
+tab adl_eat_help m1870_cu_feeding_new if days_hha<365 & flag_prior_hha==1, matcell(eat)
+tab adl_ins_help m1860_crnt_ambltn_new if days_hha<365 & flag_prior_hha==1, matcell(ins)
+tab adl_bed_help m1850_cur_trnsfrng_new if days_hha<365 & flag_prior_hha==1, matcell(trans)
+tab adl_index adl_index_hha if days_hha<365 & flag_prior_hha==1, matcell(index)
+
+mat tab=J(6,2,.)
+local r=1
+local c=1
+
+foreach x in `a' `b' `d' `e' `f' `g'  {
+mat tab[`r',`c']=`x'
+local r=`r'+1
+}
+mat list tab
+
+local r=1
+local c=2
+foreach x in `h' `i' `j' `k' `l' `m' {
+mat tab[`r',`c']=`x'
+local r=`r'+1
+}
+mat list tab
+
+frmttable using "E:\nhats\projects\NHATS_MDS_OASIS\20180404\tab.doc", replace statmat(tab) ///
+sdec(0) ctitle(" ", "N", "Unique Observations" ) rtitle("Rounds 1-3 NHATS" \ ///
+"Crosswalks matched with NHATS" \"Joined in HHA claims" \ ///
+"Removed duplicates and kept the closest claim" \ ///
+"Joined in HH Assessments" \ "Removed duplicates and kept closest assessment" ) ///
+title("Sample Derivation") note("Removed Last month of life, Proxy, and NH Resident interviews")
+
+foreach x in claim imp_hha toil dres bath eat ins  trans {
+/*if "`x'"!="cane_nhats"*/ local add addtable
+if "`x'"=="claim" local title NHATS ADL Impaired v.s. HH Claim
+if "`x'"=="imp_hha" local title NHATS ADL Impaired v.s. HHA ADL Impaired
+if "`x'"=="toil" local title NHATS ADL Toileting v.s. HHA ADL Toileting
+if "`x'"=="dres" local title NHATS ADL Dressing v.s. HHA ADL Dressing
+if "`x'"=="bath" local title NHATS ADL Bathing v.s. HHA ADL Bathing
+if "`x'"=="eat" local title NHATS ADL Eating v.s. HHA ADL Eating
+if "`x'"=="ins" local title NHATS ADL Walking v.s. HHA ADL Walking
+if "`x'"=="trans" local title NHATS ADL Transferring v.s. HHA ADL Transferring
+//if "`x'"=="index" local title NHATS ADL Index v.s. HHA ADL Index (Count of ADLs)
+frmttable using "E:\nhats\projects\NHATS_MDS_OASIS\20180404\tab.doc", replace statmat(`x') ///
+sdec(0) ctitle("NHATS/HHA", No, Yes) rtitle(No\ Yes) ///
+title("`title'") `add'
+}
+
+frmttable using "E:\nhats\projects\NHATS_MDS_OASIS\20180404\tab.doc", replace statmat(index) ///
+sdec(0) ctitle("NHATS/HHA", 0, 1, 2, 3, 4, 5, 6) rtitle( 0\1\ 2\ 3\ 4\ 5\ 6) ///
+title("NHATS ADL Index v.s. HHA ADL Index (Count of ADLs)") addtable
+
+
+//make table for nhats impairment vs claims.
+//make table for nhats imapirment vs any hha (oasis) impairment
+//make table for specific nhats imapirment vs specific hha (oasis) impairment
+//make table for count nhats imapirment vs count hha (oasis) impairment
+
+/*merge 1:1 bene_id admit_date disch_date using "`hha_09_14'"
+keep if _merge==3
+
+keep bene_id admit_date disch_date toilet_new dress_new m1870_cu_feeding_new m1860_crnt_ambltn_new ///
+m1850_cur_trnsfrng_new m1830_crnt_bathg_new m1810_cu_dress_upr m1820_cu_dress_low m1830_crnt_bathg ///
+m1840_cur_toiltg m1845_cur_toiltg_hygn m1850_cur_trnsfrng m1860_crnt_ambltn m1870_cu_feeding claim
+
+
+tempfile hh
+save "`hh'" 
+
+use "`merged'",replace
+
+joinby bene_id using "`hh'", unmatched(master)
+//
+
+capture drop days_hha
+gen days_hha=disch-admit
+
+capture drop days
+gen days=abs(disch-ivw_date) 
+
+sort spid wave days
+
+capture drop flag_prior flag_post
+gen flag_prior=1 if inrange(disch,ivw_date-365, ivw_date)
+gen flag_post=1 if inrange(disch,ivw_date, ivw_date+365)
+//drop if flag_prior==. & flag_post==.
+
+
+capture drop flag
+gen flag=0 
+replace flag=1 if flag_prior==1 | flag_post==1
+
+sort spid wave days
+capture drop tag1
+by spid wave: gen tag1=cond(_N==1,0,_n)
+
+drop if tag1>=2
+
+capture drop dup
+by spid admit_date, sort: gen dup=_n>1 if admit_date!=.
+
+rename flag hha_imp
+
+gen d=1 
+sum d
+local d=r(N)
+//Matched waves within a year to HHA claims. Including unmatched individuals. 
+di `d'
+
+by spid, sort: gen g=_n==1
+sum g if g==1
+local g=r(N)
+di `g'
+
+
+
+
+
+/*
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 
+*/
+
+mat tab=J(3,2,.)
+local r=1
+local c=1
+
+foreach x in `a' `b' `d' {
+mat tab[`r',`c']=`x'
+local r=`r'+1
+}
+mat list tab
+
+local r=1
+local c=2
+foreach x in `e' `f' `g' {
+mat tab[`r',`c']=`x'
+local r=`r'+1
+}
+mat list tab
+
+frmttable using "E:\Files to move out\Mohammed\20180410\tab.doc", replace statmat(tab) ///
+sdec(0) ctitle(" ", "N", "Unique Observations" ) rtitle("Rounds 1-3 NHATS" \ "Total with 2011 Cohort only" \ "Matched in HHA claims within one year of SP interview") ///
+title("Sample Derivation")
+
+foreach x in cane_nhats walker_nhats wheelchr_nhats com_nhats bathtoi_nhats any_dev_nhats{
+tab `x' hha_imp, matcell(`x')
+}
+
+tab adl_impair hha_imp, matcell(impair)
+
+foreach x in cane_nhats walker_nhats wheelchr_nhats com_nhats bathtoi_nhats any_dev_nhats impair{
+/*if "`x'"!="cane_nhats"*/ local add addtable
+if "`x'"=="cane_nhats" local title NHATS Cane v.s. HHA Claim
+if "`x'"=="walker_nhats" local title NHATS Walker v.s. HHA Claim
+if "`x'"=="wheelchr_nhats" local title NHATS Wheelchair v.s. HHA Claim
+if "`x'"=="com_nhats" local title NHATS Commode/Bedpan/Urinal v.s. HHA Claim
+if "`x'"=="bathtoi_nhats" local title NHATS Shower/Tub/Toilet Assistive Device v.s. HHA Claim
+if "`x'"=="any_dev_nhats" local title NHATS Any Assistive Device v.s. HHA Claim
+if "`x'"=="impair" local title NHATS Impaired v.s. HHA Claim
+frmttable using "E:\Files to move out\Mohammed\20180410\tab.doc", replace statmat(`x') ///
+sdec(0) ctitle("NHATS Impairment/HHA Claim", No, Yes) rtitle(No\ Yes) ///
+title("`title'") `add'
+}
+
+
+H="LTC MDS"
+clear all
+capture log close
+cd "E:\nhats\data\Projects\MDS NHATS\logs"
+log using ltc_facility.smcl, replace
+
+
+forvalues i=1/5 {
+import excel "E:\nhats\data\LTC Focus\facility_201`i'.xls", ///
+sheet("Facility") firstrow case(lower) clear
+
+tempfile temp`i'
+save "`temp`i''"
+
+save "E:\nhats\data\LTC Focus\facility_201`i'.dta", replace
+}
+
+forvalues i=1/4{
+append using "`temp`i''"
+}
+
+rename prov1680 prov_cms
+
+foreach x of varlist _all {
+capture replace `x'="." if `x'=="LNE"
+}
+
+qui destring paymcare paymcaid avgadl_2011p occpct, replace
+
+sum paymcare
+sum paymcaid
+capture drop medicare_cat medicaid_cat
+xtile medicare_cat= paymcare, nq(5)
+xtile medicaid_cat= paymcaid, nq(5)
+xtile avgadl= avgadl_2011p, nq(5)
+bys year medicare_cat: sum paymcare
+bys year medicaid_cat: sum paymcaid
+
+bysort year: tab medicare_cat profit 
+
+bysort year: tab medicaid_cat profit
+
+bysort profit year: sum avgadl 
+
+foreach x in profit hospbase multifac{
+capture drop `x'1
+gen `x'1=0 if `x'=="No"
+replace `x'1=1 if `x'=="Yes"
+label define `x'1 0 "No" , replace	
+label define `x'1 1 "Yes", replace
+}
+
+bysort profit1 year: sum avgadl_2011p
+
+xtile occpct1= occpct, nq(5) 
+tab profit occpct1
+
+
+tempfile ltc
+save "`ltc'"
+
+
+use "E:\nhats\data\CMS_DUA_28016\mds_asmt_summary_3_10_14.dta" , replace
+
+//discharge date
+capture drop disc_dt
+gen disc_dt= date(a2000_dschrg_dt, "YMD")
+format disc_dt %td
+
+//enter year
+capture drop ent_yr
+gen ent_yr=year(a16)
+
+//discharge year
+capture drop disc_yr
+gen disc_yr=year(disc_dt)
+
+//flagging if started nh before 2011 or ended after 2014
+capture drop nh_bef
+gen nh_bef=1 if ent_yr<=2010
+replace nh_bef=. if ent_yr==.
+
+capture drop nh_aft
+gen nh_aft=1 if disc_yr>=2015
+replace nh_aft=. if disc_yr==.
+
+//making a flag for discharged 
+capture drop disc_flag
+sort bene_id a1600_entry_dt disc_dt, stable
+by bene_id a1600_entry_dt: gen disc_flag=_n==1 if disc_dt!=.
+replace disc_flag=0 if disc_dt==.
+
+/*gsort bene_id a1600_entry_dt -trgt_dt -disc_dt 
+capture drop flag
+by bene_id a1600_entry_dt: gen flag=_n==1 if disc_dt==. */
+
+
+//correct sort 
+sort bene_id a1600_entry_dt trgt_dt disc_flag, stable
+
+// already account for people who die, date of death is close to discharge. 
+capture drop los
+gen los= disc_dt-a1600_entry_dt
+
+//rename year year_dt
+gen year=year(trgt_dt)
+
+
+
+
+
+capture drop cf_flag
+egen cf_flag=rowmiss(g0110g1_dress_self_cd g0110g2_dress_sprt_cd /// 
+g0120a_bathg_self_cd g0120b_bathg_sprt_cd g0110d1_wlk_crdr_self_cd g0110d2_wlk_crdr_sprt_cd ///
+g0110b1_trnsfr_self_cd g0110b2_trnsfr_sprt_cd g0110h1_eatg_self_cd ///
+g0110h2_eatg_sprt_cd g0110i1_toiltg_self_cd g0110i2_toiltg_sprt_cd ///
+g0110j1_prsnl_hygne_self_cd g0110j2_prsnl_hygne_sprt_cd)
+
+//carrying forward
+//sort bene_id a1600_entry_dt
+sort bene_id a1600_entry_dt trgt_dt disc_flag, stable 
+by bene_id a1600_entry_dt: carryforward g0110g1_dress_self_cd g0110g2_dress_sprt_cd /// 
+g0120a_bathg_self_cd g0120b_bathg_sprt_cd g0110d1_wlk_crdr_self_cd g0110d2_wlk_crdr_sprt_cd ///
+g0110b1_trnsfr_self_cd g0110b2_trnsfr_sprt_cd g0110h1_eatg_self_cd ///
+g0110h2_eatg_sprt_cd g0110i1_toiltg_self_cd g0110i2_toiltg_sprt_cd ///
+g0110j1_prsnl_hygne_self_cd g0110j2_prsnl_hygne_sprt_cd a0100b_cms_crtfctn_num, replace
+
+
+//keeps last assessment in stay and drop people with no discharge dates
+sort bene_id a1600_entry_dt disc_dt, stable
+capture drop last
+by bene_id a1600_entry_dt: gen last=_n==1
+keep if last==1
+drop if disc_flag==0
+
+capture drop died
+gen died=0
+replace died=1 if a21=="08"
+
+//keeps last stay's in the calendar year
+//gsort bene_id year -disc_dt 
+//by bene_id year : gen keep1=_n==1
+//keep if keep1==1
+
+capture drop unique_bene2
+by bene_id a1600_entry_dt, sort: gen unique_bene2=_n==1
+tab unique_bene2
+
+foreach x in g0110g1_dress_self_cd g0110g2_dress_sprt_cd g0120a_bathg_self_cd ///
+g0120b_bathg_sprt_cd g0110d1_wlk_crdr_self_cd g0110d2_wlk_crdr_sprt_cd ///
+g0110b1_trnsfr_self_cd g0110b2_trnsfr_sprt_cd g0110h1_eatg_self_cd ///
+g0110h2_eatg_sprt_cd g0110i1_toiltg_self_cd g0110i2_toiltg_sprt_cd ///
+g0110j1_prsnl_hygne_self_cd g0110j2_prsnl_hygne_sprt_cd{
+capture replace `x'="." if `x'=="-"
+destring `x', replace
+gen new_`x'=. 
+capture replace new_`x'=1 if `x'==8 
+capture replace new_`x'=1 if `x'==2 | `x'==3 | `x'==4 
+capture replace new_`x'=0 if `x'==0 | `x'==1
+}
+
+replace new_g0110g1_dress_self_cd=0 if g0110g1_dress_self_cd==7 & (g0110g2_dress_sprt_cd==0 | g0110g2_dress_sprt_cd==1 )
+
+replace new_g0120a_bathg_self_cd=0 if g0120a_bathg_self_cd==7 & (g0120b_bathg_sprt_cd==0 | g0120b_bathg_sprt_cd==1 )
+
+replace new_g0110d1_wlk_crdr_self_cd=0 if g0110d1_wlk_crdr_self_cd==7 & (g0110d2_wlk_crdr_sprt_cd==0 | g0110d2_wlk_crdr_sprt_cd==1)
+
+replace new_g0110b1_trnsfr_self_cd=0 if g0110b1_trnsfr_self_cd==7 & (g0110b2_trnsfr_sprt_cd==0 | g0110b2_trnsfr_sprt_cd==1)
+
+replace new_g0110h1_eatg_self_cd=0 if g0110h1_eatg_self_cd==7 & (g0110h2_eatg_sprt_cd==0 | g0110h2_eatg_sprt_cd==1)
+
+replace new_g0110i1_toiltg_self_cd=0 if g0110i1_toiltg_self_cd==7 & (g0110i2_toiltg_sprt_cd==0 | g0110i2_toiltg_sprt_cd==1)
+
+replace new_g0110j1_prsnl_hygne_self_cd=0 if g0110j1_prsnl_hygne_self_cd==7 & (g0110j2_prsnl_hygne_sprt_cd==0 | g0110j2_prsnl_hygne_sprt_cd==1)
+
+
+replace new_g0110g1_dress_self_cd=1 if g0110g1_dress_self_cd==7 & (g0110g2_dress_sprt_cd==2 | g0110g2_dress_sprt_cd==3 )
+
+replace new_g0120a_bathg_self_cd=1 if g0120a_bathg_self_cd==7 & (g0120b_bathg_sprt_cd==2 | g0120b_bathg_sprt_cd==3 )
+
+replace new_g0110d1_wlk_crdr_self_cd=1 if g0110d1_wlk_crdr_self_cd==7 & (g0110d2_wlk_crdr_sprt_cd==2 | g0110d2_wlk_crdr_sprt_cd==3)
+
+replace new_g0110b1_trnsfr_self_cd=1 if g0110b1_trnsfr_self_cd==7 & (g0110b2_trnsfr_sprt_cd==2 | g0110b2_trnsfr_sprt_cd==3)
+
+replace new_g0110h1_eatg_self_cd=1 if g0110h1_eatg_self_cd==7 & (g0110h2_eatg_sprt_cd==2 | g0110h2_eatg_sprt_cd==3)
+
+replace new_g0110i1_toiltg_self_cd=1 if g0110i1_toiltg_self_cd==7 & (g0110i2_toiltg_sprt_cd==2 | g0110i2_toiltg_sprt_cd==3)
+
+replace new_g0110j1_prsnl_hygne_self_cd=1 if g0110j1_prsnl_hygne_self_cd==7 & (g0110j2_prsnl_hygne_sprt_cd==2 | g0110j2_prsnl_hygne_sprt_cd==3)
+
+
+replace new_g0110g1_dress_self_cd=. if g0110g1_dress_self_cd==8 & g0110g2_dress_sprt_cd==8
+
+replace new_g0120a_bathg_self_cd=. if g0120a_bathg_self_cd==8 & g0120b_bathg_sprt_cd==8
+
+replace new_g0110d1_wlk_crdr_self_cd=. if g0110d1_wlk_crdr_self_cd==8 & g0110d2_wlk_crdr_sprt_cd==8
+
+replace new_g0110b1_trnsfr_self_cd=. if g0110b1_trnsfr_self_cd==8 & g0110b2_trnsfr_sprt_cd==8
+
+replace new_g0110h1_eatg_self_cd=. if g0110h1_eatg_self_cd==8 & g0110h2_eatg_sprt_cd==8
+
+replace new_g0110i1_toiltg_self_cd=. if g0110i1_toiltg_self_cd==8 & g0110i2_toiltg_sprt_cd==8
+
+replace new_g0110j1_prsnl_hygne_self_cd=. if g0110j1_prsnl_hygne_self_cd==8 & g0110j2_prsnl_hygne_sprt_cd==8
+
+capture drop tot_adl
+egen tot_adl= rowtotal(new_g0110g1_dress_self_cd new_g0120a_bathg_self_cd ///
+new_g0110d1_wlk_crdr_self_cd new_g0110b1_trnsfr_self_cd new_g0110h1_eatg_self_cd ///
+new_g0110i1_toiltg_self_cd )
+
+replace tot_adl=. if new_g0110g1_dress_self_cd==. & new_g0120a_bathg_self_cd==. & ///
+new_g0110d1_wlk_crdr_self_cd==. & new_g0110b1_trnsfr_self_cd==. & new_g0110h1_eatg_self_cd==. & ///
+new_g0110i1_toiltg_self_cd==. 
+
+rename new_g0110g1_dress_self_cd dress_mds
+rename new_g0120a_bathg_self_cd bath_mds
+rename new_g0110d1_wlk_crdr_self_cd ins_mds
+rename new_g0110b1_trnsfr_self_cd bed_mds
+rename new_g0110h1_eatg_self_cd eat_mds
+rename new_g0110i1_toiltg_self_cd toilet_mds
+rename tot_adl adl_index_mds
+
+//merging with ltc focus file
+drop if a0100b_cms_crtfctn_num=="" | a0100b_cms_crtfctn_num=="."
+rename a0100b_cms_crtfctn_num prov_cms
+
+merge m:1 year prov_cms using "`ltc'"
+keep if _merge==3
+drop _merge
+
+//qui destring prov_cms , replace
+
+//tab prov_cms, sort
+
+capture drop unique_by_fac_yr
+sort prov_cms year bene_id
+by prov_cms year bene_id: gen unique_by_fac_yr=_n==1
+
+
+
+tempfile temp1
+save "`temp1'"
+
+
+///here- join together with NHATS 
+merge m:1 bene_id using "E:\nhats\data\CMS_DUA_28016\xwalk.dta"
+rename _merge merge1
+merge m:1 nhats_cms_num using "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta"
+rename _merge merge2
+keep if merge1==3
+keep if merge2==3
+drop merge1 merge2
+
+//this round 1-6 data being joined does not have last month of life interview given by proxy. 
+joinby spid using "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" 
+drop if lml_ivw_yes==1
+drop if sp_ivw_yes==0
+drop if proxy_ivw==1 & nhres==1
+
+capture drop unique_bene2
+by bene_id a1600_entry_dt, sort: gen unique_bene2=_n==1
+tab unique_bene2
+
+///////
+//keep if ent_yr==disc_yr
+capture replace a2300_asmt_rfrnc_dt=trgt_dt if a2300_asmt_rfrnc_dt==.
+capture drop pre post time
+gen pre=inrange(ivw_date, a2300_asmt_rfrnc_dt-365, a2300_asmt_rfrnc_dt) 
+gen post=inrange(ivw_date, a2300_asmt_rfrnc_dt, a2300_asmt_rfrnc_dt+365)
+//gen pre=inrange(a2300_asmt_rfrnc_dt, ivw_date-365, ivw_date) changeup
+//gen post=inrange(a2300_asmt_rfrnc_dt, ivw_date, ivw_date+365) changeup
+
+capture drop if pre==0 & post==0
+/*capture drop nrst_post
+sort bene_id ivw_date  
+bys bene_id ivw_date pre: egen nrst_post=min(time) if pre==1
+
+capture drop nrst_pre
+sort bene_id ivw_date  
+bys bene_id ivw_date post: egen nrst_pre=max(time) if post==1 
+
+keep if time==nrst_post | time==nrst_pre 
+drop if time==. */
+
+gen time= a23 - ivw_date
+//gen time= ivw_date - disc_dt changeup
+
+capture drop abstime
+gen abstime=abs(time)
+// was using disc_dt var instead of a23, because not all people have a disc_dt
+
+
+
+// if pre
+//replace time = ivw_date- disc_dt if post
+
+capture drop num
+
+//sort bene_id ivw_date time
+ //ivw_date num time post time a2300_asmt_rfrnc_dt
+//capture drop flag
+//by bene_id time  , sort: gen flag=_n==1
+
+//nhats adl var creation
+foreach x in dres bath ins bed eat toil {
+capture drop adl_`x'
+gen adl_`x'=.
+replace adl_`x'=1 if adl_`x'_help==1
+replace adl_`x'=0 if adl_`x'_help==0
+}
+
+/*new change
+replace adl_dres=1 if dresoft==5
+replace adl_ins=1 if oflvslepr==5 
+replace adl_bed=1 if bedwout==1
+*/
+
+capture drop nhats_tot_adl
+egen nhats_tot_adl = rowtotal( adl_dres adl_bath adl_ins adl_bed adl_eat adl_toil)
+
+replace nhats_tot_adl=. if adl_bed==. & adl_dres==. & adl_bath==. & ///
+adl_toil==. & adl_eat==. & adl_ins==.
+
+
+/*capture drop nhats_tot_adl
+egen nhats_tot_adl = rowtotal( adl_bed_help adl_dres_help adl_bath_help ///
+adl_toil_help adl_eat_help adl_ins_help)
+
+replace nhats_tot_adl=. if adl_bed_help==. & adl_dres_help==. & adl_bath_help==. & ///
+adl_toil_help==. & adl_eat_help==. & adl_ins_help==. 
+
+
+capture drop nhats_adl_imp
+gen nhats_adl_imp=1 if nhats_tot_adl>0
+replace nhats_adl_imp=0 if nhats_tot_adl==0
+replace nhats_adl_imp=. if nhats_tot_adl==.
+*/
+
+capture drop time1
+gen time1=0
+
+replace time1=1 if 180<=time
+replace time1=2 if 90<=time<180
+replace time1=3 if 60<=time<90
+replace time1=4 if 30<=time<60
+replace time1=5 if 0<=time<30
+
+
+ //time2 same as time1
+capture drop time2
+gen time2=0
+
+replace time2=1 if inrange(abstime, 180, 364)
+replace time2=2 if inrange(abstime, 90, 179)
+replace time2=3 if inrange(abstime, 60, 89)
+replace time2=4 if inrange(abstime, 30, 59)
+replace time2=5 if inrange(abstime, 0, 29)
+
+tab a18 a21
+sum los
+label var adl_index_mds "ADL from MDS"
+label var nhats_tot_adl "ADL from NHATS"
+twoway scatter adl_index_mds nhats_tot_adl, jitter(10) title(MDS ADL vs NHATS ADL Measures)
+//graph box tot_adl, over(nhats_tot_adl) noout label
+
+capture drop diff
+gen diff=adl_index_mds-nhats_tot_adl
+/*tab diff nhats_tot_adl 
+capture drop absdiff
+gen absdiff= abs(diff)*/
+
+capture drop diff_di
+gen diff_di=1 if diff>=4
+replace diff_di=0 if diff<=3
+replace diff_di=. if adl_index_mds==. | nhats_tot_adl==.
+//replace diff_di=. if diff<=-1
+
+capture drop diff_di_1
+gen diff_di_1=1 if diff>=3
+replace diff_di_1=0 if diff<=2
+replace diff_di_1=. if adl_index_mds==. | nhats_tot_adl==.
+
+foreach x in education agecat race income_q num_helpers{
+capture drop `x'_dum*
+tab `x', gen(`x'_dum)
+}
+
+local yvar diff_di diff_di_1 female prob_dem hospbase1 multifac1 profit1 pre ///
+agecat_dum1 agecat_dum2 agecat_dum3 agecat_dum4 agecat_dum5 agecat_dum6 ///
+race_dum1 race_dum2 race_dum3 race_dum4 education_dum1 education_dum2 ///
+education_dum3 education_dum4 income_q_dum1 income_q_dum2 income_q_dum3 income_q_dum4 ///
+num_helpers_dum1 num_helpers_dum2 num_helpers_dum3 num_helpers_dum4
+
+local cvar abstime los paymcare
+corr `yvar' `cvar'
+label var prob_dem "Probable Dementia"
+label var paymcare "Proportion of facility residents whose primary support is Medicare"
+label var hospbase1 "Hospital Based"
+label var multifac1 "Part of a Chain of Facilities"
+label var time "Time between NHATS and MDS"
+label var pctfall30_2011p "Proportion of Residents who have fallen (past 30 days)"
+label var pctincont_bladr_2011p "Proportion of Residents who are Bowel Incontenent"
+label var los "Length of Stay"
+label var nhats_tot_adl "ADL from NHATS"
+label var pre "MDS before NHATS"
+label var abstime "Time between NHATS and MDS (abs. val. divided by 10)"
+label var profit1 "For-Profit Facility"
+label var diff_di "Gap of 4+ between MDS and NHATS ADLs"
+label var diff_di_1 "Gap of 3+ between MDS and NHATS ADLs"
+label var education_dum1 "<High School"
+label var education_dum2 "High School/GED"
+label var education_dum3 "Some College"
+label var education_dum4 ">=Bachelors"
+label var agecat_dum1 "Age 65-69"
+label var agecat_dum2 "Age 70-74" 
+label var agecat_dum3 "Age 75-79" 
+label var agecat_dum4 "Age 80-84"
+label var agecat_dum5 "Age 84-89"
+label var agecat_dum6 "Age 90+"
+label var race_dum1 "White Non-His"
+label var race_dum2 "Black Non-His"
+label var race_dum3 "Other (Am Indian/Asian/ Nat. Hawaii)"
+label var race_dum4 "Hispanic"
+label var income_q_dum1 "Income Quartile 1 (by wave)"
+label var income_q_dum2 "Income Quartile 2 (by wave)"
+label var income_q_dum3 "Income Quartile 3 (by wave)"
+label var income_q_dum4 "Income Quartile 4 (by wave)"
+label var num_helpers_dum1 "No Helpers"
+label var num_helpers_dum2 "1-3 Helpers"
+label var num_helpers_dum3 "4-6 Helpers"
+label var num_helpers_dum4 "7+ Helpers"
+label var income_cat "Income, Categorical"
+label var num_helpers_cat "Number of Helpers, Categorical"
+
+
+local rn: word count `yvar' `cvar'
+
+mat summ = J(`rn',6,.)
+local r=1
+local c=1
+
+foreach x in `yvar' {
+qui sum `x' [aw=anfinwgt]
+mat summ[`r',1]=r(N)
+mat summ[`r',2]=r(mean)*100
+mat summ[`r',3]=.
+mat summ[`r',4]=r(sd)
+mat summ[`r',5]=r(min)
+mat summ[`r',6]=r(max)
+local r=`r'+1
+}
+di `r'
+foreach x in `cvar' {
+qui sum `x' [aw=anfinwgt]
+mat summ[`r',1]=r(N)
+mat summ[`r',2]=.
+mat summ[`r',3]=r(mean)
+mat summ[`r',4]=r(sd)
+mat summ[`r',5]=r(min)
+mat summ[`r',6]=r(max)
+local r=`r'+1
+}
+
+
+matrix rownames summ = `yvar' `cvar'
+matrix list summ
+frmttable using summ, statmat(summ) ///
+ctitles(Variables, N, %, Mean, Std. Dev., Min., Max.,) replace varlabels ///
+title(Summary Statistics)
+
+
+replace abstime=abstime/10
+replace los=los/10
+
+
+local yvar diff_di
+local yvar1 diff_di_1
+local ivar female i.agecat i.race_cat i.education i.income_quart i.nhats_tot_adl
+local ivar1 prob_dem /*paymcare*/ hospbase1 multifac1 profit1 
+local ivar2 pre
+local cvar abstime /*pctfall30_2011p pctincont_bladr_2011p*/ los
+
+//svyset varunit [pw=anfinw], strata(varstrat)
+
+
+logit `yvar' `ivar' [pw=anfinwgt], or robust
+//margins, dydx(*)
+outreg2 using diff_di.doc, replace ctitle(Odds-Ratio) label title(Odds-Ratio on the Difference between MDS and NHATS) eform stats( coef pval ci)
+logit `yvar' `ivar' `ivar1' [pw=anfinwgt] , or robust  
+//margins, dydx(*)
+outreg2 using diff_di.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+logit `yvar' `ivar' `ivar1' `ivar2' [pw=anfinwgt] , or robust  
+//margins, dydx(*)
+outreg2 using diff_di.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+logit `yvar' `ivar' `ivar1' `ivar2' `cvar' [pw=anfinwgt] , or robust 
+//margins, dydx(*)
+outreg2 using diff_di.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+
+//logit `yvar' `ivar1' `ivar2' `cvar', or robust  
+//margins, dydx(*)
+//outreg2 using diff_di.doc, append ctitle(Odds-Ratio) label eform
+
+
+logit `yvar1' `ivar' [pw=anfinwgt] , or robust 
+//margins, dydx(*)
+outreg2 using diff_di_1.doc, replace ctitle(Odds-Ratio) label title(Odds-Ratio on the Difference between MDS and NHATS) eform stats( coef pval ci)
+logit `yvar1' `ivar' `ivar1' [pw=anfinwgt] , or robust  
+//margins, dydx(*)
+outreg2 using diff_di_1.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+logit `yvar1' `ivar' `ivar1' `ivar2' [pw=anfinwgt] , or robust  
+//margins, dydx(*)
+outreg2 using diff_di_1.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+logit `yvar1' `ivar' `ivar1' `cvar' pre [pw=anfinwgt] , or robust  
+//margins, dydx(*)
+outreg2 using diff_di_1.doc, append ctitle(Odds-Ratio) label eform stats( coef pval ci)
+
+corr `yvar' `yvar1' agecat race_cat education income_cat  `ivar1' `ivar2' `cvar' nhats_tot_adl if abstime<=60
+
+//logit `yvar1' `ivar1' `cvar' `ivar2', or robust  
+//margins, dydx(*)
+//outreg2 using diff_di_1.doc, append ctitle(Odds-Ratio) label eform
+
+/*capture drop tot_adl1
+gen tot_adl1=1 if tot_adl>=4
+replace tot_adl1=0 if tot_adl<=3
+tab tot_adl1
+local yvar1 tot_adl1
+
+logit `yvar1' `ivar', or robust  
+margins, dydx(*)
+outreg2 using tot_adl1.doc, replace ctitle(Odds-Ratio) label title(Odds-Ratio on MDS' binary ADL variable) eform
+logit `yvar1' `ivar' `ivar1', or  robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar' `ivar1' `cvar', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar' `ivar1' `cvar' `ivar2', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar' `ivar1' time los `ivar2', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar' `ivar1' `ivar2', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar2', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+logit `yvar1' `ivar1' `cvar' `ivar2', or robust  
+//margins, dydx(*)
+outreg2 using tot_adl1.doc, append ctitle(Odds-Ratio) label eform
+
+
+
+capture drop mds_dum*
+capture drop nhats_dum*
+tab tot_adl, gen(mds_dum)
+tab nhats_tot_adl, gen(nhats_dum)
+forvalues i=1/7 {
+lab var mds_dum`i' "MDS ADL `=`i'-1'"
+}
+forvalues i=1/7 {
+
+lab var nhats_dum`i' "NHATS ADL `=`i'-1'"
+}
+corr mds_dum* nhats_dum*
+estpost correlate mds_dum* nhats_dum*, matrix listwise
+est store c1
+esttab * using corr.doc, replace unstack compress label not
+*/
+
+
+
+label var adl_dres "NHATS Dressing ADL"
+label var adl_bath "NHATS Bathing ADL"
+label var adl_ins "NHATS Walking ADL"
+label var adl_bed "NHATS Transferring ADL"
+label var adl_eat "NHATS Eating ADL"
+label var adl_toil "NHATS Toileting ADL"
+
+
+
+label var dress_mds "MDS Dressing ADL" 
+label var bath_mds "MDS Bathing ADL"
+label var ins_mds "MDS Walking ADL"
+label var bed_mds "MDS Transferring ADl"
+label var eat_mds "MDS Eating ADL"
+label var toilet_mds "MDS Toileting ADL" 
+label var tot_adl "ADL from MDS"
+
+local nhats adl_dres adl_bath adl_ins adl_bed adl_eat adl_toil  
+
+
+local mds new_g0110g1_dress_self_cd new_g0120a_bathg_self_cd ///
+new_g0110d1_wlk_crdr_self_cd new_g0110b1_trnsfr_self_cd new_g0110h1_eatg_self_cd ///
+new_g0110i1_toiltg_self_cd
+
+
+
+
+foreach x in `mds' `nhats'{
+tab `x' if inrange(time, -90, 90), missing
+}
+
+sum `nhats' `mds'
+
+local mn adl_dres new_g0110g1_dress_self_cd adl_bath new_g0120a_bathg_self_cd ///
+adl_ins new_g0110d1_wlk_crdr_self_cd adl_bed new_g0110b1_trnsfr_self_cd adl_eat ///
+new_g0110h1_eatg_self_cd adl_toil new_g0110i1_toiltg_self_cd
+graph bar `mn', ytitle("Fraction of Individuals with ADL") legend(label(1 "NHATS Dressing") ///
+label(2 "MDS Dressing") label(3 "NHATS Bathing") label(4 "MDS Bathing") label(5 ///
+"NHATS Walking") label(6 "MDS Walking") label(7 "NHATS Transferring") label(8 ///
+"MDS Transferring") label(9 "NHATS Eating") label(10 "MDS Eating") label(11 ///
+"NHATS Toileting") label(12 "MDS Toileting") ) title("Fraction of Individuals with a given ADL, NHATS vs MDS")
+
+//(percent), over(adl_ins)
+
+foreach x in `mn'{
+tab `x'
+tab `x' if inrange(time, -30,30)  
+}
+
+corr `mn' 
+corr `mn' if inrange(time, -30,30)  
+
+
+estpost correlate `mds' `nhats', matrix listwise
+est store c2
+esttab c2 using corr1.doc, replace unstack compress label not
+
+
+
+//here
+
+
+
+
+
+
+
+
+/*
+logit tot_adl1  female  prob_dem paymcare hospbase1 multifac1
+
+if abstime<120
+profit1 paymcare hospbase1 multifac1 i.agecat i.female los pre i.race_cat i.income_cat pctfall30_2011p pctincont_bladr_2011p i.education i.nhats_tot_adl i.dem_3_cat, or
+logit diff_di i.nhats_tot_adl paymcare hospbase1 multifac1 pctincont_bladr_2011p i.agecat i.female los i.race_cat i.income_cat i.education prob_dem time pctfall30_2011p
+margins, dydx(*)
+
+
+
+capture drop unique_bene2
+by bene_id a1600_entry_dt, sort: gen unique_bene2=_n==1
+tab unique_bene2
+
+sort bene_id a1600_entry_dt post time
+by bene_id a1600_entry_dt: gen num=_n
+
+//finding # of residents--rounded b/c occpct rounded to 2nd digit I believe 
+capture drop res
+gen res=(occpct/100)*totbeds
+replace res=round(res,1)
+sum res
+
+gen log_tot_adl=log(tot_adl)
+histogram log_tot_adl, discrete freq  scheme(s1mono)
+sum log_tot_adl tot_adl, d
+
+tab profit1 tot_adl
+ladder avgadl_2011p
+
+histogram tot_adl, discrete freq  scheme(s1mono)
+
+by year prov_cms, sort: gen fac_yr=_n==1
+regress avgadl_2011p occpct profit1 rnhrppd lpnhrppd cnahrppd if fac_yr==1
+
+
+ladder tot_adl  
+gladder tot_adl, fraction   
+histogram tot_adl, normal    
+//poisson works ologit works   
+reg tot_adl profit1 paymcare hospbase1 multifac1 i.agecat i.female los pre i.race_cat i.income_cat pctfall30_2011p pctincont_bladr_2011p i.education i.nhats_tot_adl i.dem_3_cat, vce(robust)
+
+bys tot_adl: sum los
+
+capture drop tot_adl_*
+gen tot_adl_0=1 if tot_adl==0
+replace tot_adl_0=0 if tot_adl>=1
+replace tot_adl_0=. if tot_adl==.
+gen tot_adl_1=1 if tot_adl<=1
+replace tot_adl_1=0 if tot_adl>=2 
+replace tot_adl_1=. if tot_adl==.
+gen tot_adl_2=1 if tot_adl<=2
+replace tot_adl_2=0 if tot_adl>=3 
+replace tot_adl_2=. if tot_adl==.
+gen tot_adl_3=1 if tot_adl<=3
+replace tot_adl_3=0 if tot_adl>=4 
+replace tot_adl_3=. if tot_adl==.
+logit tot_adl_0 profit1, or
+logit tot_adl_1 profit1, or
+logit tot_adl_2 profit1, or
+logit tot_adl_3 profit1, or
+
+label var hospbase1 "hospital based"
+
+foreach x in reg poisson ologit{ 
+`x' tot_adl profit1 paymcare hospbase1 multifac1 pctfall30_2011p pctincont_bladr_2011p, vce(robust)
+outreg2 using `x'.doc, replace ctitle(Model 1)
+
+`x' tot_adl profit1 paymcare hospbase1 multifac1 los pre pctfall30_2011p pctincont_bladr_2011p dem_2_cat i.agecat female i.education i.race_cat,  vce(robust)
+outreg2 using `x'.doc, append ctitle(Model 2)
+
+`x' tot_adl profit1 paymcare hospbase1 multifac1 los pre pctfall30_2011p pctincont_bladr_2011p dem_2_cat i.agecat female i.education i. race_cat i.nhats_tot_adl,  vce(robust)
+outreg2 using `x'.doc, append ctitle(Model 3)
+}
+
+mlogit tot_adl profit1 paymcare hospbase1 multifac1 los pre pctfall30_2011p pctincont_bladr_2011p dem_2_cat i.agecat female i.education i. race_cat i.nhats_tot_adl, b(0)  
+estout using mlogit1.doc, replace eform c(b(star fmt(%9.3f))) sty(fixed) s(ll chi2 N) label legend varlabel(_cons Constant) unstack posthead("") prefoot("") postfoot("")
+
+foreach x in mlogit{ 
+eststo:`x' tot_adl profit1 paymcare hospbase1 multifac1 pctfall30_2011p pctincont_bladr_2011p, b(0) 
+esttab  using `x'1.doc, replace 
+
+eststo:`x' tot_adl profit1 paymcare hospbase1 multifac1 los pre pctfall30_2011p pctincont_bladr_2011p dem_2_cat i.agecat female i.education i.race_cat, b(0) 
+esttab profit1 paymcare hospbase1 multifac1 pctfall30_2011p pctincont_bladr_2011p los pre using `x'2.doc, replace
+
+eststo:`x' tot_adl profit1 paymcare hospbase1 multifac1 los pre pctfall30_2011p pctincont_bladr_2011p dem_2_cat i.agecat female i.education i. race_cat i.nhats_tot_adl, b(0) 
+esttab profit1 paymcare hospbase1 multifac1 pctfall30_2011p pctincont_bladr_2011p los pre using `x'3.doc, replace
+}
+
+
+
+
+fitstat
+estat gof
+margins, dydx (*) atmeans
+
+
+
+reg absdiff occpct  profit1 rnhrppd lpnhrppd cnahrppd paymcaid paymcare hospbase1 multifac1 
+
+/*keep g0110g1_dress_self_cd g0110g2_dress_sprt_cd g0120a_bathg_self_cd ///
+g0120b_bathg_sprt_cd g0110d1_wlk_crdr_self_cd g0110d2_wlk_crdr_sprt_cd ///
+g0110b1_trnsfr_self_cd g0110b2_trnsfr_sprt_cd g0110h1_eatg_self_cd ///
+g0110h2_eatg_sprt_cd g0110i1_toiltg_self_cd g0110i2_toiltg_sprt_cd ///
+g0110j1_prsnl_hygne_self_cd g0110j2_prsnl_hygne_sprt_cd new_g0110g1_dress_self_cd new_g0120a_bathg_self_cd ///
+new_g0110d1_wlk_crdr_self_cd new_g0110b1_trnsfr_self_cd new_g0110h1_eatg_self_cd ///
+new_g0110i1_toiltg_self_cd adl_bed_help adl_dres_help adl_bath_help ///
+adl_toil_help adl_eat_help adl_ins_help bene_id a1600_entry_dt num pre post tot_adl ///
+a2300_asmt_rfrnc_dt ivw_date time nhats_adl_imp nhats_tot_adl adl_imp totbeds acuindex2 ///
+occpct avgadl_2011p adm_bed diff prov_cms
+
+
+
+reshape wide g0110g1_dress_self_cd g0110g2_dress_sprt_cd g0120a_bathg_self_cd ///
+g0120b_bathg_sprt_cd g0110d1_wlk_crdr_self_cd g0110d2_wlk_crdr_sprt_cd ///
+g0110b1_trnsfr_self_cd g0110b2_trnsfr_sprt_cd g0110h1_eatg_self_cd ///
+g0110h2_eatg_sprt_cd g0110i1_toiltg_self_cd g0110i2_toiltg_sprt_cd ///
+g0110j1_prsnl_hygne_self_cd g0110j2_prsnl_hygne_sprt_cd new_g0110g1_dress_self_cd new_g0120a_bathg_self_cd ///
+new_g0110d1_wlk_crdr_self_cd new_g0110b1_trnsfr_self_cd new_g0110h1_eatg_self_cd ///
+new_g0110i1_toiltg_self_cd adl_bed_help adl_dres_help adl_bath_help ///
+adl_toil_help adl_eat_help adl_ins_help pre post tot_adl ivw_date time nhats_adl_imp nhats_tot_adl adl_imp ///
+totbeds acuindex2 occpct avgadl_2011p adm_bed diff prov_cms, i(bene_id a1600_entry_dt a2300_asmt_rfrnc_dt) j(num) 
+
+capture drop both 
+gen both=1 if pre1==1 & post2==1 
+*/
+
+
+
+
+

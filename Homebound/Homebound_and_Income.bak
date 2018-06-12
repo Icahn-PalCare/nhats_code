@@ -8368,9 +8368,14 @@ forvalues i=2/6 {
 	local age `age' agecat`i'
 }
 
-forvalues i=2/4 {
+forvalues i=1/3 {
 	local inc `inc' income_quart`i'
 }
+
+label var income_quart1 "Income Quartile 1"
+label var income_quart2 "Income Quartile 2"
+label var income_quart3 "Income Quartile 3"
+
 
 local cond sr_cond_cat2 sr_cond_cat3
 
@@ -8380,8 +8385,10 @@ medicaid prob_dem `cond' adl_diff_ind srh_fp ///
 ind_paid_helper metro_ind northeast midwest south ind_replenish 
 
 svy, subpop(if wave==2 &  inrange(homebound_cat,2,4)): stcox `vars' //, nohr mgale(mg)
-*stcoxkm. by(income_cat)
+//stcoxkm, by(income_quart)
 qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
+stcox `vars' if wave==2 &  inrange(homebound_cat,2,4)
+//sthplot, by(
 
 stphplot, by(income_quart) adjust(`age'  female black hisp married  ind_noone  educ_hs_ind  ///
 medicaid prob_dem `cond' adl_diff_ind srh_fp ind_paid_helper ///
@@ -8413,7 +8420,7 @@ ind_paid_helper metro_ind northeast midwest south ind_replenish
 
 svy, subpop(if wave==2 &  inrange(homebound_cat,2,4)): stcox `vars'
 
-qui outreg using homebound_income_cox_models_incl_2015_samp_weighted, merge ///
+qui outreg using homebound_income_cox_models_incl_2015_samp_weighted1, merge ///
 ctitles("" "HB or NH") varlabels  ///
 title(Cox proportional hazard models) stats(e_b p) replace ///
 note("Among wave 2 non-homebound community dwelling SPs")
@@ -8432,11 +8439,12 @@ qui outreg, stats(e_b p) ctitles("" "Nursing Home") varlabels merge
 svy, subpop(if wave==2 & inrange(homebound_cat,2,4)): logit either2 `vars'
 qui outreg, stats(e_b p) ctitles("" "HB or NH") varlabels merge
 
-outreg using homebound_income_logit_incl_2015_samp_weighted, replay replace ///
+outreg using homebound_income_logit_incl_2015_samp_weighted1, replay replace ///
 title(Logistic regression on next wave status) ///
 note("Among wave 2/5 non-homebound community dwelling SPs")
 
-
+//mdesc `vars'
+mkcorr `vars' if wave==2 &  inrange(homebound_cat,2,4), log(corr_wave2.xls) replace 
 
 
 H="cox with TVC  income adj"
@@ -8455,6 +8463,7 @@ replace income_adj= (240.007/229.594)*aveincome if wave==2
 replace income_adj= (240.007/232.957)*aveincome if wave==3
 replace income_adj= (240.007/236.736)*aveincome if wave==4
 replace income_adj= (240.007/237.017)*aveincome if wave==5
+replace income_adj=aveincome if wave==6
 
 //reweight, per Maureen's instructions
 gen orig_weight=anfinw
@@ -8463,7 +8472,10 @@ replace anfinw=anfinw/2
 replace wave=wave-3 if year==2015
 gen ind_replenish=year==2015
 label var ind_replenish "2015 Replenishment Cohort"
-
+replace anfinw=. if wave!=2
+sort spid wave
+by spid: carryforward anfinw, replace
+drop if missing(anfinw)
 gen ind_noone=n_social==0
 label var ind_noone "SR nobody in social network"
 sort spid wave
@@ -8497,9 +8509,9 @@ label define wherelandgroup 1 "Never homebound or NH resident" 2 "Future HB" ///
 label values wherelandgroup wherelandgroup
 
 sort spid wave
-by spid: drop if nhres[_n-1]==1 
-by spid: drop if homebound_cat[_n-1]==. & year<201`=wave'
-di wave
+by spid: drop if firstnh<wave
+by spid: drop if firsthb<wave
+
 
 gen nwstatus=.
 forvalues i=2/5 {
@@ -8524,6 +8536,7 @@ replace nwstat=5 if incnhne==1
 label var nwstat "Status next wave"
 replace died_12=0 if nwstatus<=5
 label var died_12 "Died prior to next wave"
+
 
 gen northeast=region==1
 gen midwest=region==2
@@ -8568,20 +8581,12 @@ label var fin_strain "Financial Strain (Any nopay/mealskip)"
 
 gen any_asst= govtasst
 replace any_asst=1 if section8==1
-label var any_asst "Reci. any Public Assist. (incl. Gov't assist./Section 8"
+label var any_asst "Reci. any Public Assist. (incl. Gov't assist./Section 8)"
 
 
 
 tab wave nwstat if wave<=4, row
 tab nwsta status if wave==2 
-
-/*
-sum aveincome
-forvalues i=1/4 {
-gen inccat`i'=income_cat==`i'-1
-local lab : label income_cat `=`i'-1'
-label var inccat`i' "Income: `lab'"
-}*/
 
 sum income_adj
 forvalues i=1/4 {
@@ -8589,7 +8594,6 @@ gen inccat`i'=income_quart==`i'
 local lab : label income_quart `=`i''
 label var inccat`i' "Income: `lab'"
 }
-
 gen prob_dementia=dem_3==1 if !missing(dem_3)
 label var prob_dementia "Probable dementia"
 
@@ -8656,10 +8660,7 @@ gen ultimate=everhb==1
 replace ultimate=2 if evernh==1 & !ultimate
 replace ultimate=2 if firstnh<firsthb
 replace ultimate=3 if !missing(death_date) & !ultimate
-stset time, failure(everhb) 
-sts graph, by(income_quart)
-graph save km_hb, replace
-graph export km_hb.pdf, replace
+stset wave, failure(homebound_==1) id(spid) origin(wave==2)
 
 forvalues i=1/6 {
 local lab : label r1d2intvrage `i'
@@ -8683,51 +8684,46 @@ forvalues i=2/6 {
 forvalues i=1/3 {
 	local inc `inc' income_quart`i'
 }
+label var income_quart1 "Income Quartile 1"
+label var income_quart2 "Income Quartile 2"
+label var income_quart3 "Income Quartile 3"
+label var agecat2 "Age 70-74"
+label var agecat3 "Age 75-79"
+label var agecat4 "Age 80-84"
+label var agecat5 "Age 85-89"
+label var agecat6 "Age 90+"
 
 local cond sr_cond_cat2 sr_cond_cat3
 
 local vars `age' `inc' fin_strain anydebt govtasst finhlpfam meals_wheels ///
 female black hisp married ind_noone educ_hs_ind  ///
-medicaid prob_dem `cond' adl_diff_ind srh_fp ///
+medicaid prob_dem `cond' adl_impair srh_fp ///
 ind_paid_helper metro_ind northeast midwest south ind_replenish 
 
-svy, subpop(if wave==2 &  inrange(homebound_cat,2,4)): stcox `vars' //, nohr mgale(mg)
-stcoxkm, by(everhb)
-qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
-stcox `vars' if wave==2 &  inrange(homebound_cat,2,4)
-sthplot, by(
+local tvc `inc'
 
-stphplot, by(income_quart) adjust(`age'  female black hisp married  ind_noone  educ_hs_ind  ///
-medicaid prob_dem `cond' adl_diff_ind srh_fp ind_paid_helper ///
-metro_ind northeast midwest south fin_strain any_asst)
+ stcox `vars' //, nohr mgale(mg)
+*stcoxkm. by(income_cat)
+qui outreg, ctitles("" "Homebound") varlabels stats(e_b p)
+
+stphplot, by(income_quart) adjust(`vars')
 stphplot, by(income_quart)
 
 gen timenh=firstnh
 replace timenh=lastwave if missing(firstnh)
-stset timenh, failure(evernh)
-sts graph, by(income_quart)
-graph save km_nh, replace
-graph export km_nh.pdf, replace
+stset wave, failure(nhres==1) id(spid) origin(wave==2)
 
 
-svy, subpop(if wave==2 &  inrange(homebound_cat,2,4)): stcox `vars'
+ stcox `vars'
 
 qui outreg, merge ctitles("" "Nursing home") varlabels stats(e_b p)
 
-gen either=everhb==1 | evernh==1
-stset time, failure(either)
-sts graph, by(income_quart)
-graph save km_either, replace
-graph export km_either.pdf, replace
+gen either=nhres==1 | homebound_==1
+stset wave, failure(either==1) id(spid) origin(wave==2)
 
-local vars `age' `inc' fin_strain anydebt govtasst finhlpfam meals_wheels ///
-female black hisp married ind_noone educ_hs_ind  ///
-medicaid prob_dem `cond' adl_diff_ind srh_fp ///
-ind_paid_helper metro_ind northeast midwest south ind_replenish 
+ stcox `vars' 
 
-svy, subpop(if wave==2 &  inrange(homebound_cat,2,4)): stcox `vars'
-
-qui outreg using homebound_income_cox_models_incl_2015_samp_weighted1, merge ///
+qui outreg using homebound_income_cox_models_tvc1, merge ///
 ctitles("" "HB or NH") varlabels  ///
 title(Cox proportional hazard models) stats(e_b p) replace ///
 note("Among wave 2 non-homebound community dwelling SPs")
@@ -8739,19 +8735,18 @@ sort spid wave
 by spid: gen hb2=inlist(nwstat,2,3) if nwstat<7
 by spid: gen nh2=inlist(nwstat,4,5) if nwstat<7
 gen either2=hb2==1 | nh2==1 if !missing(hb2)
-svy, subpop(if wave==2 & inrange(homebound_cat,2,4)): logit hb2 `vars'
+svy, subpop(if inrange(homebound_cat,2,4)): logit hb2 `vars'
 qui outreg, stats(e_b p) ctitles("" "Homebound") varlabels
-svy, subpop(if wave==2 & inrange(homebound_cat,2,4)): logit nh2 `vars'
+svy, subpop(if inrange(homebound_cat,2,4)): logit nh2 `vars'
 qui outreg, stats(e_b p) ctitles("" "Nursing Home") varlabels merge
-svy, subpop(if wave==2 & inrange(homebound_cat,2,4)): logit either2 `vars'
+svy, subpop(if inrange(homebound_cat,2,4)): logit either2 `vars'
 qui outreg, stats(e_b p) ctitles("" "HB or NH") varlabels merge
 
-outreg using homebound_income_logit_incl_2015_samp_weighted1, replay replace ///
+outreg using homebound_income_logit_incl_2015_samp_weighted_mult_wave1, replay replace ///
 title(Logistic regression on next wave status) ///
-note("Among wave 2/5 non-homebound community dwelling SPs")
+note("Multi-wave logistic regressions non-homebound community dwelling SPs")
 
-
-mkcorr `vars' if wave==2 &  inrange(homebound_cat,2,4), log(corr_wave2.xls) replace 
+mkcorr `vars' if inrange(homebound_cat,2,4), log(corr_all.xls) replace 
 
 
 H="graph next wave hb over income distribution  income adj"
