@@ -1,0 +1,18 @@
+//cpi inflation
+gen income_adj=0
+replace income_adj= (240.007/224.939)*aveincome if wave==1
+replace income_adj= (240.007/229.594)*aveincome if wave==2
+replace income_adj= (240.007/232.957)*aveincome if wave==3
+replace income_adj= (240.007/236.736)*aveincome if wave==4
+replace income_adj= (240.007/237.017)*aveincome if wave==5
+replace income_adj=aveincome if wave==6
+
+
+sort wave
+forvalues w=2/6 {
+xtile income_quart`w'_adj=income_adj if wave==`w', nq(4) 
+}
+egen income_quart_adj=rowmax(income_quart2_adj income_quart3_adj income_quart4_adj income_quart5_adj income_quart6_adj)
+forvalues w=2/6 { 
+drop income_quart`w'_adj 
+}

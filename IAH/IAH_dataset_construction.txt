@@ -5349,17 +5349,117 @@ proc export data=out.personout outfile="E:\nhats\data\Projects\pal_perf_scale\in
 H="********"
 
 
-H="Start with Serious Illness Data, restritct to waves 1-3"
+H="Get community dwelling then check ffs"
+/* Stata */
+
 use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
 
-
-duplicates drop spid wave, force
 keep if community_dwelling
-keep if wave<4
+keep if wave<6
+cap drop bene_id 
+
+merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta" 
+
+keep if _m==3
+
+save "E:\nhats\data\Projects\IAH\int_data\iah_fullsample.dta", replace
+
+keep bene_id spid wave ivw_month ivw_year
+
+saveold "E:\nhats\data\Projects\IAH\int_data\iah_ivwdates.dta", version(12) replace
 
 
-gen ffs_6m = 0
-replace ffs_6m = 1 if cont_ffs_n_mos >=6
+/* SAS */
+
+libname cms 'E:\nhats\data\20180625 NHATS CMS Data\merged';
+
+proc import datafile="E:\nhats\data\Projects\IAH\int_data\iah_ivwdates.dta" out=ivdates(rename=(ivw_year = index_year)) dbms=stata replace; run;
+
+data ivdates;
+set ivdates;
+index_year_n1 = index_year - 1;
+bene_id = trim(left(bene_id));
+run;
+
+proc freq data=ivdates; tables ivw_month; run;
+
+data mbsf;
+set cms.mbsf_06_16;
+hmoind12_n1 = hmoind12;
+buyin12_n1 = buyin12;
+bene_id = trim(left(bene_id));
+run;
+
+
+
+proc sql;
+create table iv_mbsf as select a.*, b.hmoind12, b.buyin12
+from ivdates a
+inner join mbsf b
+on a.index_year = b.year and a.bene_id = b.bene_id;
+quit;
+
+proc sql;
+create table iv_mb1 as select a.*, b.hmoind12_n1, b.buyin12_n1
+from iv_mbsf a 
+inner join mbsf b
+on a.index_year_n1 = b.year and a.bene_id = b.bene_id;
+quit;
+
+
+data iv_mb1;
+set iv_mb1;
+if length(trim(left(buyin12)))>=6 and ivw_month>0 then do;
+buyin_sy=substr(trim(left(buyin12)),1,ivw_month); * creating buyin/hmo variable for the months before index date in same year;
+hmo_sy=substr(trim(left(HMOIND12)),1,ivw_month);
+end;
+else do;
+buyin_sy=trim(left(buyin12));
+hmo_sy=trim(left(HMOIND12));
+end;
+run;
+
+data iv_mb1;
+set iv_mb1;
+buyin_sy_r = left(reverse(buyin_sy));
+hmo_sy_r = left(reverse(hmo_sy));
+hmo_n1_r = left(reverse(hmoind12_n1));
+buyin_n1_r = left(reverse(buyin12_n1));
+run;
+
+data iv_mb2;
+set iv_mb1;
+buyin_1y = trimn(left(buyin_sy_r))||trimn(left(buyin_n1_r));
+hmo_1y = trimn(left(hmo_sy_r))||trimn(left(hmo_n1_r));
+run;
+
+data iv_mb2;
+set iv_mb2;
+buyin_6m = substr(buyin_1y,2,6);
+hmo_6m = substr(hmo_1y,2,6);
+part_ab_6m = 0;
+hmo_no_6m = 0; 
+ffs_6m = 0;
+if indexc(buyin_6m,"0","1","2","A","B")=0 then part_ab_6m = 1;
+if indexc(hmo_6m,"1","2","4","A","B","C")=0 then hmo_no_6m = 1;
+if part_ab_6m = 1 and hmo_no_6m = 1 then ffs_6m = 1;
+run;
+
+proc export data=iv_mb2 (keep = spid wave ffs_6m) outfile="E:\nhats\data\Projects\IAH\int_data\iah_ffs.dta" dbms=stata replace; run;
+
+
+H="Start with Serious Illness Data, restritct to waves 1-3"
+
+use "E:\nhats\data\Projects\IAH\int_data\iah_fullsample.dta", clear
+
+cap drop _merge
+
+merge 1:1 spid wave using "E:\nhats\data\Projects\IAH\int_data\iah_ffs.dta", keepus(ffs_6m)
+keep if _m==3
+
+save "E:\nhats\data\Projects\IAH\final_data\iah_fullsample.dta", replace
+
+
 
 local cvars sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever
 
@@ -5386,16 +5486,13 @@ rename adl_flag iah_adl
 rename ind_nonelect_adm_12m iah_nonelect
 
 
-save "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", replace
+save "E:\nhats\data\Projects\IAH\final_data\iah_wave1-5.dta", replace
 
 
 keep if cc_flag
 keep if adl_flag
 keep if ind_nonelect_adm_12m // elective hospitalization in past year
 
-
-
-saveold "E:\nhats\data\Projects\IAH\int_data\steps123.dta", version(12) replace /*SAS dataset for ip rehab and homecalls */
 
 H="Search for IP rehab and home calls"
 libname claims "E:\nhats\data\CMS_DUA_28016\Merged";

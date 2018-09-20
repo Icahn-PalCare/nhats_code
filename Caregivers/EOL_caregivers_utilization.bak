@@ -812,6 +812,104 @@ title("Sample derivation") replace
 H="****************************************************"
 
 
+H="Serious ill data prelude"
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs"
+
+cd `datapath'
+log using `logpath'\sample_derivation_xwave.txt, text replace
+
+use `intpath'\serious_ill_int_dataset1.dta, clear
+
+*****************************************
+//variable cleaning and construction
+*****************************************
+foreach x of varlist adl*help {
+replace `x'=. if sp_ivw_==0
+replace adl_independent=0 if `x'==1
+replace adl_impair=1 if `x'==1
+}
+//set comorb/serill to zero if missing (because no entry in the pb file)
+foreach x of varlist comorb* cc* smi* {
+	replace `x'=0 if `x'==. & cont_ffs_n_mos>=12
+}
+
+
+replace el_ge3=comorb_all>3 if !missing(comorb_all)
+replace adl_impair=1 if nhres==1
+replace smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + ///
+smi_copd_ind + smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind
+replace ser_med_illness=smi_count>0 if missing(ser_med_illness) & !missing(smi_count)
+replace criteria_a=smi_count>0 if !missing(smi_count) & missing(criteria_a)
+replace criteria_a=1 if adl_impair==1
+replace criteria_b=criteria_a==1 & (ind_em_ur_adm_12m==1 | smi_nh_ind==1) if missing(criteria_b)
+replace criteria_c=ser_med_illness==1 & adl_impair==1 & (ind_em_ur_adm_12m==1 | ///
+smi_nh_ind==1) if missing(criteria_c)
+
+gen criteria_all=1
+gen criteria_none=criteria_a==0
+
+foreach y in 12 24 {
+gen tot_paid_by_mc_`y'm=0
+foreach x in ip snf hh hs pb op dm {
+replace tot_paid_by_mc_`y'=tot_paid_by_mc_`y'+`x'_paid_by_mc_`y'm
+}
+}
+
+gen mult_ip_adm_p12m=n_ip_admit_p12m>1 if !missing(n_ip_admit_p12m)
+foreach x of varlist *_op_* *icu_* {
+replace `x'=0 if missing(`x')
+}
+
+gen n_ed_vis_p12m=n_ed_op_visits_p12m+n_ed_ip_p12m
+gen ind_ed_vis_p12m=n_ed_vis_p12m>0 if !missing(n_ed_vis_p12m)
+gen mult_ed_vis_p12m=n_ed_vis_p12m>1 if !missing(n_ed_vis_p12m)
+gen ind_icu_p12m=icu_days_p12m>0 if !missing(icu_days_p12m)
+gen ind_hs_p12m=hs_paid_by_mc_12m!=0 if !missing(hs_paid_by_mc_12m)
+
+*****************************************
+//sample derivation
+*****************************************
+gen wave1=wave==1
+gen ffs_12m=cont_ffs_n_mos>=12 if !missing(cont_ffs_n_mos)
+gen ab_12m=part_ab_n_mos>=12
+gen hmo_12m=non_hmo_d_n_mos>=12
+label var ab_12m "12m AB Medicare before ivw"
+label var hmo_12m "12m w/o HMO before ivw"
+label var wave1 "Wave 1 Interview"
+label var ffs_12m "12m continuous FFS before ivw"
+*local samplevars wave1 sp_ivw_yes ab_12m hmo_12m ffs_12m 
+local samplevars ab_12m hmo_12m ffs_12m 
+
+local rn : word count `samplevars'
+local r=1
+local c=1
+mat samp=J(`rn',2,.)
+
+foreach x in `samplevars' {
+	*keep if `x'==1
+	sum `x'
+	mat samp[`r',`c']=r(N)
+	local r=`r'+1
+}
+
+mat rownames samp=`samplevars'
+
+frmttable, statmat(samp) ctitles("" "N") title("Sample Derivation") sdec(0) ///
+varlabels
+
+save serious_ill_nhats_sample, replace
+
+foreach x of varlist comorb* cc* ser_med *smi* criteria* {
+	replace `x'=0 if `x'==.
+}
+
+
 H="updates to include specific illness groups with income adj.& wave 1-5"
 //includes wave 1-6 using self report from nhats for rounds 4,5, 6
 
@@ -890,6 +988,7 @@ replace income_adj= (240.007/229.594)*aveincome if wave==2
 replace income_adj= (240.007/232.957)*aveincome if wave==3
 replace income_adj= (240.007/236.736)*aveincome if wave==4
 replace income_adj= (240.007/237.017)*aveincome if wave==5
+replace income_adj=aveincome if wave==6
 label var income_adj "Inflation Adjusted Income"
 
 gen ind_hs_nhats_tw=0
@@ -1449,7 +1548,7 @@ forvalues group=1/`cn' {
 				mat tab[`r',`c'+1]=r(p)
 				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
 *}
-			local r=`r'+1
+			local r=`r'+m
 }
 }
 	sum n if inlist(group`group',1)
@@ -1619,4 +1718,486 @@ matrix rownames hs = "Full Sample" "Hospice Indicator" "Good Hospice (3-183 days
 matrix list hs
 frmttable using hs_table, statmat(hs) replace title(Sample Sizes) sdec(2) ///
 note("Good Hospice numbers are their for some individuals in round 4 if they recieve hospice by Dec 2014" \ ///
+"Removed LML interview" \ "Some individuals drop out and then reappear for LML interviews, thus the high length of days")
+
+
+H="Updated 6/22/2018"
+//includes wave 1-6 using self report from nhats for rounds 4,5, 6
+
+clear all
+set more off
+capture log close
+
+local datapath "E:\nhats\data\projects\serious_ill\final_data"
+cd `datapath'
+local logpath "E:\nhats\data\projects\caregivers\logs"
+cd `logpath'
+
+
+use "E:\nhats\data\nhats cleaned\op_round_1_6.dta" /*if wave<=3*/ , clear
+replace prim_helper_cat=op_relations if prim_==1
+label values prim_helper_cat op_relationship_cat
+keep if prim_==1
+by spid wave, sort: egen hasspouse=max(spouse)
+drop if hasspouse & !spouse
+gen kid=inrange(prim_,2,3)
+by spid wave, sort: egen haskid=max(kid)
+drop if haskid & !kid
+gen othfm=prim_==4
+by spid wave, sort: egen hasoth=max(othfm)
+drop if hasoth & !othfm
+gen friend=prim_h==6
+by spid wave, sort: egen hasfriend=max(friend)
+drop if hasfr & !friend
+duplicates drop spid wave prim_helper, force
+keep spid prim_helper_cat wave
+by spid wave, sort: replace prim_=7 if _N>1
+by spid wave: keep if _n==1
+label define op_relationship_cat 7 "Son and daughter tied", modify
+tempfile op
+save `op'
+
+use "E:\nhats\data\nhats cleaned\op_round_1_6.dta" /*if wave<=3*/, clear
+replace prim_helper_cat=op_relations if primary_cg==1
+label values prim_helper_cat op_relationship_cat
+keep if primary_cg==1
+by spid wave, sort: egen hasspouse=max(spouse)
+drop if hasspouse & !spouse
+gen kid=inrange(prim_,2,3)
+by spid wave, sort: egen haskid=max(kid)
+drop if haskid & !kid
+gen othfm=prim_==4
+by spid wave, sort: egen hasoth=max(othfm)
+drop if hasoth & !othfm
+gen friend=prim_h==6
+by spid wave, sort: egen hasfriend=max(friend)
+drop if hasfr & !friend
+duplicates drop spid wave prim_helper, force
+keep spid prim_helper_cat wave
+by spid wave, sort: replace prim_=7 if _N>1
+by spid wave: keep if _n==1
+label define op_relationship_cat 7 "Son and daughter tied", modify
+tempfile op
+save `op'
+
+use `datapath'\serious_ill_nhats_sample.dta /*if wave<=3 &*/ if sp_ivw==1 & !nhres, clear
+duplicates drop spid wave hs_los, force
+drop prim*
+merge 1:1 spid wave using `op'
+/*identify the group we want to use subpop command
+ -die w/in 12m (for the 14 who have 2 ivws in the year prior to death, take the earlier one)
+ -no use of hs pre ivw
+ -ffs not important because all HS claims are visible; because when you become hospice you are medicare
+ */
+replace medicaid=0 if missing(medicaid)
+
+//nhats hospice wave 3 and after 
+gen income_adj=.
+replace income_adj= (240.007/224.939)*aveincome if wave==1
+replace income_adj= (240.007/229.594)*aveincome if wave==2
+replace income_adj= (240.007/232.957)*aveincome if wave==3
+replace income_adj= (240.007/236.736)*aveincome if wave==4
+replace income_adj= (240.007/237.017)*aveincome if wave==5
+replace income_adj=aveincome if wave==6
+label var income_adj "Inflation Adjusted Income"
+
+sort wave
+forvalues w=1/6 {
+xtile income_quart`w'_adj=income_adj if wave==`w', nq(4) 
+}
+egen income_quart_adj=rowmax(income_quart*_adj)
+forvalues w=1/6 { 
+drop income_quart`w'_adj 
+}
+
+sum income_adj
+forvalues i=1/4 {
+gen inccat_adj`i'=income_quart_adj==`i'
+local lab : label income_quart_adj `=`i''
+label var inccat_adj`i' "Adjusted Income: `lab'"
+}
+
+label var income_quart_adj "Quartile Inflation Adjusted Income" 
+label define income_quart_adj 1 "1st Adjusted Income Quartile" ///
+2 "2nd Adjusted Income Quartile" 3 "3rd Adjusted Income Quartile" 4 "4th Adjusted Income Quartile"
+tab income_quart wave
+
+gen ind_hs_nhats_tw=0
+replace ind_hs_nhats_tw=1 if placedied==4 | hospice1==1 | hospicelml==1
+
+sort spid wave
+by spid: gen ind_hs_nhats= ind_hs_nhats_tw[_n+1]
+by spid: gen died_nhats=lml[_n+1]
+label var ind_hs_nhats "Hospice indicator in wave prior"
+label var ind_hs_nhats_tw "Hospice indicator in LML ivw"
+
+gen lol=death_date-ivw_date
+
+//
+format first_hs %td
+gen hs_prior=first_hs<ivw_date 
+gen pop=died_12==1 & !hs_prior 
+sort spid pop ivw_date
+//replacing pop=1 to pop=0 for waves after first death_12 comes up 
+by spid pop: replace pop=0 if _n>1 & pop==1 
+duplicates report spid if pop
+//reweight so later waves aren't overweighted
+//note--as of 3/26/18, using unweighted
+gen orig_weight=anfinw
+sum anfinw if wave==1
+local w=r(mean)
+forvalues i=1/6 {
+sum anfinw if wave==`i'
+replace anfinw=anfinw*`w'/r(mean) if wave==`i'
+}
+svyset varunit [pw=anfinw],strat(varstrat)
+
+gen ind_hs=!missing(first_hs) 
+sum hs_los if pop,d
+replace hs_los=0 if !ind_hs
+tab hs_prior if pop
+tab ind_hs if pop
+*hist hs_los if pop
+gen ind_help=n_helpers>0
+tab ind_help if pop
+gen hrswk_20=tot_hrswk_help_i>=20 & !missing(tot_hrswk_help_i)
+gen ind_4_help=n_helpers>=4
+label var hrswk_20 "20+ hours of help per week (all sources)"
+label var ind_4_help "4+ helpers (incl. paid CGs)"
+label var ind_help "Any helpers"
+gen ind_solo_inf=n_help==n_paid+1
+label var ind_solo_inf "Has solo informal caregiver"
+gen ind_solo_solo=n_help==1 & n_paid==0
+label var ind_solo_s "Has solo inf. & no paid CGs"
+levelsof prim_, local(levels)
+local prim
+foreach l of local levels {
+gen prim`l'=prim_==`l'
+local lab : label op_relationship_cat `l'
+label var prim`l' "Primary helper : `lab'"
+local prim `prim' prim`l'
+}
+gen prim8=n_helpers==0
+label var prim8 "No helpers listed"
+local prim `prim' prim8
+forvalues i=1/4 {
+local lab : label region `i'
+gen `lab'=region==`i'
+label var `lab' "`lab'"
+rename `lab', l
+}
+//
+replace pop=1 if died_nhats==1 & wave>=4
+sort spid pop ivw_date
+//replacing pop=1 to pop=0 for waves after first death_12 comes up 
+by spid pop: replace pop=0 if _n>1 & pop==1 
+
+gen ind_hospice= 0
+replace ind_hospice=1 if ind_hs==1 & (wave<=3 | wave==4) 
+replace ind_hospice=1 if ind_hs_nhats==1 & wave>=4
+ 
+drop if wave==6
+drop if lml==1
+
+sum income_adj
+forvalues i=1/4 {
+gen inccat`i'=income_quart_adj==`i'
+local lab : label income_quart_adj `=`i''
+label var inccat`i' "Income: `lab'"
+}
+
+gen n=1
+//table 1
+gen onlypaid=n_paid==n_help
+label var onlypaid "Paid caregivers only"
+gen ind_noone=n_social==0
+label var ind_noone "Nobody in social network"
+local cvars1 age
+local cvars2 income_adj
+local cvars3 sr_numconditions1 n_helpers tot_hrswk_help_i
+local ivars1 female white black hisp other_race married livealone ind_noone ///
+educ_hs_ind medicaid medigap
+local ivars2 creditdebt medpaynotcash govtasst proxy srh_fp 
+local ivars3 ind_help ind_paid_helper ind_solo_inf ind_4_help hrswk_20 `prim' ///
+adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_impair iadl_impair ///
+metro_ind northeast midwest south
+
+gen full_samp=1
+
+
+//for unweighted, just keep the population
+keep if pop==1
+
+label var full_samp "Full 12m mortality"
+local colvars ind_solo_inf ind_solo_solo ind_paid_helper hrswk_20 ind_4_help 
+tokenize `colvars'
+local cn : word count `colvars'
+
+local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1
+
+mat tab=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+
+
+
+foreach group in "0,1" 0 1 {
+	forvalues i=1/3 {
+		foreach x of local cvars`i' {
+			sum `x' if inlist(ind_hospice,`group')
+			mat tab[`r',`c']=r(mean)
+			if "`group'"=="1" {
+				ttest `x', by(ind_hospice)
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`i' {
+			sum `x' if inlist(ind_hospice,`group')
+			mat tab[`r',`c']=r(mean)*100
+			if "`group'"=="1" {
+				tab `x' ind_hospice, chi2
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+}
+	sum n if inlist(ind_hospice,`group')
+	mat tab[`r',`c']=r(N)
+	local r=1
+	local c=`c'+1
+}
+
+mat rownames tab=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' N
+
+frmttable using eol_cg_hs_table_1_wave1_6.rtf, replace statmat(tab) title("Sample Characteristics by Hospice Use") ///
+ctitles("" "Full Sample" "No Hospice" "Yes Hospice" "P") varlabels ///
+note("Waves 1-5 NHATS community-dwelling sample with 12m mortality and no hospice prior to ivw" ///
+"1-3 Waves Claims used to determine hospice, 4-5 NHATS used to determine hospice" ///
+"If multiple ivws in 12m prior to death, earliest is taken" ///
+"P-values diff. btwn Yes/No hospice, unweighted sample") annotate(stars) ///
+asymbol(*,**)
+
+
+mat tab=J(`rn',`=`cn'*2',.)
+mat stars=J(`rn',`=`cn'*2',0)
+
+local r=1
+local c=1
+
+forvalues group=1/`cn' {
+	gen group`group'=``group''==1
+	forvalues i=1/3 {
+		foreach x of local cvars`i' {
+			sum `x' if inlist(group`group',1)
+			mat tab[`r',`c']=r(mean)
+*			if "`group'"=="1" {
+				ttest `x', by(group`group')
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+*}
+			local r=`r'+1
+}
+		foreach x of local ivars`i' {
+			sum `x' if inlist(group`group',1)
+			mat tab[`r',`c']=r(mean)*100
+*			if "`group'"=="1" {
+				tab `x' group`group', chi2
+				mat tab[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+*}
+			local r=`r'+1
+}
+}
+	sum n if inlist(group`group',1)
+	mat tab[`r',`c']=r(N)
+	local r=1
+	local c=`c'+2
+}
+
+mat rownames tab=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' N
+foreach x of local colvars {
+	local cnames `cnames' `x' P
+}
+
+mat colnames tab=`cnames'
+frmttable using eol_cg_hs_table_1_wave1_6.rtf, addtable statmat(tab) ///
+title("Sample Characteristics By CG Resources/Use") varlabels ///
+note("Waves 1-5 NHATS community-dwelling sample with 12m mortality and no hospice prior to ivw" ///
+"1-3 Waves Claims used to determine hospice, 4-5 NHATS used to determine hospice" ///
+"If multiple ivws in 12m prior to death, earliest is taken" ///
+"P-values diff. btwn Yes/No for each indicator, unweighted sample") annotate(stars) ///
+asymbol(*,**)
+
+forvalues g=1/4 {
+preserve
+if `g'==2 {
+	local title "Among those with probable dementia"
+	keep if prob_dem==1
+}
+else if `g'==3 {
+	local title "Among those with SR cancer"
+	keep if sr_cancer_ever==1
+}
+else if `g'==4 {
+	local title "Among those with heart disease"
+	keep if sr_heart_dis_ever==1
+}
+mat tab=J(`cn',3,.)
+mat stars=J(`cn',3,0)
+
+local r=1
+local c=1
+
+foreach x in `colvars' {
+	forvalues i=0/1 {
+		sum ind_hospice if `x'==`i'
+		mat tab[`r',`i'+1]=r(mean)*100
+}
+	*tab ind_hs `x', chi2
+	ttest `x', by(ind_hospice)
+	mat tab[`r',3]=r(p)
+	mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+	local r=`r'+1
+}
+mat rownames tab=`colvars'
+
+frmttable using eol_cg_hs_table_1_wave1_6.rtf, addtable statmat(tab) ///
+title("Hospice Use by CG Resources/Use `title'") varlabels ///
+ctitles("" "No hospice" "Yes Hospice" "P") sdec(2) annotate(stars) asymbol(*,**) 
+restore
+}
+
+foreach x in agecat income_quart_adj region {
+levelsof `x', local(levels)
+foreach l of local levels {
+	gen `x'`l'=`x'==`l' if !missing(`x')
+	local lab : label `x' `l'
+	label var `x'`l' "`lab'"
+	local `x' ``x'' `x'`l'
+}
+}
+
+preserve 
+keep if wave<=3 | ind_hs==1
+gen good_hs=inrange(hs_los,3,183)
+label var good_hs "Good Hospice (3 days-6 months)"
+foreach y in ind_hospice good_hs {
+	foreach x in hrswk_20 {
+		if "`y'"=="good_hs" local loc : var label good_hs
+		if "`y'"=="good_hs" local add addtable
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' 
+		outreg, varlabels stats(e_b p) ctitles("" "Full Sample") 
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if sr_cancer_ever==1
+		outreg, varlabels stats(e_b p) ctitles("" "Cancer") merge
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if sr_heart_dis_ever==1
+		outreg, varlabels stats(e_b p) ctitles("" "Heart Disease") merge
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if prob_dem==1
+		outreg using eol_cg_hs_table_1.rtf, varlabels stats(e_b p) ctitles("" "Dementia") ///
+		title("Logistic Regressions of Hospice Use and CG Resources/Use, `loc'") ///
+		note(Waves 1-3 Odds Ratio) merge `add' 
+}
+}
+restore
+
+foreach y in ind_hospice {
+	foreach x in hrswk_20 {
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' 
+		outreg, varlabels stats(e_b p) ctitles("" "Full Sample") 
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if sr_cancer_ever==1
+		outreg, varlabels stats(e_b p) ctitles("" "Cancer") merge
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if sr_heart_dis_ever==1
+		outreg, varlabels stats(e_b p) ctitles("" "Heart Disease") merge
+		logit `y' `x' c.age##c.age `income_quart_adj' female black hisp marriedp educ_hs_ind ///
+		medicaid prob_dem sr_numc adl_impair srh_fp `region' if prob_dem==1
+		outreg using eol_cg_hs_table_2.rtf, varlabels stats(e_b p) ctitles("" "Dementia") ///
+		title("Logistic Regressions of Hospice Use and CG Resources/Use") ///
+		note(Waves 1-5 Odds Ratio) merge 
+}
+}
+
+gen g1=1 if inrange(wave,1,3) | (wave==4 & ind_hs==1)
+gen g2=1 if wave==5 | (wave==4 & ind_hs==0)
+
+gen good_hs=inrange(hs_los,3,183)
+label var good_hs "Good Hospice (3 days-6 months)"
+
+local k=3
+foreach x in ind_hospice good_hs{
+foreach y in sr_cancer_ever sr_heart_dis_ever prob_dem{
+gen g`k'=1 if `x'==1 & `y'==1
+local k=`k'+1
+}
+}
+
+gen hsiv=first_hs-ivw_date
+
+mat hs = J(15,3,.)
+local r=1
+local c=1
+local g g3 g4 g5 g6 g7 g8 
+
+foreach x in n ind_hospice good_hs sr_cancer_ever sr_heart_dis_ever prob_dem `g' {
+qui sum g1 if `x'==1
+mat hs[`r',1]=r(N)
+qui sum g2 if `x'==1
+mat hs[`r',2]=r(N)
+qui sum n if `x'==1
+mat hs[`r',3]=r(N)
+local r=`r'+1
+} 
+qui sum lol if g1==1 & ind_hospice==1
+mat hs[`r',1]=r(mean)
+mat hs[`r'+1,1]=r(min)
+mat hs[`r'+2,1]=r(max)
+qui sum lol if g2==1 & ind_hospice==1
+mat hs[`r',2]=r(mean)
+mat hs[`r'+1,2]=r(min)
+mat hs[`r'+2,2]=r(max)
+qui sum lol if n==1 & ind_hospice==1
+mat hs[`r',3]=r(mean)
+mat hs[`r'+1,3]=r(min)
+mat hs[`r'+2,3]=r(max)
+mat list hs 
+
+
+matrix colnames hs = "Rounds 1-4(Dec)" "Rounds 4(Jan)-5" "Full Sample"
+matrix rownames hs = "Full Sample" "Hospice Indicator" "Good Hospice (3-183 days)" "Cancer" ///
+"Heart Disease" "Dementia" "Hospice & Cancer" "Hospice & Heart Disease" "Hospice & Dementia" ///
+"Good Hospice & Cancer" "Good Hospice & Heart Disease" "Good Hospice & Dementia" "Mean Death-Ivw. days for Hospice ind." ///
+"Min Death-Ivw. days for Hospice ind." "Max Death-Ivw. days for Hospice ind."
+matrix list hs
+frmttable using hs_table, statmat(hs) replace title(Sample Sizes) sdec(2) ///
+note("Good Hospice numbers are their for some individuals in round 5 if they don't die till round 6" \ ///
 "Removed LML interview" \ "Some individuals drop out and then reappear for LML interviews, thus the high length of days" )
+
+//sensitivity/specificity analysis
+
+tab ind_hs_nhats ind_hs if wave==3 | wave==2, matcell(ss)
+mat ss1=J(3,2,.)
+mat ss1[1,1]=ss[2,2]
+mat ss1[2,1]=ss[1,2]
+mat ss1[1,2]=ss[2,1]
+mat ss1[2,2]=ss[1,1]
+mat ss1[3,1]=ss[2,2]/(ss[2,2]+ss[1,2])
+mat ss1[3,2]=ss[1,1]/(ss[1,1]+ss[2,1])
+mat list ss1
+
+matrix colnames ss1 = "Yes (Claims)" "No (Claims)"
+matrix rownames ss1 = "Yes (SR)" "No (SR)" "Sensitivity/Specificity"
+matrix list ss1
+frmttable using hs_table, statmat(ss1) replace title(Senstivity & Specificity Analysis for Hospice) sdec(2) ///
+note("Using only rounds 2 and 3, because both had claims and Self-Report questions. " ) addtable
+

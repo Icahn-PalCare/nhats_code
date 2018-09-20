@@ -1,20 +1,22 @@
+use "E:\nhats\nhats_code\IAH\Archive\unique_nocptpos.dta", clear 
+
 cap drop _m
 merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta", keepus(bflag)
 cap drop _m
 merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\cpt+only.dta", keepus(cflag)
 cap drop _m
 merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\pos+only.dta", keepus(posflag)
-
-
-
-gen none = 1
+drop homebound*
+/*
+preserve
+capture gen none = 1
 replace none =0 if bflag==1 | cflag==1 |posflag==1
 
 keep if community_dwelling==1 & ffs_6m==1
 
 replace ind_snf_use_p12m = 0 if ind_snf_use_p12m==.
 
-gen ind_icu_p12m = 0
+capture gen ind_icu_p12m = 0
 replace ind_icu_p12m = 1 if icu_days_p12m>0
 label var ind_icu_p12m "ICU use 12m post ivw"
 
@@ -39,31 +41,31 @@ label var adl_eat_diff "Difficulting Eating"
 label var adl_bath_diff "Difficulty bathing"
 label var adl_dres_diff "Has Difficulty Dressing"
 
-egen recent_yr = max(index_year), by(bene_id)
+capture egen recent_yr = max(index_year), by(bene_id)
 
 keep if recent_yr==index_year
 
 save unique_nocptpos.dta, replace 
 
 append using cpt+pos.dta
-gen ind_cpt = 1
+capture gen ind_cpt = 1
 
 keep bene_id wave ind_cpt 
 
 save cpt+pos.dta, replace
 
 restore, preserve
-
-gen northeast = 0
+*/
+capture gen northeast = 0
 replace northeast = 1 if re1dcensdiv==1 | re1dcensdiv==2 | re2dcensdiv==1 | re2dcensdiv==2 | re3dcensdiv==1 | re3dcensdiv==2
 
-gen midwest = 0
+capture gen midwest = 0
 replace midwest = 1 if re1dcensdiv==3 | re1dcensdiv==4 | re2dcensdiv==3 | re2dcensdiv==4 | re3dcensdiv==3 | re3dcensdiv==4
 
-gen west = 0
+capture gen west = 0
 replace west = 1 if re1dcensdiv==8 | re1dcensdiv==9 | re2dcensdiv==8 | re2dcensdiv==9 | re3dcensdiv==8 | re3dcensdiv==9
 
-gen south = 0
+capture gen south = 0
 replace south = 1 if northeast==0 & west==0 & midwest==0
 
 cap drop _m
@@ -80,27 +82,87 @@ replace housecalls_count = 0 if housecalls_count==.
 cap drop _m
 drop adl_bed_diff adl_ins_diff
 cap drop _m
-merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta", keepus(adl_bed_diff adl_ins_diff) 
+merge m:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta", keepus(homebound* adl_bed_diff adl_ins_diff) 
 keep if _m==3
 
 cap drop _m
 drop anfinwgt
 
+gen income_adj=0
+replace income_adj= (240.007/224.939)*aveincome if wave==1
+replace income_adj= (240.007/229.594)*aveincome if wave==2
+replace income_adj= (240.007/232.957)*aveincome if wave==3
+
+
+xtile income_quart_adj=income_adj, nq(4) 
+sum income_adj, d
+
+forvalues w = 1/4 {
+
+gen income_quart_`w' = . 
+replace income_quart_`w' = income_adj if income_quart_adj==`w'
+sum income_quart_`w', d
+local p = 25*`w' 
+local q = r(mean)
+local r = round(`q',1)
+
+
+label var income_quart_`w' "Ave. Income in `p'th quartile (adjusted to 2016 dollars)"
+
+} 
+
+
+
 merge 1:1 spid using "E:\nhats\data\NHATS cleaned\wave1.dta", keepus(anfinwgt)
 keep if _m==3
+
+cap drop _m
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\hcc_scores.dta", keepus(score_community)
+keep if _m==3
+
+label var score_community "Average HCC Score"
+
+
+levelsof homebound_cat, local(levels)
+local hb
+foreach l of local levels {
+	gen homebound`l'=homebound_cat==`l'
+	local lab : label hb `l'
+	label var homebound`l' "`lab'"
+	local hb `hb' homebound`l'
+}
 
 svyset varunit [pweight=anfinwgt], strata(varstrat)
 
 label var adl_bed_diff "Difficulty getting out of bed"
 label var adl_ins_diff "Difficulty getting around inside"
-
-local cvars1 age aveincome
-local ivars1 female white black hisp married livealone educ_hs_ind homebound homebound_never medicaid metro_ind northeast midwest south west
-local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_dementia_ever prob_dem
-local ivars3 adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help adl_bed_diff ind_hosp_adm_p12m ind_ed_adm_p12m ind_icu_p12m died_12
+gen ind_one_hc=housecalls_count==1
+gen ind_no_hc=housecalls_count==0
+label var ind_no_hc "No housecalls"
+gen ind_lt3_hc=inlist(housecalls_count,1,2)
+gen ind_gt2_hc=inrange(housecalls_count,3,365)
+label var ind_one_hc "Exactly one housecall"
+label var ind_lt3_hc "1 or 2 housecalls"
+label var ind_gt2_hc "3+ Housecalls"
+local cvars1 age income_quart_1 income_quart_2 income_quart_3 income_quart_4 score_community
+local ivars1 female white black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
+`hb' medicaid metro_ind northeast midwest south west
+local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever ///
+sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
+sr_diabetes_ever sr_dementia_ever prob_dem
+local ivars3 ind_no_hc ind_one_hc ind_lt3_hc ind_gt2_hc adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff ///
+adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help ///
+adl_bed_diff ind_hosp_adm_p12m ind_ed_adm_p12m ind_icu_p12m died_12
 local cvars2 tot_paid_by_mc_12m housecalls_count
 
-local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1
+
+capture restore, not
+preserve
+replace ind_cpt = iah_all
+
+
+/****************** Table 1 ****************************/
 
 mat tab1 = J(`rd',2,.)
 mat stars = J(`rd',2,0)
@@ -112,7 +174,7 @@ svy: mean `x', over(ind_cpt)
 mat tab1[`r',1] = el(e(b),1,2)
 mat tab1[`r',2] = el(e(b),1,1)
 
-test [`x']0 = [`x']1
+*test [`x']0 = [`x']1
 
 mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
 
@@ -184,7 +246,7 @@ svy: mean `x', over(ind_cpt)
 mat tab1[`r',1] = el(e(b),1,2)
 mat tab1[`r',2] = el(e(b),1,1)
 
-test [`x']0 = [`x']1
+*test [`x']0 = [`x']1
 
 mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
 
@@ -208,17 +270,502 @@ mat tab1[`r',1]=2
 local ++r
 
 
+sum age if ind_cpt==1
+mat tab1[`r',1] = r(N)
+
+sum age if ind_cpt==0
+mat tab1[`r',2] = r(N)
+local ++r 
 svy, subpop(if ind_cpt==1): mean age
 mat tab1[`r',1] = e(N_subpop)
 
 svy, subpop(if ind_cpt==0): mean age
 mat tab1[`r',2] = e(N_subpop)
 
-mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' "Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" "Weighted Sample Size"
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
 
 mat list tab1
 
-frmttable using "E:\nhats\projects\IAH\20171219\table1_weighted.doc", replace statmat(tab1) ///
+frmttable using "E:\nhats\projects\IAH\iah_weighted.doc", replace statmat(tab1) ///
 varlabels title("Table 1: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted)") ///
-ctitles("" "CPT+POS" "No House Calls") sdec(2) annotate(stars) asymbol(*,**) ///
+ctitles("" "IAH" "Not IAH") sdec(2) annotate(stars) asymbol(*,**) ///
 note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+
+
+/**************************** Table 2 + 3 **********************/ 
+
+
+gen hb=homebound1
+
+
+foreach cpt in 1 0 {
+
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1 & ind_cpt==`cpt'
+mat tab1[`r',1]=r(min)
+
+sum housecalls_count if hb==0 & ind_cpt==`cpt'
+mat tab1[`r',2]=r(min)
+
+local ++r
+
+sum housecalls_count if hb==1 & ind_cpt==`cpt'
+mat tab1[`r',1]=r(max)
+sum housecalls_count if hb==0 & ind_cpt==`cpt'
+mat tab1[`r',2]=r(max)
+local ++r
+
+sum housecalls_count if hb==1 & ind_cpt==`cpt', d
+mat tab1[`r',1]=r(p50)
+sum housecalls_count if hb==0 & ind_cpt==`cpt', d
+mat tab1[`r',2]=r(p50)
+
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "1+ Housecall"
+if `cpt'==0 local housecall "No Housecalls"
+if `cpt'==1 local t "2"
+if `cpt'==0 local t "3"
+frmttable using "E:\nhats\projects\IAH\iah_weighted.doc", addtable statmat(tab1) ///
+varlabels title("Table `t': IAH ONLY NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted)") ///
+ctitles("" "Homebound" "Non-Homebound") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+
+restore
+/*************** Table 4 **************************/
+gen hb=homebound1
+preserve
+keep if iah_all==1
+
+
+
+foreach cpt in 1  {
+replace hb=ind_one_hc==1
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1, d
+mat tab1[`r',1]=r(min)
+
+sum housecalls_count if hb==0 & ind_cpt==1, d
+mat tab1[`r',2]=r(min)
+local ++r
+
+
+sum housecalls_count if hb==1, d
+mat tab1[`r',1]=r(max)
+
+sum housecalls_count if hb==0 & ind_cpt==1, d
+mat tab1[`r',2]=r(max)
+local ++r
+
+sum housecalls_count if hb==1, d
+mat tab1[`r',1]=r(p50)
+
+sum housecalls_count if hb==0 & ind_cpt==1, d
+mat tab1[`r',2]=r(p50)
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "1+ Housecall"
+if `cpt'==0 local housecall "No Housecalls"
+frmttable using "E:\nhats\projects\IAH\iah_weighted.doc", addtable statmat(tab1) ///
+varlabels title("Table 4: IAH ONLY NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted) & `housecall'") ///
+ctitles("" "One Housecall" "2+ Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+restore
+
+preserve
+
+
+foreach cpt in 1  {
+gen cpt2=ind_cpt
+replace ind_cpt=hb
+replace hb=cpt2
+//replace hb=ind_one_hc==1
+local rd: word count `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' 1 1 1 1 1 
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',2,0)
+
+local r = 1
+local c = 1
+foreach x of local cvars1 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+}
+
+foreach x of local ivars1 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+foreach x of local ivars2 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+
+
+foreach x of local ivars3 {
+
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)*100
+mat tab1[`r',2] = el(e(b),1,1)*100
+
+svy, subpop(if ind_cpt==`cpt'): tab `x' hb, pea
+mat stars[`r',1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)*100
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)*100
+*/
+local ++r
+}
+
+foreach x of local cvars2 {
+svy, subpop(if ind_cpt==`cpt'): mean `x', over(hb)
+mat tab1[`r',1] = el(e(b),1,2)
+mat tab1[`r',2] = el(e(b),1,1)
+
+*test [`x']0 = [`x']1
+
+mat stars[`r',1]=(r(p)<.01) + (r(p)<.05)
+
+local ++r
+
+/*
+qui sum `x' if posflag==1
+mat tab1[`r',3] = r(mean)
+
+qui sum `x' if none==1
+mat tab1[`r',4] = r(mean)
+*/
+}
+
+sum housecalls_count if hb==1 & ind_one_hc==1 , d
+mat tab1[`r',1]=r(min)
+
+sum housecalls_count if housecalls_count>1 & housecalls_count!=., d
+mat tab1[`r',2]=r(min)
+local ++r
+
+
+sum housecalls_count if hb==1 & ind_one_hc==1 , d
+mat tab1[`r',1]=r(max)
+
+sum housecalls_count if housecalls_count>1 & housecalls_count!=., d
+mat tab1[`r',2]=r(max)
+local ++r
+
+sum housecalls_count if hb==1 & ind_one_hc==1 , d
+mat tab1[`r',1]=r(p50)
+
+sum housecalls_count if housecalls_count>1 & housecalls_count!=., d
+mat tab1[`r',2]=r(p50)
+local ++r
+
+sum age if ind_cpt==`cpt' & hb==0
+mat tab1[`r',2] = r(N)
+sum age if ind_cpt==`cpt' & hb==1
+mat tab1[`r',1] = r(N)
+
+local r=`r'+1
+svy, subpop(if ind_cpt==`cpt' & hb==0): mean age
+mat tab1[`r',2] = e(N_subpop)
+svy, subpop(if ind_cpt==`cpt' & hb==1): mean age
+mat tab1[`r',1] = e(N_subpop)
+
+
+
+mat rownames tab1 = `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' ///
+"Minimum number of house calls" "Maximum number of housecalls" "Median House Calls" ///
+"N" "Weighted Sample Size"
+
+mat list tab1
+local housecall "Homebound only"
+if `cpt'==0 local housecall "No Housecalls"
+frmttable using "E:\nhats\projects\IAH\iah_weighted.doc", addtable statmat(tab1) ///
+varlabels title("Table 5: IAH Unique persons per NHATS Waves 1-3 Community Dwelling + 6m FFS (Weighted) & `housecall'") ///
+ctitles("" "One Housecall" "2+ Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
+
+}
+restore
+
+

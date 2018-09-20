@@ -1,0 +1,1156 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="merge multiple years"
+*libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
+libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+*libname 'E:\nhats\data\CMS_DUA_28016\Raw';
+
+
+proc contents data=extract.mbsf_ab_15; run;
+
+proc contents data=extract.mbsf_abcd_16; run;
+
+data mbsf_ab_16;
+set extract.mbsf_abcd_16 (drop = PTC_CNTRCT_ID_01--RDS_IND_12);
+run;
+
+
+
+/* loop works, but takes way too long to run
+
+proc contents data=mbsf_ab_16 short; run;
+
+%macro rename(old, prefix, num);
+%let k=1;
+%do %while(&k <= num);
+%if &k < 10 %then %do;
+rename &old.0&k = &prefix.&old.0&k;
+%let k = %eval(&k + 1);
+%end;
+%else %do;
+rename &old.&k = &prefix.&old.&k;
+%let k = %eval(&k + 1);
+%end;
+%end;
+%mend;
+*/
+
+
+data mbsf_ab_16;
+set mbsf_ab_16 (rename=(HMO_IND_01=BENE_HMO_IND_01 HMO_IND_02=BENE_HMO_IND_02  
+HMO_IND_03=BENE_HMO_IND_03 HMO_IND_04=BENE_HMO_IND_04 HMO_IND_05=BENE_HMO_IND_05 HMO_IND_06=BENE_HMO_IND_06 
+HMO_IND_07=BENE_HMO_IND_07 HMO_IND_08=BENE_HMO_IND_08 HMO_IND_09=BENE_HMO_IND_09 HMO_IND_10=BENE_HMO_IND_10 HMO_IND_11=BENE_HMO_IND_11 HMO_IND_12=BENE_HMO_IND_12 
+MDCR_ENTLMT_BUYIN_IND_01=BENE_MDCR_ENTLMT_BUYIN_IND_01 MDCR_ENTLMT_BUYIN_IND_02=BENE_MDCR_ENTLMT_BUYIN_IND_02 MDCR_ENTLMT_BUYIN_IND_03=BENE_MDCR_ENTLMT_BUYIN_IND_03  
+MDCR_ENTLMT_BUYIN_IND_04=BENE_MDCR_ENTLMT_BUYIN_IND_04 MDCR_ENTLMT_BUYIN_IND_05=BENE_MDCR_ENTLMT_BUYIN_IND_05 MDCR_ENTLMT_BUYIN_IND_06=BENE_MDCR_ENTLMT_BUYIN_IND_06
+MDCR_ENTLMT_BUYIN_IND_07=BENE_MDCR_ENTLMT_BUYIN_IND_07 MDCR_ENTLMT_BUYIN_IND_08=BENE_MDCR_ENTLMT_BUYIN_IND_08 MDCR_ENTLMT_BUYIN_IND_09=BENE_MDCR_ENTLMT_BUYIN_IND_09
+MDCR_ENTLMT_BUYIN_IND_10=BENE_MDCR_ENTLMT_BUYIN_IND_10 MDCR_ENTLMT_BUYIN_IND_11=BENE_MDCR_ENTLMT_BUYIN_IND_11 MDCR_ENTLMT_BUYIN_IND_12=BENE_MDCR_ENTLMT_BUYIN_IND_12));
+run;
+
+
+
+data cumu.mbsf_ab_summary_06_16;
+set extract.mbsf_ab_summary_06 extract.mbsf_ab_summary_07 extract.mbsf_ab_summary_08 extract.mbsf_ab_summary_09 
+extract.mbsf_ab_summary_10 extract.mbsf_ab_summary_11 extract.mbsf_ab_summary_12 extract.mbsf_ab_13 extract.mbsf_ab_14 extract.mbsf_ab_15 mbsf_ab_16;
+run;
+
+proc sort data= cumu.mbsf_ab_summary_06_16 out=test; by descending BENE_ENROLLMT_REF_YR; run;
+
+/************************************************************************
+*************************************************************************
+Clean birth_date, death_date in date format from denominator file
+*************************************************************************
+************************************************************************/
+
+/*note we can't use dob dod from CMS denominator file since a lot of them are missing,they should come from restricted file*/
+data cumu.mbsf_ab_summary_06_16;
+set cumu.mbsf_ab_summary_06_16;
+death_date = BENE_DEATH_DT;
+birth_date = BENE_BIRTH_DT;
+format death_date date9. birth_date date9.;
+drop BENE_DEATH_DT BENE_BIRTH_DT;
+run;
+
+
+
+
+
+/* Only Part AB file is important (for now) */
+
+
+data cumu.Mbsf_cc_summary_06_14;
+set extract.Mbsf_cc_summary_06 extract.Mbsf_cc_summary_07 extract.Mbsf_cc_summary_08 
+extract.Mbsf_cc_summary_09 extract.Mbsf_cc_summary_10 extract.Mbsf_cc_summary_11
+extract.Mbsf_cc_summary_12 extract.Mbsf_cc_summary_13 extract.Mbsf_cc_summary_14;
+run;
+
+data cumu.Mbsf_costuse_06_14;
+set extract.Mbsf_costuse_06 extract.Mbsf_costuse_07 extract.Mbsf_costuse_08 extract.Mbsf_costuse_09
+extract.Mbsf_costuse_10 extract.Mbsf_costuse_11 extract.Mbsf_costuse_12 extract.Mbsf_costuse_13 extract.Mbsf_costuse_14;
+run;
+
+data cumu.Mbsf_d_cmpnts_06_14;
+set extract.Mbsf_d_cmpnts_06 extract.Mbsf_d_cmpnts_07 extract.Mbsf_d_cmpnts_08 
+extract.Mbsf_d_cmpnts_09 extract.Mbsf_d_cmpnts_10 extract.Mbsf_d_cmpnts_11
+extract.Mbsf_d_cmpnts_12 extract.Mbsf_d_cmpnts_13 extract.Mbsf_d_cmpnts_14; 
+run;
+
+data cumu.Mds_asmt_summary_3_10_14;
+set extract.Mds_asmt_summary_3_10 extract.Mds_asmt_summary_3_11
+extract.Mds_asmt_summary_3_12 extract.Mds_asmt_summary_3_13 extract.Mds_asmt_summary_3_14;
+run;
+
+
+H="Merging 2015 & 2016"
+*libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
+libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+*libname 'E:\nhats\data\CMS_DUA_28016\Raw';
+
+
+/*inpatient*/
+data cumu.Inpatient_base_claims_j_06_16;
+set extract.Inpatient_base_claims_j_06 extract.Inpatient_base_claims_j_07 extract.Inpatient_base_claims_j_08 extract.Inpatient_base_claims_j_09 
+extract.Inpatient_base_claims_j_10 extract.Inpatient_base_claims_j_11 extract.Inpatient_base_claims_j_12 extract.Inpatient_base_claims_13 extract.Inpatient_base_claims_14
+extract.Inpatient_base_claims_15 extract.Inpatient_base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+
+data cumu.Inpatient_condition_codes_06_16;
+set extract.Inpatient_condition_codes_06 extract.Inpatient_condition_codes_07 extract.Inpatient_condition_codes_08
+extract.Inpatient_condition_codes_09 extract.Inpatient_condition_codes_10 extract.Inpatient_condition_codes_11
+extract.Inpatient_condition_codes_12 extract.Inpatient_condition_13 extract.Inpatient_condition_14 extract.Inpatient_condition_15 extract.Inpatient_condition_16;
+run;
+
+data cumu.Inpatient_occurrnce_codes_06_16;
+set extract.Inpatient_occurrnce_codes_06 extract.Inpatient_occurrnce_codes_07 extract.Inpatient_occurrnce_codes_08 extract.Inpatient_occurrnce_codes_09
+extract.Inpatient_occurrnce_codes_10 extract.Inpatient_occurrnce_codes_11 extract.Inpatient_occurrnce_codes_12 extract.Inpatient_occurrnce_13 
+extract.Inpatient_occurrnce_14 extract.Inpatient_occurrnce_15 extract.Inpatient_occurrnce_16;
+run;
+
+data cumu.Inpatient_revenue_center_j_06_16;
+set extract.Inpatient_revenue_center_j_06 extract.Inpatient_revenue_center_j_07 extract.Inpatient_revenue_center_j_08 extract.Inpatient_revenue_center_j_09
+extract.Inpatient_revenue_center_j_10 extract.Inpatient_revenue_center_j_11 extract.Inpatient_revenue_center_j_12 extract.Inpatient_revenue_center_13 extract.Inpatient_revenue_center_14
+extract.Inpatient_revenue_center_15 extract.Inpatient_revenue_center_16;
+run;
+
+data cumu.Inpatient_span_codes_06_16;
+set extract.Inpatient_span_codes_06 extract.Inpatient_span_codes_07 extract.Inpatient_span_codes_08 extract.Inpatient_span_codes_09 
+extract.Inpatient_span_codes_10 extract.Inpatient_span_codes_11 extract.Inpatient_span_codes_12 extract.Inpatient_span_13 extract.Inpatient_span_14 extract.Inpatient_span_15 extract.Inpatient_span_16;
+run;
+
+data cumu.Inpatient_value_codes_06_16;
+set extract.Inpatient_value_codes_06 extract.Inpatient_value_codes_07 extract.Inpatient_value_codes_08 extract.Inpatient_value_codes_09
+extract.Inpatient_value_codes_10 extract.Inpatient_value_codes_11 extract.Inpatient_value_codes_12 extract.Inpatient_value_13 extract.Inpatient_value_14 extract.Inpatient_value_15 extract.Inpatient_value_16;
+run;
+
+/*hospice & outpatient*/
+
+%let varlist = Hospice Outpatient;
+%macro datastep();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_16;
+set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var._condition_codes_09_16;
+set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_09_16;
+set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_09_16;
+set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_09_16;
+set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_09_16;
+set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+%datastep();
+
+/*hha & snf*/
+
+%let varlist = Hha Snf;
+%macro datastep2();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_16;
+set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 
+extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+%if &var = Hha %then %do;
+data cumu.&var._assess_summary_09_16;
+set extract.&var._assessment_summary_09 extract.&var._assessment_summary_10 extract.&var._assessment_summary_11
+extract.&var._assessment_summary_12 extract.&var._assessment_13 extract.&var._assessment_14 extract.&var._assessment_15 extract.&var._assessment_16;
+run;
+%end;
+data cumu.&var._condition_codes_09_16;
+set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_09_16;
+set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 
+extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_09_16;
+set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 
+extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_09_16;
+set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 
+extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_09_16;
+set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 
+extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+
+%datastep2();
+ 
+/*pb & dme*/
+%let varlist1 = Bcarrier Dme;
+%macro datastep1();
+%let i = 1;
+%let var1 = %scan(&varlist1,&i);
+%do %while(&var1 ne );
+data cumu.&var1._claims_j_09_16;
+set extract.&var1._claims_j_09 extract.&var1._claims_j_10 extract.&var1._claims_j_11 
+extract.&var1._claims_j_12 extract.&var1._claims_13 extract.&var1._claims_14 extract.&var1._claims_15 extract.&var1._claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var1._line_j_09_16;
+set extract.&var1._line_j_09 extract.&var1._line_j_10 extract.&var1._line_j_11
+extract.&var1._line_j_12 extract.&var1._line_13 extract.&var1._line_14 extract.&var1._line_15 extract.&var1._line_16;
+run;
+%let i = %eval(&i + 1);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%datastep1();
+
+/*ip*/
+data ip;
+set cumu.inpatient_base_claims_j_06_16;
+run;
+
+data ip_rc;
+set cumu.inpatient_revenue_center_j_06_16(keep=bene_id clm_id hcpcs_cd clm_line_num);
+run;
+
+proc sort data=ip_rc;
+by bene_id clm_id;
+run;
+
+proc transpose data=ip_rc out=ip_rc_wide prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table cumu.ip_09_16 as select *
+from ip a
+left join
+ip_rc_wide b 
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+
+/*snf*/
+data cumu.snf_09_16;
+set cumu.snf_base_claims_j_09_16;
+run;
+
+/*op*/
+data op_09_14;
+set cumu.outpatient_base_claims_j_09_16;
+run;
+
+data op_rev;
+set cumu.outpatient_rev_center_j_09_16(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
+if rev_cntr='0762' then obs_stay1=1;
+if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
+run;
+
+proc sort data=op_rev;
+by bene_id clm_id;
+run;
+
+proc transpose data=op_rev out=op_rev_wide1 prefix=rev_dt;
+by bene_id clm_id;
+var rev_cntr_dt;
+run;
+
+proc sql;
+create table op_rev_wide2 as select distinct bene_id, clm_id, 
+sum(obs_stay1) as obs_stay,
+sum(poss_obs_stay1) as poss_obs_stay
+from op_rev group by bene_id, clm_id;
+quit;
+
+proc transpose data=op_rev out=op_rev_wide3 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table op_09_142 as select *
+from op_09_14 a 
+left join op_rev_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join op_rev_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join op_rev_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
+quit;
+
+data cumu.op_09_16;
+set op_09_142;
+array list icd_prcdr_cd1-icd_prcdr_cd25;
+do over list;
+if list='G0378' and poss_obs_stay=1 then obs_stay=1;
+end;
+run;
+
+ 
+/*pb*/
+data pb_09_14;
+set cumu.bcarrier_claims_j_09_16;
+run;
+
+data pb_line;
+set cumu.bcarrier_line_j_09_16 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd LINE_PLACE_OF_SRVC_CD);
+run;
+
+/* proc export data=merged.pb_09_14 outfile="E:\nhats\data\CMS_DUA_28016\merged stata\pb_09_14.dta" replace; run; */
+proc sort data=pb_line;
+by bene_id clm_id;
+run;
+
+proc transpose data=pb_line out=pb_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide2 prefix=expnsdt1;
+by bene_id clm_id;
+var line_1st_expns_dt;
+run;
+
+proc transpose data=pb_line out=pb_line_wide3 prefix=betos;
+by bene_id clm_id;
+var betos_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide4 prefix=pos;
+by bene_id clm_id;
+var LINE_PLACE_OF_SRVC_CD;
+run;
+proc sql;
+create table cumu.pb_09_16 as select *
+from pb_09_14 a 
+left join pb_line_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join pb_line_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join pb_line_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id
+left join pb_line_wide4 e
+on a.bene_id=e.bene_id and a.clm_id=e.clm_id;
+quit;
+
+/*hh*/
+data cumu.hh_09_16;
+set cumu.hha_base_claims_j_09_16;
+run;
+
+/*hs*/
+data cumu.hs_09_16;
+set cumu.hospice_base_claims_j_09_16;
+run;
+
+/*dm*/
+data dm_base;
+set cumu.dme_claims_j_09_16;
+run;
+
+data dm_line(keep=bene_id clm_id home_oxygen);
+set cumu.dme_line_j_09_16;
+if betos_cd='D1C' then home_oxygen=1;
+if betos_cd~='D1C' then home_oxygen=0;
+run;
+
+proc sort data=cumu.dme_line_j_09_16 out=dme_line_j_09_16;
+by bene_id clm_id;
+run;
+
+proc transpose data=dme_line_j_09_16 out=dm_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table line as 
+select distinct bene_id, clm_id,
+sum(home_oxygen) as h_o2
+from dm_line
+group by bene_id, clm_id;
+quit;
+
+proc sql;
+create table cumu.dm_09_16 as select *
+from dm_base a 
+left join 
+line b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join 
+dm_line_wide1 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
+quit;
+
+
+
+data cumu.mbsf_06_16;
+set cumu.mbsf_ab_summary_06_16;
+HMOIND12=BENE_HMO_IND_01||BENE_HMO_IND_02||BENE_HMO_IND_03||BENE_HMO_IND_04||BENE_HMO_IND_05||
+BENE_HMO_IND_06||BENE_HMO_IND_07||BENE_HMO_IND_08||BENE_HMO_IND_09||BENE_HMO_IND_10||BENE_HMO_IND_11||BENE_HMO_IND_12;
+BUYIN12=BENE_MDCR_ENTLMT_BUYIN_IND_01||BENE_MDCR_ENTLMT_BUYIN_IND_02||BENE_MDCR_ENTLMT_BUYIN_IND_03||
+BENE_MDCR_ENTLMT_BUYIN_IND_04||BENE_MDCR_ENTLMT_BUYIN_IND_05||BENE_MDCR_ENTLMT_BUYIN_IND_06||
+BENE_MDCR_ENTLMT_BUYIN_IND_07||BENE_MDCR_ENTLMT_BUYIN_IND_08||BENE_MDCR_ENTLMT_BUYIN_IND_09||
+BENE_MDCR_ENTLMT_BUYIN_IND_10||BENE_MDCR_ENTLMT_BUYIN_IND_11||BENE_MDCR_ENTLMT_BUYIN_IND_12;
+year=BENE_ENROLLMT_REF_YR;
+run;
+
+
+H="NHATS Medicare claims processing"
+*libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
+libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+*libname 'E:\nhats\data\CMS_DUA_28016\Raw';
+
+
+/*inpatient*/
+data cumu.Inpatient_base_claims_j_06_16;
+set extract.Inpatient_base_claims_j_06 extract.Inpatient_base_claims_j_07 extract.Inpatient_base_claims_j_08 extract.Inpatient_base_claims_j_09 
+extract.Inpatient_base_claims_j_10 extract.Inpatient_base_claims_j_11 extract.Inpatient_base_claims_j_12 extract.Inpatient_base_claims_13 extract.Inpatient_base_claims_14
+extract.Inpatient_base_claims_15 extract.Inpatient_base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+
+data cumu.Inpatient_condition_codes_06_16;
+set extract.Inpatient_condition_codes_06 extract.Inpatient_condition_codes_07 extract.Inpatient_condition_codes_08
+extract.Inpatient_condition_codes_09 extract.Inpatient_condition_codes_10 extract.Inpatient_condition_codes_11
+extract.Inpatient_condition_codes_12 extract.Inpatient_condition_13 extract.Inpatient_condition_14 extract.Inpatient_condition_15 extract.Inpatient_condition_16;
+run;
+
+data cumu.Inpatient_occurrnce_codes_06_16;
+set extract.Inpatient_occurrnce_codes_06 extract.Inpatient_occurrnce_codes_07 extract.Inpatient_occurrnce_codes_08 extract.Inpatient_occurrnce_codes_09
+extract.Inpatient_occurrnce_codes_10 extract.Inpatient_occurrnce_codes_11 extract.Inpatient_occurrnce_codes_12 extract.Inpatient_occurrnce_13 
+extract.Inpatient_occurrnce_14 extract.Inpatient_occurrnce_15 extract.Inpatient_occurrnce_16;
+run;
+
+data cumu.Inpatient_revenue_center_j_06_16;
+set extract.Inpatient_revenue_center_j_06 extract.Inpatient_revenue_center_j_07 extract.Inpatient_revenue_center_j_08 extract.Inpatient_revenue_center_j_09
+extract.Inpatient_revenue_center_j_10 extract.Inpatient_revenue_center_j_11 extract.Inpatient_revenue_center_j_12 extract.Inpatient_revenue_center_13 extract.Inpatient_revenue_center_14
+extract.Inpatient_revenue_center_15 extract.Inpatient_revenue_center_16;
+run;
+
+data cumu.Inpatient_span_codes_06_16;
+set extract.Inpatient_span_codes_06 extract.Inpatient_span_codes_07 extract.Inpatient_span_codes_08 extract.Inpatient_span_codes_09 
+extract.Inpatient_span_codes_10 extract.Inpatient_span_codes_11 extract.Inpatient_span_codes_12 extract.Inpatient_span_13 extract.Inpatient_span_14 extract.Inpatient_span_15 extract.Inpatient_span_16;
+run;
+
+data cumu.Inpatient_value_codes_06_16;
+set extract.Inpatient_value_codes_06 extract.Inpatient_value_codes_07 extract.Inpatient_value_codes_08 extract.Inpatient_value_codes_09
+extract.Inpatient_value_codes_10 extract.Inpatient_value_codes_11 extract.Inpatient_value_codes_12 extract.Inpatient_value_13 extract.Inpatient_value_14 extract.Inpatient_value_15 extract.Inpatient_value_16;
+run;
+
+/*hospice & outpatient*/
+
+%let varlist = Hospice Outpatient;
+%macro datastep();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_16;
+set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var._condition_codes_09_16;
+set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_09_16;
+set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_09_16;
+set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_09_16;
+set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_09_16;
+set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+%datastep();
+
+/*hha & snf*/
+
+%let varlist = Hha Snf;
+%macro datastep2();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_09_16;
+set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 
+extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+%if &var = Hha %then %do;
+data cumu.&var._assess_summary_09_16;
+set extract.&var._assessment_summary_09 extract.&var._assessment_summary_10 extract.&var._assessment_summary_11
+extract.&var._assessment_summary_12 extract.&var._assessment_13 extract.&var._assessment_14 extract.&var._assessment_15 extract.&var._assessment_16;
+run;
+%end;
+data cumu.&var._condition_codes_09_16;
+set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_09_16;
+set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 
+extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_09_16;
+set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 
+extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_09_16;
+set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 
+extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_09_16;
+set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 
+extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+
+%datastep2();
+ 
+/*pb & dme*/
+%let varlist1 = Bcarrier Dme;
+%macro datastep1();
+%let i = 1;
+%let var1 = %scan(&varlist1,&i);
+%do %while(&var1 ne );
+data cumu.&var1._claims_j_09_16;
+set extract.&var1._claims_j_09 extract.&var1._claims_j_10 extract.&var1._claims_j_11 
+extract.&var1._claims_j_12 extract.&var1._claims_13 extract.&var1._claims_14 extract.&var1._claims_15 extract.&var1._claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var1._line_j_09_16;
+set extract.&var1._line_j_09 extract.&var1._line_j_10 extract.&var1._line_j_11
+extract.&var1._line_j_12 extract.&var1._line_13 extract.&var1._line_14 extract.&var1._line_15 extract.&var1._line_16;
+run;
+%let i = %eval(&i + 1);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%datastep1();
+
+/*ip*/
+data ip;
+set cumu.inpatient_base_claims_j_06_16;
+run;
+
+data ip_rc;
+set cumu.inpatient_revenue_center_j_06_16(keep=bene_id clm_id hcpcs_cd clm_line_num);
+run;
+
+proc sort data=ip_rc;
+by bene_id clm_id;
+run;
+
+proc transpose data=ip_rc out=ip_rc_wide prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table cumu.ip_09_16 as select *
+from ip a
+left join
+ip_rc_wide b 
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+
+/*snf*/
+data cumu.snf_09_16;
+set cumu.snf_base_claims_j_09_16;
+run;
+
+/*op*/
+data op_09_14;
+set cumu.outpatient_base_claims_j_09_16;
+run;
+
+data op_rev;
+set cumu.outpatient_rev_center_j_09_16(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
+if rev_cntr='0762' then obs_stay1=1;
+if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
+run;
+
+proc sort data=op_rev;
+by bene_id clm_id;
+run;
+
+proc transpose data=op_rev out=op_rev_wide1 prefix=rev_dt;
+by bene_id clm_id;
+var rev_cntr_dt;
+run;
+
+proc sql;
+create table op_rev_wide2 as select distinct bene_id, clm_id, 
+sum(obs_stay1) as obs_stay,
+sum(poss_obs_stay1) as poss_obs_stay
+from op_rev group by bene_id, clm_id;
+quit;
+
+proc transpose data=op_rev out=op_rev_wide3 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table op_09_142 as select *
+from op_09_14 a 
+left join op_rev_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join op_rev_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join op_rev_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
+quit;
+
+data cumu.op_09_16;
+set op_09_142;
+array list icd_prcdr_cd1-icd_prcdr_cd25;
+do over list;
+if list='G0378' and poss_obs_stay=1 then obs_stay=1;
+end;
+run;
+
+ 
+/*pb*/
+data pb_09_14;
+set cumu.bcarrier_claims_j_09_16;
+run;
+
+data pb_line;
+set cumu.bcarrier_line_j_09_16 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd LINE_PLACE_OF_SRVC_CD);
+run;
+
+/* proc export data=merged.pb_09_14 outfile="E:\nhats\data\CMS_DUA_28016\merged stata\pb_09_14.dta" replace; run; */
+proc sort data=pb_line;
+by bene_id clm_id;
+run;
+
+proc transpose data=pb_line out=pb_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide2 prefix=expnsdt1;
+by bene_id clm_id;
+var line_1st_expns_dt;
+run;
+
+proc transpose data=pb_line out=pb_line_wide3 prefix=betos;
+by bene_id clm_id;
+var betos_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide4 prefix=pos;
+by bene_id clm_id;
+var LINE_PLACE_OF_SRVC_CD;
+run;
+proc sql;
+create table cumu.pb_09_16 as select *
+from pb_09_14 a 
+left join pb_line_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join pb_line_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join pb_line_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id
+left join pb_line_wide4 e
+on a.bene_id=e.bene_id and a.clm_id=e.clm_id;
+quit;
+
+/*hh*/
+data cumu.hh_09_16;
+set cumu.hha_base_claims_j_09_16;
+run;
+
+/*hs*/
+data cumu.hs_09_16;
+set cumu.hospice_base_claims_j_09_16;
+run;
+
+/*dm*/
+data dm_base;
+set cumu.dme_claims_j_09_16;
+run;
+
+data dm_line(keep=bene_id clm_id home_oxygen);
+set cumu.dme_line_j_09_16;
+if betos_cd='D1C' then home_oxygen=1;
+if betos_cd~='D1C' then home_oxygen=0;
+run;
+
+proc sort data=cumu.dme_line_j_09_16 out=dme_line_j_09_16;
+by bene_id clm_id;
+run;
+
+proc transpose data=dme_line_j_09_16 out=dm_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table line as 
+select distinct bene_id, clm_id,
+sum(home_oxygen) as h_o2
+from dm_line
+group by bene_id, clm_id;
+quit;
+
+proc sql;
+create table cumu.dm_09_16 as select *
+from dm_base a 
+left join 
+line b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join 
+dm_line_wide1 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
+quit;
+
+
+
+data cumu.mbsf_06_16;
+set cumu.mbsf_ab_summary_06_16;
+HMOIND12=BENE_HMO_IND_01||BENE_HMO_IND_02||BENE_HMO_IND_03||BENE_HMO_IND_04||BENE_HMO_IND_05||
+BENE_HMO_IND_06||BENE_HMO_IND_07||BENE_HMO_IND_08||BENE_HMO_IND_09||BENE_HMO_IND_10||BENE_HMO_IND_11||BENE_HMO_IND_12;
+BUYIN12=BENE_MDCR_ENTLMT_BUYIN_IND_01||BENE_MDCR_ENTLMT_BUYIN_IND_02||BENE_MDCR_ENTLMT_BUYIN_IND_03||
+BENE_MDCR_ENTLMT_BUYIN_IND_04||BENE_MDCR_ENTLMT_BUYIN_IND_05||BENE_MDCR_ENTLMT_BUYIN_IND_06||
+BENE_MDCR_ENTLMT_BUYIN_IND_07||BENE_MDCR_ENTLMT_BUYIN_IND_08||BENE_MDCR_ENTLMT_BUYIN_IND_09||
+BENE_MDCR_ENTLMT_BUYIN_IND_10||BENE_MDCR_ENTLMT_BUYIN_IND_11||BENE_MDCR_ENTLMT_BUYIN_IND_12;
+year=BENE_ENROLLMT_REF_YR;
+run;
+
+
+H="2015&2016"
+*libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
+libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
+libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+*libname 'E:\nhats\data\CMS_DUA_28016\Raw';
+
+
+/*inpatient*/
+data cumu.Inpatient_base_claims_j_15_16;
+set extract.Inpatient_base_claims_15 extract.Inpatient_base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+
+data cumu.Inpatient_condition_codes_15_16;
+set extract.Inpatient_condition_15 extract.Inpatient_condition_16;
+run;
+
+data cumu.Inpatient_occurrnce_codes_15_16;
+set extract.Inpatient_occurrnce_15 extract.Inpatient_occurrnce_16;
+run;
+
+data cumu.Inpatient_revenue_center_j_15_16;
+set extract.Inpatient_revenue_center_15 extract.Inpatient_revenue_center_16;
+run;
+
+data cumu.Inpatient_span_codes_15_16;
+set extract.Inpatient_span_15 extract.Inpatient_span_16;
+run;
+
+data cumu.Inpatient_value_codes_15_16;
+set extract.Inpatient_value_15 extract.Inpatient_value_16;
+run;
+
+/*hospice & outpatient*/
+
+%let varlist = Hospice Outpatient;
+%macro datastep();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_15_16;
+set extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var._condition_codes_15_16;
+set extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_15_16;
+set extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_15_16;
+set extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_15_16;
+set extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_15_16;
+set extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+%datastep();
+
+/*hha & snf*/
+
+%let varlist = Hha Snf;
+%macro datastep2();
+%let i = 1;
+%let var = %scan(&varlist,&i);
+%do %while(&var ne );
+data cumu.&var._base_claims_j_15_16;
+set extract.&var._base_claims_15 extract.&var._base_claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+%if &var = Hha %then %do;
+data cumu.&var._assess_summary_15_16;
+set extract.&var._assessment_15 extract.&var._assessment_16;
+run;
+%end;
+data cumu.&var._condition_codes_15_16;
+set extract.&var._condition_15 extract.&var._condition_16;
+run;
+data cumu.&var._occur_codes_15_16;
+set extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+run;
+data cumu.&var._rev_center_j_15_16;
+set extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+run;
+data cumu.&var._span_codes_15_16;
+set extract.&var._span_15 extract.&var._span_16;
+run;
+data cumu.&var._value_codes_15_16;
+set extract.&var._value_15 extract.&var._value_16;
+run;
+%let i = %eval(&i + 1);
+%let var = %scan(&varlist, &i);
+%end;
+%mend;
+
+%datastep2();
+ 
+/*pb & dme*/
+%let varlist1 = Bcarrier Dme;
+%macro datastep1();
+%let i = 1;
+%let var1 = %scan(&varlist1,&i);
+%do %while(&var1 ne );
+data cumu.&var1._claims_j_15_16;
+set extract.&var1._claims_15 extract.&var1._claims_16;
+format clm_from_dt date9. clm_thru_dt date9.;
+rename CLM_FROM_DT = admit_date;
+rename CLM_THRU_DT = disch_date;
+run;
+data cumu.&var1._line_j_15_16;
+set extract.&var1._line_15 extract.&var1._line_16;
+run;
+%let i = %eval(&i + 1);
+%let var1 = %scan(&varlist1, &i);
+%end;
+%mend;
+%datastep1();
+
+/*ip*/
+data ip;
+set cumu.inpatient_base_claims_j_15_16;
+run;
+
+data ip_rc;
+set cumu.inpatient_revenue_center_j_15_16(keep=bene_id clm_id hcpcs_cd clm_line_num);
+run;
+
+proc sort data=ip_rc;
+by bene_id clm_id;
+run;
+
+proc transpose data=ip_rc out=ip_rc_wide prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table cumu.ip_15_16 as select *
+from ip a
+left join
+ip_rc_wide b 
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+
+/*snf*/
+data cumu.snf_15_16;
+set cumu.snf_base_claims_j_15_16;
+run;
+
+/*op*/
+data op_15_16;
+set cumu.outpatient_base_claims_j_15_16;
+run;
+
+data op_rev;
+set cumu.outpatient_rev_center_j_15_16(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
+if rev_cntr='0762' then obs_stay1=1;
+if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
+run;
+
+proc sort data=op_rev;
+by bene_id clm_id;
+run;
+
+proc transpose data=op_rev out=op_rev_wide1 prefix=rev_dt;
+by bene_id clm_id;
+var rev_cntr_dt;
+run;
+
+proc sql;
+create table op_rev_wide2 as select distinct bene_id, clm_id, 
+sum(obs_stay1) as obs_stay,
+sum(poss_obs_stay1) as poss_obs_stay
+from op_rev group by bene_id, clm_id;
+quit;
+
+proc transpose data=op_rev out=op_rev_wide3 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table op_15_142 as select *
+from op_15_16 a 
+left join op_rev_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join op_rev_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join op_rev_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
+quit;
+
+data cumu.op_15_16;
+set op_15_142;
+array list icd_prcdr_cd1-icd_prcdr_cd25;
+do over list;
+if list='G0378' and poss_obs_stay=1 then obs_stay=1;
+end;
+run;
+
+ 
+/*pb*/
+data pb_15_14;
+set cumu.bcarrier_claims_j_15_16;
+run;
+
+data pb_line;
+set cumu.bcarrier_line_j_15_16 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd LINE_PLACE_OF_SRVC_CD);
+run;
+
+/* proc export data=merged.pb_15_14 outfile="E:\nhats\data\CMS_DUA_28016\merged stata\pb_15_14.dta" replace; run; */
+proc sort data=pb_line;
+by bene_id clm_id;
+run;
+
+proc transpose data=pb_line out=pb_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide2 prefix=expnsdt1;
+by bene_id clm_id;
+var line_1st_expns_dt;
+run;
+
+proc transpose data=pb_line out=pb_line_wide3 prefix=betos;
+by bene_id clm_id;
+var betos_cd;
+run;
+
+proc transpose data=pb_line out=pb_line_wide4 prefix=pos;
+by bene_id clm_id;
+var LINE_PLACE_OF_SRVC_CD;
+run;
+proc sql;
+create table cumu.pb_15_16 as select *
+from pb_15_14 a 
+left join pb_line_wide1 b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join pb_line_wide2 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id
+left join pb_line_wide3 d
+on a.bene_id=d.bene_id and a.clm_id=d.clm_id
+left join pb_line_wide4 e
+on a.bene_id=e.bene_id and a.clm_id=e.clm_id;
+quit;
+
+/*hh*/
+data cumu.hh_15_16;
+set cumu.hha_base_claims_j_15_16;
+run;
+
+/*hs*/
+data cumu.hs_15_16;
+set cumu.hospice_base_claims_j_15_16;
+run;
+
+/*dm*/
+data dm_base;
+set cumu.dme_claims_j_15_16;
+run;
+
+data dm_line(keep=bene_id clm_id home_oxygen);
+set cumu.dme_line_j_15_16;
+if betos_cd='D1C' then home_oxygen=1;
+if betos_cd~='D1C' then home_oxygen=0;
+run;
+
+proc sort data=cumu.dme_line_j_15_16 out=dme_line_j_15_16;
+by bene_id clm_id;
+run;
+
+proc transpose data=dme_line_j_15_16 out=dm_line_wide1 prefix=hcpcscd;
+by bene_id clm_id;
+var hcpcs_cd;
+run;
+
+proc sql;
+create table line as 
+select distinct bene_id, clm_id,
+sum(home_oxygen) as h_o2
+from dm_line
+group by bene_id, clm_id;
+quit;
+
+proc sql;
+create table cumu.dm_15_16 as select *
+from dm_base a 
+left join 
+line b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id
+left join 
+dm_line_wide1 c
+on a.bene_id=c.bene_id and a.clm_id=c.clm_id;
+quit;
+
+
+
+data cumu.mbsf_15_16;
+set cumu.mbsf_ab_summary_15_16;
+HMOIND12=BENE_HMO_IND_01||BENE_HMO_IND_02||BENE_HMO_IND_03||BENE_HMO_IND_04||BENE_HMO_IND_05||
+BENE_HMO_IND_06||BENE_HMO_IND_07||BENE_HMO_IND_08||BENE_HMO_IND_09||BENE_HMO_IND_10||BENE_HMO_IND_11||BENE_HMO_IND_12;
+BUYIN12=BENE_MDCR_ENTLMT_BUYIN_IND_01||BENE_MDCR_ENTLMT_BUYIN_IND_02||BENE_MDCR_ENTLMT_BUYIN_IND_03||
+BENE_MDCR_ENTLMT_BUYIN_IND_04||BENE_MDCR_ENTLMT_BUYIN_IND_05||BENE_MDCR_ENTLMT_BUYIN_IND_06||
+BENE_MDCR_ENTLMT_BUYIN_IND_07||BENE_MDCR_ENTLMT_BUYIN_IND_08||BENE_MDCR_ENTLMT_BUYIN_IND_09||
+BENE_MDCR_ENTLMT_BUYIN_IND_10||BENE_MDCR_ENTLMT_BUYIN_IND_11||BENE_MDCR_ENTLMT_BUYIN_IND_12;
+year=BENE_ENROLLMT_REF_YR;
+run;
+
+
+H="Intensive/Coronary/ER Visit Day Count"
+
+libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+
+%macro day_cnt (sortfile = ,datafile = , rev_num1 = , rev_num2 = , rev_num3 = , cnt_var =, final_data = );
+proc sort data=cumu.&sortfile. out=&datafile.;
+by bene_id clm_id clm_thru_dt;
+run;
+data &datafile.;
+set &datafile.;
+rev_center = REV_CNTR + 0;
+if (rev_center >= &rev_num1. and rev_center <= &rev_num2.);
+
+run;
+data &datafile.1 (keep = bene_id clm_id CLM_THRU_DT &cnt_var.);
+set &datafile.;
+by bene_id CLM_ID CLM_THRU_DT;
+retain &cnt_var.;
+&cnt_var. = &cnt_var. + REV_CNTR_UNIT_CNT;
+if first.clm_id then do;
+&cnt_var. = REV_CNTR_UNIT_CNT;
+end;
+if last.clm_id;
+run;
+proc sql;
+create table &final_data._&cnt_var.
+as select a.*, b.&cnt_var.
+from cumu.&final_data. a
+left join &datafile.1 b
+on a.bene_id = b.bene_id and
+a.clm_id = b.clm_id;
+quit;
+proc freq data=&final_data._&cnt_var.;
+table &cnt_var.;
+run;
+data cumu.&final_data.;
+set &final_data._&cnt_var.;
+run;
+%mend;
+/*put 0000 if extra rev center not needed? need to fix at some point*/
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_16, datafile = inpat_rev_file, rev_num1 = 200, rev_num2 = 209, rev_num3=0000, cnt_var = icarecnt, final_data = ip_06_16);
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_16, datafile = inpat_rev_file, rev_num1 = 210, rev_num2 = 219, rev_num3=0000, cnt_var = crnrydaycnt, final_data = ip_06_16);
+%day_cnt(sortfile = Inpatient_revenue_center_j_06_16, datafile = inpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3=981, cnt_var = ERdaycnt, final_data = ip_06_16);
+%day_cnt(sortfile = Outpatient_rev_center_j_09_16, datafile = outpat_rev_file, rev_num1 = 450, rev_num2 = 459, rev_num3 = 981, cnt_var = ERdaycnt, final_data = op_09_16);

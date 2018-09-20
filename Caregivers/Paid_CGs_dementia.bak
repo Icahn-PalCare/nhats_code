@@ -17,3 +17,675 @@ Steps (from email from 3/5/18):
 
 
 H="Table 1"
+capture log close
+set more off
+clear all
+
+local logpath "E:\nhats\data\projects\caregivers\logs"
+
+cd `logpath'
+//use dataset created for Jenny's paper on homebound and caregiving
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_5_fullish.dta" ///
+if !missing(ind_paid), clear
+
+
+//post-stratify by age sex back to sampling frame
+
+replace anfinw=anfinw*6855860/5671878 if !female & age<70
+replace anfinw=anfinw*4941100/5071147 if !female & inrange(age,70,74)
+replace anfinw=anfinw*3367300/3524465 if !female & inrange(age,75,79)
+replace anfinw=anfinw*2257880/2208455 if !female & inrange(age,80,84)
+replace anfinw=anfinw*1307620/1358952 if !female & inrange(age,85,89)
+replace anfinw=anfinw*648680/624319   if !female & inrange(age,90,300)
+
+replace anfinw=anfinw*7601440/6226214 if female & age<70
+replace anfinw=anfinw*5695060/6077509 if female & inrange(age,70,74)
+replace anfinw=anfinw*4182460/4196832 if female & inrange(age,75,79)
+replace anfinw=anfinw*3165560/3137807 if female & inrange(age,80,84)
+replace anfinw=anfinw*2253980/2157300 if female & inrange(age,85,89)
+replace anfinw=anfinw*1577880/1534438 if female & inrange(age,90,300)
+
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_unk
+
+
+local cvars1 age
+local cvars2 n_children aveincome 
+local cvars3 sr_numconditions1 adl_index iadl_index
+
+local ivars1 female white black hisp other_race educ_hs_ind married
+local ivars2 inccat1 inccat2 inccat3 inccat4 medicaid livealone rcfres stairs_ind region2 region3 region4  ///
+metro_ind device_any device_mobility 
+local ivars3 adl_impair adl3 iadl_impair iadl3 srh_fp sr_hosp_ind ind_paid_helper ind_gt20hrs_wk_paid `paidvars'
+
+label var device_mobility "Walker, scooter, or wheelchair for mobility"
+drop group*
+gen group1=1 if prob_dem==1
+gen group2=!ind_paid if prob_dem==1
+gen group3=ind_paid==1 if prob_dem==1
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' 1 2 3
+
+mat tab1=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+forvalues i=1/3 {
+	foreach round in 1 2 3 4 5 {
+		foreach x of local cvars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)
+			if `i'>2 {
+				svy, subpop(if prob_dem==1): reg `x' group3
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)*100
+			if `i'>2 {
+				svy, subpop(if prob_dem==1): tab `x' group3
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	sum n if group`i'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+
+	
+	local r=1
+	local c=`c'+1
+}
+
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' `cvars4' `ivars4' `cvars5' `ivars5' "_" N ///
+"National Estimate"
+
+frmttable using `logpath'\dem_paid_cg_tables_wave_5.doc, replace statmat(tab1) ///
+ title("NHATS Wave 5 Community Dwelling Characteristics with Probable Dementia by Paid CG Status") ///
+ ctitles("" "Full Sample" "No Paid CG" "Yes Paid CG") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05,**p<.01, diff btwn has paid cg and no")
+
+/*sig vars from the bivariate to start the logit with are:
+married
+medicaid
+livealone
+mobility device
+adl/iadl index
+hospital stay prev year
+
+also include age female race
+
+*/
+local xvars age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility adl_index iadl_index sr_hosp_ind
+
+pwcorr `xvars'
+
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+logit ind_paid `xvars' if prob_dem==1
+
+svy, subpop(if prob_dem==1): logit ind_paid `xvars'
+predict p
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if prob_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5.doc, stats(e_b e_ci p) ///
+varlabels addtable merge 
+local xvars age female black hisp other_race married medicaid livealone ///
+device_mobility adl_index iadl_index sr_hosp_ind
+local wc : word count `xvars'
+tokenize `xvars'
+
+
+mat tab=J(`wc',1,.)
+local r=1
+local all
+foreach x in `xvars' {
+local y `x'
+local not`x' : list xvars - y
+qui reg `x' `not`x'' if !missing(p) & prob_dem==1
+mat tab[`r',1]=1/(1-e(r2))
+local r=`r'+1
+}
+
+mat rownames tab=`xvars'
+frmttable, statmat(tab) varlabels 
+
+reg ind_paid `xvars' if prob_dem==1 & !missing(p)
+estat vif
+
+frmttable, statmat(tab) 
+
+
+logit medicaid c.aveincome##i.income_cat educ_
+predict pmcaid
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+
+preserve
+replace medicaid=pmcaid>=.5 if missing(medicaid)
+
+svy, subpop(if prob_dem==1): logit ind_paid `xvars'
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if prob_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5.doc, stats(e_b e_ci p) ///
+varlabels addtable merge note(includes imputed medicaid)
+
+
+H="Table 1 with Income adjusted"
+capture log close
+set more off
+clear all
+
+local logpath "E:\nhats\data\projects\caregivers\logs"
+
+cd `logpath'
+//use dataset created for Jenny's paper on homebound and caregiving
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_5_fullish.dta" ///
+if !missing(ind_paid), clear
+
+
+//post-stratify by age sex back to sampling frame
+
+replace anfinw=anfinw*6855860/5671878 if !female & age<70
+replace anfinw=anfinw*4941100/5071147 if !female & inrange(age,70,74)
+replace anfinw=anfinw*3367300/3524465 if !female & inrange(age,75,79)
+replace anfinw=anfinw*2257880/2208455 if !female & inrange(age,80,84)
+replace anfinw=anfinw*1307620/1358952 if !female & inrange(age,85,89)
+replace anfinw=anfinw*648680/624319   if !female & inrange(age,90,300)
+
+replace anfinw=anfinw*7601440/6226214 if female & age<70
+replace anfinw=anfinw*5695060/6077509 if female & inrange(age,70,74)
+replace anfinw=anfinw*4182460/4196832 if female & inrange(age,75,79)
+replace anfinw=anfinw*3165560/3137807 if female & inrange(age,80,84)
+replace anfinw=anfinw*2253980/2157300 if female & inrange(age,85,89)
+replace anfinw=anfinw*1577880/1534438 if female & inrange(age,90,300)
+
+//////
+capture drop a1
+egen a1= rowtotal(toil dres bath meds bank)
+
+capture drop severe
+gen severe=1 if a1==5
+
+gen sev_dem=0
+
+replace sev_dem=1 if severe==1 & prob_dem==1
+
+//for wave 5 only to make into 2016 dollars. 
+capture drop income_adj 
+capture drop income_quart_adj 
+gen income_adj= (240.007/237.017)*aveincome 
+xtile income_quart_adj= income_adj, nq(4)
+
+forvalues i=1/4{
+gen income_quart_adj`i'=income_quart_adj==`i'
+local lab: label income_quart_adj `=`i''
+label var income_quart_adj`i' "Adjusted income: `lab'"
+}
+label var income_adj "Adjusted income"
+//////
+
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_unk
+
+
+local cvars1 age
+local cvars2 n_children income_adj 
+local cvars3 sr_numconditions1 adl_index iadl_index
+
+local ivars1 female white black hisp other_race educ_hs_ind married
+local ivars2 income_quart_adj1 income_quart_adj2 income_quart_adj3 income_quart_adj4 medicaid livealone rcfres stairs_ind region2 region3 region4  ///
+metro_ind device_any device_mobility 
+local ivars3 adl_impair adl3 iadl_impair iadl3 srh_fp sr_hosp_ind ind_paid_helper ind_gt20hrs_wk_paid `paidvars'
+
+label var device_mobility "Walker, scooter, or wheelchair for mobility"
+drop group*
+gen group1=1 if prob_dem==1
+gen group2=!ind_paid if prob_dem==1
+gen group3=ind_paid==1 if prob_dem==1
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' 1 2 3
+
+mat tab1=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+forvalues i=1/3 {
+	foreach round in 1 2 3 4 5 {
+		foreach x of local cvars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)
+			if `i'>2 {
+				svy, subpop(if prob_dem==1): reg `x' group3
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)*100
+			if `i'>2 {
+				svy, subpop(if prob_dem==1): tab `x' group3
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	sum n if group`i'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+
+	
+	local r=1
+	local c=`c'+1
+}
+
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' `cvars4' `ivars4' `cvars5' `ivars5' "_" N ///
+"National Estimate"
+
+frmttable using `logpath'\dem_paid_cg_tables_wave_5_inc.doc, replace statmat(tab1) ///
+ title("NHATS Wave 5 Community Dwelling Characteristics with Probable Dementia by Paid CG Status") ///
+ ctitles("" "Full Sample" "No Paid CG" "Yes Paid CG") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05,**p<.01, diff btwn has paid cg and no")
+
+/*sig vars from the bivariate to start the logit with are:
+married
+medicaid
+livealone
+mobility device
+adl/iadl index
+hospital stay prev year
+
+also include age female race
+
+*/
+local xvars age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility adl_index iadl_index sr_hosp_ind
+
+pwcorr `xvars'
+
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+logit ind_paid `xvars' if prob_dem==1
+
+svy, subpop(if prob_dem==1): logit ind_paid `xvars'
+predict p
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if prob_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5_inc.doc, stats(e_b e_ci p) ///
+varlabels addtable merge 
+local xvars age female black hisp other_race married medicaid livealone ///
+device_mobility adl_index iadl_index sr_hosp_ind
+local wc : word count `xvars'
+tokenize `xvars'
+
+
+mat tab=J(`wc',1,.)
+local r=1
+local all
+foreach x in `xvars' {
+local y `x'
+local not`x' : list xvars - y
+qui reg `x' `not`x'' if !missing(p) & prob_dem==1
+mat tab[`r',1]=1/(1-e(r2))
+local r=`r'+1
+}
+
+mat rownames tab=`xvars'
+frmttable, statmat(tab) varlabels 
+
+reg ind_paid `xvars' if prob_dem==1 & !missing(p)
+estat vif
+
+frmttable, statmat(tab) 
+
+
+logit medicaid c.income_adj##i.income_quart_adj educ_
+predict pmcaid
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+
+preserve
+replace medicaid=pmcaid>=.5 if missing(medicaid)
+
+svy, subpop(if prob_dem==1): logit ind_paid `xvars'
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if prob_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5_inc.doc, stats(e_b e_ci p) ///
+varlabels addtable merge note(includes imputed medicaid)
+
+
+H="Table 1 with severe dementia and adjusted income"
+capture log close
+set more off
+clear all
+
+local logpath "E:\nhats\data\projects\caregivers\logs"
+
+cd `logpath'
+//use dataset created for Jenny's paper on homebound and caregiving
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_5_fullish.dta" ///
+if !missing(ind_paid), clear
+
+
+//post-stratify by age sex back to sampling frame
+
+replace anfinw=anfinw*6855860/5671878 if !female & age<70
+replace anfinw=anfinw*4941100/5071147 if !female & inrange(age,70,74)
+replace anfinw=anfinw*3367300/3524465 if !female & inrange(age,75,79)
+replace anfinw=anfinw*2257880/2208455 if !female & inrange(age,80,84)
+replace anfinw=anfinw*1307620/1358952 if !female & inrange(age,85,89)
+replace anfinw=anfinw*648680/624319   if !female & inrange(age,90,300)
+
+replace anfinw=anfinw*7601440/6226214 if female & age<70
+replace anfinw=anfinw*5695060/6077509 if female & inrange(age,70,74)
+replace anfinw=anfinw*4182460/4196832 if female & inrange(age,75,79)
+replace anfinw=anfinw*3165560/3137807 if female & inrange(age,80,84)
+replace anfinw=anfinw*2253980/2157300 if female & inrange(age,85,89)
+replace anfinw=anfinw*1577880/1534438 if female & inrange(age,90,300)
+
+//////
+capture drop a1
+egen a1= rowtotal(toil dres bath meds bank)
+
+capture drop severe
+gen severe=1 if a1==5
+
+gen sev_dem=0
+
+replace sev_dem=1 if severe==1 & prob_dem==1
+
+//for wave 5 only to make into 2016 dollars. 
+capture drop income_adj 
+capture drop income_quart_adj 
+gen income_adj= (240.007/237.017)*aveincome 
+xtile income_quart_adj= income_adj, nq(4)
+
+forvalues i=1/4{
+gen income_quart_adj`i'=income_quart_adj==`i'
+local lab: label income_quart_adj `=`i''
+label var income_quart_adj`i' "Adjusted income: `lab'"
+}
+label var income_adj "Adjusted income"
+//////
+
+egen any_paid=anymatch(any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown ), v(1)
+
+label var any_paid "Paid Help from Any Source"
+
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid
+
+
+local cvars1 age
+local cvars2 n_children income_adj 
+local cvars3 sr_numconditions1 adl_index iadl_index
+
+local ivars1 female white black hisp other_race educ_hs_ind married
+local ivars2 income_quart_adj1 income_quart_adj2 income_quart_adj3 income_quart_adj4 medicaid livealone rcfres stairs_ind region2 region3 region4  ///
+metro_ind device_any device_mobility 
+local ivars3 adl_impair adl3 iadl_impair iadl3 srh_fp sr_hosp_ind ind_paid_helper ind_gt20hrs_wk_paid `paidvars'
+
+label var device_mobility "Walker, scooter, or wheelchair for mobility"
+drop group*
+gen group1=1 if sev_dem==1
+gen group2=!ind_paid if sev_dem==1
+gen group3=ind_paid==1 if sev_dem==1
+local rn : word count `cvars1' `cvars2' `ivars1' `ivars2'  `cvars3' `ivars3' 1 2 3
+
+mat tab1=J(`rn',4,.)
+mat stars=J(`rn',4,0)
+local r=1
+local c=1
+
+forvalues i=1/3 {
+	foreach round in 1 2 3 4 5 {
+		foreach x of local cvars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)
+			if `i'>2 {
+				svy, subpop(if sev_dem==1): reg `x' group3
+				test
+				mat tab1[`r',`c'+1]=r(p)
+				mat stars[`r',`c'+1]=(r(p)<.01) + (r(p)<.05)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`round' {
+			 sum `x' if group`i'==1 [aw=anfinw]
+			mat tab1[`r',`c']=r(mean)*100
+			if `i'>2 {
+				svy, subpop(if sev_dem==1): tab `x' group3
+				mat tab1[`r',`c'+1]=e(p_Pear)
+				mat stars[`r',`c'+1]=(e(p_Pear)<.01) + (e(p_Pear)<.05)
+}
+			local r=`r'+1
+}
+}
+	local r=`r'+1
+
+	
+	sum n if group`i'==1 [aw=anfinw]
+	mat tab1[`r',`c']=r(N)
+	mat tab1[`r'+1,`c']=r(sum)
+
+	
+	local r=1
+	local c=`c'+1
+}
+
+
+mat rownames tab1=`cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' `cvars4' `ivars4' `cvars5' `ivars5' "_" N ///
+"National Estimate"
+
+frmttable using `logpath'\dem_paid_cg_tables_wave_5_inc_sev_dem.doc, replace statmat(tab1) ///
+ title("NHATS Wave 5 Community Dwelling Characteristics with Severe Dementia by Paid CG Status") ///
+ ctitles("" "Full Sample" "No Paid CG" "Yes Paid CG") ///
+ sdec(2) annotate(stars) asymbol(*,*) ///
+ varlabels note("*p<.05,**p<.01, diff btwn has paid cg and no")
+
+/*sig vars from the bivariate to start the logit with are:
+married
+medicaid
+livealone
+mobility device
+adl/iadl index
+hospital stay prev year
+
+also include age female race
+
+*/
+local xvars age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility adl_index iadl_index sr_hosp_ind
+
+pwcorr `xvars'
+
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+logit ind_paid `xvars' if sev_dem==1
+
+svy, subpop(if sev_dem==1): logit ind_paid `xvars'
+predict p
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if sev_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5_inc_sev_dem.doc, stats(e_b e_ci p) ///
+varlabels addtable merge 
+local xvars age female black hisp other_race married medicaid livealone ///
+/*device_mobility adl_index iadl_index*/ sr_hosp_ind
+local wc : word count `xvars'
+tokenize `xvars'
+
+
+mat tab=J(`wc',1,.)
+local r=1
+local all
+foreach x in `xvars' {
+local y `x'
+local not`x' : list xvars - y
+qui reg `x' `not`x'' if !missing(p) & sev_dem==1
+mat tab[`r',1]=1/(1-e(r2))
+local r=`r'+1
+}
+
+mat rownames tab=`xvars'
+frmttable, statmat(tab) varlabels 
+
+reg ind_paid `xvars' if sev_dem==1 & !missing(p)
+estat vif
+
+frmttable, statmat(tab) 
+
+
+logit medicaid c.income_adj##i.income_quart_adj educ_
+predict pmcaid
+local xvars c.age female black hisp other_race married educ_hs_ind  medicaid livealone ///
+device_mobility c.adl_index c.iadl_index sr_hosp_ind
+
+preserve
+replace medicaid=pmcaid>=.5 if missing(medicaid)
+
+svy, subpop(if sev_dem==1): logit ind_paid `xvars'
+outreg, varlabels stats(e_b e_ci p)
+
+svy, subpop(if sev_dem==1): logit ind_paid i.(`xvars')
+margins, dydx(*)
+outreg using `logpath'\dem_paid_cg_tables_wave_5_inc_sev_dem.doc, stats(e_b e_ci p) ///
+varlabels addtable merge note(includes imputed medicaid)
+
+
+H="Table 2 Nursing home"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta", replace
+tempfile main
+save `main'
+
+forvalues w=1/6 {
+use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta", clear
+capture drop wave
+gen wave=`w'
+
+keep spid cs`w'dnumchild ho`w'entrst hh`w'dhshldnum mo* sc* ha* mc* wave
+rename cs`w' n_children
+label var n_ch "Number of children"
+rename ho`w' stairs_ind
+label var stairs "Stairs to enter home"
+gen livesalone_ind=hh`w'dhshldnum==1 if hh`w'dhshldnum>=0
+label var livesal "Lives alone (only one in household)"
+foreach x in n sta live {
+replace `x'=. if `x'<0
+}
+
+local kidvars n_children stairs_ind livesalone_ind
+gen ind_kids=n_children>=1 if !missing(n_children)
+rename (mo`w'* sc`w'* ha`w'* mc`w'*) (* * * *)
+rename (eatslfdif toiloft bathoft) (eatdif toilslf bathslf)
+
+foreach x in eat toil insd bed dres bath {
+	gen `x'=inlist(`x'slf,3,4) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen adlcount=rowtotal(eat toil insd bed dres bath)
+gen medswout=0
+foreach x in laun meds shop meal bank {
+	drop `x'
+	gen `x'=inlist(d`x'reas,1,3) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen iadlcount=rowtotal(laun meds shop meal bank)
+
+gen device_mobility=inlist(insdwalk,1,2) | inlist(outwalk,1,2) | inlist(insdwl,1,2) ///
+| inlist(outwl,1,2) | inlist(insdsct,1,2) | inlist(outsct,1,2) 
+
+tab wave
+
+tempfile adl
+save `adl'
+
+merge 1:1 spid wave using "`main'"
+drop _merge
+
+tempfile main
+save `main'
+
+}
+
+
+
+
+capture drop a1
+egen a1= rowtotal(toil dres bath meds bank)
+
+capture drop severe
+gen severe=1 if a1==5
+
+gen sev_dem=0
+
+replace sev_dem=1 if severe==1 & prob_dem==1
+
+
+bys wave: tab prob_dem nhres
+bys wave: tab sev_dem nhres 
+
+gen group1=1 if prob_dem==1
+
+gen group2=1 if sev_dem==1
+
+gen group3=1 if prob_dem==1 & nhres==1
+
+gen group4=1 if sev_dem==1 & nhres==1
+
+
+
+mat tab1=J(4,6,.)
+local r=1
+local c=1
+
+forvalues i=1/4{
+	forvalues w=1/6{
+		sum group`i' if wave==`w'
+		mat tab1[`r',`c']=r(N)
+		local c=`c'+1
+		}
+	local c=1
+	local r=`r'+1
+}
+
+mat list tab1
+
+mat rownames tab1= "Probable Dementia" "Severe Dementia" "Prob. Dem. & Nursing Home" "Sev. Dem. & Nursing Home"
+
+frmttable using "E:\nhats\data\projects\caregivers\logs\nhres_tab.doc", replace ///
+statmat(tab1) title("NHATS Waves 1-6 Nuring Home Residents and Dementia") ///
+ctitles(" " "Wave 1" "Wave 2" "Wave 3" "Wave 4" "Wave 5" "Wave 6")

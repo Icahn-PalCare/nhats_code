@@ -1522,97 +1522,197 @@ frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180309\tab.doc", replace st
 sdec(0) ctitle("Any Device NHATS/ADL Impairment", No, Yes) rtitle(No\ Yes) ///
 title("`title'") addtable
 
-H="xxxxADL Help tables--not in use"
-use "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" , clear
+H="xxxxxBasic Tabs for checks FRI Project--not in use"
+clear all 
+set more off
+capture log close
 
-gen adl_dres_help1=adl_dres_help
-gen adl_ins_help1=adl_ins_help
-gen adl_bed_help1=adl_bed_help
-gen adl_eat_help1=adl_eat_help
-//egen adl_in=rowtotal(adl_help
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
 
-replace adl_dres_help1=1 if dresoft==5
-replace adl_bed_help1=1 if bedwout==1
-replace adl_ins_help1=1 if oflvslepr==5
-replace adl_eat_help1=1 if eatwout==1
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
 
-egen adl_index1= rowtotal(adl_dres_help1 adl_ins_help1 adl_bed_help1 adl_eat_help1 adl_toil_help adl_bath_help)
-gen adl_impair1=.
-replace adl_impair1=0 if adl_index1==0
-replace adl_impair1=1 if inrange(adl_index1,1,7)
+use serious_ill_nhats_sample if wave==1
 
-local adl adl_dres_help adl_ins_help adl_bed_help adl_eat_help /*adl_index*/ adl_impair 
-local adl1 adl_dres_help1 adl_ins_help1 adl_bed_help1 adl_eat_help1 /*adl_index1*/ adl_impair1
+duplicates drop spid, force
 
-mat tab=J(11,6,.)
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+mat tab=J(5,1,.)
 local r=1
-local c=1
 
-forvalues w=1/6 {
-foreach x in `adl'{
-sum `x' if `x'==0 & wave==`w'
-mat tab[`r',`c']=r(N)
-local r=`r'+1
-sum `x' if `x'==1 & wave==`w'
-mat tab[`r',`c']=r(N)
-local r=`r'+1
-}
-sum adl_index if wave==`w'
-mat tab[`r',`c']=r(mean)
-local r=1
-local c=`c'+1
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
 }
 
-mat list tab
+mat rownames tab=`vars'
 
-frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab) ///
-sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help-No" \ "ADL Dress Help-Yes"\ ///
-"ADL Walk Help-No" \ "ADL Walk Help-Yes" \ "ADL Transfer Help-No" \ "ADL Transfer Help-Yes" \  ///
-"ADL Eat Help-No" \ "ADL Eat Help-Yes" \ "ADL Impair-No" \ "ADL Impair-Yes" \ "ADL Index (Mean)")  ///
-title("Previous Method for Calculating ADLs") note("Full Survey")
+frmttable using "`logpath'table.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
 
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
 
 /*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+
+////////////////////
+
+
+
 
 local adl insdhlp oftgoarea oflvslepr bedhlp dreshlp ///
 dresoft toilhlp bathhlp showrbat1 showrbat2 showrbat3 ///
-eathlp eatdev outoft ntlvrmslp
-
+eathlp eatdev 
 foreach x in `adl'{
 tab `x', matcell(`x')
 }
 
-foreach x in insdhlp bedhlp toilhlp{
-mat rownames `x'= "1 YES" "2 NO"  
+foreach x in insdhlp eathlp{
+mat rownames `x'= "-8 DK" "-7 RF" "-1 Inapplicable" "1 YES" "2 NO"
 }
 
-foreach x in dreshlp eathlp bathhlp{
-mat rownames `x'= "-1 Inapplicable" "1 YES" "2 NO"
-}
+mat rownames dreshlp= "-7 RF" "-1 Inapplicable" "1 YES" "2 NO"
 
-foreach x in showrbat1 showrbat2 showrbat3{
-mat rownames `x'= "-7 RF" "1 YES" "2 NO"
+mat rownames bathhlp= "-8 DK"  "-1 Inapplicable" "1 YES" "2 NO"
+
+
+foreach x in bedhlp toilhlp showrbat1 showrbat2 ///
+showrbat3  {
+mat rownames `x'= "-8 DK" "-7 RF" "1 YES" "2 NO"  
 }
 
 mat rownames oftgoarea= "-8 DK" "-7 RF" "-1 Inapplicable" ///
 "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
 "4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
 
-mat rownames dresoft="-7 RF" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" ///
-"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER"
+mat rownames dresoft= "-8 DK" "-7 RF" ///
+"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
+"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
 
-mat rownames oflvslepr= "-1 Inapplicable" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" ///
-"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)"  
+mat rownames oflvslepr= "-1 Inapplicable" ///
+"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
+"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
 
-mat rownames eatdev= "1 YES" "2 NO" "7 ALWAYS FED THROUGH IV OR TUBE"
-
-mat rownames outoft= "-8 DK" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" /// 
-"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER"
-
-mat rownames ntlvrmslp= "-1 Inapplicable"
+mat rownames eatdev= "-8 DK" "-7 RF" "1 YES" "2 NO" ///
+"7 ALWAYS FED THROUGH IV OR TUBE"
 
 foreach x in `adl' {
-if "`x'"!="insdhlp" local add addtable
+if "`x'"!="eatdev" local add addtable
 if "`x'"=="insdhlp" local title "Got Help Inside"
 if "`x'"=="oftgoarea" local title "How Often Go Other Areas"
 if "`x'"=="oflvslepr" local title "How Often Leave Bedroom"
@@ -1626,110 +1726,13 @@ if "`x'"=="showrbat2" local title "Took Baths in a Tub"
 if "`x'"=="showrbat3" local title "Washed Some Other Way"
 if "`x'"=="eathlp" local title "Did Anyone Help You Eat"
 if "`x'"=="eatdev" local title "Ever Use Adapted Utensils"
-if "`x'"=="outoft" local title "Often Go Outside"
-if "`x'"=="ntlvrmslp" local title "Did not Leave Bedroom"
-frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180425\tab.doc", replace statmat(`x') ///
+frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180521\tab.doc", replace statmat(`x') ///
 sdec(0) title("`title'") `add'
 }
 
-
-
-
-mat tab1=J(11,6,.)
-local r=1
-local c=1
-
-forvalues w=1/6 {
-foreach x in `adl1'{
-sum `x' if `x'==0 & wave==`w'
-mat tab1[`r',`c']=r(N)
-local r=`r'+1
-sum `x' if `x'==1 & wave==`w'
-mat tab1[`r',`c']=r(N)
-local r=`r'+1
-}
-sum adl_index1 if wave==`w'
-mat tab1[`r',`c']=r(mean)
-local r=1
-local c=`c'+1
-}
-mat list tab1
-
-frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab1) ///
-sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help-No" \ "ADL Dress Help-Yes"\ ///
-"ADL Walk Help-No" \ "ADL Walk Help-Yes" \ "ADL Transfer Help-No" \ "ADL Transfer Help-Yes" \  ///
-"ADL Eat Help-No" \ "ADL Eat Help-Yes" \ "ADL Impair-No" \ "ADL Impair-Yes" \ "ADL Index (Mean)")  ///
-title("New Method for Calculating ADLs") note("Full Survey") addtable
-
-
-mat tab2=J(6,6,.)
-local r=1
-local c=1
-
-forvalues w=1/6 {
-foreach x in `adl'{
-sum `x' if wave==`w'
-mat tab2[`r',`c']=r(mean)*100
-local r=`r'+1
-}
-sum adl_index if wave==`w'
-mat tab2[`r',`c']=r(mean)
-local r=1
-local c=`c'+1
-}
-mat list tab2
-
-frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab2) ///
-sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help"\ ///
-"ADL Walk Help" \ "ADL Transfer Help" \ "ADL Eat Help" \ "ADL Impair" \ "ADL Index (Mean)")  ///
-title("Old Method for Calculating ADLs %") note("Represents percentages of individuals who are ADL impaired") addtable
-
-
-mat tab3=J(6,6,.)
-local r=1
-local c=1
-
-forvalues w=1/6 {
-foreach x in `adl1'{
-sum `x' if wave==`w'
-mat tab3[`r',`c']=r(mean)*100
-local r=`r'+1
-}
-sum adl_index1 if wave==`w'
-mat tab3[`r',`c']=r(mean)
-local r=1
-local c=`c'+1
-}
-mat list tab3
-
-frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab3) ///
-sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help"\ ///
-"ADL Walk Help" \ "ADL Transfer Help" \ "ADL Eat Help" \ "ADL Impair" \ "ADL Index (Mean)")  ///
-title("New Method for Calculating ADLs %") note("Represents percentages of individuals who are ADL impaired") addtable
-
-/*
-tab wave adl_dres_help, matcell(dres)
-tab wave adl_ins_help, matcell(ins)
-tab wave adl_bed_help, matcell(bed)
-tab wave adl_index, matcell(index)
-tab wave adl_impair, matcell(impair)
-
-
-replace adl_dres_help=1 if dresoft==5
-replace adl_dres_help=1 if bedwout==1
-replace adl_ins_help =1 if oflvslepr==5
-egen adl_index1= rowtotal(adl_*_help)
-gen adl_impair1=.
-replace adl_impair1=0 if adl_index1<1
-replace adl_impair1=1 if adl_index1>0 & adl_index1<7
-
-
-tab wave adl_dres_help, matcell(dres1)
-tab wave adl_ins_help, matcell(ins1)
-tab wave adl_bed_help, matcell(bed1)
-tab wave adl_index1, matcell(index1)
-tab wave adl_impair1, matcell(impair1)
-
+/*frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180521\tab.doc", replace statmat(any) ///
+sdec(0) ctitle("Any Device NHATS/ADL Impairment", No, Yes) rtitle(No\ Yes) ///
+title("`title'") addtable
 
 
 H="New--Tables 1-3"
@@ -2171,7 +2174,7 @@ frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate
 title ("Bivariate Odds Ratios, stratified by characteristics") substat(1) addtable
 
 
-H="New Self Report from NHATS vs. Claims Tables"
+H="Self Report from NHATS vs. Claims Tables"
 clear all 
 set more off
 capture log close
@@ -2539,7 +2542,220 @@ note("Excludes Oxygen & Lift")
 tab device_any tag_dme, row
 
 
-H="xxxxxBasic Tabs for checks FRI Project--not in use"
+H="xxxxADL Help tables--not in use"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" , clear
+
+gen adl_dres_help1=adl_dres_help
+gen adl_ins_help1=adl_ins_help
+gen adl_bed_help1=adl_bed_help
+gen adl_eat_help1=adl_eat_help
+//egen adl_in=rowtotal(adl_help
+
+replace adl_dres_help1=1 if dresoft==5
+replace adl_bed_help1=1 if bedwout==1
+replace adl_ins_help1=1 if oflvslepr==5
+replace adl_eat_help1=1 if eatwout==1
+
+egen adl_index1= rowtotal(adl_dres_help1 adl_ins_help1 adl_bed_help1 adl_eat_help1 adl_toil_help adl_bath_help)
+gen adl_impair1=.
+replace adl_impair1=0 if adl_index1==0
+replace adl_impair1=1 if inrange(adl_index1,1,7)
+
+local adl adl_dres_help adl_ins_help adl_bed_help adl_eat_help /*adl_index*/ adl_impair 
+local adl1 adl_dres_help1 adl_ins_help1 adl_bed_help1 adl_eat_help1 /*adl_index1*/ adl_impair1
+
+mat tab=J(11,6,.)
+local r=1
+local c=1
+
+forvalues w=1/6 {
+foreach x in `adl'{
+sum `x' if `x'==0 & wave==`w'
+mat tab[`r',`c']=r(N)
+local r=`r'+1
+sum `x' if `x'==1 & wave==`w'
+mat tab[`r',`c']=r(N)
+local r=`r'+1
+}
+sum adl_index if wave==`w'
+mat tab[`r',`c']=r(mean)
+local r=1
+local c=`c'+1
+}
+
+mat list tab
+
+frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab) ///
+sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help-No" \ "ADL Dress Help-Yes"\ ///
+"ADL Walk Help-No" \ "ADL Walk Help-Yes" \ "ADL Transfer Help-No" \ "ADL Transfer Help-Yes" \  ///
+"ADL Eat Help-No" \ "ADL Eat Help-Yes" \ "ADL Impair-No" \ "ADL Impair-Yes" \ "ADL Index (Mean)")  ///
+title("Previous Method for Calculating ADLs") note("Full Survey")
+
+
+/*
+
+local adl insdhlp oftgoarea oflvslepr bedhlp dreshlp ///
+dresoft toilhlp bathhlp showrbat1 showrbat2 showrbat3 ///
+eathlp eatdev outoft ntlvrmslp
+
+foreach x in `adl'{
+tab `x', matcell(`x')
+}
+
+foreach x in insdhlp bedhlp toilhlp{
+mat rownames `x'= "1 YES" "2 NO"  
+}
+
+foreach x in dreshlp eathlp bathhlp{
+mat rownames `x'= "-1 Inapplicable" "1 YES" "2 NO"
+}
+
+foreach x in showrbat1 showrbat2 showrbat3{
+mat rownames `x'= "-7 RF" "1 YES" "2 NO"
+}
+
+mat rownames oftgoarea= "-8 DK" "-7 RF" "-1 Inapplicable" ///
+"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
+"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
+
+mat rownames dresoft="-7 RF" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" ///
+"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER"
+
+mat rownames oflvslepr= "-1 Inapplicable" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" ///
+"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)"  
+
+mat rownames eatdev= "1 YES" "2 NO" "7 ALWAYS FED THROUGH IV OR TUBE"
+
+mat rownames outoft= "-8 DK" "1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" /// 
+"3 SOME DAYS (2-4 DAYS A WEEK)" "4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER"
+
+mat rownames ntlvrmslp= "-1 Inapplicable"
+
+foreach x in `adl' {
+if "`x'"!="insdhlp" local add addtable
+if "`x'"=="insdhlp" local title "Got Help Inside"
+if "`x'"=="oftgoarea" local title "How Often Go Other Areas"
+if "`x'"=="oflvslepr" local title "How Often Leave Bedroom"
+if "`x'"=="bedhlp" local title "Got Help Out of Bed"
+if "`x'"=="dreshlp" local title "Anyone Help Get Dressed"
+if "`x'"=="dresoft" local title "Often you Get Dressed"
+if "`x'"=="toilhlp" local title "Anyone Help you use Toilet"
+if "`x'"=="bathhlp" local title "Anyone Help Shower Bath Other"
+if "`x'"=="showrbat1" local title "Showered"
+if "`x'"=="showrbat2" local title "Took Baths in a Tub"
+if "`x'"=="showrbat3" local title "Washed Some Other Way"
+if "`x'"=="eathlp" local title "Did Anyone Help You Eat"
+if "`x'"=="eatdev" local title "Ever Use Adapted Utensils"
+if "`x'"=="outoft" local title "Often Go Outside"
+if "`x'"=="ntlvrmslp" local title "Did not Leave Bedroom"
+frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180425\tab.doc", replace statmat(`x') ///
+sdec(0) title("`title'") `add'
+}
+
+
+
+
+mat tab1=J(11,6,.)
+local r=1
+local c=1
+
+forvalues w=1/6 {
+foreach x in `adl1'{
+sum `x' if `x'==0 & wave==`w'
+mat tab1[`r',`c']=r(N)
+local r=`r'+1
+sum `x' if `x'==1 & wave==`w'
+mat tab1[`r',`c']=r(N)
+local r=`r'+1
+}
+sum adl_index1 if wave==`w'
+mat tab1[`r',`c']=r(mean)
+local r=1
+local c=`c'+1
+}
+mat list tab1
+
+frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab1) ///
+sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help-No" \ "ADL Dress Help-Yes"\ ///
+"ADL Walk Help-No" \ "ADL Walk Help-Yes" \ "ADL Transfer Help-No" \ "ADL Transfer Help-Yes" \  ///
+"ADL Eat Help-No" \ "ADL Eat Help-Yes" \ "ADL Impair-No" \ "ADL Impair-Yes" \ "ADL Index (Mean)")  ///
+title("New Method for Calculating ADLs") note("Full Survey") addtable
+
+
+mat tab2=J(6,6,.)
+local r=1
+local c=1
+
+forvalues w=1/6 {
+foreach x in `adl'{
+sum `x' if wave==`w'
+mat tab2[`r',`c']=r(mean)*100
+local r=`r'+1
+}
+sum adl_index if wave==`w'
+mat tab2[`r',`c']=r(mean)
+local r=1
+local c=`c'+1
+}
+mat list tab2
+
+frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab2) ///
+sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help"\ ///
+"ADL Walk Help" \ "ADL Transfer Help" \ "ADL Eat Help" \ "ADL Impair" \ "ADL Index (Mean)")  ///
+title("Old Method for Calculating ADLs %") note("Represents percentages of individuals who are ADL impaired") addtable
+
+
+mat tab3=J(6,6,.)
+local r=1
+local c=1
+
+forvalues w=1/6 {
+foreach x in `adl1'{
+sum `x' if wave==`w'
+mat tab3[`r',`c']=r(mean)*100
+local r=`r'+1
+}
+sum adl_index1 if wave==`w'
+mat tab3[`r',`c']=r(mean)
+local r=1
+local c=`c'+1
+}
+mat list tab3
+
+frmttable using "E:\Files to move out\Mohammed\20180412\tab.doc", replace statmat(tab3) ///
+sdec(2) ctitle("Wave:", "1", "2" "3", "4", "5", "6" ) rtitle("ADL Dress Help"\ ///
+"ADL Walk Help" \ "ADL Transfer Help" \ "ADL Eat Help" \ "ADL Impair" \ "ADL Index (Mean)")  ///
+title("New Method for Calculating ADLs %") note("Represents percentages of individuals who are ADL impaired") addtable
+
+/*
+tab wave adl_dres_help, matcell(dres)
+tab wave adl_ins_help, matcell(ins)
+tab wave adl_bed_help, matcell(bed)
+tab wave adl_index, matcell(index)
+tab wave adl_impair, matcell(impair)
+
+
+replace adl_dres_help=1 if dresoft==5
+replace adl_dres_help=1 if bedwout==1
+replace adl_ins_help =1 if oflvslepr==5
+egen adl_index1= rowtotal(adl_*_help)
+gen adl_impair1=.
+replace adl_impair1=0 if adl_index1<1
+replace adl_impair1=1 if adl_index1>0 & adl_index1<7
+
+
+tab wave adl_dres_help, matcell(dres1)
+tab wave adl_ins_help, matcell(ins1)
+tab wave adl_bed_help, matcell(bed1)
+tab wave adl_index1, matcell(index1)
+tab wave adl_impair1, matcell(impair1)
+
+
+
+H="NEW Self Report from NHATS vs Claims data 2 tables"
+//This will create two tables 1 with the full sample.
+//The next will be stratified to include those with an ADL impairment only. 
+
 clear all 
 set more off
 capture log close
@@ -2589,7 +2805,10 @@ foreach x in `vars' {
 
 mat rownames tab=`vars'
 
-frmttable using "`logpath'table.rtf", statmat(tab) replace title("Sample Derivation") ///
+frmttable using "`logpath'table_all.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+frmttable using "`logpath'table_adl.rtf", statmat(tab) replace title("Sample Derivation") ///
 sdec(0) varlabels
 
 use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
@@ -2686,67 +2905,235 @@ label var bed_or_chair "Hospital bed or wheelchair from DME"
 
 
 
+gen all=1 
+gen adl=1 if adl_impair_new==1
+ 
+/////Tables
 
-////////////////////
 
+foreach p in all adl{
+preserve
+keep if `p'==1
 
+gen wheelchr=chair
+gen com=commode
+gen bathtoi=tub_toil
 
+foreach x in cane walker wheelchr com bathtoi{
+sum `x'_nhats if `x'==1 & `x'_nhats==1
+local a=`r(N)'
+sum `x'_nhats if `x'==0 & `x'_nhats==1
+local b=`r(N)'
+sum `x' if `x'==1 & `x'_nhats==0
+local c=`r(N)'
+sum `x' if `x'==0 & `x'_nhats==0
+local d=`r(N)'
 
-local adl insdhlp oftgoarea oflvslepr bedhlp dreshlp ///
-dresoft toilhlp bathhlp showrbat1 showrbat2 showrbat3 ///
-eathlp eatdev 
-foreach x in `adl'{
-tab `x', matcell(`x')
+sum `x'_nhats if `x'_nhats==1 & `x'!=. 
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & `x'!=. 
+local f=`r(N)'
+sum `x' if `x'==1 & `x'_nhats!=.
+local g=`r(N)'
+sum `x' if `x'==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
 }
-
-foreach x in insdhlp eathlp{
-mat rownames `x'= "-8 DK" "-7 RF" "-1 Inapplicable" "1 YES" "2 NO"
-}
-
-mat rownames dreshlp= "-7 RF" "-1 Inapplicable" "1 YES" "2 NO"
-
-mat rownames bathhlp= "-8 DK"  "-1 Inapplicable" "1 YES" "2 NO"
+tab cane_nhats cane, row
+mat list cane
 
 
-foreach x in bedhlp toilhlp showrbat1 showrbat2 ///
-showrbat3  {
-mat rownames `x'= "-8 DK" "-7 RF" "1 YES" "2 NO"  
-}
 
-mat rownames oftgoarea= "-8 DK" "-7 RF" "-1 Inapplicable" ///
-"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
-"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
-
-mat rownames dresoft= "-8 DK" "-7 RF" ///
-"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
-"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
-
-mat rownames oflvslepr= "-1 Inapplicable" ///
-"1 EVERY DAY (7 DAYS A WEEK)" "2 MOST DAYS (5-6 DAYS A WEEK)" "3 SOME DAYS (2-4 DAYS A WEEK)" ///
-"4 RARELY (ONCE A WEEK OR LESS)" "5 NEVER" 
-
-mat rownames eatdev= "-8 DK" "-7 RF" "1 YES" "2 NO" ///
-"7 ALWAYS FED THROUGH IV OR TUBE"
-
-foreach x in `adl' {
-if "`x'"!="eatdev" local add addtable
-if "`x'"=="insdhlp" local title "Got Help Inside"
-if "`x'"=="oftgoarea" local title "How Often Go Other Areas"
-if "`x'"=="oflvslepr" local title "How Often Leave Bedroom"
-if "`x'"=="bedhlp" local title "Got Help Out of Bed"
-if "`x'"=="dreshlp" local title "Anyone Help Get Dressed"
-if "`x'"=="dresoft" local title "Often you Get Dressed"
-if "`x'"=="toilhlp" local title "Anyone Help you use Toilet"
-if "`x'"=="bathhlp" local title "Anyone Help Shower Bath Other"
-if "`x'"=="showrbat1" local title "Showered"
-if "`x'"=="showrbat2" local title "Took Baths in a Tub"
-if "`x'"=="showrbat3" local title "Washed Some Other Way"
-if "`x'"=="eathlp" local title "Did Anyone Help You Eat"
-if "`x'"=="eatdev" local title "Ever Use Adapted Utensils"
-frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180521\tab.doc", replace statmat(`x') ///
-sdec(0) title("`title'") `add'
-}
-
-/*frmttable using "E:\nhats\projects\Serious_Ill\FRI\20180521\tab.doc", replace statmat(any) ///
-sdec(0) ctitle("Any Device NHATS/ADL Impairment", No, Yes) rtitle(No\ Yes) ///
+foreach x in cane walker wheelchr com bathtoi {
+if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane
+if "`x'"=="walker" local title Walker
+if "`x'"=="wheelchr" local title Wheelchair
+if "`x'"=="com" local title Commode/Bedpan/Urinal
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/DME", Yes, No, Total) rtitle(Yes\ % \No\% \ Total \ %) ///
 title("`title'") addtable
+}
+
+
+tab cane_nhats adl_bath_diff 
+
+
+foreach x in cane walker wheelchr com bathtoi {
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & `x'_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+}
+tab cane_nhats adl_impair_new, row
+mat list cane
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane v.s. ADL Impairment
+if "`x'"=="walker" local title Walker v.s. ADL Impairment
+if "`x'"=="wheelchr" local title Wheelchair v.s. ADL Impairment
+if "`x'"=="com" local title Commode/Bedpan/Urinal v.s. ADL Impairment
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device v.s. ADL Impairment
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/ADL Impair", Yes, No, Total) rtitle(Yes\ % \ No\ % \Total \ %) ///
+title("`title'") addtable
+}
+
+
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1 | bathtoi_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 & bathtoi_nhats==0
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix any= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+tab any_dev_nhats adl_impair_new, row
+matrix list any
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(any) ///
+sdec(1) ctitle("Any Device NHATS/ADL Impairment", Yes, No, Total, %) rtitle(Yes\ % \No\ % \Total \ %)  ///
+title(Any NHATS Device V.S. ADL Impairment) addtable
+
+
+///DME claim vs adl_impairment 
+capture drop dme_cl*
+egen dme_cl=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair)
+
+egen dme_c=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair oxy ind_snf_or_hh_12m  )
+
+gen dme_cl_1=0
+replace dme_cl_1=1 if dme_cl>=1
+
+gen dme_c_1=0
+replace dme_c_1=1 if dme_c>=1
+
+tab dme_cl_1 adl_impair_new
+
+//Eat and dress vs DME
+capture drop eat_dres
+egen eat_dres=rowtotal(device_dres device_eat)
+replace eat_dres=1 if eat_dres==2
+
+tab dme_cl_1 eat_dres
+
+
+
+sum n if adl_impair>=1 & dme_cl_1==0
+
+
+tempfile temp`p'
+save "'temp`p''", replace
+keep if adl_impair_new==1 & dme_cl_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+
+use "'temp`p''", clear
+
+tempfile temp1`p'
+save "'temp1`p''", replace
+
+keep if adl_impair_new==1 & dme_c_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme1= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+use "'temp1`p''", clear
+
+
+foreach x in dme dme1 {
+
+if "`x'"=="dme" local title ADL Impaired Self Report & DME Sample Excluding Oxygen, HH, & SNF 
+if "`x'"=="dme1" local title ADL Impaired Self Report & DME Sample Including Oxygen, HH, & SNF 
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("Eating and/or Dressing Device Self Report", Freq., %) rtitle(Yes\ No \ Total)  ///
+title("`title'") addtable
+}
+
+
+capture drop tag_dme
+egen tag_dme= anymatch(cane walker commode urinal bedpan tub_toil_dev chair), v(1)
+label var tag_dme "Claim for any device"
+
+sum device_any if any_dev_nhats==1 & tag_dme==1
+local a=`r(N)'
+sum device_any if any_dev_nhats==1 & tag_dme==0
+local b=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==1
+local c=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==0
+local d=`r(N)'
+
+sum device_any if any_dev_nhats==1 & tag_dme!=.
+local e=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme!=.
+local f=`r(N)'
+sum tag_dme if tag_dme==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum tag_dme if tag_dme==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix dev= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+mat list dev
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(dev) ///
+sdec(1) ctitle("Self Report/Claims", Yes, No, Total) rtitle(Yes\ % \ No\ % \ Total \ %)  ///
+title("Self Report using any Device vs. Claim for any Device") addtable ///
+note("Excludes Oxygen & Lift")
+
+
+tab device_any tag_dme, row
+
+tab any_dev_nhats device_any
+restore
+}
+
