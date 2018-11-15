@@ -3494,23 +3494,24 @@ do over list;
 if list=. then list=0;
 end;
 
-
-if year(admit_date)=2014 then rate=1;
-if year(admit_date)=2013 then rate=1.02377;
-if year(admit_date)=2012 then rate=1.05554;
-if year(admit_date)=2011 then rate=1.09671;
-if year(admit_date)=2010 then rate=1.13032;
-if year(admit_date)=2009 then rate=1.16989;
-if year(admit_date)=2008 then rate=1.20745;
-if year(admit_date)=2007 then rate=1.25859;
-if year(admit_date)=2006 then rate=1.32572;
-if year(admit_date)=2005 then rate=1.38045;
-if year(admit_date)=2004 then rate=1.44662;
-if year(admit_date)=2003 then rate=1.51895;
-if year(admit_date)=2002 then rate=1.58688;
-if year(admit_date)=2001 then rate=1.66714;
-if year(admit_date)=2000 then rate=1.74736;
-if year(admit_date)<=1999 then rate=1.8833;
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.03905;
+if year(admit_date)=2014 then rate=1.06448;
+if year(admit_date)=2013 then rate=1.08978;
+if year(admit_date)=2012 then rate=1.1236;
+if year(admit_date)=2011 then rate=1.16742;
+if year(admit_date)=2010 then rate=1.2032;
+if year(admit_date)=2009 then rate=1.24532;
+if year(admit_date)=2008 then rate=1.2853;
+if year(admit_date)=2007 then rate=1.33973;
+if year(admit_date)=2006 then rate=1.4112;
+if year(admit_date)=2005 then rate=1.46946;
+if year(admit_date)=2004 then rate=1.53989;
+if year(admit_date)=2003 then rate=1.61688;
+if year(admit_date)=2002 then rate=1.6892;
+if year(admit_date)=2001 then rate=1.77463;
+if year(admit_date)=2000 then rate=1.86002;
+if year(admit_date)<=1999 then rate=1.9395;
 
 
 &source._paid_by_mc=rate*(clm_pmt_amt+clm_pass_thru_per_diem_amt);
@@ -3557,25 +3558,26 @@ left join
 /*Adjust for inflation*/
 data &source._meet2_post;
 set proj_int.&source._meet_&days_after_core.p;
-/*adjust to 2014 dollars*/
+/*adjust to 2016 dollars*/
 
-if year(admit_date)=2014 then rate=1;
-if year(admit_date)=2013 then rate=1.02377;
-if year(admit_date)=2012 then rate=1.05554;
-if year(admit_date)=2011 then rate=1.09671;
-if year(admit_date)=2010 then rate=1.13032;
-if year(admit_date)=2009 then rate=1.16989;
-if year(admit_date)=2008 then rate=1.20745;
-if year(admit_date)=2007 then rate=1.25859;
-if year(admit_date)=2006 then rate=1.32572;
-if year(admit_date)=2005 then rate=1.38045;
-if year(admit_date)=2004 then rate=1.44662;
-if year(admit_date)=2003 then rate=1.51895;
-if year(admit_date)=2002 then rate=1.58688;
-if year(admit_date)=2001 then rate=1.66714;
-if year(admit_date)=2000 then rate=1.74736;
-if year(admit_date)<=1999 then rate=1.8833;
-
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.03905;
+if year(admit_date)=2014 then rate=1.06448;
+if year(admit_date)=2013 then rate=1.08978;
+if year(admit_date)=2012 then rate=1.1236;
+if year(admit_date)=2011 then rate=1.16742;
+if year(admit_date)=2010 then rate=1.2032;
+if year(admit_date)=2009 then rate=1.24532;
+if year(admit_date)=2008 then rate=1.2853;
+if year(admit_date)=2007 then rate=1.33973;
+if year(admit_date)=2006 then rate=1.4112;
+if year(admit_date)=2005 then rate=1.46946;
+if year(admit_date)=2004 then rate=1.53989;
+if year(admit_date)=2003 then rate=1.61688;
+if year(admit_date)=2002 then rate=1.6892;
+if year(admit_date)=2001 then rate=1.77463;
+if year(admit_date)=2000 then rate=1.86002;
+if year(admit_date)<=1999 then rate=1.9395;
 &source._paid_by_mc=rate*(clm_pmt_amt);
 run;
 
@@ -3870,7 +3872,7 @@ Get claims that meet 1 *1797*/
 proc sql;
 create table snf_meet1_aft_365 as select *
 from snf_meet_365_1a
-where (index_date - admit_date)<365 & (index_date - disch_date)>=0; 
+where (disch_date-index_date)<=365 & (index_date - admit_date)<0; 
 quit;
 
 
@@ -3878,15 +3880,15 @@ quit;
 proc sql;
 create table snf_meet2_aft_365 as select *
 from snf_meet_365_1a
-where (index_date - admit_date)>=365 & (index_date - disch_date)>=0; 
+where (disch_date-index_date)>365 & (index_date - admit_date)<0; 
 quit;
 
-/*For these claims that start > 1 year before core, truncate start date so 
+/*For these claims that end > 1 year before core, truncate end date so 
 only count LOS days w/i 1 year
 create indicator variable that claim start date is truncated*/
 data snf_meet2_aft_365_1;
 set snf_meet2_aft_365;
-admit_date = index_date-365;
+disch_date = index_date+365;
 snf_admit_date_mod = 1;
 label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
 run;
@@ -3899,7 +3901,7 @@ run;
 proc sql;
 create table snf_meet3_aft_365 as select *
 from snf_meet_365_1a
-where (index_date - admit_date)<365 & (index_date-disch_date)<0; 
+where (disch_date-index_date)<=365 & disch_date>index_date & (index_date-admit_date)>=0; 
 quit;
 
 /*For these claims that end after core, truncate end date so 
@@ -3907,7 +3909,7 @@ only count LOS days 1 year before the core
 create indicator variable that claim end date is truncated*/
 data snf_meet3_aft_365_1;
 set snf_meet3_aft_365;
-disch_date = index_date;
+admit_date = index_date+1;
 snf_disch_date_mod = 1;
 label snf_disch_date_mod = "Disch date mod; at ivw date";
 run;
@@ -3920,16 +3922,16 @@ run;
 proc sql;
 create table snf_meet4_aft_365 as select *
 from snf_meet_365_1a
-where (index_date - admit_date)>=365 & (index_date - disch_date)<0; 
+where (disch_date-index_date)>365 & (index_date - admit_date)>=0; 
 quit;
 
 /*truncate both start and end dates so just count 1 year pre interview*/
 data snf_meet4_aft_365_1;
 set snf_meet4_aft_365;
-disch_date = index_date;
+disch_date = index_date+365;
 snf_disch_date_mod = 1;
 label snf_disch_date_mod = "Disch date mod; at ivw date";
-admit_date = index_date-365;
+admit_date = index_date+1;
 snf_admit_date_mod = 1;
 label snf_admit_date_mod = "Admit date mod; at 12 mo from ivw date";
 run;
@@ -3958,7 +3960,7 @@ run;
 
 data aft_snf_days_1;
 set proj_int.snf_meet_aft_365;
-calc_snf_LOS=disch_date-admit_date;
+calc_snf_LOS=disch_date-admit_date+1;
 if calc_snf_LOS=0 then calc_snf_LOS=1;
 run;
 
@@ -4126,7 +4128,7 @@ proc sql;
 create table dm_meet as select * from
 proj_int.index a 
 left join 
-medi.dm_09_14 b 
+medi.dm_09_16 b 
 on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
 quit;
 
@@ -4134,7 +4136,7 @@ proc sql;
 create table pb_meet as select * from
 proj_int.index a 
 left join 
-medi.pb_09_14 b 
+medi.pb_09_16 b 
 on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
 quit;
 
@@ -4270,7 +4272,7 @@ run;
 
 
 data hs1 (keep=bene_id live_disch died_on_hs los admit_date);
-set medi.hs_09_14;
+set medi.hs_09_16;
 live_disch=PTNT_DSCHRG_STUS_CD='01';
 died_on_hs=PTNT_DSCHRG_STUS_CD='40' or PTNT_DSCHRG_STUS_CD='41';
 los=disch_date-admit_date;
@@ -8663,3 +8665,43 @@ ctitles("" "Incident ADL"""  "All 12m FFS" \"""n" "Weighted %" "n" "Weighted %")
 note("Restricted to those with 12m FFS prior to interview (waves 1-4)")
 
 tab wave
+
+
+H="region"
+use "E:\nhats\data\NHATS working data\round_1_to_6.dta", clear 
+
+keep spid wave re*dcensdiv
+
+forvalues i=1/6 {
+
+capture gen northeast = 0
+replace northeast = 1 if re`i'dcensdiv==1 | re`i'dcensdiv==2
+
+capture gen midwest = 0
+replace midwest = 1 if re`i'dcensdiv==3 | re`i'dcensdiv==4
+
+capture gen west = 0
+replace west = 1 if re`i'dcensdiv==8 | re`i'dcensdiv==9
+}
+
+capture gen south = 0
+replace south = 1 if northeast==0 & west==0 & midwest==0
+
+cap drop re*dcensdiv
+
+tempfile region
+save "`region'"
+
+
+
+/*
+use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", clear
+cap drop _m
+duplicates drop spid wave, force
+merge 1:1 spid wave using "`region'"
+keep if _m==3
+cap drop _m
+
+
+save "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
+*/

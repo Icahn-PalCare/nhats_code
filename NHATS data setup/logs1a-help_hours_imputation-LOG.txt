@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs1a-help_hours_imputation-LOG.txt
   log type:  text
- opened on:  13 Aug 2018, 09:58:03
+ opened on:  25 Oct 2018, 11:41:44
 
 . 
 . //PC file paths
@@ -54,13 +54,23 @@ E:\nhats\data\NHATS working data
 . ********************************************************************
 . //combine op and sp data files
 . 
+. 
+. //note--10/25/18, need to limit variables, because file's too large
+. 
+. //now create limited datasets for each wave with only needed variables
+. local keeplist spid wave  w*anfinwgt0 w*varstrat w*varunit r*dresid ///
+>  mo*douthelp mo*dinsdhelp mo*dbedhelp sc*deathelp sc*dbathhelp ///
+>  sc*dtoilhelp sc*ddreshelp ha*dlaunreas ha*dshopreas ha*dmealreas ///
+>  ha*dbankreas mc*dmedsreas 
+
+.  
 . //round 1
 . use "`r1raw'NHATS_Round_1_OP_File_v2.dta", clear
 
 . sort spid opid 
 
 . 
-. merge m:1 spid using round_1_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_1_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 
     Result                           # of obs.
     -----------------------------------------
@@ -84,7 +94,7 @@ file R1_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_2_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_2_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r1dresid already defined)
 (label r2dresid already defined)
 
@@ -110,7 +120,7 @@ file R2_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_3_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_3_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r1dresid already defined)
 (label r2dresid already defined)
 (label r3dresid already defined)
@@ -137,7 +147,7 @@ file R3_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_4_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_4_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r1dresid already defined)
 (label r2dresid already defined)
 (label r3dresid already defined)
@@ -165,7 +175,7 @@ file R4_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_5_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_5_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r1dresid already defined)
 (label r2dresid already defined)
 (label r3dresid already defined)
@@ -195,7 +205,7 @@ file R5_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_6_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_6_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r1dresid already defined)
 (label r2dresid already defined)
 (label r3dresid already defined)
@@ -225,7 +235,7 @@ file R6_OPSPlinked.dta saved
 . sort spid opid
 
 . 
-. merge m:1 spid using round_7_1.dta //bring in sorted sp ivw dataset
+. merge m:1 spid using round_7_1.dta, keepusing(`keeplist') //bring in sorted sp ivw dataset
 (label r5dcontnew already defined)
 (label r1dresid already defined)
 (label r2dresid already defined)
@@ -464,10 +474,6 @@ file R7_OPSPltd.dta saved
 (label op1dflmiss already defined)
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
-(label pa1dv2favact already defined)
-(label fl1dneverdrv already defined)
-(label rl1dracehisp already defined)
-(label r1dgender already defined)
 (label _merge already defined)
 
 . append using R4_OPSPltd.dta
@@ -669,10 +675,6 @@ file R7_OPSPltd.dta saved
 (label op1dflmiss already defined)
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
-(label pa1dv2favact already defined)
-(label fl1dneverdrv already defined)
-(label rl1dracehisp already defined)
-(label r1dgender already defined)
 (label _merge already defined)
 
 . append using R5_OPSPltd.dta
@@ -946,7 +948,6 @@ file R7_OPSPltd.dta saved
 (label op1dflmiss already defined)
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
-(label pa1dv2favact already defined)
 (label _merge already defined)
 
 . append using R6_OPSPltd.dta
@@ -1291,10 +1292,6 @@ file R7_OPSPltd.dta saved
 (label op1dflmiss already defined)
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
-(label pa5dfavact already defined)
-(label fl5dneverdrv already defined)
-(label rl5dracehisp already defined)
-(label r5dgender already defined)
 (label _merge already defined)
 
 . append using R7_OPSPltd.dta
@@ -1712,10 +1709,6 @@ file R7_OPSPltd.dta saved
 (label op1dflmiss already defined)
 (label op1dmissadd already defined)
 (label op1dprobdup already defined)
-(label pa5dfavact already defined)
-(label fl5dneverdrv already defined)
-(label rl5dracehisp already defined)
-(label r5dgender already defined)
 (label _merge already defined)
 
 . 
@@ -5004,7 +4997,7 @@ Non-relati |                                 Survey wave
 
 . 
 . ********************************************************************
-. //generate variables indicating help w/ adls & iadls
+. //generate variables indicating help w/ adls & a
 . local adl insd bed eat bath toil dres
 
 . local iadl laun shop meal bank meds 
@@ -5416,7 +5409,7 @@ Recode to small numbe |         0          0          0          0          0   
 . ********************************************************************
 . //save separate datasets for r 1 2 & 3 so can run imputation with weighting
 . foreach w in 1 2 3 4 5 6 7{
-  2. preserve
+  2. preserve  
   3. keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
 >  r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
 >  daughter oth_fam 
@@ -7025,5 +7018,5 @@ file R7_hrs_imputed_added.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs1a-help_hours_imputation-LOG.txt
   log type:  text
- closed on:  13 Aug 2018, 10:48:28
----------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  25 Oct 2018, 11:44:09
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

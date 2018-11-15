@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:  13 Aug 2018, 09:56:08
+ opened on:  25 Oct 2018, 11:58:29
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -234,7 +234,7 @@ file round_7_1.dta saved
 >         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 >         hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
 >         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
->         r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* 
+>         r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* cs*
   5. 
 . if `w'==1 {     
   6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
@@ -255,8 +255,7 @@ file round_7_1.dta saved
 >         re4dcensdiv ip4nginslast
  16. }
  17. if `w'==5 {     
- 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew r
-> e5dresistrct ///
+ 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
  19. }       
  20. if `w'==6 {     
@@ -452,12 +451,12 @@ file round_7_ltd.dta saved
 . 
 . //3B?
 . //merge in tracker status information
-. merge m:1 spid using "`r6raw'NHATS_Round_6_Tracker_File", ///
->         keepusing(yearsample w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt w5trfinwgt0 w5tr2011wg
-> t0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3tr
-> finwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
->                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1sps
-> tatdtyr ///
+. merge m:1 spid using "`r7raw'NHATS_Round_7B_Tracker_File", ///
+>         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+>          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+>         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3s
+> tatus r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+>                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
@@ -489,8 +488,28 @@ file round_7_ltd.dta saved
 . drop _merge     
 
 . save round_1_to_7.dta, replace
-(note: file round_1_to_7.dta not found)
 file round_1_to_7.dta saved
+
+. 
+. //10/17/2018--old version of stata
+. forvalues w=1/6{
+  2. clear all
+  3. use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
+  4. saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
+  5. }
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode and thus may not display well in Stata 13.
+file E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_4\NHATS_Round_4_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_5\NHATS_Round_5_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_6\NHATS_Round_6_SP_File_stata12.dta saved
 
 . 
 . *********************************************
@@ -498,5 +517,5 @@ file round_1_to_7.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:  13 Aug 2018, 09:57:23
----------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  25 Oct 2018, 11:59:53
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

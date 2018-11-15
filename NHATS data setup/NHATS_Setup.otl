@@ -1,4 +1,4 @@
-= V4 Outline MultiLine NoSorting TabWidth=30
+= V7 Outline MultiLine NoSorting TabWidth=30
 
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
 /*Combines rounds 1 and 2 sample person SP interview files,
@@ -7,7 +7,6 @@ status variables into a single file
 
 Data format is multiple observations per subject, one for each round
 */
-
 capture log close
 clear all
 set more off
@@ -122,7 +121,7 @@ local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  
 	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
 	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
-	r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* 
+	r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* cs*
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
@@ -210,8 +209,10 @@ drop _merge
 
 //3B?
 //merge in tracker status information
-merge m:1 spid using "`r6raw'NHATS_Round_6_Tracker_File", ///
-	keepusing(yearsample w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+merge m:1 spid using "`r7raw'NHATS_Round_7B_Tracker_File", ///
+	keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+	 w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+	w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
 		w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 		r1fqstatdt*)
 
@@ -221,6 +222,13 @@ merge m:1 spid using "`r1s'NSOC_Round_1_SP_tracker_file", nogen
 drop if _merge==2
 drop _merge	
 save round_1_to_7.dta, replace
+
+//10/17/2018--old version of stata
+forvalues w=1/6{
+clear all
+use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
+saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
+}
 
 *********************************************
 log close
@@ -501,7 +509,7 @@ tab otherrel wave, missing
 tab nonrel wave, missing
 
 ********************************************************************
-//generate variables indicating help w/ adls & iadls
+//generate variables indicating help w/ adls & a
 local adl insd bed eat bath toil dres
 local iadl laun shop meal bank meds 
 local nonadl out money tkpl
@@ -598,7 +606,7 @@ tab impute_cat op_ind_hrsmth if wave==7, missing
 ********************************************************************
 //save separate datasets for r 1 2 & 3 so can run imputation with weighting
 foreach w in 1 2 3 4 5 6 7{
-preserve ., 
+preserve  
 keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
  r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
  daughter oth_fam 
@@ -719,7 +727,7 @@ tab r3status if wave==3
 gen ivw_type=3
 replace ivw_type=1 if r1spstat==20 & wave==1 
 
-foreach w in 2 3 4 5 6 {
+foreach w in 2 3 4 5 6 7{
 	replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w'
 	replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w'
 }
@@ -737,7 +745,7 @@ tab r1dresid r1spstat if wave==1, missing
 gen sp_ivw_yes=1 if r1spstat==20 & wave==1
 replace sp_ivw_yes=0 if inlist(r1spstat,11,24) & wave==1
 
-foreach w in 2 3 4 5 6 {
+foreach w in 2 3 4 5 6 7{
 	tab r`w'status r`w'spstat if wave==`w', missing
 	replace sp_ivw_yes=1 if r`w'spstat==20 & wave==`w'
 	replace sp_ivw_yes=0 if inlist(r`w'spstat,11,12,24) & wave==`w'
@@ -746,7 +754,7 @@ la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml inter
 tab sp_ivw_yes wave, missing
 
 gen lml_ivw_yes = 0
-foreach w in 2 3 4 5 6 {
+foreach w in 2 3 4 5 6 7{
 	replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`w'
 }
 la var lml_ivw_yes "LWL interview? yes=1"
@@ -918,7 +926,7 @@ tab indephigh wave if sp_ivw_yes==1, missing
 //demographic information
 *********************************************
 *********************************************
-//age at interview, note this is missing for wave 3 b/c no wave 3 sensitive data yet
+//age at interview, note this is missing for wave 7 b/c no wave 7 sensitive data yet
 gen age=.
 foreach w in 1 2 3 4 5 6 {
 	replace age=r`w'dintvwrage if wave==`w'
@@ -2154,7 +2162,7 @@ replace n_sn=0 if missing(n_sn)
 label var n_sn "Number in social network"
 
 //save as op file before dropping down to one obs per spid
-saveold "E:/nhats/data/NHATS cleaned/op_round_1_7.dta", replace
+saveold "E:/nhats/data/NHATS cleaned/op_round_1_7.dta", replace version(12)
 
 //keep the entry for the primary caregiver only, this will then be the 
 //information merged into the SP dataset
@@ -2219,11 +2227,12 @@ capture log close
 clear all
 set more off
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
+set maxvar 10000
 
 local r1raw E:\nhats\data\NHATS Public\round_1\
 local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
-local r4raw E:\nhats\data\NHATS Public\round_4\
+local r4raw E:\nhats\a\NHATS Public\round_4\
 local r5raw E:\nhats\data\NHATS Public\round_5\
 local r6raw E:\nhats\data\NHATS Public\round_6\
 local r7raw E:\nhats\data\NHATS Public\round_7\
@@ -2235,7 +2244,6 @@ local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
-
 
 
 //7/13/17--add in metro/nonmetro var
@@ -2251,6 +2259,7 @@ save `metro'
 cd "`work'"
 use round_1_7_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
+
 
 // 8/10/2018 Add in 2011 weight for rd5,6 
 egen an2011wgt=rowmax(w*an2011wgt0)
@@ -2274,38 +2283,8 @@ foreach w in 1 5{
 	replace serarmfor=-8 if va`w'serarmfor==-8 & wave==`w'
 }
 label var serarmfor "Served in Armed Forces"
-
-//Add in 4/27
-gen insdhlp=mo1insdhlp 
-label val insdhlp mo1insdhlp
-gen oftgoarea=mo1oftgoarea
-label val oftgoarea mo1oftgoarea 
-gen oflvslepr=mo1oflvslepr 
-label val oflvslepr mo1oflvslepr 
-gen bedhlp=mo1bedhlp 
-label val bedhlp mo1bedhlp
-gen dreshlp=sc1dreshlp
-label val dreshlp sc1dreshlp
-gen dresoft=sc1dresoft 
-label val dresoft sc1dresoft
-gen toilhlp=sc1toilhlp 
-label val toilhlp sc1toilhlp
-gen bathhlp=sc1bathhlp 
-label val bathhlp sc1bathhlp
-gen showrbat1=sc1showrbat1 
-label val showrbat1 sc1showrbat1
-gen showrbat2=sc1showrbat2 
-label val showrbat2 sc1showrbat2
-gen showrbat3=sc1showrbat3 
-label val showrbat3 sc1showrbat3 
-gen eathlp=sc1eathlp 
-label val eathlp sc1eathlp
-//gen eatdev=sc1eatdev 
-//label val eatdev sc1eatdev
-gen outoft=mo1outoft
-label val outoft mo1outoft
-//gen ntlvrmslp=fl1ntlvrmslp
-//label val ntlvrmslp fl1ntlvrmslp
+sort spid wave
+by spid: carryforward serarmfor, replace
 
 //Add in 4/6/18
 egen dresslf=rowmax(sc*dresslf)
@@ -2328,7 +2307,7 @@ label var eatdev "Ever use Adapted Utensils"
 ////// 4/2/2018--Adding in income quartile
 sort wave
 forvalues w=1/7 {
-xtile income_quart`w'=aveincome if wave==`w', nq(4) 
+xtile income_quart`w'=aveincome [aw=w`w'anfinwgt0] if wave==`w', nq(4) 
 }
 egen income_quart=rowmax(income_quart*)
 
@@ -2337,6 +2316,9 @@ drop income_quart`w'
 }
 
 label var income_quart "Quartile of Income"
+label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
+label values income_quart income_quart
+
 ///// 3/26/18 --Adding in Hospice and place died variables.
 
 egen placedied=rowmax(pd*placedied)
@@ -2537,26 +2519,6 @@ replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
 label var agefeel "Age you Feel Most Times"
 
 
-
-///// 3/5/18 --Adding in FRI questions from round 1
-
-foreach x in cane walker wheelchr {
-capture drop `x'_nhats
-gen `x'_nhats=fl1`x'
-replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
-replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
-label var `x'_nhats "`x' from NHATS"
-}
-
-capture drop com_nhats
-recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
-
-capture drop bathtoi_nhats
-gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
-replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
-replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
-
-
 ///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
 //missing if in NH-FQ, dead, in NH-FQ R1 & R2
 
@@ -2612,6 +2574,10 @@ recode hc1cancerty1 hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
 hc1cancerty6 hc1cancerty7 hc1cancerty8 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had)
 
+foreach x of varlist sr*canc*d {
+	local lab : var label `x'
+	label var `x' "Sensitive: `lab'"
+}
 //keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 //sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had
 
@@ -2653,11 +2619,16 @@ label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
 
 foreach x in out insd bed {
 	gen device_`x'=.
+	label var device_`x' "Uses any assistive device for mobility `x'"
 }
-
+label var device_out "Uses any assistive device for mobility outside"
+label var device_ins "Uses any assistive device for mobility inside"
+label var device_bed "Uses any assistive device to get out of bed"
 foreach x in eat bath toil dres {
 	gen device_`x'=.
+	label var device_`x' "Uses assistive device for `x'ing"
 }
+
 forvalues w=1/7 {
 foreach x in out insd bed {
 	replace device_`x'=mo`w'd`x'devi==2 if inlist(mo`w'd`x'devi,1,2) & wave==`w'
@@ -2729,7 +2700,7 @@ replace dt`w'getoplcs3=0 if !missing(dt`w'getoplcs7) & missing(dt`w'getoplcs3)
 forvalues x=1/7  {
 	replace get_places`x'=dt`w'getoplcs`x'==1 if wave==`w'
 	replace get_places`x'=. if (inlist(dt`w'getoplcs7,-1,.) | dt`w'getoplcs`x'==.) & wave==`w'
-	label var get_places`x' "Get places: `lab`l''"
+	label var get_places`x' "Get places: `lab`x''"
 	local l=`l'+1
 }
 }
@@ -2747,6 +2718,10 @@ replace marital_sd=1 if marital_div==1
 
 label var married "Married"
 label var marriedpartnered "Married or Live w/ Partner"
+label var marital_sep "Separated"
+label var marital_div "Divorced"
+label var marital_wid "Widowed"
+label var marital_nev "Never married"
 
 //lives with spouse
 gen resspouse=.
@@ -2767,6 +2742,7 @@ label var hhm "Number of household members"
 
 sort spid wave
 by spid: replace age=age[_n-1]+1 if missing(age)
+label var age "Sensitive: age"
 
 gen agecat = .
 forvalues i=1/7 {
@@ -2883,12 +2859,17 @@ forvalues i=2/7 {
 }
 drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
 }
+label var moved "Moved since last ivw"
 
 ******************************************
 /*these are taken from Rebecca's code*/
 
 gen community_dwelling = 0
-replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+forvalues w=1/7 {
+	replace community_dwelling=1 if inlist(r`w'dresid,1,2)
+}
+replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | ///
+r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
 gen SP_completed = 0
 replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
 
@@ -2899,7 +2880,7 @@ gen sp_status=1
 gen deceased=0
 gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
 label var prob_dem "Indicator probable dementia"
-forvalues i=2/6 {
+forvalues i=2/7 {
 	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
 	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
 	replace rcfres=inlist(r`i'dresid,2,3,7) if wave==`i'
@@ -2974,11 +2955,14 @@ replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
 
 /// Changes to Dressing and Eating
-/*These changes were made because the help varaibles were not capturing everyone 
+/*These changes were made because the help variables were not capturing everyone 
 who may have been impaired for the ADL*/ 
-replace adl_dres_help=1 if dresoft==5
-replace adl_eat_help=1 if eatdev==7
-replace adl_ins_help=1 if ntlvrmslp==1
+//changes made 5/20/18
+forvalues w=1/7 {
+	replace adl_dres_help=1 if sc`w'dresoft==5
+	replace adl_eat_help=1 if sc`w'eatdev==7
+	replace adl_ins_help=1 if fl`w'ntlvrmslp==1
+}
 
 gen adl_index=0
 foreach i in eat bath toil dres bed ins {
@@ -3020,8 +3004,11 @@ replace `x'=0 if `x'==.
 }
 }
 
+label var meals_wheels "Meals on wheels"
+label var noone_talk "SP has no one to talk to"
+label var restrnt_takeout "Received help with restaurant/takeout"
 //pull in date of death, constructed from claims and nhats
-merge m:1 spid using "E:\nhats\data\CMS_DUA_28016\death_date.dta", nogen
+merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", nogen
 
 gen died_12=mofd(death_date)-mofd(ivw_date)<=12
 gen died_24=mofd(death_date)-mofd(ivw_date)<=24
@@ -3049,7 +3036,7 @@ label var died_`i' "SP died w/in `i' months, per future wave status"
 gen dd=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
 gen nhats_death_day=. 
-forvalues i=2/4 {
+forvalues i=2/6 {
 	foreach j in mth yr {
 		replace pd`i'`j'died=. if pd`i'`j'<0
 }
@@ -3060,12 +3047,12 @@ forvalues i=2/4 {
 }
 
 by spid, sort: egen nhats_death_date=max(dd)
-label var nhats_death_date "SP death date, from tracker (day imputed)"
+label var nhats_death_date "Sensitive: SP death date, from NHATS (day imputed)"
 format nhats_death_date %td
 gen nhats_death_month=month(nhats_death_date)
 gen nhats_death_year=year(nhats_death_date)
 foreach x in month year {
-label var nhats_death_date "SP death `x', from tracker"
+label var nhats_death_`x' "Sensitive: SP death `x', from NHATS"
 }
 
 drop dd
@@ -3074,10 +3061,10 @@ gen eligible_nsoc=fl1dnsoc==1
 gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
 gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
 gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
-label var eligible  "Eligible for NSOC interview, wave 1 tracker"
-label var complete  "Completed Interview"
-label var total_caregiver_comp "Total Caregivers that Completed Interview"
-label var total_caregiver_elig "Total Caregivers Eligible for NSOC"
+label var eligible  "Sensitive: Eligible for NSOC interview, wave 1 tracker"
+label var complete  "Sensitive: Completed Interview"
+label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Interview"
+label var total_caregiver_elig "Sensitive: Total Caregivers Eligible for NSOC"
 rename r*status round*status
 
 //adverse consequences of unmet need
@@ -3089,6 +3076,44 @@ forvalues i=1/7 {
 }
 }
 label var adverse "Any adverse consequence of unmet need (excluding mobility)"
+
+local ha laun shop meal bank
+local sc eat bath toil dres
+local mo out insd bed
+
+forvalues i=1/7{
+	foreach x in `ha'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if ha`i'`x'wout==1 & wave==`i'
+		
+	}
+}
+	
+forvalues i=1/7{
+	foreach x in `sc'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if sc`i'`x'wout==1 & wave==`i'
+	}
+}
+
+forvalues i=1/7{
+	foreach x in `mo'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if mo`i'`x'wout==1 & wave==`i'
+	}
+}
+
+label var adverse_laun "Ever go w/o clean laundry"
+label var adverse_shop "Ever go w/o groceries/personal items"
+label var adverse_meal "Ever go w/o hot meal"
+label var adverse_bank "Ever go w/o handling bills and banking matters" 
+label var adverse_eat "Ever go w/o eating"
+label var adverse_bath "Ever go w/o showering/bath/washup"
+label var adverse_toil "Ever go w/o using toilet"
+label var adverse_dres "Ever go w/o getting dressed"
+label var adverse_out "Ever go w/o going outside; stayed inside"
+label var adverse_insd "Ever go w/o moving inside b/c unmet need" 
+label var adverse_bed "Ever go w/o leaving bed"
 
 //limited favorite activity
 capture drop lim_fav
@@ -3105,6 +3130,7 @@ capture drop lim_fav_yr
 gen lim_fav_yr=.
 //forvalues i=6 {
 	replace lim_fav_yr=pa6fvactlimyr==1 if pa6fvactlimyr>=0 & wave==6
+	replace lim_fav_yr=pa7fvactlimyr==1 if pa7fvactlimyr>=0 & wave==7
 //}
 label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
 
@@ -3284,12 +3310,22 @@ recode region (1 2=1) (3 4=2) (5/7=3) (8 9=4)
 
 la define region 1 "Northeast" 2 "Midwest" 3 "South" 4 "West"
 label values region region
- 
+
+capture gen northeast=0
+capture gen midwest=0
+capture gen south=0
+capture gen west=0
+
+replace northeast=1 if region==1
+replace midwest=1 if region==2
+replace south=1 if region==3
+replace west=1 if region==4
+
 //and now drop all raw variables
 forvalues i=1/7 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
-	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'*
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'*
 }
 
 drop el1* rl1* ia1* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5*
@@ -3302,2628 +3338,330 @@ sort spid wave
 by spid: carryforward educ*, replace
 label var educ_hs_ind "Education: HS+"
 
-saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta", replace version(12)
+//10/25/18--add in payer and other variables from Jenny's homebound project
+preserve
 
-drop death_* died_12 died_24
+//note--as of now, doesn't include round 7
+forvalues wave=1/6 {
+use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_SP_File.dta", clear
+keep spid cs`wave'dnumchild ho`wave'entrst hh`wave'dhshldnum mo* sc* ha* mc* 
+gen wave=`wave'
+rename cs`wave' n_children
+label var n_ch "Number of living children"
+rename ho`wave' stairs_ind
+label var stairs "Stairs to enter home"
+gen livesalone_ind=hh`wave'dhshldnum==1 if hh`wave'dhshldnum>=0
+label var livesal "Lives alone (only one in household)"
+foreach x in n sta live {
+replace `x'=. if `x'<0
+}
+
+local kidvars n_children stairs_ind livesalone_ind
+gen ind_kids=n_children>=1 if !missing(n_children)
+rename (mo`wave'* sc`wave'* ha`wave'* mc`wave'*) (* * * *)
+rename (eatslfdif toiloft bathoft) (eatdif toilslf bathslf)
+
+foreach x in eat toil insd bed dres bath {
+	gen `x'_jenny=inlist(`x'slf,3,4) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen adlcount=rowtotal(eat_j toil_j insd_j bed_j dres_j bath_j)
+
+//for iadls, reason don't do alone b/c health/function or reported difficulty or went w/o
+gen medswout=0
+foreach x in laun meds shop meal bank {
+	drop `x'
+	gen `x'_jenny=inlist(d`x'reas,1,3) | inlist(`x'dif,3,4) | `x'wout==1
+}
+drop medswout
+egen iadlcount=rowtotal(laun_j meds_j shop_j meal_j bank_j)
+label var eat_j "Some/lot difficulty eating by self, or rarely/never, or had to go w/o"
+label var toil_j "Some/lot difficulty toileting by self, or rarely/never, or had to go w/o"
+label var insd_j "Some/lot difficulty moving inside by self, or rarely/never, or had to go w/o"
+label var bed_j "Some/lot difficulty getting out of bed by self, or rarely/never, or had to go w/o"
+label var dres_j "Some/lot difficulty dressing by self, or rarely/never, or had to go w/o"
+label var bath_j "Some/lot difficulty bathing by self, or rarely/never, or had to go w/o"
+label var laun_j "Some/lot of difficulty with laundry by self, or not by self b/c health, or had to go w/o"
+label var meds_j "Some/lot of difficulty with meds by self, or not by self b/c health, or had to go w/o"
+label var shop_j "Some/lot of difficulty with shopping by self, or not by self b/c health, or had to go w/o"
+label var meal_j "Some/lot of difficulty with hot meals by self, or not by self b/c health, or had to go w/o"
+label var bank_j "Some/lot of difficulty with banking by self, or not by self b/c health, or had to go w/o"
+
+gen device_mobility=inlist(insdwalk,1,2) | inlist(outwalk,1,2) | inlist(insdwl,1,2) ///
+| inlist(outwl,1,2) | inlist(insdsct,1,2) | inlist(outsct,1,2) 
+
+label var device_mobility "Uses a walker, wheelchair, or scooter inside or outside"
+
+keep spid wave *_jenny device_mobility `kidvars' ind_kids adlcount iadlcount
+
+tempfile kids`wave'
+save `kids`wave''
+
+use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_OP_File.dta", clear
+describe op`wave'*pay*
+tab op`wave'*payshlp
+tab op`wave'progmpaid
+
+rename op`wave'sppays op`wave'sppayhlp
+foreach x in sp gov ins oth {
+gen paid_by_`x'=op`wave'`x'payhlp==1 if op`wave'`x'payhlp>0 | op`wave'`x'payhlp<-1
+local lab : var label op`wave'`x'payhlp
+label var paid_by_`x' "`lab'"
+}
+gen paid_by_unk=(paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==0 | ///
+((paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==-4 & op`wave'paid==1)
+label var paid_by_unk "Unknown payer"
+
+
+levelsof op`wave'progmpaid, local(levels)
+foreach l of local levels {
+if `l'>0 {
+gen paid_by_gov_cat_`l'=op`wave'progmpaid==`l' if op`wave'progmpaid!=-1
+local lab : label op`wave'progmpaid `l'
+label var paid_by_gov_cat_`l' "`lab'"
+}
+}
+gen paid_by_gov_cat_unknown=op`wave'progmpaid<-1 if op`wave'progmpaid!=-1
+label var paid_by_gov_cat_unk "Unknown gov't payer (Missing,RF,DK)"
+gen op_insur_help=op`wave'insurhlp==1 
+gen op_out_help=op`wave'outhlp==1
+gen op_money_help=op`wave'moneyhlp==1
+gen op_places_help=op`wave'tkplhlp1==1 | op`wave'tkplhlp2==1
+label var op_insur_help "Help with insurance decisions"
+keep spid opid paid* op_*
+tempfile paid
+save `paid'
+gen wave=`wave'
+merge 1:m spid opid wave using "E:\nhats\data\NHATS Cleaned\op_round_1_7", ///
+keep(match master) gen(opmer)
+merge 1:1 spid opid using `paid', keep(match master) gen(paidm)
+foreach x of varlist paid_by* {
+replace `x'=0 if paid==0
+}
+drop if n_helpers>=1 & opishelp==0
+
+foreach x in sp gov ins unk oth {
+by spid, sort: egen any_paid_by_`x'=max(paid_by_`x')
+local lab :var label paid_by_`x'
+label var any_paid_by_`x' "`lab'"
+}
+rename paid_by_gov_cat_91 paid_by_gov_cat_oth
+foreach x of varlist paid_by_gov_cat* {
+by spid, sort: egen any_`x'=max(`x')
+local lab :var label `x'
+label var any_`x' "`lab'"
+}
+
+
+by spid: egen any_paid_by_medicare=max(paid_by_gov_cat_2)
+label var any_paid_by_medicare "Helper paid by Medicare"
+by spid: egen any_paid_by_medicaid=max(paid_by_gov_cat_1)
+label var any_paid_by_medicaid "Helper paid by Medicaid"
+by spid: egen any_paid_by_state=max(paid_by_gov_cat_3)
+label var any_paid_by_state "Helper paid by state program"
+gen ind_gt20hrs_wk_inf=tot_hrswk_help_i>20 if !missing(tot_hrswk_help_i)
+replace ind_gt20hrs_wk_inf=0 if tot_hrswk_help_i-tot_hrswk_paid_i<20
+gen ind_gt20hrs_wk_paid=tot_hrswk_paid_i>20 if !missing(tot_hrswk_paid_i)
+label var ind_gt20hrs_wk_i "Unpaid help: >20 hrs wk"
+label var ind_gt20hrs_wk_p "Paid help: >20 hrs wk"
+gen ind_inf=n_helpers>=1 if !missing(n_helpers)
+replace ind_inf=0 if n_paid==n_helpers
+label var ind_inf "Any family/unpaid help"
+local pvars ind_inf ind_gt20hrs_wk_inf ind_paid ind_gt20hrs_wk_paid ///
+any_paid_by_sp any_paid_by_gov ///
+any_paid_by_medicaid any_paid_by_medicare any_paid_by_state 
+replace any_paid_by_unk=1 if (any_paid_by_sp+any_paid_by_ins+any_paid_by_oth ///
++any_paid_by_gov==0) & ind_paid==1
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_unk 
+keep spid any_paid* ind_gt* wave
+
+duplicates drop 
+tempfile paid`wave'
+save `paid`wave''
+
+use "E:\nhats\data\NHATS Cleaned\op_round_1_7" if wave==`wave' & opishelp==1, clear
+tokenize spouse daughter son otherfamily paid otherinformal
+drop spouse daughter son paid
+forvalues i=1/6 {
+	gen ``i''=op_relat==`i'
+	by spid: egen ``i''_help_ind=max(``i'')
+	label var ``i''_help "Has ``i'' helper"
+	gen ``i''hrs=op_hrswk_i if ``i''==1
+	by spid: egen tot_``i''hrs=total(``i''hrs) if ``i''_help_ind==1
+	label var tot_``i''hrs "Hours of help/week from ``i'' sources"
+	local ihelp `ihelp' ``i''_help_ind
+	local chelp `chelp' tot_``i''hrs
+}
+label var otherfamily_he "Has other family helper"
+label var otherinformal "Has non-family unpaid helper"
+label var tot_otherf "Hours of help/week from other family sources"
+label var tot_otheri "Hours of help/week from other unpaid sources"
+keep spid `chelp' `ihelp' wave
+duplicates drop
+
+tempfile hours`wave'
+save `hours`wave''
+}
+
+foreach x in hours paid kids {
+	di "`x'"
+	use ``x'1', clear
+	forvalues w=2/6 {
+		di "`w'"
+		append using ``x'`w''
+}
+	di "`x'"
+	tempfile `x'
+	save ``x''
+}
+
+restore
+
+merge 1:1 spid wave using `kids', keep(match master) gen(kidm)
+merge 1:1 spid wave using `hours', keep(match master) gen(hrm)
+merge 1:1 spid wave using `paid', keep(match master) gen(paidm)
+
+label var aveincome "Income"
+label var residence "Type of residence"
+drop sr*raw ht_new pr_ad8* dem_via_proxy speaktosp date_item* date_sum* ///
+preslast presfirst vp* presvp* date_prvp clock_scorer irecall drecall ///
+wordrecall *65 kidm hrm paidm SP_completed deceased va*ser* el5 rl*
+
+foreach x in eat bath toil dres {
+	label var adl_`x'_diff "Has difficulty while `x'ing last month"
+	label var adl_`x'_not "Did not `x' by self in last month"
+}
+
+foreach x in laun shop meal bank meds {
+	label var iadl_`x'_diff "Has difficulty while `x'ing last month"
+	label var iadl_`x'_not "Did not `x' in last month"
+}
+label var iadl_meds_diff "Difficulty taking meds last month"
+label var iadl_meds_not "Didn't take meds or not by self in last month"	
+label var adl_ins_diff "Difficulty moving around inside by self in last month"
+label var adl_ins_no "Didn't move around inside by self in last month"
+label var adl_bed_dif "Difficulty getting out of bed by self in last month"
+label var adl_bed_no "Didn't get out of bed by self in last month"
+label var num_helpers_cat "Categorical number of helpers"
+label var ivw_type "Type of interview"
+label var income_cat "Categorical income"
+label var trfinwgt "Tracker weight"
+label var tr2011wgt "Tracker weight (2011 cohort)"
+label var howgetdoc "Mode of transport to regular doctor"
+label var ivw_day "Day of interview (Assigned to 1 for all)"
+label var ivw_month "Month of interview"
+label var ivw_year "Year of interview"
+label var ivw_date "Date of interview (1st of the month assigned)"
+label var community_dwelling "Community dwelling"
+label var marital_sd "Separated or divorced"
+label var iadl_diff_index "Count of IADL difficulties reported (missing coded as zero)"
+label var iadl_diff_ind "Indicator of any IADL difficulty reported (missing coded as zero)"
+label var adl_diff_index "Count of IADL difficulties reported (missing coded as zero)"
+label var adl_diff_ind "Indicator of any IADL difficulty reported (missing coded as zero)"
+label var nhats_death_day "Sensitive: Day of death from NHATS (Assigned to last day of month)"
+label var nhats_death_month "Sensitive: Month of death from NHATS"
+label var nhats_death_year "Sensitive: Year of death from NHATS"
+label var division "Census division"
+label var region "Region"
+label var ind_kids "Indicator any living children"
+
+rename adlcount adlcount_jenny 
+label var adlcount_j "ADL count: some/lot of difficulty or adverse consequence of unmet need"
+rename iadlcount iadlcount_jenny 
+label var iadlcount_j "IADL count: some/lot of difficulty or adverse consequence of unmet need"
+
+// 11/8/18 Making National Estimates using 2011 population (using original weights) Rds 1-4
+rename anfinwgt old_anfinwgt
+gen anfinwgt=old_anfinwgt
+replace anfinw=old_anfinwgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*2169060/2173979 if inrange(age,80,84) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*1194880/1224397 if inrange(age,85,89) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*524540/463619 if inrange(age,90,150) & female==0 & inrange(wave,1,4)
+
+replace anfinw=old_anfinwgt*6124980/5250466 if inrange(age,65,69) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*4781940/4843444 if inrange(age,70,74) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3886940/3878674 if inrange(age,75,79) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3249940/3215654 if inrange(age,80,84) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*2230480/2257969 if inrange(age,85,89) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*1382160/1329677 if inrange(age,90,150) & female==1 & inrange(wave,1,4)
+
+// Making National Estimates using 2015 population (using original weights) Rds 5-7
+replace anfinw=old_anfinwgt*6855860/5671878 if inrange(age,65,69) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*4941100/5071147 if inrange(age,70,74) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*3367300/3524465 if inrange(age,75,79) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*2257880/2208455 if inrange(age,80,84) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*1307620/1358952 if inrange(age,85,89) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*648680/624319 if inrange(age,90,150) & female==0 & inrange(wave,5,7)
+
+replace anfinw=old_anfinwgt*7601440/6226214 if inrange(age,65,69) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*5695060/6077509 if inrange(age,70,74) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*4182460/4196832 if inrange(age,75,79) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*3165560/3137807 if inrange(age,80,84) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*2253980/2157300 if inrange(age,85,89) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*1577880/1534438 if inrange(age,90,150) & female==1 & inrange(wave,5,7)
+
+// Making National Estimates using 2011 Population (2011 Weights) for Rds 5-7
+rename an2011wgt old_an2011wgt
+gen an2011wgt=old_an2011wgt
+replace an2011wgt=old_an2011wgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,5,7) 
+replace an2011wgt=old_an2011wgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*2169060/2173979 if inrange(age,80,84) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*1194880/1224397 if inrange(age,85,89) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*524540/463619 if inrange(age,90,150) & female==0 & inrange(wave,5,7)
+
+replace an2011wgt=old_an2011wgt*6124980/5250466 if inrange(age,65,69) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*4781940/4843444 if inrange(age,70,74) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3886940/3878674 if inrange(age,75,79) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3249940/3215654 if inrange(age,80,84) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*2230480/2257969 if inrange(age,85,89) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*1382160/1329677 if inrange(age,90,150) & female==1 & inrange(wave,5,7)
+
+label var anfinwgt "Updated Analytic Weights"
+label var an2011wgt "Updated 2011 Analytic Weight for Rds 5+"
+
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta", replace version(12)
 
 gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
 
 foreach x in 12 24 {
 	gen nhats_died_`x'=time2d<=`x' if !lml
+	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
 }
+
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_variable_list.txt", text replace
+describe , fullnames
+log close
+
+drop death_* died_12 died_24
 
 drop time2d 
 
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta_public_sens_only.dta", replace version(12)
 
 
-H="xxx(done step above) Drop the Raw Variables to a Limited Data Set (6a_Drop_Variables)"
-use "E:\nhats\data\NHATS working data\round_1_6_clean_helper_added_old.dta", clear
-//gen n = 1
-//Add a couple of essential variables
-
-
-gen community_dwelling = 0
-
-gen SP_completed = 0
-
-forvalues i = 1/6 {
-
-replace community_dwelling = 1 if (r`i'dresid == 1 | r`i'dresid == 2)
-}
-
-replace SP_completed = 1 if (r1dresid == 1 | r1dresid == 2) 
-
-forvalues i = 2/6 {
-replace SP_completed = 1 if (r`i'dresid == 1 | r`i'dresid == 2 | r`i'dresid == 4)
-
-}
-
-//these ADL variables were missing previously
-gen adl_ins_help = .
-foreach w in 1 2 3 4{
-	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
-	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
-	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
-	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
-}
-
-gen adl_bed_help = .
-foreach w in 1 2 3 4{
-	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
-	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
-	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
-	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
-}
-
-/*
-drop sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score sr_phq2_depressed sr_gad2_score sr_gad2_anxiety
-gen sr_depr_pqq1=.
-gen sr_depr_pqq2=.
-gen sr_anx_gad1=.
-gen sr_anx_gad2=.
-foreach w in 1 2 3{
-	//set up new variables for individual wave variables
-	foreach q in 1 2 3 4{
-	gen temp_hc`w'deprsan`q'=. if inlist(hc`w'depresan`q',-9,-8,-7,-1)
-	replace temp_hc`w'deprsan`q'=hc`w'depresan`q'-1 if inlist(hc`w'depresan`q',1,2,3,4)
-	}
-	//now create clean depression, anxiety variables
-	replace sr_depr_pqq1=temp_hc`w'deprsan1 if wave==`w' //little interest or pleasure in doing things
-	replace sr_depr_pqq2=temp_hc`w'deprsan2 if wave==`w' //felt down/depressed/hopeless
-	replace sr_anx_gad1=temp_hc`w'deprsan3 if wave==`w' //felt nervous or anxious
-	replace sr_anx_gad2=temp_hc`w'deprsan4 if wave==`w' //unable to stop worrying
-
-	foreach q in 1 2 3 4{
-	drop temp_hc`w'deprsan`q'
-	}
-	
-}
-*/
-/*
-la def depr_anx 0"Not at all" 1"Several days" 2"More than half the days" ///
-3"Nearly every day"
-la val sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 depr_anx
-la var sr_depr_pqq1 "How often little interest in doing things?"
-la var sr_depr_pqq2 "How often felt down, depressed, hopeless?"
-la var sr_anx_gad1 "How often felt nervous or anxious?"
-la var sr_anx_gad2 "How often unable to stop worrying?"
-
-foreach v in sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2{
-	tab `v' wave if ivw_type==1,missing
-}
-
-//combined phq-2 score for depression, cutoff 3+=depressed
-gen sr_phq2_score=sr_depr_pqq1+sr_depr_pqq2
-gen sr_phq2_depressed=1 if sr_phq2_score>=3 & sr_phq2_score~=.
-replace sr_phq2_depressed=0 if sr_phq2_score<3 & sr_phq2_score~=.
-la var sr_phq2_score "PHQ-2 combined score 0-6 scale"
-la var sr_phq2_depressed "Depressed per PHQ-2, score=3+"
-tab sr_phq2_score sr_phq2_depressed if ivw_type==1, missing
-replace sr_depr_pqq1 = -7 if hc1depresan1 == -7 | hc2depresan1  == -7 | hc3depresan1  == -7
-replace sr_depr_pqq1 = -8 if hc1depresan1 == -8 | hc2depresan1  == -8 | hc3depresan1  == -8
-replace sr_depr_pqq2 = -7 if hc1depresan2 == -7 | hc2depresan2  == -7 | hc3depresan2  == -7
-replace sr_depr_pqq2 = -8 if hc1depresan2 == -8 | hc2depresan2  == -8 | hc3depresan2  == -8
-replace sr_phq2_score = -7 if sr_depr_pqq1 == -7 & sr_depr_pqq2 == -7
-replace sr_phq2_score = -8 if sr_depr_pqq1 == -8 & sr_depr_pqq2 == -8
-
-//combined gad-2 score for anxiety, cutoff 3+=anxiety
-gen sr_gad2_score=sr_anx_gad1+sr_anx_gad2
-gen sr_gad2_anxiety=1 if sr_gad2_score>=3 & sr_gad2_score~=.
-replace sr_gad2_anxiety=0 if sr_gad2_score<3 & sr_gad2_score~=.
-la var sr_gad2_score "GAD-2 combined score 0-6 scale"
-la var sr_gad2_anxiety "Anxiety per GAD-2, score=3+"
-tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
-tab sr_gad2_anxiety wave, missing
-replace sr_anx_gad1 = -7 if hc1depresan3 == -7 | hc2depresan3  == -7 | hc3depresan3  == -7
-replace sr_anx_gad1 = -8 if hc1depresan3 == -8 | hc2depresan3  == -8 | hc3depresan3  == -8
-replace sr_anx_gad2 = -7 if hc1depresan4 == -7 | hc2depresan4  == -7 | hc3depresan4  == -7
-replace sr_anx_gad2 = -8 if hc1depresan4 == -8 | hc2depresan4  == -8 | hc3depresan4  == -8
-replace sr_gad2_score = -7 if sr_anx_gad1 == -7 & sr_anx_gad2 == -7
-replace sr_gad2_score = -8 if sr_anx_gad1 == -8 & sr_anx_gad2 == -8
-tab sr_gad2_score 
-tab sr_anx_gad1 
-tab sr_anx_gad2
-*/
-//gen education_rf_1 = 0
-//gen education_dk_1 = 0
-//sum n if el1higstschl == -8 & wave==1 & community_dwelling == 1
-//replace education_rf_1 = 
-//sum n if el1higstschl
-
-
-capture drop r1dresid rl1condspanh is1resptype r1dgender r1d2intvrage re1resistrct hc1health hc1disescn1 hc1disescn2 hc1disescn3 hc1disescn4 hc1disescn5 hc1disescn6 hc1disescn7 hc1disescn8 hc1disescn9 hc1disescn10 hc1cancerty1 hc1dementage hc1brokebon1 hc1brokebon2 hc1serdisill hc1hosptstay hc1hosovrnht hc1kneesurg hc1knesrgyr hc1ageknesur hc1hipsurg hc1hipsrgyr hc1agehipsur hc1catarsurg hc1catrsrgyr hc1agecatsur hc1bckspnsur hc1backsrgyr hc1agebcksrg hc1heartsurg hc1hartsrgyr hc1agehrtsrg hc1fllsinmth hc1worryfall hc1worrylimt hc1faleninyr hc1multifall hc1depresan1 hc1depresan2 hc1depresan3 hc1depresan4 hc1aslep30mn hc1trbfalbck hc1sleepmed ht1placedesc hh1martlstat hh1yrendmarr hh1yrsmarliv hh1spgender hh1d2spouage hh1spouseduc hh1spoupchlp hh1livwthspo hh1placekind hh1proxlivsp hh1othlvhere hh1dspouseid hh1dlvngarrg hh1dhshldnum hh1dhshldchd ss1heringaid ss1hearphone ss1convwradi ss1convquiet ss1glasseswr ss1seewellst ss1seestvgls ss1glasscls ss1othvisaid ss1glrednewp ss1probchswl ss1probspeak ss1painbothr ss1painlimts ss1painmedof ss1painwhe1 ss1painwhe2 ss1painwhe3 ss1painwhe4 ss1painwhe5 ss1painwhe6 ss1painwhe7 ss1painwhe8 ss1painwhe9 ss1painwhe10 ss1painwhe11 ss1painwhe12 ss1painwhe13 ss1probbreat ss1prbbrlimt ss1strnglmup ss1uplimtact ss1lwrbodstr ss1lwrbodimp ss1lowenergy ss1loenlmtat ss1prbbalcrd ss1prbbalcnt pc1walk6blks pc1walk3blks pc1up20stair pc1up10stair pc1car20pnds pc1car10pnds pc1geonknees pc1bendover pc1hvobovrhd pc1rechovrhd pc1opnjarwhd pc1grspsmobj cp1memrygood cp1knownspyr cp1chgthink1 cp1chgthink2 cp1chgthink3 cp1chgthink4 cp1chgthink5 cp1chgthink6 cp1chgthink7 cp1chgthink8 cp1memcogpr1 cp1memcogpr2 cp1memcogpr3 cp1memcogpr4 cg1speaktosp cg1quesremem cg1reascano1 cg1reascano2 cg1reascano3 cg1reascano4 cg1reascano5 cg1reascano6 cg1reascano7 cg1reascano8 cg1reascano9 cg1ratememry cg1ofmemprob cg1memcom1yr cg1todaydat1 cg1todaydat2 cg1todaydat3 cg1todaydat4 cg1todaydat5 cg1prewrdrcl cg1dwrdlstnm cg1wrdsrcal1 cg1wrdsrcal2 cg1wrdsrcal3 cg1wrdsrcal4 cg1wrdsrcal5 cg1wrdsrcal6 cg1wrdsrcal7 cg1wrdsrcal8 cg1wrdsrcal9 cg1wrdsrca10 cg1dwrdimmrc cg1dwrdinone cg1dwrdirref cg1wrdsntlst cg1numnotlst cg1probreca1 cg1probreca2 cg1probreca3 cg1probreca4 cg1dclkdraw cg1dclkimgcl cg1atdrwclck cg1presidna1 cg1presidna2 cg1presidna3 cg1presidna4 cg1vpname1 cg1vpname2 cg1vpname3 cg1vpname4 cg1wrdsdcal1 cg1wrdsdcal2 cg1wrdsdcal3 cg1wrdsdcal4 cg1wrdsdcal5 cg1wrdsdcal6 cg1wrdsdcal7 cg1wrdsdcal8 cg1wrdsdcal9 cg1wrdsdca10 cg1dwrddlyrc cg1dwrddnone cg1dwrddrref cg1wrdnotlst cg1numwrdnot cg1dwrd1rcl cg1dwrd2rcl cg1dwrd3rcl cg1dwrd4rcl cg1dwrd5rcl cg1dwrd6rcl cg1dwrd7rcl cg1dwrd8rcl cg1dwrd9rcl cg1dwrd10rcl cg1dwrd1dly cg1dwrd2dly cg1dwrd3dly cg1dwrd4dly cg1dwrd5dly cg1dwrd6dly cg1dwrd7dly cg1dwrd8dly cg1dwrd9dly cg1dwrd10dly mo1outoft mo1outcane mo1outwalkr mo1outwlchr mo1outsctr mo1outhlp mo1outslf mo1outdif mo1outyrgo mo1outwout ha1laun ha1launslf ha1whrmachi1 ha1whrmachi2 ha1whrmachi3 ha1whrmachi4 ha1whrmachi5 ha1whrmachi6 ha1dlaunreas ha1laundif ha1launoft ha1launwout ha1shop ha1shopslf ha1howpaygr1 ha1howpaygr2 ha1howpaygr3 ha1howpaygr4 ha1howpaygr5 ha1howpaygr6 ha1howpaygr7 ha1howgtstr1 ha1howgtstr2 ha1howgtstr3 ha1howgtstr4 ha1howgtstr5 ha1howgtstr6 ha1howgtstr7 ha1howgtstr8 ha1shopcart ha1shoplean ha1dshopreas ha1shopdif ha1shopoft ha1shopwout ha1meal ha1mealslf ha1restamels ha1oftmicrow ha1dmealreas ha1mealdif ha1mealoft ha1mealwout ha1bank ha1bankslf ha1dbankreas ha1bankdif ha1bankoft ha1bankwout ha1money ha1moneyhlp ha1dlaunsfdf ha1dshopsfdf ha1dmealsfdf ha1dbanksfdf ha1dmealwhl ha1dmealtkot sc1eatdev sc1eatdevoft sc1eathlp sc1eatslfoft sc1eatslfdif sc1eatwout sc1showrbat1 sc1showrbat2 sc1showrbat3 sc1prfrshbth sc1scusgrbrs sc1shtubseat sc1bathhlp sc1bathoft sc1bathdif sc1bathyrgo sc1bathwout sc1usvartoi1 sc1usvartoi2 sc1usvartoi3 sc1usvartoi4 sc1toilhlp sc1toiloft sc1toildif sc1toilwout sc1dresoft sc1dresdev sc1dreshlp sc1dresslf sc1dresdif sc1dresyrgo sc1dreswout sc1deatdevi sc1deathelp sc1deatsfdf sc1dbathdevi sc1dbathhelp sc1dbathsfdf sc1dtoildevi sc1dtoilhelp sc1dtoilsfdf sc1ddresdevi sc1ddreshelp sc1ddressfdf mc1meds mc1medstrk mc1medsslf mc1whrgtmed1 mc1whrgtmed2 mc1whrgtmed3 mc1whrgtmed4 mc1howpkupm1 mc1howpkupm2 mc1howpkupm3 mc1medsrem mc1dmedsreas mc1medsdif mc1medsyrgo mc1medsmis mc1havregdoc mc1regdoclyr mc1hwgtregd1 mc1hwgtregd2 mc1hwgtregd3 mc1hwgtregd4 mc1hwgtregd5 mc1hwgtregd6 mc1hwgtregd7 mc1hwgtregd8 mc1hwgtregd9 mc1ansitindr mc1tpersevr1 mc1tpersevr2 mc1tpersevr3 mc1tpersevr4 mc1chginspln mc1anhlpwdec mc1dmedssfdf sd1smokedreg sd1smokesnow sd1numcigday sd1agesrtsmk sd1agelstsmk el1higstschl rl1spkothlan rl1dracehisp ip1covmedcad ip1mgapmedsp ip1cmedicaid ip1covtricar ip1nginsnurs ia1totinc ia1toincim1 ia1toincim2 ia1toincim3 ia1toincim4 ia1toincim5 w1anfinwgt0 w1varstrat w1varunit
-capture drop r2dresid is2resptype r2d2intvrage re2spadrsnew re2intplace re2newstrct re2dadrscorr re2dresistrct re2dcensdiv hc2health hc2disescn1 hc2disescn2 hc2disescn3 hc2disescn4 hc2disescn5 hc2disescn6 hc2disescn7 hc2disescn8 hc2disescn9 hc2disescn10 hc2brokebon1 hc2brokebon2 hc2hosptstay hc2hosovrnht hc2knesrgyr hc2hipsrgyr hc2catrsrgyr hc2backsrgyr hc2hartsrgyr hc2fllsinmth hc2worryfall hc2worrylimt hc2faleninyr hc2multifall hc2depresan1 hc2depresan2 hc2depresan3 hc2depresan4 hc2aslep30mn hc2trbfalbck hc2sleepmed ht2placedesc hh2marchange hh2martlstat hh2yrendmarr hh2newspoprt hh2spgender hh2dspouage hh2dspageall hh2spouseduc hh2spoupchlp hh2livwthspo hh2placekind hh2dmarstat hh2dlvngarrg hh2dhshldnum hh2dhshldchd hh2dspouseid ss2heringaid ss2hearphone ss2convwradi ss2convquiet ss2glasseswr ss2seewellst ss2seestvgls ss2glasscls ss2othvisaid ss2glrednewp ss2probchswl ss2probspeak ss2painbothr ss2painlimts ss2painmedof ss2painwhe1 ss2painwhe2 ss2painwhe3 ss2painwhe4 ss2painwhe5 ss2painwhe6 ss2painwhe7 ss2painwhe8 ss2painwhe9 ss2painwhe10 ss2painwhe11 ss2painwhe12 ss2painwhe13 ss2probbreat ss2prbbrlimt ss2strnglmup ss2uplimtact ss2lwrbodstr ss2lwrbodimp ss2lowenergy ss2loenlmtat ss2prbbalcrd ss2prbbalcnt pc2walk6blks pc2walk3blks pc2up20stair pc2up10stair pc2car20pnds pc2car10pnds pc2geonknees pc2bendover pc2hvobovrhd pc2rechovrhd pc2opnjarwhd pc2grspsmobj cp2memrygood cp2knownspyr cp2chgthink1 cp2chgthink2 cp2chgthink3 cp2chgthink4 cp2chgthink5 cp2chgthink6 cp2chgthink7 cp2chgthink8 cp2memcogpr1 cp2memcogpr2 cp2memcogpr3 cp2memcogpr4 cp2dad8dem cg2speaktosp cg2quesremem cg2reascano1 cg2reascano2 cg2reascano3 cg2reascano4 cg2reascano5 cg2reascano6 cg2reascano7 cg2reascano8 cg2reascano9 cg2ratememry cg2ofmemprob cg2memcom1yr cg2todaydat1 cg2todaydat2 cg2todaydat3 cg2todaydat5 cg2todaydat4 cg2todaydat6 cg2prewrdrcl cg2dwrdlstnm cg2wrdsrcal1 cg2wrdsrcal2 cg2wrdsrcal3 cg2wrdsrcal4 cg2wrdsrcal5 cg2wrdsrcal6 cg2wrdsrcal7 cg2wrdsrcal8 cg2wrdsrcal9 cg2wrdsrca10 cg2dwrdimmrc cg2dwrdinone cg2dwrdirref cg2wrdsntlst cg2numnotlst cg2probreca1 cg2probreca2 cg2probreca3 cg2probreca4 cg2probreca5 cg2dclkdraw cg2dclkimgcl cg2atdrwclck cg2presidna1 cg2presidna2 cg2presidna3 cg2presidna4 cg2vpname1 cg2vpname2 cg2vpname3 cg2vpname4 cg2wrdsdcal1 cg2wrdsdcal2 cg2wrdsdcal3 cg2wrdsdcal4 cg2wrdsdcal5 cg2wrdsdcal6 cg2wrdsdcal7 cg2wrdsdcal8 cg2wrdsdcal9 cg2wrdsdca10 cg2dwrddlyrc cg2dwrddnone cg2dwrddrref cg2wrdnotlst cg2numwrdnot cg2dwrd1rcl cg2dwrd2rcl cg2dwrd3rcl cg2dwrd4rcl cg2dwrd5rcl cg2dwrd6rcl cg2dwrd7rcl cg2dwrd8rcl cg2dwrd9rcl cg2dwrd10rcl cg2dwrd1dly cg2dwrd2dly cg2dwrd3dly cg2dwrd4dly cg2dwrd5dly cg2dwrd6dly cg2dwrd7dly cg2dwrd8dly cg2dwrd9dly cg2dwrd10dly mo2outoft mo2outcane mo2outwalkr mo2outwlchr mo2outsctr mo2outhlp mo2outslf mo2outdif mo2outyrgo mo2outwout ha2laun ha2launslf ha2whrmachi1 ha2whrmachi2 ha2whrmachi3 ha2whrmachi4 ha2whrmachi5 ha2whrmachi6 ha2dlaunreas ha2laundif ha2launoft ha2launwout ha2shop ha2shopslf ha2howpaygr1 ha2howpaygr2 ha2howpaygr3 ha2howpaygr4 ha2howpaygr5 ha2howpaygr6 ha2howpaygr7 ha2howgtstr1 ha2howgtstr2 ha2howgtstr3 ha2howgtstr4 ha2howgtstr5 ha2howgtstr6 ha2howgtstr7 ha2howgtstr8 ha2shopcart ha2shoplean ha2dshopreas ha2shopdif ha2shopoft ha2shopwout ha2meal ha2mealslf ha2restamels ha2oftmicrow ha2dmealreas ha2mealdif ha2mealoft ha2mealwout ha2bank ha2bankslf ha2dbankreas ha2bankdif ha2bankoft ha2bankwout ha2money ha2moneyhlp ha2dlaunsfdf ha2dshopsfdf ha2dmealsfdf ha2dbanksfdf ha2dmealwhl ha2dmealtkot sc2eatdev sc2eatdevoft sc2eathlp sc2eatslfoft sc2eatslfdif sc2eatwout sc2showrbat1 sc2showrbat2 sc2showrbat3 sc2bdevdec sc2prfrshbth sc2scusgrbrs sc2shtubseat sc2bathhlp sc2bathoft sc2bathdif sc2bathyrgo sc2bathwout sc2usvartoi1 sc2usvartoi2 sc2usvartoi3 sc2usvartoi4 sc2toilhlp sc2toiloft sc2toildif sc2toilwout sc2dresoft sc2dresdev sc2dreshlp sc2dresslf sc2dresdif sc2dresyrgo sc2dreswout sc2deatdevi sc2deathelp sc2deatsfdf sc2dbathdevi sc2dbathhelp sc2dbathsfdf sc2dtoildevi sc2dtoilhelp sc2dtoilsfdf sc2ddresdevi sc2ddreshelp sc2ddressfdf mc2meds mc2medstrk mc2medsslf mc2whrgtmed1 mc2whrgtmed2 mc2whrgtmed3 mc2whrgtmed4 mc2howpkupm1 mc2howpkupm2 mc2howpkupm3 mc2medsrem mc2dmedsreas mc2medsdif mc2medsyrgo mc2medsmis mc2havregdoc mc2regdoclyr mc2hwgtregd1 mc2hwgtregd2 mc2hwgtregd3 mc2hwgtregd4 mc2hwgtregd5 mc2hwgtregd6 mc2hwgtregd7 mc2hwgtregd8 mc2hwgtregd9 mc2ansitindr mc2tpersevr1 mc2tpersevr2 mc2tpersevr3 mc2tpersevr4 mc2chginspln mc2anhlpwdec mc2dmedssfdf sd2smokesnow sd2numcigday ip2covmedcad ip2mgapmedsp ip2cmedicaid ip2covtricar ip2nginslast ip2nginsnurs w2anfinwgt0 w2varstrat w2varunit r3dresid is3resptype r3d2intvrage re3spadrsnew re3intplace re3newstrct re3dresistrct re3dcensdiv hc3health hc3disescn1 hc3disescn2 hc3disescn3 hc3disescn4 hc3disescn5 hc3disescn6 hc3disescn7 hc3disescn8 hc3disescn9 hc3disescn10 hc3brokebon1 hc3brokebon2 hc3hosptstay hc3hosovrnht hc3knesrgyr hc3hipsrgyr hc3catrsrgyr hc3backsrgyr hc3hartsrgyr hc3fllsinmth hc3worryfall hc3worrylimt hc3faleninyr hc3multifall hc3depresan1 hc3depresan2 hc3depresan3 hc3depresan4 hc3aslep30mn hc3trbfalbck hc3sleepmed ht3placedesc hh3marchange hh3martlstat hh3yrendmarr hh3newspoprt hh3spgender hh3dspouage hh3dspageall hh3spouseduc hh3spoupchlp hh3livwthspo hh3placekind hh3dmarstat hh3dlvngarrg hh3dhshldnum hh3dhshldchd hh3dspouseid ss3heringaid ss3hearphone ss3convwradi ss3convquiet ss3glasseswr ss3seewellst ss3seestvgls ss3glasscls ss3othvisaid ss3glrednewp ss3probchswl ss3probspeak ss3painbothr ss3painlimts ss3painmedof ss3painwhe1 ss3painwhe2 ss3painwhe3 ss3painwhe4 ss3painwhe5 ss3painwhe6 ss3painwhe7 ss3painwhe8 ss3painwhe9 ss3painwhe10 ss3painwhe11 ss3painwhe12 ss3painwhe13 ss3probbreat ss3prbbrlimt ss3strnglmup ss3uplimtact ss3lwrbodstr ss3lwrbodimp ss3lowenergy ss3loenlmtat ss3prbbalcrd ss3prbbalcnt pc3walk6blks pc3walk3blks pc3up20stair pc3up10stair pc3car20pnds pc3car10pnds pc3geonknees pc3bendover pc3hvobovrhd pc3rechovrhd pc3opnjarwhd pc3grspsmobj cp3memrygood cp3knownspyr cp3chgthink1 cp3chgthink2 cp3chgthink3 cp3chgthink4 cp3chgthink5 cp3chgthink6 cp3chgthink7 cp3chgthink8 cp3memcogpr1 cp3memcogpr2 cp3memcogpr3 cp3memcogpr4 cp3dad8dem cg3speaktosp cg3quesremem cg3reascano1 cg3reascano2 cg3reascano3 cg3reascano4 cg3reascano5 cg3reascano6 cg3reascano7 cg3reascano8 cg3reascano9 cg3ratememry cg3ofmemprob cg3memcom1yr cg3todaydat1 cg3todaydat2 cg3todaydat3 cg3todaydat5 cg3todaydat4 cg3todaydat6 cg3prewrdrcl cg3dwrdlstnm cg3wrdsrcal1 cg3wrdsrcal2 cg3wrdsrcal3 cg3wrdsrcal4 cg3wrdsrcal5 cg3wrdsrcal6 cg3wrdsrcal7 cg3wrdsrcal8 cg3wrdsrcal9 cg3wrdsrca10 cg3dwrdimmrc cg3dwrdinone cg3dwrdirref cg3wrdsntlst cg3numnotlst cg3probreca1 cg3probreca2 cg3probreca3 cg3probreca4 cg3probreca5 cg3dclkdraw cg3dclkimgcl cg3atdrwclck cg3presidna1 cg3presidna2 cg3presidna3 cg3presidna4 cg3vpname1 cg3vpname2 cg3vpname3 cg3vpname4 cg3wrdsdcal1 cg3wrdsdcal2 cg3wrdsdcal3 cg3wrdsdcal4 cg3wrdsdcal5 cg3wrdsdcal6 cg3wrdsdcal7 cg3wrdsdcal8 cg3wrdsdcal9 cg3wrdsdca10 cg3dwrddlyrc cg3dwrddnone cg3dwrddrref cg3wrdnotlst cg3numwrdnot cg3dwrd1rcl cg3dwrd2rcl cg3dwrd3rcl cg3dwrd4rcl cg3dwrd5rcl cg3dwrd6rcl cg3dwrd7rcl cg3dwrd8rcl cg3dwrd9rcl cg3dwrd10rcl cg3dwrd1dly cg3dwrd2dly cg3dwrd3dly cg3dwrd4dly cg3dwrd5dly cg3dwrd6dly cg3dwrd7dly cg3dwrd8dly cg3dwrd9dly cg3dwrd10dly mo3outoft mo3outcane mo3outwalkr mo3outwlchr mo3outsctr mo3outhlp mo3outslf mo3outdif mo3outyrgo mo3outwout ha3laun ha3launslf ha3whrmachi1 ha3whrmachi2 ha3whrmachi3 ha3whrmachi4 ha3whrmachi5 ha3whrmachi6 ha3dlaunreas ha3laundif ha3launoft ha3launwout ha3shop ha3shopslf ha3howpaygr1 ha3howpaygr2 ha3howpaygr3 ha3howpaygr4 ha3howpaygr5 ha3howpaygr6 ha3howpaygr7 ha3howgtstr1 ha3howgtstr2 ha3howgtstr3 ha3howgtstr4 ha3howgtstr5 ha3howgtstr6 ha3howgtstr7 ha3howgtstr8 ha3shopcart ha3shoplean ha3dshopreas ha3shopdif ha3shopoft ha3shopwout ha3meal ha3mealslf ha3restamels ha3mealwheel ha3oftmicrow ha3dmealreas ha3mealdif ha3mealoft ha3mealwout ha3bank ha3bankslf ha3dbankreas ha3bankdif ha3bankoft ha3bankwout ha3money ha3moneyhlp ha3dlaunsfdf ha3dshopsfdf ha3dmealsfdf ha3dbanksfdf ha3dmealwhl ha3dmealtkot sc3eatdev sc3eatdevoft sc3eathlp sc3eatslfoft sc3eatslfdif sc3eatwout sc3showrbat1 sc3showrbat2 sc3showrbat3 sc3bdevdec sc3prfrshbth sc3scusgrbrs sc3shtubseat sc3bathhlp sc3bathoft sc3bathdif sc3bathyrgo sc3bathwout sc3usvartoi1 sc3usvartoi2 sc3usvartoi3 sc3usvartoi4 sc3toilhlp sc3toiloft sc3toildif sc3toilwout sc3dresoft sc3dresdev sc3dreshlp sc3dresslf sc3dresdif sc3dresyrgo sc3dreswout sc3deatdevi sc3deathelp sc3deatsfdf sc3dbathdevi sc3dbathhelp sc3dbathsfdf sc3dtoildevi sc3dtoilhelp sc3dtoilsfdf sc3ddresdevi sc3ddreshelp sc3ddressfdf mc3meds mc3medstrk mc3medsslf mc3whrgtmed1 mc3whrgtmed2 mc3whrgtmed3 mc3whrgtmed4 mc3howpkupm1 mc3howpkupm2 mc3howpkupm3 mc3medsrem mc3dmedsreas mc3medsdif mc3medsyrgo mc3medsmis mc3havregdoc mc3regdoclyr mc3hwgtregd1 mc3hwgtregd2 mc3hwgtregd3 mc3hwgtregd4 mc3hwgtregd5 mc3hwgtregd6 mc3hwgtregd7 mc3hwgtregd8 mc3hwgtregd9 mc3ansitindr mc3tpersevr1 mc3tpersevr2 mc3tpersevr3 mc3tpersevr4 mc3chginspln mc3anhlpwdec mc3dmedssfdf sd3smokesnow sd3numcigday ip3covmedcad ip3mgapmedsp ip3cmedicaid ip3covtricar ip3nginslast ip3nginsnurs w3anfinwgt0 w3varstrat w3varunit r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage rl1primarace rl1hisplatno r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied yearsample r3status r3spstat r3spstatdtyr r2status r2spstat r2spstatdtyr r1status r1spstat r1spstatdtyr
-capture drop  r4dresid is4resptype r4d2intvrage re4spadrsnew re4intplace re4newstrct re4dresistrct re4dcensdiv hc4health hc4disescn1 hc4disescn2 hc4disescn3 hc4disescn4 hc4disescn5 hc4disescn6 hc4disescn7 hc4disescn8 hc4disescn9 hc4disescn10 hc4cancerty1 hc4brokebon1 hc4brokebon2 hc4hosptstay hc4hosovrnht hc4knesrgyr hc4hipsrgyr hc4catrsrgyr hc4backsrgyr hc4hartsrgyr hc4fllsinmth hc4worryfall hc4worrylimt hc4faleninyr hc4multifall hc4depresan1 hc4depresan2 hc4depresan3 hc4depresan4 hc4aslep30mn hc4trbfalbck hc4sleepmed ht4placedesc hh4marchange hh4martlstat hh4yrendmarr hh4newspoprt hh4spgender hh4dspouage hh4dspageall hh4spouseduc hh4spoupchlp hh4livwthspo hh4placekind hh4dmarstat hh4dlvngarrg hh4dhshldnum hh4dhshldchd hh4dspouseid ss4heringaid ss4hearphone ss4convwradi ss4convquiet ss4glasseswr ss4seewellst ss4seestvgls ss4glasscls ss4othvisaid ss4glrednewp ss4probchswl ss4probspeak ss4painbothr ss4painlimts ss4painmedof ss4painwhe1 ss4painwhe2 ss4painwhe3 ss4painwhe4 ss4painwhe5 ss4painwhe6 ss4painwhe7 ss4painwhe8 ss4painwhe9 ss4painwhe10 ss4painwhe11 ss4painwhe12 ss4painwhe13 ss4probbreat ss4prbbrlimt ss4strnglmup ss4uplimtact ss4lwrbodstr ss4lwrbodimp ss4lowenergy ss4loenlmtat ss4prbbalcrd ss4prbbalcnt pc4walk6blks pc4walk3blks pc4up20stair pc4up10stair pc4car20pnds pc4car10pnds pc4geonknees pc4bendover pc4hvobovrhd pc4rechovrhd pc4opnjarwhd pc4grspsmobj cp4memrygood cp4knownspyr cp4chgthink1 cp4chgthink2 cp4chgthink3 cp4chgthink4 cp4chgthink5 cp4chgthink6 cp4chgthink7 cp4chgthink8 cp4memcogpr1 cp4memcogpr2 cp4memcogpr3 cp4memcogpr4 cp4dad8dem cg4speaktosp cg4quesremem cg4reascano1 cg4reascano2 cg4reascano3 cg4reascano4 cg4reascano5 cg4reascano6 cg4reascano7 cg4reascano8 cg4reascano9 cg4ratememry cg4ofmemprob cg4memcom1yr cg4todaydat1 cg4todaydat2 cg4todaydat3 cg4todaydat4 cg4todaydat5 cg4todaydat6 cg4prewrdrcl cg4dwrdlstnm cg4wrdsrcal1 cg4wrdsrcal2 cg4wrdsrcal3 cg4wrdsrcal4 cg4wrdsrcal5 cg4wrdsrcal6 cg4wrdsrcal7 cg4wrdsrcal8 cg4wrdsrcal9 cg4wrdsrcal10 cg4dwrdimmrc cg4dwrdinone cg4dwrdirref cg4wrdsntlst cg4numnotlst cg4probreca1 cg4probreca2 cg4probreca3 cg4probreca4 cg4probreca5 cg4dclkdraw cg4dclkimgcl cg4atdrwclck cg4presidna1 cg4presidna2 cg4presidna3 cg4presidna4 cg4vpname1 cg4vpname2 cg4vpname3 cg4vpname4 cg4wrdsdcal1 cg4wrdsdcal2 cg4wrdsdcal3 cg4wrdsdcal4 cg4wrdsdcal5 cg4wrdsdcal6 cg4wrdsdcal7 cg4wrdsdcal8 cg4wrdsdcal9 cg4wrdsdca10 cg4dwrddlyrc cg4dwrddnone cg4dwrddrref cg4wrdnotlst cg4numwrdnot cg4dwrd1rcl cg4dwrd2rcl cg4dwrd3rcl cg4dwrd4rcl cg4dwrd5rcl cg4dwrd6rcl cg4dwrd7rcl cg4dwrd8rcl cg4dwrd9rcl cg4dwrd10rcl cg4dwrd1dly cg4dwrd2dly cg4dwrd3dly cg4dwrd4dly cg4dwrd5dly cg4dwrd6dly cg4dwrd7dly cg4dwrd8dly cg4dwrd9dly cg4dwrd10dly mo4outoft mo4outcane mo4outwalkr mo4outwlchr mo4outsctr mo4outhlp mo4outslf mo4outdif mo4outyrgo mo4outwout ha4laun ha4launslf ha4whrmachi1 ha4whrmachi2 ha4whrmachi3 ha4whrmachi4 ha4whrmachi5 ha4whrmachi6 ha4dlaunreas ha4laundif ha4launoft ha4launwout ha4shop ha4shopslf ha4howpaygr1 ha4howpaygr2 ha4howpaygr3 ha4howpaygr4 ha4howpaygr5 ha4howpaygr6 ha4howpaygr7 ha4howgtstr1 ha4howgtstr2 ha4howgtstr3 ha4howgtstr4 ha4howgtstr5 ha4howgtstr6 ha4howgtstr7 ha4howgtstr8 ha4shopcart ha4shoplean ha4dshopreas ha4shopdif ha4shopoft ha4shopwout ha4meal ha4mealslf ha4restamels ha4mealwheel ha4oftmicrow ha4dmealreas ha4mealdif ha4mealoft ha4mealwout ha4bank ha4bankslf ha4dbankreas ha4bankdif ha4bankoft ha4bankwout ha4money ha4moneyhlp ha4dlaunsfdf ha4dshopsfdf ha4dmealsfdf ha4dbanksfdf ha4dmealwhl ha4dmealtkot sc4eatdev sc4eatdevoft sc4eathlp sc4eatslfoft sc4eatslfdif sc4eatwout sc4showrbat1 sc4showrbat2 sc4showrbat3 sc4bdevdec sc4prfrshbth sc4scusgrbrs sc4shtubseat sc4bathhlp sc4bathoft sc4bathdif sc4bathyrgo sc4bathwout sc4usvartoi1 sc4usvartoi2 sc4usvartoi3 sc4usvartoi4 sc4toilhlp sc4toiloft sc4toildif sc4toilwout sc4dresoft sc4dresdev sc4dreshlp sc4dresslf sc4dresdif sc4dresyrgo sc4dreswout sc4deatdevi sc4deathelp sc4deatsfdf sc4dbathdevi sc4dbathhelp sc4dbathsfdf sc4dtoildevi sc4dtoilhelp sc4dtoilsfdf sc4ddresdevi sc4ddreshelp sc4ddressfdf mc4meds mc4medstrk mc4medsslf mc4whrgtmed1 mc4whrgtmed2 mc4whrgtmed3 mc4whrgtmed4 mc4howpkupm1 mc4howpkupm2 mc4howpkupm3 mc4medsrem mc4dmedsreas mc4medsdif mc4medsyrgo mc4medsmis mc4havregdoc mc4regdoclyr mc4hwgtregd1 mc4hwgtregd2 mc4hwgtregd3 mc4hwgtregd4 mc4hwgtregd5 mc4hwgtregd6 mc4hwgtregd7 mc4hwgtregd8 mc4hwgtregd9 mc4ansitindr mc4tpersevr1 mc4tpersevr2 mc4tpersevr3 mc4tpersevr4 mc4chginspln mc4anhlpwdec mc4dmedssfdf sd4smokesnow sd4numcigday ip4covmedcad ip4mgapmedsp ip4cmedicaid ip4covtricar ip4nginslast ip4nginsnurs w4anfinwgt0 w4varstrat w4varunit r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied r4dintvwrage pd4mthdied pd4yrdied r4ddeathage hh4dspousage r4status r4spstat r4spstatdtyr
-capture drop  mo1oftgoarea mo1oflvslepr mo1insdcane mo1insdwalkr mo1insdwlchr mo1insdsctr mo1oftholdwl mo1insdhlp mo1insdslf mo1insddif mo1insdyrgo mo1insdwout mo1beddev mo1bedhlp mo1bedslf mo1beddif mo1bedwout mo1doutsfdf mo1doutdevi mo1douthelp mo1dinsdsfdf mo1dinsddevi mo1dinsdhelp mo1dbedsfdf mo1dbeddevi mo1dbedhelp mo2oftgoarea mo2oflvslepr mo2insdcane mo2insdwalkr mo2insdwlchr mo2insdsctr mo2oftholdwl mo2insdhlp mo2insdslf mo2insddif mo2insdyrgo mo2insdwout mo2beddev mo2bedhlp mo2bedslf mo2beddif mo2bedwout mo2doutsfdf mo2doutdevi mo2douthelp mo2dinsdsfdf mo2dinsddevi mo2dinsdhelp mo2dbedsfdf mo2dbeddevi mo2dbedhelp mo3oftgoarea mo3oflvslepr mo3insdcane mo3insdwalkr mo3insdwlchr mo3insdsctr mo3oftholdwl mo3insdhlp mo3insdslf mo3insddif mo3insdyrgo mo3insdwout mo3beddev mo3bedhlp mo3bedslf mo3beddif mo3bedwout mo3doutsfdf mo3doutdevi mo3douthelp mo3dinsdsfdf mo3dinsddevi mo3dinsdhelp mo3dbedsfdf mo3dbeddevi mo3dbedhelp mo4oftgoarea mo4oflvslepr mo4insdcane mo4insdwalkr mo4insdwlchr mo4insdsctr mo4oftholdwl mo4insdhlp mo4insdslf mo4insddif mo4insdyrgo mo4insdwout mo4beddev mo4bedhlp mo4bedslf mo4beddif mo4bedwout mo4doutsfdf mo4doutdevi mo4douthelp mo4dinsdsfdf mo4dinsddevi mo4dinsdhelp mo4dbedsfdf mo4dbeddevi mo4dbedhelp
-saveold "E:\nhats\data\NHATS working data\round_1_5_clean_helper_added_old_trunc1.dta", replace
-
-
-H="Categorizing a cetain set of Variables (6b_Categorizing_Variables_1)"
-use "E:\nhats\data\NHATS working data\round_1_5_clean_helper_added_old_trunc1.dta", clear
-
- 
- tab dem_3_cat, missing
- replace dem_3_cat = . if dem_3_cat == -1
- tab dem_3_cat, gen(dem_cat)
- label var dem_cat1 "Dementia: Probable"
- label var dem_cat2 "Dementia: Possible"
- label var dem_cat3 "Dementia: No Dementia"
-
- tab maritalstat
-
- replace maritalstat = . if maritalstat == -9
-  tab maritalstat, gen(marital)
- label var marital1 "Marital Stat: Married"
- label var marital2 "Marital Stat: Live w/Partner"
- label var marital3 "Marital Stat: Separated"
- label var marital4 "Marital Stat: Divorced"
- label var marital5 "Marital Stat: Widowed"
- label var marital6 "Marital Stat: Never Married"
- gen spouse = 1 if maritalstat == 1 | maritalstat == 2
- replace spouse = 0 if maritalstat == 3 | maritalstat == 4 | maritalstat==5 | maritalstat == 6
- replace spouse = -7 if maritalstat == -7
- replace spouse = -8 if maritalstat == -8
- tab spouse
- label var spouse "Marital Stat: Married or Live w/Partner"
-   
- tab income_cat, gen(income_cat)
- label var income_cat1 "Income: <15,000"
- label var income_cat2 "Income: 15-29,999"
- label var income_cat3 "Income: 30-59,999"
- label var income_cat4 "Income: >60,000"
- 
- gen race_cat_1 = race_cat
- replace race_cat_1 = . if race_cat < 0
- tab race_cat_1, gen(race_cat)
- label var race_cat1 "Race: White (Non-His)"
- replace race_cat1 = -7 if race_cat == -7
- replace race_cat1 = -8 if race_cat == -8
- label var race_cat2 "Race: Black (Non-His)"
- replace race_cat2 = -7 if race_cat == -7
- replace race_cat2 = -8 if race_cat == -8
- label var race_cat3 "Race: Other"
- replace race_cat3 = -7 if race_cat == -7
- replace race_cat3 = -8 if race_cat == -8
- label var race_cat4 "Race: Hispanic"
- replace race_cat4 = -7 if race_cat == -7
- replace race_cat4 = -8 if race_cat == -8
- 
- tab education
- gen education_1 = education
- replace education_1 = . if education < 0
- tab education_1, gen(education_cat)
-  foreach vars in education_cat{ 
-	 foreach w in 1 2 3 4{
-	 replace `vars'`w' = -7 if education == -7
-	 replace `vars'`w' = -8 if education == -8
-	 }
- }
- label var education_cat1 "Education: < HS"
- label var education_cat2 "Education: High School"
- label var education_cat3 "Education: Some College"
- label var education_cat4 "Education: >= Bachelors"
- 
- gen srh_1 = srh
- replace srh_1 = . if srh < 0
- tab srh_1, gen(srh_cat)
- foreach vars in srh_cat{ 
-	 foreach w in 1 2 3 4 5{
-	 replace `vars'`w' = -7 if srh == -7
-	 replace `vars'`w' = -8 if srh == -8
-	 }
-}
- label var srh_cat1 "SRH: Excellent"
- label var srh_cat2 "SRH: Very Good"
- label var srh_cat3 "SRH: Good"
- label var srh_cat4 "SRH: Fair"
- label var srh_cat5 "SRH: Poor"
- 
- gen memory_1 = memory
- replace memory_1 = . if memory <0
- tab memory_1, gen(memory_cat)
- foreach vars in memory_cat{ 
-	 foreach w in 1 2 3 4 5 {
-	 replace `vars'`w' = -7 if memory == -7
-	 replace `vars'`w' = -8 if memory == -8
-	 }
-}
- label var memory_cat1 "Memory: Excellent"
- label var memory_cat2 "Memory: Very Good"
- label var memory_cat3 "Memory: Good"
- label var memory_cat4 "Memory: Fair"
- label var memory_cat5 "Memory: Poor"
- 
- 
-
- saveold "E:\nhats\data\NHATS working data\round_1_5_clean_helper_added_old_trunc_lab1.dta", replace
-
-
-H="Creating Table 1. Variables Created Thus Far (6c_table1_update(11_24_15))"
-use "E:\nhats\data\NHATS working data\round_1_4_clean_helper_added_old_trunc_lab1.dta" ,clear
-
-gen n=1
-
-local democvars age 
-local demoivars female community_dwelling race_cat1 race_cat2 race_cat3 race_cat4 proxy_ivw spouse education_cat1 education_cat2 education_cat3 education_cat4 ///
-income_cat1 income_cat2 income_cat3 income_cat4 medicaid medigap mc_partd tricare private_ltc otherlang ///
-srh_cat1 srh_cat2 srh_cat3 srh_cat4 srh_cat5 sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
-sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever dem_cat1 dem_cat2 dem_cat3 
-local democvars1 sr_gad2_score sr_phq2_score
-local demoivars1 sr_gad2_anxiety sr_phq2_depressed  ///
-memory_cat1 memory_cat2 memory_cat3 memory_cat4 memory_cat5 fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help adl_ins_help adl_bed_help iadl_laun_help iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help ///
-reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind
-local democvars2
-
-label var otherlang "Speak a Language other than English?"
-label var s "Has help while getting around home"
-label var adl_bed_help "Has help getting out of bed"
-
-
-foreach x of local demoivars {
-	tab `x',m
-	
-}
-
-gen prob_dementia=dem_3_cat==1 if dem_3_cat!=.
-
-local rn : word count `democvars' `demoivars' `democvars1' `demoivars1' `democvars2'  n
-
-local r=1 
-local c=1
-
-mat demo=J(`rn',12,.)
-
-foreach i in 4  {
-	foreach x of local democvars {
-		sum `x' if wave==`i' & `x' >= 0
-		mat demo[`r',`c']=r(mean)
-		mat demo[`r',`c'+1]=r(sd)
-		sum n if `x'==. & wave==`i'
-		mat demo[`r',`c'+2]=r(N)
-		sum n if `x'==. & wave==`i' & SP_completed == 1
-		mat demo[`r',`c'+3]=r(N)
-		sum n if `x'==-7 & wave==`i'
-		mat demo[`r',`c'+4]=r(N)
-		sum n if `x'==-8 & wave==`i'
-		mat demo[`r',`c'+5]=r(N)
-		local r=`r'+1
-}
-	foreach x of local demoivars {
-		sum `x' if wave==`i' & `x' >= 0
-		mat demo[`r',`c']=r(N)*r(mean)
-		mat demo[`r',`c'+1]=r(mean)*100
-		sum n if `x'==. & wave==`i'
-		mat demo[`r',`c'+2]=r(N)
-		sum n if `x'==. & wave==`i' & SP_completed == 1
-		mat demo[`r',`c'+3]=r(N)
-		sum n if `x'==-7 & wave==`i'
-		mat demo[`r',`c'+4]=r(N)
-		sum n if `x'==-8 & wave==`i'
-		mat demo[`r',`c'+5]=r(N)		
-		local r=`r'+1
-}
-	foreach x of local democvars1 {
-		sum `x' if wave==`i' & `x' >= 0
-		mat demo[`r',`c']=r(mean)
-		mat demo[`r',`c'+1]=r(sd)
-		sum n if `x'==. & wave==`i'
-		mat demo[`r',`c'+2]=r(N)
-		sum n if `x'==. & wave==`i' & SP_completed == 1
-		mat demo[`r',`c'+3]=r(N)
-		sum n if `x'==-7 & wave==`i'
-		mat demo[`r',`c'+4]=r(N)
-		sum n if `x'==-8 & wave==`i'
-		mat demo[`r',`c'+5]=r(N)
-		local r=`r'+1
-}
-	foreach x of local demoivars1 {
-		sum `x' if wave==`i' & `x' >= 0
-		mat demo[`r',`c']=r(N)*r(mean)
-		mat demo[`r',`c'+1]=r(mean)*100
-		sum n if `x'==. & wave==`i'
-		mat demo[`r',`c'+2]=r(N)
-		sum n if `x'==. & wave==`i' & SP_completed == 1
-		mat demo[`r',`c'+3]=r(N)
-		sum n if `x'==-7 & wave==`i'
-		mat demo[`r',`c'+4]=r(N)
-		sum n if `x'==-8 & wave==`i'
-		mat demo[`r',`c'+5]=r(N)
-		local r=`r'+1
-}
-	foreach x of local democvars2 {
-		sum `x' if wave==`i' & `x' >= 0
-		mat demo[`r',`c']=r(mean)
-		mat demo[`r',`c'+1]=r(sd)
-		sum n if `x'==. & wave==`i'
-		mat demo[`r',`c'+2]=r(N)
-		sum n if `x'==. & wave==`i' & SP_completed == 1
-		mat demo[`r',`c'+3]=r(N)
-		sum n if `x'==-7 & wave==`i'
-		mat demo[`r',`c'+4]=r(N)
-		sum n if `x'==-8 & wave==`i'
-		mat demo[`r',`c'+5]=r(N)		
-		local r=`r'+1
-}
-
-	sum n if wave == `i'
-	mat demo[`r',`c']=r(N)
-	label var n "N"
-	local r=1
-}
-
-mat rownames demo=`democvars' `demoivars' `democvars1' `demoivars1' `democvars2'  n
-
-frmttable using "E:\nhats\nhats_wave4_missing_new.rtf", statmat(demo) varlabels ctitles( "" "Mean/N, W1" "SD/%" "N Missing" "Missing Not Community" ///
-"Refused" "Don't Know" ) sdec(0,2,0,0,0,0) replace
-
-
-H="NSOC Data Cleaning Part 1 (1_nsoc_nhats_setup1)"
-//get caregivers dataset from nsoc 
-//note: this links in the cleaned version of the Round 1 SP interviews
-//created in the file "4_r12_cleaning_3.do" file
-
-
-capture log close
-clear all
-set more off
-
-logs E:\nhats\nhats_code\NHATS data setup\logs
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'1_nsoc_nhats_setup1.txt, text replace
-
-local r1raw E:\nhats\data\NHATS Public\round_1\
-local r2raw E:\nhats\data\NHATS Public\round_2\
-local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
-local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-/*
-local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
-local work /Users/rebeccagorges/Documents/data/nhats/working/
-local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-*/
-cd `work'
-
-//get just round 1 sp cleaned interviews, save ds for merging in later
-//note need to update this with final clean dataset name
-use `work'round_1_3_clean_helper_added.dta if wave==1
-save `work'round1_only_clean.dta, replace
-
-//spid is the nhats spid, so if more than one caregiver, more than one row
-use `r1s'NSOC_Round_1_File_v2.dta
-
-//merge in sp nsoc elgibility information SP tracker file by sp
-merge m:1 spid using `r1s'NSOC_Round_1_SP_Tracker_File.dta 
-//shouldn't merge if not elgible for nsoc or no helpers participated
-tab fl1dnsoc _merge, missing
-tab fl1dnsoccomp _merge, missing //entry in nsoc if number helpers > 0
-drop if _merge==2
-drop _merge
-
-//merge in the other person nsoc tracker file
-merge 1:1 spid opid using `r1s'NSOC_Round_1_OP_Tracker_File.dta
-tab _merge
-drop if _merge==2
-drop _merge
-
-//merge in round 3 tracker file to get indicator of death
-merge m:1 spid  using `r3raw'NHATS_Round_3_Tracker_File.dta
-drop if _merge==2
-drop _merge
-//merge in tracker file details
-//NSOC_Round_1_SP_Tracker_File.dta
-
-//other person sensitive data to get caregiver age
-merge 1:1 spid opid using `r1s'NHATS_Round_1_OP_Sen_Dem_File.dta
-drop if _merge==2
-drop _merge
-
-//other person main nhats file for other caregiver information
-merge 1:1 spid opid using `r1raw'NHATS_Round_1_OP_File_v2.dta
-drop if _merge==2
-drop _merge
-
-//merge in round 1 sp interviews, probably want to change this when have final
-//sp dataset saved
-merge m:1 spid using `work'round1_only_clean.dta
-drop if _merge==2
-drop _merge
-******************************************************
-
-//create indicator of those SPIDs that died
-gen sp_died=0
-replace sp_died=1 if inlist(r2status,62,86) | inlist(r3status,62,86)
-la var sp_died "Sample person died r2 or r3"
-tab sp_died, missing
-
-save caregiver_ds_nsoc_v1.dta, replace
-
-//how many unique SP's is this?
-sort spid 
-quietly by spid: gen dup = cond(_N==1,0,_n)
-tab dup
-replace dup=dup+1
-tab dup
-
-drop if dup>1
-tab sp_died,missing
-
-*******************************************************
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_pub_sens_only_variable_list.txt", text replace
+describe , fullnames
 log close
 
-
-H="NSOC Data Cleaning Part 2 (2_nsoc_cleaning1)"
-//cleaning, variable setup of caregiver dataset from nsoc
-
-capture log close
-clear all
-set more off
-
-logs E:\nhats\nhats_code\NHATS data setup\logs
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'2_nsoc_nhats_cleaning1.txt, text replace
-
-//PC file paths
-local r1raw E:\nhats\data\NHATS Public\round_1\
-local r2raw E:\nhats\data\NHATS Public\round_2\
-local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
-local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-//Rebecca Mac file paths
-/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
-local work /Users/rebeccagorges/Documents/data/nhats/working
-local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-*/
-cd `work'
-
-use caregiver_ds_nsoc_v1.dta, replace
-******************************************************************
-tab op1dnsoc, missing
-
-//per nsoc user guide, use this weight when analysis is at the caregiver level
-sum w1cgfinwgt0, detail //caregiver nsoc analytic weight
-
-tab c1dgender, missing //caregiver gender
-gen cg_female=1 if c1dgender==2
-replace cg_female=0 if c1dgender==1
-label var cg_female "Caregiver = female"
-tab cg_female, missing
-
-tab c1relatnshp, missing //caregiver relationship to SP
-gen cg_relationship_cat=3
-replace cg_relationship_cat=1 if c1relatnshp==2
-replace cg_relationship_cat =2 if inlist(c1relatnshp,3,4,5,6,7,8)
-la def rel 1 "Spouse" 2 "Adult child" 3 "Other"
-la val cg_relationship_cat rel
-la var cg_relationship_cat "Caregiver relationship"
-tab cg_relationship_cat, missing
-
-//ask about this, if want age categories, then fill in from categorical
-//variable directly from nhats, don't use actual age
-gen cg_age=op1age
-replace cg_age=. if inlist(op1age,-8,-7,-1)
-sum cg_age, detail
-
-tab op1catgryage if cg_age==., missing
-
-******************************************************************
-//caregiver resides in same household, use OP reside in household flag
-******************************************************************
-******* Not complete, this section needs work! *********
-******************************************************************
-tab op1prsninhh, missing //caregiver in household
-gen cg_lives_with_sp=1 if op1prsninhh==1
-replace cg_lives_with_sp=0 if op1prsninhh==2
-tab cg_lives_with_sp, missing
-tab cg_lives_with_sp cg_relationship_cat, missing
-
-tab op1proxy if cg_lives_with_sp==.
-tab livearrang if cg_lives_with_sp==. & cg_relationship_cat==1, missing
-
-//check hh1livwthspo (SP lives with spouse), needs to come from sp interview though
-tab hh1livwthspo cg_lives_with_sp  if cg_relationship_cat==1
-
-******************************************************************
-//caregiver level of education
-tab op1leveledu, missing
-tab hh1spouseduc if op1leveledu==. & cg_relationship_cat==1, missing
-******************************************************************
-//caregiver health
-tab che1health, missing //caregiver self reported health
-gen cg_srh=che1health
-replace cg_srh=. if che1health==-8 | che1health==-7
-la val cg_srh srh
-gen cg_srh_fp=1 if inlist(cg_srh,4,5)
-replace cg_srh_fp=0 if inlist(cg_srh,1,2,3)
-la var cg_srh "Caregiver self reported health 1-5"
-la var cg_srh_fp "Caregiver SHR fair/poor"
-tab cg_srh cg_srh_fp, missing
-
-************************
-//identify those that helped in last year  but not in last month
-//excluded from HHS Informal Caregiving for Older Americans: Analysis of the 2011 NSOC
-//April 2014 report dataset (n=11)
-tab cca1hlplstyr, missing
-
-***************************************************************
-//identify care activities helped with
-//household chores (laundry, cleaning, meal prep)
-tab cca1hwoftchs, missing //how often help w/ hh chores
-tab cca1hwoftshp, missing //how often help with shopping
-tab cca1hlpordmd //ever help order rx
-tab cca1hlpbnkng //ever help banking
-
-tab cca1hwoftpc //how often personal care
-tab cca1hwofthom //how often help getting around home or leaving home
-
-tab cca1hwoftdrv //how often drive places
-tab cca1hwoftott //how often went with on other transportation
-
-//help medical care in the last month, yes/no
-gen help_healthcare=0
-foreach v in med shot mdtk exrcs diet teeth feet skin{
-replace help_healthcare=1 if cca1hlp`v'==1
+local senslabs
+local i=1
+foreach x of varlist * {
+di `i'
+local lab : var label `x'
+tokenize "`lab'"
+if "`1'"=="Sensitive:" {
+local senslabs `senslabs' `x'
+local i=`i'+1
 }
-tab help_healthcare, missing
-
-//help coordinate medical care with providers, insurance, etc? in last year
-gen help_coordhc=0
-foreach v in mdapt spkdr insrn othin{
-replace help_coordhc=1 if cca1hlp`v'==1
 }
-tab help_coordhc, missing
 
-
-************************
-//save the dataset
-save caregiver_ds_nsoc_clean_v2.dta, replace
-************************
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_sensitive_variables.txt", text replace
+describe `senslabs', fullnames
 log close
-
-
-H="NSOC Data Cleaning Part 3 (3_nsoc_add_helper_hours)"
-//adds in imputed caregiver hours from the SP / OP data processing
-//these are hours self reported by SP, not the hours reported in the NSOC dataset
-
-capture log close
-clear all
-set more off
-
-local logs E:\nhats\nhats_code\NHATS data setup\logs
-//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
-log using `logs'3_nsoc_nhats_add_imp_help_hrs.txt, text replace
-
-local r1raw E:\nhats\data\NHATS Public\round_1\
-local r2raw E:\nhats\data\NHATS Public\round_2\
-local r3raw E:\nhats\data\NHATS Public\round_3\
-local work E:\nhats\data\NHATS working data\
-local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-/*local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
-local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
-local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
-local work /Users/rebeccagorges/Documents/data/nhats/working
-local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
-local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
-*/
-cd `work'
-
-************************************************************************
-//this includes helper information aggregated to the sp-wave level
-use caregiver_ds_nsoc_clean_v2.dta, replace 
-
-sum tot_hrsmonth_help_i, detail
-
-gen prim_cg_ind=0
-replace prim_cg_ind=1 if prim_helper_opid==opid
-
-la var prim_cg_ind "Caregiver is Primary helper"
-tab prim_cg_ind, missing
-
-//merge in individual helper OP level data from imputed helper dataset
-merge 1:1 spid opid wave using R1_hrs_imputed_added.dta, ///
- keepusing(impute_cat op_hrsmth_i op_numdays_i ln_opdhrsmth_i ///
- op_ind_hrsmth spouse otherrel nonrel)
-
-drop if _merge==2 //drop obs where OP is not in the NSOC dataset
-
-tab cg_relationship_cat spouse, missing
-
-************************************************************************
-log close
-
-
-H="Import NSOC"
-
-/************************** NSOC DATA SETUP ********************************/
-
-proc import out = RAW_NSOC
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_File_v2_old.dta"
-			replace;
-run;
-proc import out = RAW_OP
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta"
-			replace;
-run;
-proc import out = RAW_OP_SENSITIVE
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
-			replace;
-run;
-proc import out = NSOC_SP_Tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta"
-			replace;
-run;
-proc import out = NSOC_OP_Tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_OP_Tracker_File.dta"
-			replace;
-run;
-proc import out=raw_nhats_r1
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta"
-			replace;
-run; 
-
-/**Final NHATS Database**/
-data final_nhats;
-set nhats.nhats_all_obs;
-if complete = 1;
-run;
-
-H="Cleaning NHATS"
-libname nhats "E:\nhats\data\NHATS working data";
-
-/***** Import SP NHATS Data *****/
-proc import out=raw_nhats_r1
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta";
-run;
-proc import out=raw_nhats_r2
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_old.dta";
-run;
-proc import out=raw_nhats_r3
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_old.dta";
-run;
-proc import out=nhats_r1_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_SP_Sen_Dem_File.dta";
-run;
-proc import out=nhats_r2_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_SP_Sen_Dem_File.dta";
-run;
-
-/***** Import OP NHATS Data *****/
-
-proc import out=nhats_r1_OP
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta";
-run;
-proc import out=nhats_r2_OP
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_OP_File_old.dta";
-run;
-proc import out=nhats_r3_OP
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_OP_File_old.dta";
-run;
-proc import out=nhats_r1_OP_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File.dta";
-run;
-proc import out=nhats_r2_OP_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_OP_Sen_Dem_File.dta";
-run;
-
-/***** Import Tracker Files *****/
-
-proc import out=raw_nhats_r1_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_Tracker_File.dta";
-run;
-proc import out=raw_nhats_r2_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_Tracker_File.dta";
-run;
-proc import out=raw_nhats_r3_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_Tracker_File.dta";
-run;
-proc import out=nhats_nsoc_tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta";
-run;
-
-/***** NHATS/NSOC Data set from Rebecca *****/
-
-proc import out=nhats
-			datafile = "E:\nhats\data\NHATS working data\round_1_3_clean_helper_added_old.dta";
-run;
-
-/*************** SAMPLE CREATION ***************/
-
-/** Died/Loss to Follow-up on Wave 2 and Wave 3 **/
-proc sql;
-create table nhats_died_ind
-as select a.spid, a.is1resptype, b.is2resptype , b.is2reasnprx7, c.is3resptype , c.is3reasnprx7
-from raw_nhats_r1 a
-left join raw_nhats_r2 b
-on a.spid = b.spid
-left join raw_nhats_r3 c
-on a.spid = c.spid;
-quit;
-data nhats_died_ind1;
-set nhats_died_ind;
-
-/* FROM NHATS Documentation for answering deceased question: 
-"You have selected SP Decseased. If SP is STILL LIVING, select a
-different option. If SP is deceased, select supress to confirm."*/
-/*Died on 12 Month follow-up*/
-died = 0;
-if is2reasnprx7 = 1 then died = 1;
-if is2reasnprx7 = -9 then died = .;
-label died = "Died on 12 Month follow-up";
-/*Died within 24 months*/
-died_24 = 0;
-if is2reasnprx7 = 1 or is3reasnprx7 = 1 then died_24 = 1;
-if is2reasnprx7 = -9 or is3reasnprx7 = -9 then died_24 = .;
-label died_24 = "Died within 24 months";
-run;
-/*frequency check*/
-proc freq data=nhats_died_ind1;
-table died died_24 died*died_24;
-run;
-/*keeping only relevant information*/
-data nhats_died_ind2;
-set nhats_died_ind1 (keep = spid died died_24);
-run;
-/*PERMANENT DATASET OF ALL DIED WITHIN WAVE 2 AND 3 OF THE SP WHO WERE IN WAVE 1*/
-data nhats.died_indicator;
-set nhats_died_ind2;
-run;
-
-/********* Sensitive Data Extraction ********/
-
-data nhats_r1_sen_1;
-set nhats_r1_sen;
-age = r1dintvwrage;
-run;
-proc means data=nhats_r1_sen_1;
-var age;
-run;
-
-/******* Pre-main nhats database merge *******/
-
-proc sql;
-create table raw_nhats_r1_1
-as select a.*, b.died, b.died_24, c.age
-from raw_nhats_r1 a
-left join nhats.died_indicator b
-on a.spid = b.spid
-left join nhats_r1_sen_1 c
-on a.spid = c.spid;
-quit;
-
-proc freq data=raw_nhats_r1_1;
-table hh1dlvngarrg;
-run;
-
-data nhats_wave1;
-set raw_nhats_r1_1;
-
-/*drop 56 weight variables*/
-drop w1anfinwgt1-w1anfinwgt56;
-
-/*Community Dwelling Variable. If the variable = "Community" or "Residential Care Resident not nursing home"*/
-/*none missing from the raw database*/
-community_dwelling = 0;
-if r1dresid = 1 or r1dresid = 2 then community_dwelling = 1;
-label community_dwelling = "SP in Community/Residential Care Resident";
-
-/*Gender Variable*/
-gender = .;
-if r1dgender = 2 then gender = 1;
-if r1dgender = 1 then gender = 0;
-label gender = "Gender: 0 = Male, 1 = Female";
-
-/* Education Variable. Greater than High School */
-education = .;
-if el1higstschl < 4 then education = 1;
-if el1higstschl = 4 then education = 2;
-if el1higstschl >= 5 and el1higstschl <= 7 then education = 3;
-if el1higstschl >= 8 and el1higstschl <= 9 then education = 4;
-label education = "Education: 1 = <HS 2 = HS 3 = Some College 4 = >= College";
-gt_hs_edu = .;
-if el1higstschl >= 4 then gt_hs_edu = 1;
-if el1higstschl > 0  and el1higstschl < 4 then gt_hs_edu = 0;
-label gt_hs_edu = "Greater than/Equal to High School";
-
-/* White(Non-Hispanic) definition if the race variable is DK/RF then I set that as missing*/
-race_cat = rl1dracehisp;
-if rl1dracehisp = 5 | rl1dracehisp = 6 then race_cat = .;
-label race_cat = "Race: 1 = White, 2 = Black, 3 = Other, 4 = Hispanic";
-if rl1dracehisp = 1 then white = 1;
-if rl1dracehisp = 2 or rl1dracehisp = 3 or rl1dracehisp = 4 then white = 0;
-if rl1dracehisp = 5 or rl1dracehisp = 6 then white = .;
-label white = "White (Non-Hispanic)";
-
-/* Married Variable. All missing stays missing */
-married = 0;
-if hh1martlstat = 1 then married = 1;
-if hh1martlstat < 0 then married = .;
-label Married = "Married";
-
-/* Living Arrangement */
-living_arrang = hh1dlvngarrg;
-if hh1dlvngarrg < 0 then living_arrang = .;
-label living_arrang = "Living Arrangement: 1 = Alone, 2 = Spouse/Partner, 3 = S/P + Other, 4 = Other";
-live_alone = .;
-if living_arrang = 1 then live_alone = 1;
-if living_arrang > 1 then live_alone = 0;
-
-/*Changing ADL numbers. If the answers to ADL questions are "yes" or "can't do"*/
-if ls1evdayact1 = 1 or ls1evdayact1 = 3 then adl_eating = 1;
-if ls1evdayact1 = 2 then adl_eating = 0;
-if ls1evdayact2 = 1 or ls1evdayact2 = 3 then adl_bed = 1;
-if ls1evdayact2 = 2 then adl_bed = 0;
-if ls1evdayact3 = 1 or ls1evdayact3 = 3 then adl_chair = 1;
-if ls1evdayact3 = 2 then adl_chair = 0;
-if ls1evdayact4 = 1 or ls1evdayact4 = 3 then adl_walk_in = 1;
-if ls1evdayact4 = 2 then adl_walk_in = 0;
-if ls1evdayact5 = 1 or ls1evdayact5 = 3 then adl_walk_out = 1;
-if ls1evdayact5 = 2 then adl_walk_out = 0;
-if ls1evdayact6 = 1 or ls1evdayact6 = 3 then adl_dress = 1;
-if ls1evdayact6 = 2 then adl_dress = 0;
-if ls1evdayact7 = 1 or ls1evdayact7 = 3 then adl_bathe = 1;
-if ls1evdayact7 = 2 then adl_bathe = 0;
-if ls1evdayact8 = 1 or ls1evdayact8 = 3 then adl_toilet = 1;
-if ls1evdayact8 = 2 then adl_toilet = 0;
-
-/*changing IADL Numbers. If the answers on First IADL (Able to?) are "No" AND if the other IADL question (Keep from?) = "Yes"*/
-if ls1ableto1 = 2 and ls1diskefrm1 = 1 then iadl_meals = 1;
-if ls1ableto1 = 2 and ls1diskefrm1 = 2 then iadl_meals = 0;
-if ls1ableto1 = 1 then iadl_meals = 0;
-if ls1ableto2 = 2 and ls1diskefrm2 = 1 then iadl_laundry = 1;
-if ls1ableto2 = 2 and ls1diskefrm2 = 2 then iadl_laundry = 0;
-if ls1ableto2 = 1 then iadl_laundry = 0;
-if ls1ableto3 = 2 and ls1diskefrm3 = 1 then iadl_housewk = 1;
-if ls1ableto3 = 2 and ls1diskefrm3 = 2 then iadl_housewk = 0;
-if ls1ableto3 = 1 then iadl_housewk = 0;
-if ls1ableto4 = 2 and ls1diskefrm4 = 1 then iadl_shop = 1;
-if ls1ableto4 = 2 and ls1diskefrm4 = 2 then iadl_shop = 0;
-if ls1ableto4 = 1 then iadl_shop = 0;
-if ls1ableto5 = 2 and ls1diskefrm5 = 1 then iadl_money = 1;
-if ls1ableto5 = 2 and ls1diskefrm5 = 2 then iadl_money = 0;
-if ls1ableto5 = 1 then iadl_money = 0;
-if ls1ableto6 = 2 and ls1diskefrm6 = 1 then iadl_meds = 1;
-if ls1ableto6 = 2 and ls1diskefrm6 = 2 then iadl_meds = 0;
-if ls1ableto6 = 1 then iadl_meds = 0;
-if ls1ableto7 = 2 and ls1diskefrm7 = 1 then iadl_phone = 1;
-if ls1ableto7 = 2 and ls1diskefrm7 = 2 then iadl_phone = 0;
-if ls1ableto7 = 1 then iadl_phone = 0;
-
-
-/*SUM of the ADLs. Create three categories. (0, 1/2, >=3) */
-sum_adl = sum(adl_eating, adl_bed, adl_chair, adl_walk_in, adl_walk_out, adl_dress, adl_bathe, adl_toilet);
-sum_adl_cat = 0;
-if sum_adl = 1 or sum_adl = 2 then sum_adl_cat = 1;
-if sum_adl > 2 then sum_adl_cat = 2;
-if sum_adl = . then sum_adl_cat = .;
-label sum_adl = "Sum of all ADLs/IADLs";
-label sum_adl_cat = "Num. of ADL/IADL Category (0, 1/2, >=3)";
-
-/* INDICATOR OF ANY ADL/IADLs. Needed for Caregiving Project with Katherine*/
-ADL_IADL_ind = 0;
-if adl_eating = 1| adl_bed = 1 | adl_chair = 1 | adl_walk_in = 1 | adl_walk_out = 1 | adl_dress = 1 | 
-adl_bathe = 1 | adl_toilet = 1|iadl_meals = 1 | iadl_laundry = 1 | iadl_housewk = 1 | iadl_shop = 1 | 
-iadl_money = 1 | iadl_meds = 1 | iadl_phone = 1 then ADL_IADL_ind = 1;
-if sum_adl = . then ADL_IADL_ind = .;
-label adl_iadl_ind = "Indicator if any of ADLs/IADLs at all";
-
-
-
-run;
-proc freq data=nhats_wave1;
-table community_dwelling adl_eating adl_bed adl_chair adl_walk_in adl_walk_out adl_dress adl_bathe adl_toilet
-iadl_meals iadl_laundry iadl_housewk iadl_shop iadl_money iadl_meds iadl_phone white married gt_hs_edu
-sum_adl sum_adl_cat ADL_IADL_ind;
-run;
-
-proc freq data=nhats_nsoc_tracker;
-table fl1dnsoc fl1dnsoccomp;
-run;
-
-data nhats_nsoc_tracker1;
-set nhats_nsoc_tracker;
-eligible = 0;
-if fl1dnsoc = 1 then eligible = 1;
-complete = 0;
-if fl1dnsoccomp > 0 then complete = 1;
-total_caregiver_comp = fl1dnsoccomp;
-if fl1dnsoccomp < 0 then total_caregiver_comp = .;
-label eligible = "Eligible for NSOC interview";
-label complete = "Completed Interview";
-label total_caregiver_comp = "Total Caregivers that Completed Interview";
-run;
-proc freq data=nhats_nsoc_tracker1;
-table eligible complete total_caregiver_comp;
-run;
-
-proc sql;
-create table nhats_wave1_1
-as select a.*, b.eligible, b.complete, b.total_caregiver_comp
-from nhats_wave1 a
-left join nhats_nsoc_tracker1 b
-on a.spid = b.spid;
-quit;
-
-proc freq data=nhats_wave1_1;
-table eligible complete total_caregiver_comp;
-run;
-
-data nhats.nhats_wave1_all_obs;
-set nhats_wave1_1;
-run;
-
-data raw_nhats_r2_1;
-set raw_nhats_r2;
-drop w2anfinwgt1-w2anfinwgt56;
-run;
-
-proc sql;
-create table nhats_wave12
-as select a.*, 
-
-H="Cleaning NSOC"
-
-/**Final NSOC Database**/
-data final_nhats;
-set nhats.nhats_all_obs;
-if complete = 1;
-run;
-proc freq data=final_nhats;
-table died cs1dreconcil;
-run;
-
-proc freq data = RAW_OP;
-table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp cs1dreconcil;
-run;
-proc freq data = raw_op_sensitive;
-table op1age op1catgryage;
-run;
-
-/*Adding in the OP Demographics to the NSOC dataset*/
-proc sql;
-create table raw_nsoc1
-as select a.*, b.op1prsninhh, b.op1martlstat, b.op1numchldrn, b.op1ishelper, b.op1sppayshlp, b.op1leveledu,
-c.op1age, c.op1catgryage, d.cs1dreconcil, d.hh1martlstat, d.hh1dhshldnum, d.died, d.died_24
-from raw_nsoc a
-left join raw_op b
-on a.spid = b.spid
-and a.opid = b.opid
-left join raw_op_sensitive c
-on a.spid = c.spid
-and a.opid = c.opid
-left join final_nhats d
-on a.spid = d.spid;
-quit;
-
-proc freq data= raw_nsoc1;
-table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage op1leveledu cs1dreconcil hh1martlstat hh1dhshldnum;
-run;
-
-data nsoc;
-set raw_nsoc1;
-
-/*** Drop the variations of the NSOC Weight Variable. Use primarily "w1cgfinwgt0" for full Sample ***/
-
-drop w1cgfinwgt1 - w1cgfinwgt56;
-
-/*Creating Spouse Variable */
-if cg_spouse = .;
-if c1relatnshp = 2 then cg_spouse = 1;
-if c1relatnshp ~= 2 then cg_spouse = 0;
-/*gathering total hours a day/week/month/other */
-total_hours_day = cdc1hlphrsdy + 0;
-if total_hours_day < 0 then total_hours_day = .;
-total_hours_week = cdc1hlpdyswk + 0;
-if total_hours_week < 0 then total_hours_week = .;
-total_hours_month = cdc1hlpdysmt + 0;
-if total_hours_month < 0 then total_hours_month = .;
-total_hours_other = cdc1hlphrlmt + 0;
-if total_hours_other < 0 then total_hours_other = .;
-other_flag = 0;
-if cdc1hlphrmvf ~= 1 then other_flag=1;
-/*if the cargiver was a regular then you calculated it days a week per day and multiply that by 4*/
-if cdc1hlpsched = 1 then total_hours = total_hours_week * total_hours_day * 4;
-/*if they were not a regular than you calculated the total days in the month by total hours*/
-if cdc1hlpsched ~= 1 then total_hours = total_hours_month * total_hours_day;
-if other_flag = 1 then total_hours = total_hours_other;
-
-/* LIVING CHILDREN MISSING DATA */
-Any_Living_Children_SP = 0;
-if cs1dreconcil ~= 3 then Any_Living_Children_SP = 1;
-Any_Living_Children_CG = .;
-if chd1chldlvng = 2 then Any_Living_Children_CG = 0;
-if chd1chldlvng = 1 then Any_Living_Children_CG = 1;
-if cg_spouse = 1 then cg_living_children = Any_Living_Children_SP;
-if cg_spouse = 0 then cg_living_children = Any_Living_Children_CG;
-drop Any_Living_Children_SP Any_Living_Children_CG;
-
-/*MARITAL STATUS MISSING DATA */
-if cg_spouse = 1 then cg_Marital_status = hh1martlstat;
-if cg_spouse = 0 then cg_marital_status = chd1martstat;
-if cg_marital_status = . then cg_Marital_Status =op1martlstat; 
-
-/*NUMBER IN HOUSEHOLD */
-if cg_spouse = 1 then cg_total_in_hh = hh1dhshldnum;
-if cg_spouse = 0 then cg_total_in_hh = chd1numinhh;
-if cg_total_in_hh < 0 then cg_total_in_hh = .;
-
-/*EDUCATION OF CAREGIVER */
-if cg_spouse = 1 then cg_educ = op1leveledu;
-if cg_spouse = 0 then cg_educ = chd1educ;
-if cg_educ < 0 then cg_educ = .;
-
-run;
-proc freq data=nsoc;
-table cs1dreconcil  chd1chldlvng cg_living_children;
-run;
-data ko.nsoc_raw;
-set nsoc;
-run;
-
-H="NHATS Setup"
-libname nhats "E:\nhats\data\NHATS working data";
-
-/***** Import SP NHATS Data *****/
-proc import out=raw_nhats_r1
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta";
-run;
-proc import out=raw_nhats_r2
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_old.dta";
-run;
-proc import out=raw_nhats_r3
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_old.dta";
-run;
-proc import out=nhats_r1_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_SP_Sen_Dem_File.dta";
-run;
-proc import out=nhats_r2_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_SP_Sen_Dem_File.dta";
-run;
-
-/***** Import OP NHATS Data *****/
-
-proc import out=nhats_r1_OP
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta";
-run;
-proc import out=nhats_r2_OP
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_OP_File_old.dta";
-run;
-proc import out=nhats_r3_OP
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_OP_File_old.dta";
-run;
-proc import out=nhats_r1_OP_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File.dta";
-run;
-proc import out=nhats_r2_OP_sen
-			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_OP_Sen_Dem_File.dta";
-run;
-
-/***** Import Tracker Files *****/
-
-proc import out=raw_nhats_r1_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_Tracker_File.dta";
-run;
-proc import out=raw_nhats_r2_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_Tracker_File.dta";
-run;
-proc import out=raw_nhats_r3_tracker
-			datafile = "E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_Tracker_File.dta";
-run;
-proc import out=nhats_nsoc_tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta";
-run;
-
-/***** NHATS/NSOC Data set from Rebecca *****/
-
-proc import out=nhats_rg
-			datafile = "E:\nhats\data\NHATS working data\round_1_3_clean_helper_added_old.dta";
-run;
-proc export data = nhats_rg
-			outfile = "E:\nhats\data\NHATS working data\round_1_3_clean_helper_added_old_backup.dta"
-			replace;
-run;
-proc export data=nhats_rg outfile = "E:\nhats\data\NHATS working data\round_1_3_clean_helper_added_old.csv" dbms = csv replace label;
-run;
-
-/*************** SAMPLE CREATION ***************/
-
-/** Died/Loss to Follow-up on Wave 2 and Wave 3 **/
-proc sql;
-create table nhats_died_ind
-as select a.spid, a.is1resptype, b.is2resptype , b.is2reasnprx7, c.is3resptype , c.is3reasnprx7
-from raw_nhats_r1 a
-left join raw_nhats_r2 b
-on a.spid = b.spid
-left join raw_nhats_r3 c
-on a.spid = c.spid;
-quit;
-data nhats_died_ind1;
-set nhats_died_ind;
-
-/* FROM NHATS Documentation for answering deceased question: 
-"You have selected SP Decseased. If SP is STILL LIVING, select a
-different option. If SP is deceased, select supress to confirm."*/
-/*Died on 12 Month follow-up*/
-died = 0;
-if is2reasnprx7 = 1 then died = 1;
-if is2reasnprx7 = -9 then died = .;
-label died = "Died on 12 Month follow-up";
-/*Died within 24 months*/
-died_24 = 0;
-if is2reasnprx7 = 1 or is3reasnprx7 = 1 then died_24 = 1;
-if is2reasnprx7 = -9 or is3reasnprx7 = -9 then died_24 = .;
-label died_24 = "Died within 24 months";
-run;
-/*frequency check*/
-proc freq data=nhats_died_ind1;
-table died died_24 died*died_24;
-run;
-/*keeping only relevant information*/
-data nhats_died_ind2;
-set nhats_died_ind1 (keep = spid died died_24);
-run;
-/*PERMANENT DATASET OF ALL DIED WITHIN WAVE 2 AND 3 OF THE SP WHO WERE IN WAVE 1*/
-data nhats.died_indicator;
-set nhats_died_ind2;
-run;
-
-/********* Sensitive Data Extraction ********/
-
-data nhats_r1_sen_1;
-set nhats_r1_sen;
-age = r1dintvwrage;
-run;
-proc means data=nhats_r1_sen_1;
-var age;
-run;
-
-/******* Pre-main nhats database merge *******/
-
-proc sql;
-create table raw_nhats_r1_1
-as select a.*, b.died, b.died_24, c.age as age_w1
-from raw_nhats_r1 a
-left join nhats.died_indicator b
-on a.spid = b.spid
-left join nhats_r1_sen_1 c
-on a.spid = c.spid;
-quit;
-
-proc freq data=raw_nhats_r1_1;
-table hh1dlvngarrg;
-run;
-
-data nhats_wave1;
-set raw_nhats_r1_1;
-
-/*drop 56 weight variables*/
-drop w1anfinwgt1-w1anfinwgt56;
-
-/*Community Dwelling Variable. If the variable = "Community" or "Residential Care Resident not nursing home"*/
-/*none missing from the raw database*/
-community_dwelling = 0;
-if r1dresid = 1 or r1dresid = 2 then community_dwelling = 1;
-label community_dwelling = "SP in Community/Residential Care Resident";
-
-/*Gender Variable*/
-gender = .;
-if r1dgender = 2 then gender = 1;
-if r1dgender = 1 then gender = 0;
-label gender = "Gender: 0 = Male, 1 = Female";
-
-/* Education Variable. Greater than High School */
-education = .;
-if el1higstschl < 4 then education = 1;
-if el1higstschl = 4 then education = 2;
-if el1higstschl >= 5 and el1higstschl <= 7 then education = 3;
-if el1higstschl >= 8 and el1higstschl <= 9 then education = 4;
-label education = "Education: 1 = <HS 2 = HS 3 = Some College 4 = >= College";
-gt_hs_edu = .;
-if el1higstschl >= 4 then gt_hs_edu = 1;
-if el1higstschl > 0  and el1higstschl < 4 then gt_hs_edu = 0;
-label gt_hs_edu = "Greater than/Equal to High School";
-
-/* White(Non-Hispanic) definition if the race variable is DK/RF then I set that as missing*/
-race_cat = rl1dracehisp;
-if rl1dracehisp = 5 | rl1dracehisp = 6 then race_cat = .;
-label race_cat = "Race: 1 = White, 2 = Black, 3 = Other, 4 = Hispanic";
-if rl1dracehisp = 1 then white = 1;
-if rl1dracehisp = 2 or rl1dracehisp = 3 or rl1dracehisp = 4 then white = 0;
-if rl1dracehisp = 5 or rl1dracehisp = 6 then white = .;
-label white = "White (Non-Hispanic)";
-
-/* Married Variable. All missing stays missing */
-married = 0;
-if hh1martlstat = 1 then married = 1;
-if hh1martlstat < 0 then married = .;
-label Married = "Married";
-
-/* Living Arrangement */
-living_arrang = hh1dlvngarrg;
-if hh1dlvngarrg < 0 then living_arrang = .;
-label living_arrang = "Living Arrangement: 1 = Alone, 2 = Spouse/Partner, 3 = S/P + Other, 4 = Other";
-live_alone = .;
-if living_arrang = 1 then live_alone = 1;
-
-if living_arrang > 1 then live_alone = 0;
-
-/*Changing ADL numbers. If the answers to ADL questions are "yes" or "can't do"*/
-if ls1evdayact1 = 1 or ls1evdayact1 = 3 then adl_eating = 1;
-if ls1evdayact1 = 2 then adl_eating = 0;
-if ls1evdayact2 = 1 or ls1evdayact2 = 3 then adl_bed = 1;
-if ls1evdayact2 = 2 then adl_bed = 0;
-if ls1evdayact3 = 1 or ls1evdayact3 = 3 then adl_chair = 1;
-if ls1evdayact3 = 2 then adl_chair = 0;
-if ls1evdayact4 = 1 or ls1evdayact4 = 3 then adl_walk_in = 1;
-if ls1evdayact4 = 2 then adl_walk_in = 0;
-if ls1evdayact5 = 1 or ls1evdayact5 = 3 then adl_walk_out = 1;
-if ls1evdayact5 = 2 then adl_walk_out = 0;
-if ls1evdayact6 = 1 or ls1evdayact6 = 3 then adl_dress = 1;
-if ls1evdayact6 = 2 then adl_dress = 0;
-if ls1evdayact7 = 1 or ls1evdayact7 = 3 then adl_bathe = 1;
-if ls1evdayact7 = 2 then adl_bathe = 0;
-if ls1evdayact8 = 1 or ls1evdayact8 = 3 then adl_toilet = 1;
-if ls1evdayact8 = 2 then adl_toilet = 0;
-
-/*changing IADL Numbers. If the answers on First IADL (Able to?) are "No" AND if the other IADL question (Keep from?) = "Yes"*/
-if ls1ableto1 = 2 and ls1diskefrm1 = 1 then iadl_meals = 1;
-if ls1ableto1 = 2 and ls1diskefrm1 = 2 then iadl_meals = 0;
-if ls1ableto1 = 1 then iadl_meals = 0;
-if ls1ableto2 = 2 and ls1diskefrm2 = 1 then iadl_laundry = 1;
-if ls1ableto2 = 2 and ls1diskefrm2 = 2 then iadl_laundry = 0;
-if ls1ableto2 = 1 then iadl_laundry = 0;
-if ls1ableto3 = 2 and ls1diskefrm3 = 1 then iadl_housewk = 1;
-if ls1ableto3 = 2 and ls1diskefrm3 = 2 then iadl_housewk = 0;
-if ls1ableto3 = 1 then iadl_housewk = 0;
-if ls1ableto4 = 2 and ls1diskefrm4 = 1 then iadl_shop = 1;
-if ls1ableto4 = 2 and ls1diskefrm4 = 2 then iadl_shop = 0;
-if ls1ableto4 = 1 then iadl_shop = 0;
-if ls1ableto5 = 2 and ls1diskefrm5 = 1 then iadl_money = 1;
-if ls1ableto5 = 2 and ls1diskefrm5 = 2 then iadl_money = 0;
-if ls1ableto5 = 1 then iadl_money = 0;
-if ls1ableto6 = 2 and ls1diskefrm6 = 1 then iadl_meds = 1;
-if ls1ableto6 = 2 and ls1diskefrm6 = 2 then iadl_meds = 0;
-if ls1ableto6 = 1 then iadl_meds = 0;
-if ls1ableto7 = 2 and ls1diskefrm7 = 1 then iadl_phone = 1;
-if ls1ableto7 = 2 and ls1diskefrm7 = 2 then iadl_phone = 0;
-if ls1ableto7 = 1 then iadl_phone = 0;
-
-
-/*SUM of the ADLs. Create three categories. (0, 1/2, >=3) */
-sum_adl = sum(adl_eating, adl_bed, adl_chair, adl_walk_in, adl_walk_out, adl_dress, adl_bathe, adl_toilet);
-sum_adl_cat = 0;
-if sum_adl = 1 or sum_adl = 2 then sum_adl_cat = 1;
-if sum_adl > 2 then sum_adl_cat = 2;
-if sum_adl = . then sum_adl_cat = .;
-label sum_adl = "Sum of all ADLs/IADLs";
-label sum_adl_cat = "Num. of ADL/IADL Category (0, 1/2, >=3)";
-
-/* INDICATOR OF ANY ADL/IADLs. Needed for Caregiving Project with Katherine*/
-ADL_IADL_ind = 0;
-if adl_eating = 1| adl_bed = 1 | adl_chair = 1 | adl_walk_in = 1 | adl_walk_out = 1 | adl_dress = 1 | 
-adl_bathe = 1 | adl_toilet = 1|iadl_meals = 1 | iadl_laundry = 1 | iadl_housewk = 1 | iadl_shop = 1 | 
-iadl_money = 1 | iadl_meds = 1 | iadl_phone = 1 then ADL_IADL_ind = 1;
-if sum_adl = . then ADL_IADL_ind = .;
-label adl_iadl_ind = "Indicator if any of ADLs/IADLs at all";
-
-
-
-run;
-proc freq data=nhats_wave1;
-table community_dwelling adl_eating adl_bed adl_chair adl_walk_in adl_walk_out adl_dress adl_bathe adl_toilet
-iadl_meals iadl_laundry iadl_housewk iadl_shop iadl_money iadl_meds iadl_phone white married gt_hs_edu
-sum_adl sum_adl_cat ADL_IADL_ind;
-run;
-
-proc freq data=nhats_nsoc_tracker;
-table fl1dnsoc fl1dnsoccomp;
-run;
-
-data nhats_nsoc_tracker1;
-set nhats_nsoc_tracker;
-eligible = 0;
-if fl1dnsoc = 1 then eligible = 1;
-complete = 0;
-if fl1dnsoccomp > 0 then complete = 1;
-total_caregiver_comp = fl1dnsoccomp;
-if fl1dnsoccomp < 0 then total_caregiver_comp = .;
-label eligible = "Eligible for NSOC interview";
-label complete = "Completed Interview";
-label total_caregiver_comp = "Total Caregivers that Completed Interview";
-run;
-proc freq data=nhats_nsoc_tracker1;
-table eligible complete total_caregiver_comp;
-run;
-
-proc sql;
-create table nhats_wave1_1
-as select a.*, b.eligible, b.complete, b.total_caregiver_comp
-from nhats_wave1 a
-left join nhats_nsoc_tracker1 b
-on a.spid = b.spid;
-quit;
-
-proc freq data=nhats_wave1_1;
-where community_dwelling = 1;
-table eligible complete total_caregiver_comp;
-run;
-
-data nhats.nhats_wave1_all_obs;
-set nhats_wave1_1;
-run;
-
-data raw_nhats_r2_1;
-set raw_nhats_r2;
-drop w2anfinwgt1-w2anfinwgt56;
-run;
-
-proc sql;
-create table nhats_wave12
-as select a.spid, a.died, a.died_24, a.age_w1, a.community_dwelling, a.gender, a.education, a.gt_hs_edu, a.race_cat, a.white, a.married, a.living_arrang, a.live_alone,
-a.adl_eating, a.adl_bed, a.adl_chair, a.adl_walk_in, a.adl_walk_out, a.adl_dress, a.adl_bathe, a.adl_toilet, a.iadl_meals, a.iadl_laundry, a.iadl_housewk, a.iadl_shop,
-a.iadl_money, a.iadl_meds, a.iadl_phone, a.sum_adl, a.sum_adl_cat, a.ADL_IADL_ind, a.eligible, a.complete, a.total_caregiver_comp, b.*
-from nhats_wave1_1 a
-inner join raw_nhats_r2_1 b
-on a.spid = b.spid;
-quit;
-
-data test;
-set nhats.nhats_wave1_all_obs;
-if ADL_IADL_ind = 1;run;
-proc freq data=test;
-table died;
-run;
-
-
-
-H="NSOC Setup"
-libname ko "E:\nhats\data\Projects\Caregivers";
-libname nhats "E:\nhats\data\NHATS working data";
-
-
-/************************** NSOC DATA SETUP ********************************/
-
-proc import out = RAW_NSOC
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_File_v2_old.dta"
-			replace;
-run;
-proc freq data=raw_nsoc;
-table c1dintdays;
-run;
-proc import out = RAW_OP
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_OP_File_old.dta"
-			replace;
-run;
-proc import out = RAW_OP_SENSITIVE
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
-			replace;
-run;
-proc import out = NSOC_SP_Tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_SP_Tracker_File.dta"
-			replace;
-run;
-proc import out = NSOC_OP_Tracker
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NSOC_Round_1_OP_Tracker_File.dta"
-			replace;
-run;
-proc import out=raw_nhats_r1
-			datafile = "E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_old.dta"
-			replace;
-run; 
-proc import out=raw_nhats_r2_sens
-			datafile = "E:\nhats\data\NHATS Sensitive\r2_sensitive\NHATS_Round_2_SP_Sen_Dem_File.dta"
-			replace;
-run;
-
-/**Final NSOC Database**/
-data final_nhats;
-set nhats.Nhats_wave1_all_obs;
-run;
-proc freq data=final_nhats;
-table died cs1dreconcil;
-run;
-
-proc freq data = RAW_OP;
-table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp cs1dreconcil;
-run;
-proc freq data = raw_op_sensitive;
-table op1age op1catgryage;
-run;
-
-/*Adding in the OP Demographics to the NSOC dataset*/
-proc sql;
-create table raw_nsoc1
-as select a.*, b.op1prsninhh, b.op1martlstat, b.op1numchldrn, b.op1ishelper, b.op1sppayshlp, b.op1leveledu, b.op1prsninhh,
-c.op1age, c.op1catgryage, d.hh1livwthspo, d.cs1dreconcil, d.hh1martlstat, d.hh1dhshldnum, d.died, d.died_24, d.complete, d.ADL_IADL_ind
-from raw_nsoc a
-left join raw_op b
-on a.spid = b.spid
-and a.opid = b.opid
-left join raw_op_sensitive c
-on a.spid = c.spid
-and a.opid = c.opid
-left join final_nhats d
-on a.spid = d.spid;
-quit;
-
-proc freq data= raw_nsoc1;
-table op1prsninhh op1martlstat op1numchldrn op1ishelper op1sppayshlp op1age op1catgryage op1leveledu cs1dreconcil hh1martlstat hh1dhshldnum chd1educ
-c1relatnshp chd1martstat chi1medicare cca1hwget2sp op1prsninhh hh1livwthspo cca1hlpothin;
-run;
-
-proc freq data=raw_nsoc1;
-
-table cec1wrk4pay;
-run;
-proc freq data=nsoc;
-table cg_spouse;
-run;
-data nsoc;
-set raw_nsoc1;
-
-/*** Drop the variations of the NSOC Weight Variable. Use primarily "w1cgfinwgt0" for full Sample ***/
-
-drop w1cgfinwgt1 - w1cgfinwgt56;
-
-/*female variable*/
-cg_female = .;
-if c1dgender = 1 then cg_female = 0;
-if c1dgender = 2 then cg_female = 1;
-
-/*Creating Spouse Variable */
-cg_spouse = .;
-if c1relatnshp = 2 then cg_spouse = 1;
-if c1relatnshp ~= 2 then cg_spouse = 0;
-/*Relationship Categorical Variable. If Spouse then Cat = 1, if any form of their child (bio, in-law, step) then cat = 2 others are equal to 0*/
-cg_relationship_cat = 3;
-if c1relatnshp = 2 then cg_relationship_cat = 1;
-if c1relatnshp >= 3 and c1relatnshp <= 8 then cg_relationship_cat = 2;
-/*antoher categorical: 1 = spouse, 2 = daughter (any), 3 = son (any), 4 = any relative, 5 = other non-relative*/
-cg_relationship_cat1 = .;
-if c1relatnshp = 2 then cg_relationship_cat1 = 1;
-if c1relatnshp = 3 |  c1relatnshp = 5 | c1relatnshp = 7 then cg_relationship_cat1 = 2;
-if c1relatnshp = 4 |  c1relatnshp = 6 | c1relatnshp = 8 then cg_relationship_cat1 = 3;
-if (c1relatnshp >= 9 and c1relatnshp <= 29) OR c1relatnshp = 91 then cg_relationship_cat1 = 4;
-if (c1relatnshp >= 30 and c1relatnshp <= 39) OR c1relatnshp = 92 then cg_relationship_cat1 = 5;
-
-/*gathering total hours a day/week/month/other */
-total_hours_day = cdc1hlphrsdy + 0;
-if total_hours_day < 0 then total_hours_day = .;
-total_hours_week = cdc1hlpdyswk + 0;
-if total_hours_week < 0 then total_hours_week = .;
-total_days_month = cdc1hlpdysmt + 0;
-if total_days_month < 0 then total_days_month = .;
-total_hours_other = cdc1hlphrlmt + 0;
-if total_hours_other < 0 then total_hours_other = .;
-other_flag = 0;
-if cdc1hlphrmvf ~= 1 then other_flag=1;
-/*if the cargiver was a regular then you calculated it days a week per day and multiply that by 4*/
-if cdc1hlpsched = 1 then total_hours = total_hours_week * total_hours_day * 4;
-/*if they were not a regular than you calculated the total days in the month by total hours*/
-if cdc1hlpsched ~= 1 then total_hours = total_days_month * total_hours_day;
-if other_flag = 1 then total_hours = total_hours_other;
-
-/* LIVING CHILDREN MISSING DATA */
-Any_Living_Children_SP = 0;
-if cs1dreconcil ~= 3 then Any_Living_Children_SP = 1;
-Any_Living_Children_CG = .;
-if chd1chldlvng = 2 then Any_Living_Children_CG = 0;
-if chd1chldlvng = 1 then Any_Living_Children_CG = 1;
-if cg_spouse = 1 then cg_living_children = Any_Living_Children_SP;
-if cg_spouse = 0 then cg_living_children = Any_Living_Children_CG;
-drop Any_Living_Children_SP Any_Living_Children_CG;
-
-/*MARITAL STATUS MISSING DATA */
-if cg_spouse = 1 then cg_Marital_status = hh1martlstat;
-if cg_spouse = 0 then cg_marital_status = chd1martstat;
-if cg_marital_status = . then cg_Marital_Status =op1martlstat; 
-cg_marr_part_ind = .;
-if cg_marital_status = 1 or cg_marital_status = 2 then cg_marr_part_ind = 1;
-if cg_marital_status >= 3 then cg_marr_part_ind = 0;
-
-/*NUMBER IN HOUSEHOLD */
-if cg_spouse = 1 then cg_total_in_hh = hh1dhshldnum;
-if cg_spouse = 0 then cg_total_in_hh = chd1numinhh;
-if cg_total_in_hh < 0 then cg_total_in_hh = .;
-
-/*EDUCATION OF CAREGIVER */
-if cg_spouse = 1 then cg_educ = op1leveledu;
-if cg_spouse = 0 then cg_educ = chd1educ;
-if cg_educ < 0 then cg_educ = .;
-cg_gt_hs = .;
-if cg_educ >= 4 then cg_gt_hs = 1;
-if cg_educ < 4 and cg_educ >= 0 then cg_gt_hs = 0;
-
-/* Caregiver Medicare */
-cg_medicare = .;
-if chi1medicare = 1 then cg_medicare = 1;
-if chi1medicare = 2 then cg_medicare = 0;
-
-/* Lives with SP */
-if cg_spouse = 1 then cg_lives_with_SP = hh1livwthspo;
-if cg_spouse = 0 then cg_lives_with_sp = op1prsninhh;
-if cg_lives_with_SP < 0 then cg_lives_with_sp = .;
-
-run;
-proc freq data=nsoc;
-table cg_relationship_cat1 cpp1wrk4pay cec1wrk4pay;
-run;
-proc means data=nsoc;
-var total_hours;
-run;
-proc print data = nsoc (obs = 100);
-where cec1wrk4pay = 2;
-var cec1wrk4pay cec1ownbusns cec1unpdwrk cec1misswork cec1look4wrk cec1hrsweek cec1hrslstwk cec1hrslast;
-run;
-data test;
-set nsoc (keep = spid op1prsninhh hh1livwthspo c1relatnshp cg_spouse cg_lives_with_sp);
-run;
-proc freq data=nsoc;
-table
-che1hrtattck che1othheart che1arthrits che1diabetes che1lungdis
-che1cancer cca1hwoftpc cca1hwofthom cca1hwoftshp cca1hwoftchs
-cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd
-cca1hlpinsrn cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs
-cca1hlpteeth cca1hlpmdtk cca1hlpshot
-
-cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg
-cac1diffinc cac1diffemo cac1diffphy che1fltltin;
-run;
-
-proc format;
-value yesno_ 1 = "Yes"
-			 0 = "No"
-			 . = "Missing";
-value cat1_  1 = "Every Day"
-			 2 = "Most Days"
-			 3 = "Some Days"
-			 4 = "Rarely"
-			 5 = "Never";
-value cat1a_ 1 = "Every/Most/Some Days"
-			 0 = "Rarely/Never";
-value cat2_  1 = "Very Much"
-			 2 = "Somewhat"
-			 3 = "Not So Much";
-value cat2a_ 1 = "Very Much/Somewhat"
-			 0 = "Not So Much";
-value cat3_  1 = "Not At All"
-			 2 = "Several Days"
-			 3 = "More Than Half The Days"
-			 4 = "Nearly Every Day";
-value cat3a_ 0 = "Not At All"
-			 1 = "At least Sever Days";
-run;
-option nospool;
-proc freq data=nsoc;
-table che1sleeptrb trb_back_sleep;
-run;
-%let varlist = che1hrtattck che1othheart che1arthrits che1diabetes che1lungdis che1cancer che1pain che1brethprb che1lowenrgy  che1lost10lb che1highbld che1osteoprs che1seeing che1hearing;
-%let varlist1 = ever_heart_attack ever_heart_disease ever_arthritis ever_diabetes ever_lung_dis ever_cancer ever_pain ever_breath_prob ever_low_enrgy  lost_10_lbs_yr ever_high_bp
-ever_osteoperosis ever_diff_seeing ever_diff_hearing;
-%macro ever_disease;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 0; 
-run;
-proc freq data=nsoc;
-table &var &var1;
-format &var1 yesno_.;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%ever_disease;
-
-%let varlist = che1fltltlin che1fltdown che1fltnervs che1fltworry;
-%let varlist1 = felt_lit_interest felt_depressed felt_nervous felt_worry;
-%macro ever_disease1;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 2;
-if &var = 3 then &var1 = 3;
-if &var = 4 then &var1 = 4;
-&var1._di = .;
-if &var = 2 or &var = 3 or &var = 4 then &var1._di = 1;
-if &var = 1 then &var1._di = 0;
-
-run;
-proc freq data=nsoc;
-table &var &var1 &var1._di;
-format &var1 cat3_. &var1._di cat3a_.;
-run;
-
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%ever_disease1;
-
-%let varlist = che1health che1painlmt che1brethlmt che1enrgylmt cca1hwoftpc cca1hwofthom cca1hwoftshp cca1hwoftchs che1sleeptrb;
-%let varlist1 =  self_health pain_lim_act breath_lim_act enrgy_lim_act help_personal_care help_get_around help_shopping help_chores trb_back_sleep;
-%macro help1;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 2;
-if &var = 3 then &var1 = 3;
-if &var = 4 then &var1 = 4;
-if &var = 5 then &var1 = 5;
-&var1._di = .;
-if &var = 1 or &var = 2 or &var = 3 then &var1._di = 1;
-if &var = 4 or &var = 5 then &var1._di = 0;
-
-run;
-proc freq data=nsoc;
-table &var &var1 &var1._di;
-format &var1 cat1_. &var1._di cat1a_.;
-run;
-
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%help1;
-
-%let varlist = cca1hlpbnkng cca1hlpmed cca1hlpmdapt cca1hlpspkdr cca1hlpordmd cca1hlpinsrn cca1hlpothin cse1hlpgtdev cse1homsafer cse1hlppdhlp cca1hlpdiet cca1hlpfeet cca1hlpskin cca1hlpexrcs cca1hlpteeth cca1hlpmdtk cca1hlpshot cse1frfamhlp cpp1wrk4pay;
-%let varlist1 = help_bills help_track_meds help_make_appts help_speak_doc help_order_med help_insurance help_insurance_oth help_mob_dev help_home_safe help_paid_helpr help_diet help_foot help_skin help_exercise help_teeth help_medical_task help_shots_injection friend_help work_4_pay;
-%macro help2;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 0; 
-run;
-proc freq data=nsoc;
-table &var &var1;
-format &var1 yesno_.;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%help2;
-proc freq data=nsoc;
-table help_mob_dev help_home_safe help_paid_helpr;
-run;
-
-data nsoc;
-set nsoc;
-if help_insurance = 1 | help_insurance_oth = 1 then help_insurance_any = 1;
-if help_insurance = 0 and help_insurance_oth = 0 then help_insurance_any = 0;
-run;
-
-%let varlist = cac1moreconf cac1dealbetr cac1closr2sp cac1moresat cac1exhaustd cac1toomuch cac1notime cac1uroutchg;
-%let varlist1 = gain_more_conf gain_deal_better gain_closer2SP gain_more_satisfied neg_exhausted neg_too_much neg_no_time neg_no_routine;
-%macro gain_neg;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 2;
-if &var = 3 then &var1 = 3;
-&var1._di = .;
-if &var = 1 or &var = 2 then &var1._di = 1;
-if &var = 3 then &var1._di = 0;
-run;
-proc freq data=nsoc;
-table &var &var1 &var1._di;
-format &var1 cat2_. &var1._di cat2a_.;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%gain_neg;
-option spool;
-proc freq data=nsoc;
-table cac1diffinc cac1diffinlv;
-run;
-%let varlist = cac1diffinc cac1diffemo cac1diffphy;
-%let varlist1 = diff_financial diff_emotional diff_physical;
-%macro difficulty;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 0; 
-run;
-proc freq data=nsoc;
-table &var &var1;
-format &var1 yesno_.;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%difficulty;
-%let varlist = cac1diffinlv cac1diffemlv cac1diffphlv;
-%let varlist1 = diff_financial_lv diff_emotional_lv diff_physical_lv;
-%let varlist2 = cac1diffinc cac1diffemo cac1diffphy;
-ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\diffculty_levels.rtf";
-%macro difficulty1;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%let var2 = %scan(&varlist2, &i);
-%do %while(&var ne );
-
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var2 = 2 then &var1 = 0;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 2;
-if &var = 3 then &var1 = 3;
-if &var = 4 then &var1 = 4;
-if &var = 5 then &var1 = 5;
-&var1._di = .;
-if &var2 = 2 then &var1._di = 0;
-if &var = 1 or &var = 2 or &var = 3 then &var1._di = 0;
-if &var = 4 or &var = 5 then &var1._di = 1;
-run;
-proc freq data=nsoc;
-table &var &var1 &var1._di;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%let var2 = %scan(&varlist2, &i);
-%end;
-%mend;
-%difficulty1;
-ods rtf close;
-
-%let varlist = cdc1hlpsched cdc1hlpyrpls chi1medicaid;
-%let varlist1 = help_regular_sched help_longer_than_yr cg_medicaid;
-%macro misc_binary;
-%let i = 1;
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%do %while(&var ne );
-data nsoc;
-set nsoc;
-&var1 = .;
-if &var = 1 then &var1 = 1;
-if &var = 2 then &var1 = 0; 
-run;
-proc freq data=nsoc;
-table &var &var1;
-format &var1 yesno_.;
-run;
-%let i = %eval(&i + 1);
-%let var = %scan(&varlist,&i);
-%let var1 = %scan(&varlist1, &i);
-%end;
-%mend;
-%misc_binary;
-
-/*
-proc sql;
-create table nsoc1
-as select a.*, b.cg_age as age1, b.dem_3_cat, b.sr_gad2_anxiety, b.sr_phq2_depressed
-from nsoc a
-left join nsoc_rg b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-proc freq data=nsoc_rg;
-table dem_3_cat sr_gad2_anxiety sr_phq2_depressed;
-run;
-proc freq data=nsoc1;
-table dem_3_cat sr_gad2_anxiety sr_phq2_depressed;
-run; 
-*/
-data ko.nsoc_raw1;
-set nsoc;
-run;
-proc freq data=ko.nsoc_raw1;
-table diff_physical_lv_di;
-run;
-
-/*****AGE CATEGORIES********/
-
-
-/*Bringing in raw OP, but change to bring in the final OP: TO DO LATER*/
-proc import out = RAW_OP_SENS
-			datafile = "E:\nhats\data\NHATS Sensitive\r1_sensitive\NHATS_Round_1_OP_Sen_Dem_File_old.dta"
-			replace;
-run;
-proc freq data=raw_op_sens;
-table op1catgryage;
-run;
-
-data nsoc;
-set ko.nsoc_raw1;
-run;
-proc freq data=nsoc;
-table chd1cgbrthyr;
-run;
-
-/*bring in variables regarding year and month of brith.*/
-proc sql;
-create table raw_op_sens1
-as select a.*, b.op1dage, b.op1dcatgryag, c.chd1cgbrthmt, c.chd1cgbrthyr
-from raw_op_sens a
-left join raw_op b
-on a.spid = b.spid and
-a.opid = b.opid
-left join nsoc c
-on a.spid = c.spid and
-a.opid = c.opid;
-quit;
-proc freq data=raw_op_sens1;
-where op1catgryage < 0;
-table op1dage;
-run;
-proc freq data=raw_op_sens1;
-where op1age<=0 and op1catgryage < 0;
-table chd1cgbrthyr;
-run;
-/*all op continuous variable have some sort of categorical variable*/
-proc means data=raw_op_sens1 n nmiss mean median min max std;
-where op1dage >0;
-var op1age;
-run;
-
-data test;
-set raw_op_sens1;
-if op1dage = 1;
-run;
-
-
-/*AGE CATEGORIES
-1 - UNDER 20
-2 - 20-24
-3 - 25-29
-4 - 30-34
-5 - 35-39
-6 - 40-44
-7 - 45-49
-8 - 50-54
-9 - 55-59
-10 - 60-64
-11 - 65-69
-12 - 70-74
-13 - 75-79
-14 - 80-84
-15 - 85-89
-16 - 90 +
-*/
-
-data raw_op_sens2;
-set raw_op_sens1;
-/*use the regular categorical variable and add in sensitive categories for the ones that are missing*/
-if op1dage < 0 and op1catgryage >0 then op1dage = op1catgryage;
-if op1dage <0 then op1dage = .;
-if op1dage >16 then op1dage = 16;
-
-
-if chd1cgbrthyr > 0 then cg_age_approx = 2011 - chd1cgbrthyr;
-
-/*based on categories*/
-
-if cg_age_approx < 20 and cg_age_approx > 0 and op1dage = . then op1dage = 1;
-if cg_age_approx >= 20 and cg_age_approx <=24 and op1dage = . then op1dage = 2;
-if cg_age_approx >= 25 and cg_age_approx <=29 and op1dage = .  then op1dage = 3;
-if cg_age_approx >= 30 and cg_age_approx <=34 and op1dage = .  then op1dage = 4;
-if cg_age_approx >= 35 and cg_age_approx <=39 and op1dage = .  then op1dage = 5;
-if cg_age_approx >= 40 and cg_age_approx <=44 and op1dage = .  then op1dage = 6;
-if cg_age_approx >= 45 and cg_age_approx <=49 and op1dage = .  then op1dage = 7;
-if cg_age_approx >= 50 and cg_age_approx <=54 and op1dage = .  then op1dage = 8;
-if cg_age_approx >= 55 and cg_age_approx <=59 and op1dage = .  then op1dage = 9;
-if cg_age_approx >= 60 and cg_age_approx <=64 and op1dage = .  then op1dage = 10;
-if cg_age_approx >= 65 and cg_age_approx <=69 and op1dage = .  then op1dage = 11;
-if cg_age_approx >= 70 and cg_age_approx <=74 and op1dage = .  then op1dage = 12;
-if cg_age_approx >= 75 and cg_age_approx <=79 and op1dage = .  then op1dage = 13;
-if cg_age_approx >= 80 and cg_age_approx <=84 and op1dage = .  then op1dage = 14;
-if cg_age_approx >= 85 and cg_age_approx <=89 and op1dage = .  then op1dage = 15;
-if cg_age_approx >= 90 and op1dage = .  then op1dage = 16;
-
-
-rename op1dage = cg_age_cat;
-run;
-proc freq data=raw_op_sens2;
-table cg_age_cat ;
-run;
-
-
-proc sql;
-create table nsoc_w_age
-as select a.*, b.cg_age_cat
-from nsoc a
-left join raw_op_sens2 b
-on a.spid = b.spid
-and a.opid = b.opid;
-quit;
-proc freq data=nsoc_w_age;
-table cg_age_cat ;
-run;
-proc freq data=nsoc_w_age;
-where cg_age_cat = .;
-table cg_spouse;
-run;
-
-data nsoc1;
-set nsoc_w_age;
-run;
-
-/**Age in Continuous Form (non-intervals)**/
-
-
-data nsoc_age;
-set nsoc1 (keep = spid opid chd1cgbrthyr chd1cgbrthmt c1intmonth);
-run;
-proc sql;
-create table nsoc_age1
-as select a.*, b.op1age
-from nsoc_age a
-left join raw_op_sens b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-proc freq data=nsoc_age1;
-table op1age;
-run;
-data nsoc_age1;
-set nsoc_age1;
-cg_age = op1age;
-if cg_age = -1|cg_age=-7|cg_age=-8 then cg_age = .;
-if op1age < 0 and chd1cgbrthyr >0 and c1intmonth >= chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr;
-if op1age < 0 and chd1cgbrthyr >0 and c1intmonth < chd1cgbrthmt then cg_age = 2011-chd1cgbrthyr-1;
-run;
-proc means data=nsoc_age1;
-var cg_age;
-run;
-
-proc sql;
-create table nsoc_age2
-as select a.*, b.cg_age
-from nsoc1 a
-left join nsoc_age1 b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-proc means data=nsoc_age2;
-var cg_age;
-run;
-
-data nsoc1;
-set nsoc_age2;
-run;
-
-proc means data=nsoc_pay;
-var cec1hrsweek cec1hrslstwk;
-run;
-
-data nsoc_pay;
-set nsoc1 ;
-/*paid last week variable binary 1/0*/
-paid_last_week = cec1wrk4pay;
-if cec1wrk4pay < 0 then paid_last_week = .;
-if cec1wrk4pay = 2 | cec1wrk4pay = 3 then paid_last_week = 0;
-
-if cec1hrslstwk < 0 then cec1hrslstwk = .;
-if cec1wrk4pay = 1 then paid_hours = cec1hrslstwk;
-
-
-if paid_hours <=20 and paid_hours~= . then paid_hours_cat = 0;
-if paid_hours >=21 and paid_hours<=39 then paid_hours_cat = 1;
-if paid_hours >=40 then paid_hours_cat = 2;
-/*if they didn't work last week then their paid hours is 0 and their category is zero*/
-if paid_last_week = 0 then paid_hours = 0;
-if paid_last_week = 0 then paid_hours_cat = 0;
-run;
-/*
-ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\Pay_Hours.rtf";
-proc freq data=nsoc_pay;
-table cec1wrk4pay paid_last_week paid_hours_cat paid_hours;
-run;
-proc means data=nsoc_pay;
-var paid_hours;
-run;
-ods rtf close;
-*/
-data nsoc1;
-set nsoc_pay;
-run;
-
-
-
-proc freq data=nsoc1;
-table che1fltltlin;
-run;
-data nsoc_phq_gad;
-set nsoc1;
-if che1fltltlin >= 0 then cg_depr_pqq1 = che1fltltlin;
-if che1fltdown >= 0 then cg_depr_pqq2 = che1fltdown;
-if che1fltnervs >= 0 then cg_depr_gad1 = che1fltnervs;
-if che1fltworry >= 0 then cg_depr_gad2 = che1fltworry;
-cg_depr_pqq1 = cg_depr_pqq1-1;
-cg_depr_pqq2 = cg_depr_pqq2-1;
-cg_depr_gad1 = cg_depr_gad1-1;
-cg_depr_gad2 = cg_depr_gad2-1;
-cg_phq2_score = sum(cg_depr_pqq1, cg_depr_pqq2);
-cg_gad2_score = sum(cg_depr_gad1, cg_depr_gad2);
-cg_phq2_depressed = .;
-if cg_phq2_score >= 3 then cg_phq2_depressed = 1;
-else if cg_phq2_score < 3 and cg_phq2_score ~= . then cg_phq2_depressed = 0;
-cg_gad2_anxiety = .;
-if cg_gad2_score >= 3 then cg_gad2_anxiety = 1;
-else if cg_gad2_score < 3 and cg_gad2_score ~= . then cg_gad2_anxiety = 0;
-run;
-/*
-ods rtf body = "E:\nhats\projects\Caregivers_KO\11242015\PHG_GAD.rtf";
-proc freq data=nsoc_phq_gad;
-table cg_depr_pqq1 cg_depr_pqq2 cg_depr_gad1 cg_depr_gad2 cg_phq2_score cg_gad2_score cg_phq2_depressed cg_gad2_anxiety;
-run;
-ods rtf close;
-*/
-data nsoc1;
-set nsoc_phq_gad;
-run;
-proc freq data=nsoc1;
-table diff_physical_lv_di;
-run;
-
-
-proc freq data=nsoc1;
-table cca1lstmhlpd;
-run;
-
-data flag_no_help_month;
-set nsoc1;
-if cca1hlplstyr = 1 then flag_no_help_mth = 1;
-run;
-proc freq data=flag_no_help_month;
-table flag_no_help_mth;
-run;
-
-data nsoc1;
-set flag_no_help_month;
-run;
-proc freq data=nsoc1;
-table diff_physical_lv_di;
-run;
-
-/*************************** HALF WAY POINT SAVE **********************************/
-
-data nhats.nsoc1_half;
-set nsoc1;
-run;
-
-/*************************** HALF WAY POINT SAVE **********************************/
-
-proc freq data=nhats.nhats_wave1_all_obs;
-table died;
-run;
-proc sql;
-create table raw_op_sp_dies
-as select a.*, b.died, c.op1dnsoc as nsoc_eligible
-from raw_op a
-left join  nhats.nhats_wave1_all_obs b
-on a.spid = b.spid
-left join nsoc_op_tracker c
-on a.spid = c.spid and a.opid = c.opid;
-quit;
-proc freq data=raw_op_sp_dies;
-table died nsoc_eligible;
-run;
-data raw_op_sp_dies1;
-set raw_op_sp_dies;
-if died ~= .;
-run;
-proc freq data=raw_op_sp_dies1;
-table died nsoc_eligible;
-run;
-proc sort data=nsoc1 out=nsoc1a;
-by spid opid;
-run;
-data nsoc_helper_num;
-set nsoc1a;
-if died ~= .;
-by spid opid;
-retain informal_nsoc_comp informal_nsoc_comp_i;
-informal_nsoc_comp = informal_nsoc_comp + 1;
-if first.spid then do ;
-informal_nsoc_comp = 1;
-informal_nsoc_comp_i = 1;
-end;
-run;
-
-data test;
-set nsoc_helper_num (keep = spid opid informal_nsoc_comp informal_nsoc_comp_i);
-run;
-proc freq data = nsoc_helper_num;
-table informal_nsoc_comp informal_nsoc_comp_i;
-run;
-data nsoc_helper_num1;
-set nsoc_helper_num;
-by spid opid;
-if last.spid;
-run;
-proc freq data = nsoc_helper_num1;
-table informal_nsoc_comp informal_nsoc_comp_i;
-run; 
-
-proc sql;
-create table raw_op_inf_cg
-as select a.*, b.informal_nsoc_comp, c.informal_nsoc_comp_i
-from raw_op_sp_dies1 a
-left join nsoc_helper_num1 b
-on a.spid = b.spid
-left join nsoc_helper_num c
-on a.spid = c.spid and a.opid = c.opid;
-quit;
-proc freq data=raw_op_inf_cg;
-table op1relatnshp informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible;
-run;
-data test;
-set raw_op_inf_cg (keep = spid opid nsoc_eligible informal_nsoc_comp informal_nsoc_comp_i);
-run;
-data raw_op_inf_cg1;
-set raw_op_inf_cg;
-/*if they did not complete the NSOC then set them as "0"*/
-if informal_nsoc_comp_i = . then informal_nsoc_comp_i = 0;
-/*Only include the SPs that had at least one of the caregivers that completed the NSOC interview*/
-if informal_nsoc_comp ~= .;
-/*helpers who were NSOC eligible but were not interviewed*/
-if nsoc_eligible >= 1 and nsoc_eligible <=5 then nsoc_eligible_i = 1;
-if nsoc_eligible_i ~= 1 then nsoc_eligible_i = 0;
-/*Note which person is a qualified "helper"*/
-all_helpers = .;
-if op1ishelper = 1 then all_helpers = 1;
-if all_helpers ~= 1 then all_helpers = 0;
-/*Is any family*/
-is_family = .;
-if (op1relatnshp >=1 and op1relatnshp <= 29 )|op1relatnshp=91 then is_family = 1;
-if is_family ~= 1 then is_family = 0;
-/*paid indicator*/
-helper_informal = .;
-/*if it's -1 then it's bc of the spouse. Check Box HL5. Spouse is considered as Unpaid Helper. */
-if all_helpers = 0 then helper_informal = 0;
-if all_helpers = 1 and is_family = 1 then helper_informal = 1;
-if all_helpers = 1 and op1paidhelpr = -1 then helper_informal = 1;
-if all_helpers = 1 and is_family = 0 and op1paidhelpr = 2 /*(answered No)*/ then helper_informal = 1;
-if all_helpers = 1 and is_family = 0 and (op1paidhelpr = 1) then helper_informal = 0;
-/*helper family CHANGED in 12/10/2015 from being actual family to indication of them being unpaid. */
-all_helper_family = .;
-if all_helpers = 1 and helper_informal = 1 then all_helper_family = 1;
-if all_helper_family ~= 1 then all_helper_family = 0;
-run;
-proc freq data=raw_op_inf_cg1;
-table all_helpers all_helper_family helper_informal ;
-run;
-proc freq data=raw_op_inf_cg1;
-table helper_informal*op1relatnshp;
-run;
-proc freq data=raw_op_inf_cg1;
-where helper_informal = .;
-table all_helpers is_family op1paidhelpr op1relatnshp;
-run;
-/*
-data test;
-set raw_op_inf_cg1 (keep = spid opid op1ishelper op1paidhelpr op1relatnshp);
-run;
-proc freq data=test;
-table op1relatnshp op1ishelper op1paidhelpr;
-run;
-data test1;
-set test;
-if op1ishelper = 1;
-run;
-proc freq data=test1;
-table op1relatnshp op1paidhelpr;
-run;
-proc freq data=raw_op_inf_cg1;
-table op1relatnshp is_family informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible all_helpers all_helper_family is_imm_family all_helper_imm_family;
-run;
-data test;
-set raw_op_inf_cg1 (keep = spid opid nsoc_eligible informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers all_helper_family);
-run;
-proc sort data=test;
-by spid opid;
-run;
-proc sort data=raw_op_inf_cg1;
-by spid opid;
-run;
-*/
-data raw_op_inf_cg2;
-set raw_op_inf_cg1;
-by spid opid;
-retain informal_nsoc_elig all_helper_tot all_helper_family_tot ;
-informal_nsoc_elig = informal_nsoc_elig + nsoc_eligible_i;
-all_helper_tot = all_helper_tot + all_helpers;
-all_helper_family_tot = all_helper_family_tot + all_helper_family;
-if first.spid then do;
-informal_nsoc_elig = nsoc_eligible_i;
-all_helper_tot=all_helpers;
-all_helper_family_tot = all_helper_family;
-end;
-run;
-proc freq data=raw_op_inf_cg2;
-table all_helper_family_tot;
-run;
-data test1;
-set raw_op_inf_cg2 (keep = spid opid nsoc_eligible helper_informal informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers informal_nsoc_elig all_helper_tot all_helper_family_tot);
-run;
-data raw_op_inf_cg3;
-set raw_op_inf_cg2;
-by spid opid;
-if last.spid;
-diff_helper = all_helper_tot - informal_nsoc_comp;
-run;
-proc freq data=raw_op_inf_cg3;
-table diff_helper;
-run;
-data test3;
-set raw_op_inf_cg3 (keep = spid opid nsoc_eligible helper_informal informal_nsoc_comp informal_nsoc_comp_i nsoc_eligible_i op1ishelper all_helpers informal_nsoc_elig all_helper_tot all_helper_family_tot );
-run;
-/*
-ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Total_Helper.rtf";
-proc freq data=raw_op_inf_cg3;
-table informal_nsoc_comp  all_helper_tot diff_helper all_helper_family_tot;
-run;
-ods rtf close;
-*/
-proc sql;
-create table nsoc_helpers
-as select a.*, b.informal_nsoc_comp, b.informal_nsoc_elig, b.all_helper_tot, b.all_helper_family_tot
-from nsoc1 a 
-left join raw_op_inf_cg3 b
-on a.spid = b.spid;
-quit;
-
-proc freq data=nsoc_helpers;
-table informal_nsoc_comp informal_nsoc_elig all_helper_tot all_helper_family_tot ;
-run;
-proc sql;
-create table nsoc_helpers0
-as select a.*, b.helper_informal
-from nsoc_helpers a
-left join raw_op_inf_cg1 b
-on a.spid = b.spid and
-a.opid = b.opid;
-quit;
-proc freq data=nsoc_helpers0;
-table helper_informal;
-run;
-
-data test(keep = spid);
-set nsoc_helpers ;
-if all_helper_tot = 1;
-run;
-data nsoc_helpers1;
-set nsoc_helpers0;
-/*solo CG in da houuuuuse*/
-solo_cg = 0;
-if all_helper_tot = 1 then solo_cg = 1;
-/*No Other Family Member*/
-solo_cg_fam = .;
-if helper_informal = 1 and all_helper_family_tot = 1 then solo_cg_fam = 1;
-if helper_informal = 1 and all_helper_family_tot > 1 then solo_cg_fam = 0;
-if helper_informal = 0 and all_helper_family_tot = 0 then solo_cg_fam = 1;
-if helper_informal = 0 and all_helper_family_tot > 0 then solo_cg_fam = 0;
-run;
-
-proc freq data=nsoc_helpers1;
-table helper_informal is_imm_family solo_cg solo_cg_fam ;
-run;
-proc freq data=nsoc_helpers1;
-where helper_informal = 1;
-table all_helper_family_tot;
-run;
-proc freq data=nsoc_helpers1;
-table informal_nsoc_comp all_helper_tot;
-run;
-
-/************* ONLY EOL Helpers *****************/
-
-data nsoc_helpers2;
-set nsoc_helpers1;
-if died = 1;
-run;
-/*
-ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\Solo_Caregiver_Numbers.rtf";
-proc freq data=nsoc_helpers2;
-table solo_cg_fam  ;
-run;
-proc freq data=nsoc_helpers2;
-where solo_cg_fam = 1;
-table all_helper_tot all_helper_family_tot;
-run;
-proc freq data=nsoc_helpers2;
-table solo_cg  ;
-run;
-proc freq data=nsoc_helpers2;
-where solo_cg = 1;
-table all_helper_tot;
-run;
-ods rtf close;
-*/
-/************* ONLY EOL Helpers *****************/
-
-proc sql;
-create table nsoc1
-as select *
-from nhats.Nsoc1_half a
-left join nsoc_helpers1 b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-
-proc freq data=nsoc1;
-table diff_physical_lv_di;
-run;
-
-/*********** Interview Date **************/
-
-data nsoc_int_date;
-set nsoc1;
-int_month = c1intmonth;
-if int_month >=5 then int_year = 2011;
-run;
-
-proc freq data=nsoc_int_date;
-table c1intmonth int_month int_year;
-run;
-
-data raw_nhats_r2_death_dates;
-set raw_nhats_r2_sens (keep = spid pd2mthdied pd2yrdied);
-run;
-
-proc sql;
-create table nsoc_int2death
-as select a.*, b.pd2mthdied as month_died, b.pd2yrdied as year_died
-from nsoc_int_date a
-left join raw_nhats_r2_death_dates b
-on a.spid = b.spid;
-quit;
-data nsoc_int2death;
-set nsoc_int2death;
-if month_died = -1 then month_died = .;
-if year_died = -1 then year_died = .;
-run;
-proc freq data=nsoc_int2death;
-table died month_died year_died;
-run;
-
-
-/*Interview to Death*/
-data nsoc_int2death1;
-set nsoc_int2death;
-if year_died = 1 then year_died = 2011;
-if year_died = 2 then year_died = 2012;
-if year_died ~= . then year_sep = year_died - int_year;
-if month_died ~= . then month_sep = month_died - int_month;
-if year_sep = 1 then year_sep_months = 12;
-if year_sep = 0 then year_sep_months = 0;
-
-months_to_death = year_sep_months + month_sep;
-/*take out the dates that are negative. Confirmed with Katherine, we are assuming they are a fluke*/
-if months_to_death < 0 then months_to_death = .;
-run;
-proc freq data=nsoc_int2death1;
-table c1intmonth   month_died year_died year_sep month_sep year_sep_months months_to_death;
-run;
-data test;
-set nsoc_int2death1 (keep = spid opid c1intmonth month_died year_died year_sep month_sep year_sep_months months_to_death);
-if months_to_death < 0 and months_to_death ~= .;
-run;
-data nsoc1;
-set nsoc_int2death1;
-run;
-
-/*Hours of Care additions. Could be more efficient I know. */
-data dc_additions;
-set nsoc1;
-total_hours_month = total_hours;
-if total_hours = . and cdc1hlpsched = 1 then total_hours_month = total_hours_day * total_hours_week * 4;
-
-if cdc1hlpyrs ~= -1 then helper_num_yrs = cdc1hlpyrs;
-if helper_num_yrs = . & cdc1hlpyrpls = 2 then helper_num_yrs = 0;
-if helper_num_yrs = . & cdc1hlpyrst ~= -1 then helper_num_yrs = 2011 - cdc1hlpyrst;
-
-run;
-proc freq data=dc_additions;
-table helper_num_yrs;
-run;
-proc freq data=dc_additions;
-table  total_hours total_hours_month helper_num_yrs;
-run;
-
-data nsoc1;
-set dc_additions;
-run;
-
-proc freq data=nsoc1;
-where all_helper_tot = 1;
-table  informal_nsoc_comp;
-run;
-proc freq data=nsoc1;
-where died = 1;
-table all_helper_tot cg_spouse;
-run;
-
-data indicators;
-set nsoc1;
-run;
-data nsoc1;
-set indicators;
-run;
-
-proc freq data=nsoc1;
-table diff_emotional_lv_di ;
-run;
-
-
-
-/****** Living in household **********/
-/****** OP1PRSNINHH is the variable for if the person is in the household ******/
-/****** This is answered they answer three questions in the the NHATS Questionnaire ******/
-/****** hh1livwthspo hh1proxlivsp hh1othlvhere if they answer yes or no (particularly if ******/
-/****** the person also has an opid (spouse: hh1dspouseid, proxy: is1dproxyid)) then ******/
-/****** then they will appear in the OP File. For those that didn't answer these questions, ******/
-/****** then we can probably assume that these people don't live in the household ******/
-
-proc sql;
-create table opfile_hh1
-as select a.*, b.hh1livwthspo, c.hh1proxlivsp, d.hh1othlvhere, d.hh1dlvngarrg, d.hh1livwthspo as SP_answered_spo, d.hh1proxlivsp as SP_ans_prox,d.hh1othlvhere as SP_ans_oth, d.r1dresid
-from raw_op a
-left join raw_nhats_r1 b
-on a.spid = b.spid and a.opid = b.hh1dspouseid
-left join raw_nhats_r1 c
-on a.spid = c.spid and a.opid = c.is1dproxyid
-left join raw_nhats_r1 d
-on a.spid = d.spid;
-quit;
-proc freq data= opfile_hh1;
-table op1prsninhh;
-run;
-proc freq data=opfile_hh1;
-table in_hh;
-run;
-data opfile_hh_final;
-set opfile_hh1;
-lives_in_hh = .;
-/*if the living arrangement says that they live with spouse and the person is the spouse then that person should be coded as a person in the hh*/
-if (hh1dlvngarrg = 2 | hh1dlvngarrg = 3) and op1relatnshp = 2 then op1prsninhh = 1;
-if op1prsninhh = 1 and lives_in_hh = . then lives_in_hh = 1;
-if op1prsninhh = 0 and lives_in_hh = . then lives_in_hh = 0;
-if op1chnotinhh = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1soclntwrk = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1contctflg = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1spcaredfr = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1ishelper = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1dflmiss = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1dsocwrkfl = 1 and lives_in_hh = . then lives_in_hh = 0;
-if op1relatnshp = 37 and lives_in_hh = . then lives_in_hh = 0;
-if hh1dlvngarrg = 1 and lives_in_hh = . then lives_in_hh = 0;
-run;
-proc freq data=opfile_hh_final;
-table op1prsninhh lives_in_hh;
-run;
-data nsoc1;
-set nsoc1;
-drop lives_in_hh;
-run;
-proc sql; 
-create table nsoc_w_hh
-as select a.*, b.lives_in_hh
-from nsoc1 a
-left join opfile_hh_final b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-proc freq data=nsoc_w_hh;
-table lives_in_hh;
-run;
-
-data nsoc1;
-set nsoc_w_hh;
-run;
-
-proc freq data=nsoc1;
-table diff_emotional_lv_di ;
-run;
-/*
-ods rtf body = "E:\nhats\data\Projects\Caregivers\logs\solo_cg_fam_xtab_spouse.rtf";
-proc freq data=nsoc1;
-where died = 1;
-table cg_spouse*solo_cg;
-run;
-proc freq data=nsoc1;
-where solo_cg = 1 and died = 1;
-table cg_relationship_cat;
-run;
-proc freq data=nsoc1;
-where died = 1;
-table cg_spouse*solo_cg_fam;
-run;
-proc freq data=nsoc1;
-where solo_cg_fam = 1 and died = 1;
-table cg_relationship_cat;
-run;
-ods rtf close;
-*/
-
-data nhats_op;
-set ko.helpers1a;
-if op1dochlp = -1 then op1dochlp = 0;
-run;
-proc freq data=nhats_op;
-table op1dochlp;
-run;
-proc sql;
-create table op_additions
-as select a.*, b.op1dochlp
-from nsoc1 a
-left join nhats_op b
-on a.spid = b.spid and a.opid = b.opid;
-quit;
-proc freq data=op_additions;
-table op1dochlp;
-run;
-data nsoc1;
-set op_additions;
-run;
-data ko.nsoc_full;
-set nsoc1;
-run;
-proc export data=nsoc1 outfile = "E:\nhats\data\Projects\Caregivers\nsoc_FULL.dta" dbms = dta replace;
-run;
-
-/*no lfu*/
-data no_lfu;
-set nsoc1;
-if died = . then delete;
-run;
-data nsoc1;
-set no_lfu;
-run;
-
-data ko.nsoc_final;
-set nsoc1;
-run;
 
 
 H="NSOC Setup stata"
@@ -6459,7 +4197,7 @@ drop dup
 }
 
 
-H="Death date from NHATS and claims"
+H="xxxDeath date from NHATS and claims--old"
 /*
 //sas code to pull dod from the mbsf (note-there is no information in the ndi 
 
@@ -6604,3 +4342,259 @@ label values death_source death_source
 keep spid death*
 save "E:\nhats\data\CMS_DUA_28016\death_date.dta", replace
 
+
+
+H="new code for dod from claims"
+/*
+//sas code to pull dod from the mbsf (note-there is no information in the ndi 
+libname medi 'E:\nhats\data\20180625 NHATS CMS Data\merged\';
+
+proc import out=xwalka
+	    datafile = "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta" replace;
+run;
+
+data xwalkb;
+set medi.nhats2bene_xwalk_11;
+run;
+
+proc sql;  
+create table xwalk as select * from
+xwalka a inner join 
+xwalkb b
+on a.nhats_cms_num=b.nhats_cms_num;
+quit;
+
+data death1;
+set medi.mbsf_06_16 (keep=bene_id death_date);
+if death_date~=.;
+run;
+
+proc sort data=death1 out=death2 nodupkey;
+by bene_id death_date;
+run;
+
+
+data claims (keep=bene_id admit_date);
+set medi.ip_06_16 
+	medi.snf_09_16
+	medi.op_09_16
+	medi.pb_09_16
+	medi.hh_09_16
+	medi.hs_09_16;
+run;
+
+proc sort data=claims out=claims2;
+by bene_id descending admit_date;
+run;
+
+proc sort data=claims2 out=claims3 nodupkey;
+by bene_id; 
+run;
+
+proc sql;
+create table death as select a.spid, b.*, c.* 
+from 
+xwalk a
+left join 
+death2 b
+on a.bene_id=b.bene_id
+left join
+claims3 c
+on a.bene_id=c.bene_id;
+quit;
+
+
+proc export data=death outfile="E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta" replace; run;
+*/
+
+
+
+
+
+
+use spid using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", clear
+duplicates drop
+merge 1:m spid using "E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta", nogen ///
+keepusing(spid death_date admit)
+duplicates drop 
+rename death_date dd_claims
+
+by spid, sort: drop if missing(dd) & _N>1
+forvalues i=2/6 {
+	merge 1:1 spid using "E:\nhats\data\NHATS Public\round_`i'\nhats_round_`i'_tracker_file", ///
+	nogen keep(match master) keepusing(r`i'status r`i'spstatdt*)
+	merge 1:1 spid using "E:\nhats\data\NHATS Sensitive\r`i'_sensitive\nhats_round_`i'_sp_sen_dem_file", ///
+	nogen keep(match master)
+}
+keep spid *died *status dd* adm *spstat*
+
+//look at death month & year. don't have, so set date to last of month
+gen dd_nhats=.
+replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+gen death_day=. 
+forvalues i=2/6 {
+	foreach j in mth yr {
+		replace pd`i'`j'died=. if pd`i'`j'<0
+}
+	replace death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+	replace death_day=30 if inlist(pd`i'm,4,6,9,11)
+	replace death_day=28 if inlist(pd`i'm,2)
+	replace dd_nh=mdy(pd`i'mthdied,death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
+}
+gen dd_present_nhats=dd_nhats!=.
+gen dd_present_claims=dd_claims!=.
+gen mcdy=year(dd_claims)
+gen nhdy=year(dd_nhats)
+tab dd_pres*,m
+tab nhdy mcdy,m
+gen match=month(dd_nhats)==month(dd_claims) & year(dd_nhats)==year(dd_claims)
+tab match
+/*preserve
+keep if dd_present_claims | nhdy<2013
+*/
+tab dd_pres*,m
+tab nhdy mcdy,m
+tab match
+forvalues i=2/5 {
+tab r`i'status
+}
+
+*keep if dd_present_n!=dd_present_c
+tab match
+gen last_ivw_date=.
+forvalues i=2/6 {
+tab r`i'status
+replace last_ivw_date=mdy(r`i'spstatdtm,1,r`i'spstatdtyr) if inlist(r`i'status,60,61,63) 
+
+}
+format last_ivw dd_cl dd_nh %td
+gen time=admit-dd_nhats
+gen nhdm=month(dd_nhats)
+gen mcdm=month(dd_claims)
+gen conflict1=admit>dd_nhats & admit!=.
+gen conflict1a=admit>dd_claims & admit!=.
+gen nhonly=dd_present_nh & !dd_present_claims & nhdy<2013
+gen conflict2=last_ivw>dd_claims & last_ivw!=.
+gen claimsonly=dd_present_claims & nhdy>2012
+
+preserve
+keep if !missing(dd_claims) | nhdy<2013
+//800 deaths from either claims or nhats, 621 (77.63%) match month and year
+tab match
+tab conflict1
+//52 cases with a claim after death (nhats), 24 with a claim >31 days after death
+tab conflict1a
+//67 cases with a claim after death (claims), 25 with a claim>31 days after death
+
+//following the method used for HRS, we will take claims death date.  if there's 
+//a death date in nhats only (14 cases), that will be used.  if there's a claim 
+//after the nhats death date, the last claim date is used.
+
+restore
+drop death_day
+gen death_date=dd_claims
+replace death_date=dd_nhats if dd_claims==.
+replace death_date=last if last>dd_nhats & dd_claims==. & !missing(last)
+label var death_date "SP death date, from tracker (day imputed)"
+format death_date %td
+gen death_month=month(death_date)
+gen death_year=year(death_date)
+foreach x in month year {
+label var death_date "SP death `x', from claims or tracker"
+}
+gen death_source=1 if death_date==dd_claims 
+replace death_source=2 if death_date==last & dd_claims==.
+replace death_source=3 if death_date==dd_nhats & dd_claims==.
+replace death_source=4 if death_date==dd_claims & dd_claims==dd_nhats 
+replace death_source=. if missing(death_date)
+
+label define death_source 1 "MBSF" 2 "last claim after NHATS DOD" 3 "NHATS" 4 "Both"
+label values death_source death_source
+
+keep spid death*
+save "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", replace
+
+
+
+
+H="Making Population Estimates "
+
+//2011 ---Changes have already been made in NHATS Setup
+/*
+replace anfinw=anfinw*5491440/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4087340/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3027820/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2169060/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1194880/1224397 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6124980/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4781940/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*3886940/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3249940/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2230480/2257969 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+*/
+
+/*
+//2011, census
+
+replace anfinw=anfinw*5773054/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4185119/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3123735/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2264379/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1773244/(463619+1224397) if inrange(age,85,150) & female==0
+*replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6488377/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4959052/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4051216/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3391403/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*3670746/(1329677+2257969) if inrange(age,85,150) & female==1
+*replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+*/
+
+//2015---Changes have already been made in NHATS Setup
+/*
+replace anfinw=anfinw*6855860/5671878 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4941100/5071147 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3367300/3524465 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2257880/2208455 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1307620/1358952 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*648680/624319 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*7601440/6226214 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*5695060/6077509 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4182460/4196832 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3165560/3137807 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2253980/2157300 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1577880/1534438 if inrange(age,90,150) & female==1
+*/
+
+/*
+//2015 national sample, Census
+replace anfinw=anfinw*7105274/5671878 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4995740/5071147 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3438329/3524465 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2331936/2208455 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*2057940/(624319+1358952) if inrange(age,85,150) & female==0
+*replace anfinw=anfinw*648680/624319 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*7915224/6226214 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*5851969/6077509 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4320201/4196832 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3309010/3137807 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*3966339/(1534438+2157300) if inrange(age,85,89) & female==1
+*replace anfinw=anfinw*1577880/1534438 if inrange(age,90,150) & female==1
+*/
+
+H="Adjusting for Income CPI using 2017$"
+// Income adjusted for cpi inflation; now in terms of 2017 dollars.
+gen income_adj=0
+replace income_adj= (245.120/224.939)*aveincome if wave==1
+replace income_adj= (245.120/229.594)*aveincome if wave==2
+replace income_adj= (245.120/232.957)*aveincome if wave==3
+replace income_adj= (245.120/236.736)*aveincome if wave==4
+replace income_adj= (245.120/237.017)*aveincome if wave==5
+replace income_adj= (245.120/240.007)*aveincome if wave==6
+replace income_adj=aveincome if wave==7

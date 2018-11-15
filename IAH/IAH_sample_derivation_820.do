@@ -81,10 +81,10 @@ label var ip_rehab_only "Inpatient rehab (no SNF/HH), 1 yr prior to ivw"
 
 /* merge housecalls flag */
 cap drop _m
-merge 1:1 bene_id index_date using "E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta", keepus(cnt)
+merge 1:1 bene_id index_date using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta"
 gen hcallsb4 = 0
-replace hcallsb4 = 1 if cnt==2
-label var hcalls " 2 or more house calls +/- 90 days of ivw"
+replace hcallsb4 = 1 if _m==3
+label var hcalls " 1 or more house calls +/- 90 days of ivw"
 
 
 /* house calls count */
@@ -126,7 +126,7 @@ save "`region'"
 
 
 
-
+/*
 use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", clear
 cap drop _m
 duplicates drop spid wave, force
@@ -136,7 +136,7 @@ cap drop _m
 
 
 save "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
-
+*/
 
 ****
 use "E:\nhats\data\Projects\IAH\int_data\iah_wave1-5.dta", clear
@@ -161,7 +161,7 @@ sum income_adj, d
 replace housecalls_count = 0 if housecalls_count==.
 
 gen iah_rehab = 0
-replace iah_rehab = 1 if ip_rehab==1
+replace iah_rehab = 1 if ip_rehab==1 |snf==1 |hh==1
 
 cap drop iah_all
 
@@ -212,12 +212,12 @@ append using "E:\nhats\data\Projects\IAH\int_data\iah_mostrecent.dta"
 
 cap drop _m
 
-merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta", keepus(cnt)
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta"
 drop if _m==2
 
 gen housecalls_90 = 0
-replace housecalls_90 = 1 if cnt==2
-label var housecalls_90 "2+ housecalls +/- 90 days of ivw"
+replace housecalls_90 = 1 if _m==3
+label var housecalls_90 "1+ housecalls +/- 90 days of ivw"
 
 gen iah_pacute = 0
 replace iah_pacute = 1 if iah_rehab==1

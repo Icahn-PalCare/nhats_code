@@ -7732,3 +7732,370 @@ ctitles("" "" "Pre-match" "" "" "Post-match" \ "" "<20 hrs/wk" "20+" "Std Diff" 
  }
 log close
 }
+
+
+H="*******************************************"
+
+
+H="JASP revision"
+
+
+H="********************************************"
+
+
+H="table 1 including 3 columns"
+clear all
+set more off
+capture log close
+
+local logpath "E:\nhats\data\projects\Homebound\logs"
+cd `logpath'
+use "E:\nhats\data\projects\Homebound\final_data\hb_wave_5_fullish.dta", clear
+rename anfinw orig_finw
+merge 1:1 spid wave using "E:\nhats\data\nhats cleaned\sp_round_1_5.dta", ///
+keepusing(anfinw)
+
+//2011
+/*
+replace anfinw=anfinw*5491440/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4087340/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3027820/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2169060/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1194880/1224397 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6124980/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4781940/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*3886940/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3249940/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2230480/2257969 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+*/
+
+/*
+//2011, census
+
+replace anfinw=anfinw*5773054/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4185119/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3123735/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2264379/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1773244/(463619+1224397) if inrange(age,85,150) & female==0
+*replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6488377/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4959052/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4051216/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3391403/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*3670746/(1329677+2257969) if inrange(age,85,150) & female==1
+*replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+*/
+
+//2015
+/*
+replace anfinw=anfinw*6855860/5671878 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4941100/5071147 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3367300/3524465 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2257880/2208455 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1307620/1358952 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*648680/624319 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*7601440/6226214 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*5695060/6077509 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4182460/4196832 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3165560/3137807 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2253980/2157300 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1577880/1534438 if inrange(age,90,150) & female==1
+*/
+
+/*
+//2015 national sample, Census
+replace anfinw=anfinw*7105274/5671878 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4995740/5071147 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3438329/3524465 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2331936/2208455 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*2057940/(624319+1358952) if inrange(age,85,150) & female==0
+*replace anfinw=anfinw*648680/624319 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*7915224/6226214 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*5851969/6077509 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*4320201/4196832 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3309010/3137807 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*3966339/(1534438+2157300) if inrange(age,85,89) & female==1
+*replace anfinw=anfinw*1577880/1534438 if inrange(age,90,150) & female==1
+*/
+
+gen ind_4_help=n_helpers>=4
+gen tot_childhrs=tot_sonhrs+tot_daughterhrs
+gen tot_othunp=tot_otherfam+tot_otherinf
+foreach l in tot_spousehrs tot_childhrs tot_othunp tot_paidhrs {
+local chelp `chelp' `l'
+}
+
+label var tot_childhrs "Hours of help/week from child sources"
+label var tot_othunp "Hours of help/week from other informal"
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins 
+
+label var ind_4_help "4+ Helpers"
+local cvars1 age
+local cvars2 aveincome 
+local cvars3 n_helpers n_paid_helpers tot_hrswk_help_i ///
+tot_hrswk_paid_i `chelp'
+local ivars1 female white hisp black other_race educ_hs_ind 
+local ivars2 medicaid married 
+local cvars3 n_children
+local ivars3 livealone rcfres stairs_ind region1 region2 region3 region4 metro_ind ///
+device_mobility 
+local cvars4 adl_index iadl_index sr_numconditions1
+local ivars4 sr_lung_dis_ever sr_phq2_depressed prob_dementia srh_fp sr_hosp_ind
+local ivars5 `paidvars'  ind_paid_helper hrswk_20 ind_4_help
+local cvars5  n_helpers tot_hrswk_help_i `chelp'
+label var ind_kids "Any children"
+
+
+
+ local rn : word count `cvars1' `cvars2' `ivars1' `ivars2' `cvars3' `ivars3' `cvars4' `ivars4' `cvars5' `ivars5' 1 1
+
+svyset [pw=anfinw]
+mat tab1=J(`rn',6,.)
+mat stars=J(`rn',6,0)
+local r=3
+local c=1
+levelsof homebound_cat if homebound_cat<4, local(levels)
+
+foreach l of local levels {
+	sum n if homebound_cat==`l' [aw=anfinw]
+	mat tab1[1,`l']=r(N)
+	mat tab1[2,`l']=r(sum)	
+	forvalues round=1/5 {
+		foreach x of local cvars`round' {
+		di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			mat tab1[`r',`l']=r(mean)
+			if `l'==3 {
+			svy: reg `x' homebound_cat if inlist(homebound_cat,1,2)
+			mat tab1[`r',4]=e(p)
+			mat stars[`r',4]=(e(p)<.0`wave')+(e(p)<.01)
+			svy: reg `x' homebound_cat if inlist(homebound_cat,1,3)
+			mat tab1[`r',5]=e(p)
+			mat stars[`r',5]=(e(p)<.0`wave')+(e(p)<.01)
+			svy: reg `x' homebound_cat if inlist(homebound_cat,2,3)
+			mat tab1[`r',6]=e(p)
+			mat stars[`r',6]=(e(p)<.0`wave')+(e(p)<.01)
+
+		
+}
+			local r=`r'+1
+
+}
+		foreach x of local ivars`round' {
+			di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			mat tab1[`r',`l']=r(mean)*100
+			if `l'==3 {
+				svy: tab `x' homebound_cat if inlist(homebound_cat,1,2)
+				mat tab1[`r',4]=(e(p_Pear))
+				mat stars[`r',4]=(e(p_Pear)<.05)+(e(p_Pear)<.01)				
+				svy: tab `x' homebound_cat if inlist(homebound_cat,1,3)
+				mat tab1[`r',5]=(e(p_Pear))
+				mat stars[`r',5]=(e(p_Pear)<.05)+(e(p_Pear)<.01)				
+				svy: tab `x' homebound_cat if inlist(homebound_cat,3,2)
+				mat tab1[`r',6]=(e(p_Pear))
+				mat stars[`r',6]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+
+			
+}			
+			local r=`r'+1
+}
+}
+	*local c=`c'+1
+	local r=3
+}
+
+/*
+	
+	
+mat tab1=J(`rn',16,.)
+mat stars=J(`rn',16,0)
+local r=3
+local c=1
+levelsof homebound_cat, local(levels)
+
+foreach l of local levels {
+	sum n if homebound_cat==`l' [aw=anfinw]
+	mat tab1[1,`c']=r(N)
+	mat tab1[2,`c']=r(sum)
+	forvalues round=1/5 {
+		foreach x of local cvars`round' {
+		di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			local `x'`l'=r(mean)
+			local sd`x'`l'=r(sd)
+			mat tab1[`r',`c']=r(mean)
+			*mat tab1[`r',`c'+1]=r(sd)
+			foreach z in 1 2 3 {
+				if `l'!=`z' {
+			*mat tab1[`r',`c'+2]=(``x'`l''-``x'1')/sqrt((`sd`x'`l''+`sd`x'1')/2)
+			svy: reg `x' homebound_cat if inlist(homebound_cat,`z',`l')
+			test 
+			mat tab1[`r',`c'+`z']=r(p)
+			mat stars[`r',`c'+`z']=(r(p)<.0`wave')+(r(p)<.01)
+}
+}
+		local r=`r'+1
+		di "`r'"
+}
+		foreach x of local ivars`round' {
+			di "`x'"
+			sum `x' if homebound_cat==`l' [aw=anfinw]
+			local `x'`l'=r(mean)
+			mat tab1[`r',`c']=r(mean)*100
+			foreach z in 1 2 3 {
+				if `l'!=`z' {
+*				mat tab1[`r',`c'+1]=(``x'`l''-``x'1')/sqrt((``x'`l''*(1-``x'`l'') + ``x'1'*(1-``x'1'))/2)
+					svy: tab `x' homebound_cat if inlist(homebound_cat,`z',`l')
+					mat tab1[`r',`c'+`z']=(e(p_Pear))
+					mat stars[`r',`c'+`z']=(e(p_Pear)<.0`wave')+(e(p_Pear)<.01)
+}
+}
+
+		local r=`r'+1
+}
+
+}
+	local c=`c'+5
+	local r=3
+}*/
+mat rownames tab1=N n `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' `cvars4' `ivars4' `cvars5' `ivars5'
+
+frmttable using `logpath'\sample_characteristics_wave_5_revision.doc, replace statmat(tab1) ///
+title(Table 1: Characteristics of the study population (weighted estimates)) ///
+ctitles("" "Homebound" "Never Alone" "Help/Difficulty" "P-value: A-B" "P-value: A-C" "P-value: B-C" ) ///
+sdec(2) annotate(stars) asymbol(*,**) varlabels 
+
+
+H="match including graph of std differences"
+capture log close
+
+
+cd "E:\nhats\data\Projects\Homebound\logs"
+
+foreach wave in  5  {
+
+log using propensity_score_matching_wave_`wave'.txt, text replace
+use "E:\nhats\data\Projects\Homebound\final_data\hb_wave_`wave'_fullish.dta" ///
+if homebound_cat<3, clear
+merge 1:1 spid wave using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", nogen ///
+keepusing(region) keep(match master)
+local vars i.agecat2 female black hisp married n_children i.income_cat medicaid educ_hs_ind ///
+srh_fp sr_numconditions1 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3
+gen ind_4_help=n_helpers>=4
+gen hb=homebound_cat==1
+gen agec2_2=inlist(agecat,3,4)
+gen agec2_3=agecat>4
+label var agec2_2 "Age 75-84"
+label var agec2_3 "Age 85+"
+cap tab region, gen(region)
+
+local demovars agec2_2 agec2_3 female black hisp married n_children inccat2 ///
+inccat3 inccat4 ///
+medicaid educ_hs_ind
+local clinivars  srh_fp sr_numconditions1 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility metro_ind region2 region3 region4
+
+
+tokenize hrswk_20 ind_paid_helper ind_4_help
+
+local vars age female black hisp married /*n_children*/ ///
+/*inccat2 inccat3*/ inccat4 ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1*/  cond2 cond3 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem ///
+///adl_independent iadl_independent //
+adl3 iadl3 region2 metro_ind // region3 region4 //metro_ind region2 //region3 region4
+
+if `wave'==5 local vars /*agec2_2 agec2_3*/ age female black hisp married /*n_children*/ ///
+/*inccat2 inccat3 inccat4*/ aveincome ///
+medicaid educ_hs_ind srh_fp /*sr_numconditions1 cond2*/ cond3 ///
+sr_lung_dis_ever sr_phq2_depressed prob_dem ///
+///adl_independent iadl_independent //
+adl3 iadl3 region2 region3 region4 //metro_ind //region2 region3 region4
+
+local vars agec2_2 agec2_3 female black hisp married inccat4 medicaid educ_hs_ind srh_fp ///
+cond2 cond3 sr_lung_dis_ever sr_phq2_depressed prob_dem adl3 iadl3 device_mobility ///
+region2 region3 region4 metro_ind
+
+sum `vars'
+
+foreach x of local vars {
+	replace `x'=0 if missing(`x')
+	}
+local i=1
+cap drop *score* *_weight*
+//implement radius matching
+foreach x in hrswk_20 ind_paid_helper ind_4_help {
+pscore ``i'' `vars' , pscore(`x'_score) logit
+*******************************************************************
+
+
+gen logit`x'score=ln(`x'_score/(1-`x'_score))
+sum logit`x'score
+
+sca cal_ps1=r(sd)*0.02
+sca list cal_ps1
+local caliper cal_ps1
+
+//rule of thumb 0.2*sd, try 0.02* sd
+psmatch2  ``i'' ,outcome(homebound) pscore(`x'_score) radius caliper(`=`caliper'') logit
+di "``i''"
+
+logit ``i'' `vars'
+predict p
+replace `x'_score=p
+drop p
+
+//for final analysis, don't use radius match, use iptw instead
+replace _we=(`x'/`x'_score)+((1-`x')/(1-`x'_score))
+egen sow=total(_we)
+replace _we=_we/sow
+drop sow
+
+//note--need to manually add variable labels
+pstest `vars',treated(``i'') both mw(_w) graph
+graph save pstest_graph_``i'', replace
+graph export pstest_graph_``i''.pdf, replace
+rename _we `x'_weight
+rename _sup `x'_sup
+psgraph, treated(``i'') pscore(`x'_score) support(`x'_sup)
+
+local i=`i'+1
+}
+
+local replace replace
+foreach x in hrswk_20 ind_paid_helper ind_4_help {
+	svy: logit hb `x' `vars' if !missing(`x'_w), or
+	qui outreg, stats(e_b p e_ci) varlabels ctitles("" "1")
+	logit hb `x' `vars' [pw=`x'_w], or
+	qui outreg, stats(e_b p e_ci) varlabels merge ctitles("" "2")
+	svy: logit hb `x' `demovars' `clinivars' if !missing(`x'_w), or
+	qui outreg, stats(e_b p e_ci) varlabels merge ctitles("" "3")
+	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
+	qui outreg using homebound_matched_logits_wave_`wave'2.rtf, ///
+	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "4") ///
+	note("Matched and unmatched logistic regressions, odds ratios reported" \ ///
+	"1--Unmatched, matching variables only"\ "2--Matched, matching variables only"\ ///
+	"3--Unmatched, all covariates" \"4--Matched, all covariates")
+	local replace addtable
+}
+
+foreach x in hrswk_20  {
+	logit hb `x' `demovars' `clinivars' [pw=`x'_w], or
+	qui outreg, stats(e_b p e_ci) varlabels ctitles("" "Orig")
+	logit hb `x' `demovars' `clinivars' metro_ind [pw=`x'_w], or
+	qui outreg using homebound_matched_logits_wave_`wave'2.rtf, ///
+	`replace' stats(e_b p e_ci) varlabels merge ctitles("" "Incl Metro") 
+	local replace addtable
+}
+
+log close
+
+}

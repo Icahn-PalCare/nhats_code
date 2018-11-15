@@ -5449,16 +5449,17 @@ proc export data=iv_mb2 (keep = spid wave ffs_6m) outfile="E:\nhats\data\Project
 
 
 H="Start with Serious Illness Data, restritct to waves 1-3"
-use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
+
+use "E:\nhats\data\Projects\IAH\int_data\iah_fullsample.dta", clear
+
+cap drop _merge
+
+merge 1:1 spid wave using "E:\nhats\data\Projects\IAH\int_data\iah_ffs.dta", keepus(ffs_6m)
+keep if _m==3
+
+save "E:\nhats\data\Projects\IAH\final_data\iah_fullsample.dta", replace
 
 
-duplicates drop spid wave, force
-keep if community_dwelling
-keep if wave<4
-
-
-gen ffs_6m = 0
-replace ffs_6m = 1 if cont_ffs_n_mos >=6
 
 local cvars sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever
 
@@ -5485,16 +5486,13 @@ rename adl_flag iah_adl
 rename ind_nonelect_adm_12m iah_nonelect
 
 
-save "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", replace
+save "E:\nhats\data\Projects\IAH\final_data\iah_wave1-5.dta", replace
 
 
 keep if cc_flag
 keep if adl_flag
 keep if ind_nonelect_adm_12m // elective hospitalization in past year
 
-
-
-saveold "E:\nhats\data\Projects\IAH\int_data\steps123.dta", version(12) replace /*SAS dataset for ip rehab and homecalls */
 
 H="Search for IP rehab and home calls"
 libname claims "E:\nhats\data\CMS_DUA_28016\Merged";

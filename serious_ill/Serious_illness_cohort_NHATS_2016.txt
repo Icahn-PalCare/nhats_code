@@ -1,4 +1,4 @@
-= V4 Outline MultiLine NoSorting TabWidth=30
+= V7 Outline MultiLine NoSorting TabWidth=30
 
 H="NHATS Serious Illness"
 /*HRS variables are processed in file HRS_Processing.txt
@@ -601,11 +601,34 @@ dx list is from Elixhauser code*/
 data proj_int.dem_dx_freq;
 set dx_all_last_1yr_w_dups;
 	dementia=0;
+	dem_icd10=0;
 	if (substr(diag,1,4) in ('3310','3311','3312','2900','2901',
              '2902','2903','2912','2948','2949') or
-		substr(diag,1,5) in ('29410','29411','29040','29041','29042','29043')) 
+		substr(diag,1,5) in ('29410','29411','29040','29041','29042','29043'))
 		and dementia=0 
           then dementia=1;
+/*ICD-10*/		
+
+if (substr(diag,1,5)='F0150'
+or substr(diag,1,5)='F0151'
+or substr(diag,1,5)='F0280'
+or substr(diag,1,5)='F0281'
+or substr(diag,1,5)='F0390'
+or substr(diag,1,5)='F0391'
+or substr(diag,1,4)='F051'
+or substr(diag,1,5)='F1027'
+or substr(diag,1,5)='F1097'
+or substr(diag,1,4)='G300'
+or substr(diag,1,4)='G301'
+or substr(diag,1,4)='G308'
+or substr(diag,1,4)='G309'
+or substr(diag,1,5)='G3101'
+or substr(diag,1,5)='G3109'
+or substr(diag,1,4)='G311'
+or substr(diag,1,5)='G3183') 
+		and dem_icd10=0 
+          then dem_icd10=1;
+if dem_icd10=1 then dementia=1;
 run;
 
 
@@ -1641,13 +1664,14 @@ run;
 in the next section*/
 proc sql;
 create table dem_dx_freq_2 as select distinct bene_id,index_year,
-sum(dementia) as dem_dx_1yr label="count dementia dx 1yr pre core ivw"
+sum(dementia) as dem_dx_1yr label="count dementia dx 1yr pre core ivw",
+sum(dem_icd10) as dem_dx_icd10_1yr label="count dementia dx 1yr pre-core ivw, ICD10"
  from proj_int.dem_dx_freq group by bene_id,index_year;
 quit;
 
 /* merge in the 1 year count of dementia diagnoses from the previous section*/
 proc sql;
-create table elix_1yr_dm_dx_count as select a.*,b.dem_dx_1yr from
+create table elix_1yr_dm_dx_count as select a.*,b.dem_dx_1yr,b.dem_dx_icd10_1yr from
 proj_int.elix_0_1yr_2 a left join
 dem_dx_freq_2 b
 on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
@@ -1656,14 +1680,9 @@ quit;
 /*overwrite the previously saved dataset with one with the additional dementia variable added*/
 data proj_int.elix_0_1yr_2;
 set elix_1yr_dm_dx_count;
-if comorb_31_0_1yr=0 then dem_dx_1yr=0;
+if comorb_31_0_1yr=0 & dem_dx_icd10_1yr<=0 then dem_dx_1yr=0;
 run;
 
-proc freq data=proj_int.elix_0_1yr_2;
-table comorb:;
-run;
-
- 
 
 H="Charlson comorbidities"
 /*Add indicator variables for the Charlson comorbidities
@@ -2366,6 +2385,913 @@ proc contents data=proj_int.chronic_21_1yr3_0;
 run;
 
 
+H="SMIs from ICD-10"
+/*use ICD10 list to get SMIs that don't need more than dx*/
+
+data icd10a;
+set proj_int.dx_0_1yr(rename=(diag=dx_0));
+
+/*initialize variables*/
+cancer_icd10=0;
+esrd_icd10=0;
+copd_icd10=0;
+diabetes_icd10=0;
+hiv_icd10=0;
+liver_icd10=0;
+als_icd10=0;
+renal_icd10=0;
+pvd_icd10=0;
+dementia_icd10=0;
+cad_icd10=0;
+dementia_icd10=0;
+chf_icd10=0;
+cva_icd10=0;
+
+diag=trim(left(dx_0));
+
+if diag~='' then do;
+
+/*cancer*/
+if (substr(diag,1,4)='C153'
+or substr(diag,1,4)='C154'
+or substr(diag,1,4)='C155'
+or substr(diag,1,4)='C158'
+or substr(diag,1,4)='C159'
+or substr(diag,1,4)='C160'
+or substr(diag,1,4)='C161'
+or substr(diag,1,4)='C162'
+or substr(diag,1,4)='C163'
+or substr(diag,1,4)='C164'
+or substr(diag,1,4)='C165'
+or substr(diag,1,4)='C166'
+or substr(diag,1,4)='C168'
+or substr(diag,1,4)='C169'
+or substr(diag,1,4)='C220'
+or substr(diag,1,4)='C221'
+or substr(diag,1,4)='C222'
+or substr(diag,1,4)='C223'
+or substr(diag,1,4)='C224'
+or substr(diag,1,4)='C227'
+or substr(diag,1,4)='C228'
+or substr(diag,1,4)='C229'
+or substr(diag,1,4)='C250'
+or substr(diag,1,4)='C251'
+or substr(diag,1,4)='C252'
+or substr(diag,1,4)='C253'
+or substr(diag,1,4)='C254'
+or substr(diag,1,4)='C257'
+or substr(diag,1,4)='C258'
+or substr(diag,1,4)='C259'
+or substr(diag,1,3)='C33'
+or substr(diag,1,4)='C384'
+or substr(diag,1,4)='C450'
+or substr(diag,1,4)='C480'
+or substr(diag,1,4)='C481'
+or substr(diag,1,4)='C482'
+or substr(diag,1,4)='C488'
+or substr(diag,1,4)='C561'
+or substr(diag,1,4)='C562'
+or substr(diag,1,4)='C569'
+or substr(diag,1,5)='C5700'
+or substr(diag,1,5)='C5701'
+or substr(diag,1,5)='C5702'
+or substr(diag,1,5)='C5710'
+or substr(diag,1,4)='C573'
+or substr(diag,1,4)='C574'
+or substr(diag,1,4)='C710'
+or substr(diag,1,4)='C712'
+or substr(diag,1,4)='C713'
+or substr(diag,1,4)='C714'
+or substr(diag,1,4)='C717'
+or substr(diag,1,4)='C718'
+or substr(diag,1,4)='C719'
+or substr(diag,1,4)='C770'
+or substr(diag,1,4)='C771'
+or substr(diag,1,4)='C772'
+or substr(diag,1,4)='C773'
+or substr(diag,1,4)='C774'
+or substr(diag,1,4)='C775'
+or substr(diag,1,4)='C778'
+or substr(diag,1,4)='C779'
+or substr(diag,1,5)='C7800'
+or substr(diag,1,4)='C781'
+or substr(diag,1,4)='C782'
+or substr(diag,1,5)='C7830'
+or substr(diag,1,5)='C7839'
+or substr(diag,1,4)='C784'
+or substr(diag,1,4)='C785'
+or substr(diag,1,4)='C786'
+or substr(diag,1,4)='C787'
+or substr(diag,1,5)='C7880'
+or substr(diag,1,5)='C7889'
+or substr(diag,1,5)='C7900'
+or substr(diag,1,5)='C7901'
+or substr(diag,1,6)='C79011'
+or substr(diag,1,6)='C79019'
+or substr(diag,1,5)='C7902'
+or substr(diag,1,4)='C792'
+or substr(diag,1,5)='C7931'
+or substr(diag,1,5)='C7932'
+or substr(diag,1,5)='C7949'
+or substr(diag,1,5)='C7951'
+or substr(diag,1,5)='C7952'
+or substr(diag,1,5)='C7960'
+or substr(diag,1,5)='C7961'
+or substr(diag,1,5)='C7962'
+or substr(diag,1,5)='C7970'
+or substr(diag,1,5)='C7981'
+or substr(diag,1,5)='C7982'
+or substr(diag,1,5)='C7989'
+or substr(diag,1,4)='C800'
+or substr(diag,1,5)='C9100'
+or substr(diag,1,5)='C9101'
+or substr(diag,1,5)='C9102'
+or substr(diag,1,5)='C9110'
+or substr(diag,1,5)='C9111'
+or substr(diag,1,5)='C9112'
+or substr(diag,1,5)='C9190'
+or substr(diag,1,5)='C9191'
+or substr(diag,1,5)='C9192'
+or substr(diag,1,5)='C91Z0'
+or substr(diag,1,5)='C91Z1'
+or substr(diag,1,5)='C91Z2'
+or substr(diag,1,5)='C9200'
+or substr(diag,1,5)='C9201'
+or substr(diag,1,5)='C9202'
+or substr(diag,1,5)='C9210'
+or substr(diag,1,5)='C9211'
+or substr(diag,1,5)='C9212'
+or substr(diag,1,5)='C9220'
+or substr(diag,1,5)='C9221'
+or substr(diag,1,5)='C9222'
+or substr(diag,1,5)='C9230'
+or substr(diag,1,5)='C9231'
+or substr(diag,1,5)='C9232'
+or substr(diag,1,5)='C9240'
+or substr(diag,1,5)='C9241'
+or substr(diag,1,5)='C9242'
+or substr(diag,1,5)='C9250'
+or substr(diag,1,5)='C9251'
+or substr(diag,1,5)='C9252'
+or substr(diag,1,5)='C9262'
+or substr(diag,1,5)='C9290'
+or substr(diag,1,5)='C9291'
+or substr(diag,1,5)='C9292'
+or substr(diag,1,5)='C92A2'
+or substr(diag,1,5)='C92Z0'
+or substr(diag,1,5)='C92Z1'
+or substr(diag,1,5)='C92Z2'
+or substr(diag,1,5)='C9300'
+or substr(diag,1,5)='C9301'
+or substr(diag,1,5)='C9302'
+or substr(diag,1,5)='C9310'
+or substr(diag,1,5)='C9311'
+or substr(diag,1,5)='C9312'
+or substr(diag,1,5)='C9332'
+or substr(diag,1,6)='C93910'
+or substr(diag,1,5)='C9391'
+or substr(diag,1,5)='C9392'
+or substr(diag,1,5)='C93Z0'
+or substr(diag,1,5)='C93Z1'
+or substr(diag,1,5)='C93Z2'
+or substr(diag,1,5)='C9400'
+or substr(diag,1,5)='C9401'
+or substr(diag,1,5)='C9402'
+or substr(diag,1,5)='C9420'
+or substr(diag,1,5)='C9421'
+or substr(diag,1,5)='C9422'
+or substr(diag,1,5)='C9430'
+or substr(diag,1,5)='C9431'
+or substr(diag,1,5)='C9432'
+or substr(diag,1,5)='C9480'
+or substr(diag,1,5)='C9481'
+or substr(diag,1,5)='C9482'
+or substr(diag,1,5)='C9500'
+or substr(diag,1,5)='C9501'
+or substr(diag,1,5)='C9502'
+or substr(diag,1,5)='C9510'
+or substr(diag,1,5)='C9511'
+or substr(diag,1,5)='C9512'
+or substr(diag,1,5)='C9590'
+or substr(diag,1,5)='C9592'
+or substr(diag,1,4)='D751')
+and cancer_icd10=0 then
+cancer_icd10=1;
+
+/*ESRD*/
+if (substr(diag,1,4)='I120'
+or substr(diag,1,5)='I1311'
+or substr(diag,1,4)='N185'
+or substr(diag,1,4)='N186'
+or substr(diag,1,3)='N19'
+or substr(diag,1,5)='Z4931'
+or substr(diag,1,5)='Z4932'
+or substr(diag,1,5)='Z9115'
+or substr(diag,1,4)='Z992')
+adn esrd_icd10=0 then 
+esrd_icd10=1;
+
+/*COPD*/
+if (substr(diag,1,4)='J411'
+	or substr(diag,1,4)='J418'
+	or substr(diag,1,3)='J42'
+	or substr(diag,1,4)='J430'
+	or substr(diag,1,4)='J431'
+	or substr(diag,1,4)='J432'
+	or substr(diag,1,4)='J438'
+	or substr(diag,1,4)='J439'
+	or substr(diag,1,4)='J440'
+	or substr(diag,1,4)='J441'
+	or substr(diag,1,4)='J449'
+	or substr(diag,1,4)='J470'
+	or substr(diag,1,4)='J471'
+	or substr(diag,1,4)='J479'
+	or substr(diag,1,3)='J60'
+	or substr(diag,1,3)='J61'
+	or substr(diag,1,4)='J620'
+	or substr(diag,1,4)='J628'
+	or substr(diag,1,4)='J630'
+	or substr(diag,1,4)='J631'
+	or substr(diag,1,4)='J632'
+	or substr(diag,1,4)='J633'
+	or substr(diag,1,4)='J634'
+	or substr(diag,1,4)='J635'
+	or substr(diag,1,4)='J636'
+	or substr(diag,1,3)='J64'
+	or substr(diag,1,3)='J65'
+	or substr(diag,1,4)='J660'
+	or substr(diag,1,4)='J661'
+	or substr(diag,1,4)='J662'
+	or substr(diag,1,4)='J668'
+	or substr(diag,1,4)='J670'
+	or substr(diag,1,4)='J671'
+	or substr(diag,1,4)='J672'
+	or substr(diag,1,4)='J673'
+	or substr(diag,1,4)='J674'
+	or substr(diag,1,4)='J675'
+	or substr(diag,1,4)='J676'
+	or substr(diag,1,4)='J677'
+	or substr(diag,1,4)='J678'
+	or substr(diag,1,4)='J679'
+	or substr(diag,1,4)='J684'
+	or substr(diag,1,5)='J8410'
+	or substr(diag,1,6)='J84112'
+	or substr(diag,1,5)='J8417'
+	or substr(diag,1,5)='J9600'
+	or substr(diag,1,5)='J9601'
+	or substr(diag,1,5)='J9602'
+	or substr(diag,1,5)='J9610'
+	or substr(diag,1,5)='J9611'
+	or substr(diag,1,5)='J9612'
+	or substr(diag,1,5)='J9620'
+	or substr(diag,1,5)='J9621'
+	or substr(diag,1,5)='J9622'
+	or substr(diag,1,5)='J9690'
+	or substr(diag,1,5)='J9691'
+	or substr(diag,1,5)='J9692'
+	or substr(diag,1,4)='J982'
+	or substr(diag,1,4)='J983')
+	and copd_icd10=0 then
+	copd_icd10=1;
+
+/*Diabetes*/
+if (substr(diag,1,4)='E102'
+or substr(diag,1,5)='E1021'
+or substr(diag,1,5)='E1022'
+or substr(diag,1,5)='E1029'
+or substr(diag,1,5)='E1052'
+or substr(diag,1,5)='E1059'
+or substr(diag,1,4)='E112'
+or substr(diag,1,5)='E1121'
+or substr(diag,1,5)='E1122'
+or substr(diag,1,5)='E1129'
+or substr(diag,1,5)='E1152'
+or substr(diag,1,4)='E122'
+or substr(diag,1,4)='E124'
+or substr(diag,1,4)='E125'
+or substr(diag,1,4)='E127'
+or substr(diag,1,4)='E132'
+or substr(diag,1,5)='E1321'
+or substr(diag,1,5)='E1322'
+or substr(diag,1,5)='E1329'
+or substr(diag,1,4)='E135'
+or substr(diag,1,5)='E1352'
+or substr(diag,1,5)='E1359'
+or substr(diag,1,6)='E13610'
+or substr(diag,1,4)='E137'
+or substr(diag,1,4)='E138'
+or substr(diag,1,4)='E142'
+or substr(diag,1,4)='E144'
+or substr(diag,1,4)='E145'
+or substr(diag,1,4)='E147')
+and diabetes_icd10=0 then
+diabetes_icd10=1;
+
+/*HIV*/
+
+if (substr(diag,1,4)='B20X'
+or substr(diag,1,4)='B200'
+or substr(diag,1,4)='B201'
+or substr(diag,1,4)='B202'
+or substr(diag,1,4)='B203'
+or substr(diag,1,4)='B204'
+or substr(diag,1,4)='B205'
+or substr(diag,1,4)='B206'
+or substr(diag,1,4)='B207'
+or substr(diag,1,4)='B208'
+or substr(diag,1,4)='B209'
+or substr(diag,1,4)='B21X'
+or substr(diag,1,4)='B210'
+or substr(diag,1,4)='B211'
+or substr(diag,1,4)='B212'
+or substr(diag,1,4)='B213'
+or substr(diag,1,4)='B217'
+or substr(diag,1,4)='B218'
+or substr(diag,1,4)='B219'
+or substr(diag,1,4)='B22X'
+or substr(diag,1,4)='B220'
+or substr(diag,1,4)='B221'
+or substr(diag,1,4)='B222'
+or substr(diag,1,4)='B227')
+and hiv_icd10=0 then
+hiv_icd10=1;
+
+/*Advanced liver disease*/
+if (substr(diag,1,5)='I8500'
+or substr(diag,1,5)='I8501'
+or substr(diag,1,5)='I8510'
+or substr(diag,1,5)='I8511'
+or substr(diag,1,4)='K702'
+or substr(diag,1,5)='K7030'
+or substr(diag,1,5)='K7031'
+or substr(diag,1,5)='K7040'
+or substr(diag,1,5)='K7041'
+or substr(diag,1,5)='K7210'
+or substr(diag,1,5)='K7290'
+or substr(diag,1,4)='K740'
+or substr(diag,1,4)='K741'
+or substr(diag,1,4)='K742'
+or substr(diag,1,4)='K743'
+or substr(diag,1,4)='K744'
+or substr(diag,1,4)='K745'
+or substr(diag,1,5)='K7460'
+or substr(diag,1,5)='K7469'
+or substr(diag,1,4)='K766'
+or substr(diag,1,4)='K767')
+and liver_icd10=0 then
+liver_icd10=1;
+
+/*ALS or other neurodegenerative disease*/
+if (substr(diag,1,4)='G10' 
+or substr(diag,1,5)='G1221'
+or substr(diag,1,4)='G132'
+or substr(diag,1,4)='G138')
+and als_icd10=0 then
+als_icd10=1;
+
+/*renal, for diabetes*/
+if (substr(diag,1,4)='I120'
+or substr(diag,1,5)='I1311'
+or substr(diag,1,4)='N183'
+or substr(diag,1,4)='N184'
+or substr(diag,1,4)='N185'
+or substr(diag,1,4)='N186'
+or substr(diag,1,3)='N19'
+or substr(diag,1,5)='Z4931'
+or substr(diag,1,5)='Z4932'
+or substr(diag,1,5)='Z9115'
+or substr(diag,1,4)='Z992')
+and renal_icd10=0 then
+renal_icd10=1;
+
+/*PVD*/
+if (substr(diag,1,5)='E0852'
+or substr(diag,1,5)='E0952'
+or substr(diag,1,6)='I70221'
+or substr(diag,1,6)='I70222'
+or substr(diag,1,6)='I70223'
+or substr(diag,1,6)='I70228'
+or substr(diag,1,6)='I70229'
+or substr(diag,1,6)='I70231'
+or substr(diag,1,6)='I70232'
+or substr(diag,1,6)='I70233'
+or substr(diag,1,6)='I70234'
+or substr(diag,1,6)='I70235'
+or substr(diag,1,6)='I70238'
+or substr(diag,1,6)='I70239'
+or substr(diag,1,6)='I70241'
+or substr(diag,1,6)='I70242'
+or substr(diag,1,6)='I70243'
+or substr(diag,1,6)='I70244'
+or substr(diag,1,6)='I70245'
+or substr(diag,1,6)='I70248'
+or substr(diag,1,6)='I70249'
+or substr(diag,1,5)='I7025'
+or substr(diag,1,5)='I7025'
+or substr(diag,1,6)='I70261'
+or substr(diag,1,6)='I70262'
+or substr(diag,1,6)='I70263'
+or substr(diag,1,6)='I70268'
+or substr(diag,1,6)='I70269'
+or substr(diag,1,6)='I70301'
+or substr(diag,1,6)='I70302'
+or substr(diag,1,6)='I70303'
+or substr(diag,1,6)='I70308'
+or substr(diag,1,6)='I70309'
+or substr(diag,1,6)='I70311'
+or substr(diag,1,6)='I70312'
+or substr(diag,1,6)='I70313'
+or substr(diag,1,6)='I70318'
+or substr(diag,1,6)='I70319'
+or substr(diag,1,6)='I70321'
+or substr(diag,1,6)='I70322'
+or substr(diag,1,6)='I70323'
+or substr(diag,1,6)='I70328'
+or substr(diag,1,6)='I70329'
+or substr(diag,1,6)='I70331'
+or substr(diag,1,6)='I70332'
+or substr(diag,1,6)='I70333'
+or substr(diag,1,6)='I70334'
+or substr(diag,1,6)='I70335'
+or substr(diag,1,6)='I70338'
+or substr(diag,1,6)='I70339'
+or substr(diag,1,6)='I70341'
+or substr(diag,1,6)='I70342'
+or substr(diag,1,6)='I70343'
+or substr(diag,1,6)='I70344'
+or substr(diag,1,6)='I70345'
+or substr(diag,1,6)='I70348'
+or substr(diag,1,6)='I70349'
+or substr(diag,1,5)='I7035'
+or substr(diag,1,6)='I70361'
+or substr(diag,1,6)='I70362'
+or substr(diag,1,6)='I70363'
+or substr(diag,1,6)='I70368'
+or substr(diag,1,6)='I70369'
+or substr(diag,1,6)='I70391'
+or substr(diag,1,6)='I70392'
+or substr(diag,1,6)='I70393'
+or substr(diag,1,6)='I70398'
+or substr(diag,1,6)='I70399'
+or substr(diag,1,6)='I70399'
+or substr(diag,1,6)='I70401'
+or substr(diag,1,6)='I70402'
+or substr(diag,1,6)='I70403'
+or substr(diag,1,6)='I70408'
+or substr(diag,1,6)='I70409'
+or substr(diag,1,6)='I70411'
+or substr(diag,1,6)='I70412'
+or substr(diag,1,6)='I70413'
+or substr(diag,1,6)='I70418'
+or substr(diag,1,6)='I70419'
+or substr(diag,1,6)='I70421'
+or substr(diag,1,6)='I70422'
+or substr(diag,1,6)='I70423'
+or substr(diag,1,6)='I70428'
+or substr(diag,1,6)='I70429'
+or substr(diag,1,6)='I70431'
+or substr(diag,1,6)='I70432'
+or substr(diag,1,6)='I70433'
+or substr(diag,1,6)='I70434'
+or substr(diag,1,6)='I70435'
+or substr(diag,1,6)='I70438'
+or substr(diag,1,6)='I70439'
+or substr(diag,1,6)='I70441'
+or substr(diag,1,6)='I70442'
+or substr(diag,1,6)='I70443'
+or substr(diag,1,6)='I70444'
+or substr(diag,1,6)='I70445'
+or substr(diag,1,6)='I70448'
+or substr(diag,1,6)='I70449'
+or substr(diag,1,5)='I7045'
+or substr(diag,1,6)='I70461'
+or substr(diag,1,6)='I70462'
+or substr(diag,1,6)='I70463'
+or substr(diag,1,6)='I70468'
+or substr(diag,1,6)='I70469'
+or substr(diag,1,6)='I70491'
+or substr(diag,1,6)='I70492'
+or substr(diag,1,6)='I70493'
+or substr(diag,1,6)='I70498'
+or substr(diag,1,6)='I70499'
+or substr(diag,1,6)='I70501'
+or substr(diag,1,6)='I70502'
+or substr(diag,1,6)='I70503'
+or substr(diag,1,6)='I70508'
+or substr(diag,1,6)='I70509'
+or substr(diag,1,6)='I70511'
+or substr(diag,1,6)='I70512'
+or substr(diag,1,6)='I70513'
+or substr(diag,1,6)='I70518'
+or substr(diag,1,6)='I70519'
+or substr(diag,1,6)='I70521'
+or substr(diag,1,6)='I70522'
+or substr(diag,1,6)='I70523'
+or substr(diag,1,6)='I70528'
+or substr(diag,1,6)='I70529'
+or substr(diag,1,6)='I70531'
+or substr(diag,1,6)='I70532'
+or substr(diag,1,6)='I70533'
+or substr(diag,1,6)='I70534'
+or substr(diag,1,6)='I70535'
+or substr(diag,1,6)='I70538'
+or substr(diag,1,6)='I70539'
+or substr(diag,1,6)='I70541'
+or substr(diag,1,6)='I70542'
+or substr(diag,1,6)='I70543'
+or substr(diag,1,6)='I70544'
+or substr(diag,1,6)='I70545'
+or substr(diag,1,6)='I70548'
+or substr(diag,1,6)='I70549'
+or substr(diag,1,6)='I7055'
+or substr(diag,1,6)='I70561'
+or substr(diag,1,6)='I70562'
+or substr(diag,1,6)='I70563'
+or substr(diag,1,6)='I70568'
+or substr(diag,1,6)='I70569'
+or substr(diag,1,6)='I70591'
+or substr(diag,1,6)='I70592'
+or substr(diag,1,6)='I70593'
+or substr(diag,1,6)='I70598'
+or substr(diag,1,6)='I70599'
+or substr(diag,1,6)='I70599'
+or substr(diag,1,6)='I70601'
+or substr(diag,1,6)='I70602'
+or substr(diag,1,6)='I70603'
+or substr(diag,1,6)='I70608'
+or substr(diag,1,6)='I70609'
+or substr(diag,1,6)='I70611'
+or substr(diag,1,6)='I70612'
+or substr(diag,1,6)='I70613'
+or substr(diag,1,6)='I70618'
+or substr(diag,1,6)='I70619'
+or substr(diag,1,6)='I70621'
+or substr(diag,1,6)='I70622'
+or substr(diag,1,6)='I70623'
+or substr(diag,1,6)='I70628'
+or substr(diag,1,6)='I70629'
+or substr(diag,1,6)='I70631'
+or substr(diag,1,6)='I70632'
+or substr(diag,1,6)='I70633'
+or substr(diag,1,6)='I70634'
+or substr(diag,1,6)='I70635'
+or substr(diag,1,6)='I70638'
+or substr(diag,1,6)='I70639'
+or substr(diag,1,6)='I70641'
+or substr(diag,1,6)='I70642'
+or substr(diag,1,6)='I70643'
+or substr(diag,1,6)='I70644'
+or substr(diag,1,6)='I70645'
+or substr(diag,1,6)='I70648'
+or substr(diag,1,6)='I70649'
+or substr(diag,1,5)='I7065'
+or substr(diag,1,6)='I70661'
+or substr(diag,1,6)='I70662'
+or substr(diag,1,6)='I70663'
+or substr(diag,1,6)='I70668'
+or substr(diag,1,6)='I70669'
+or substr(diag,1,6)='I70691'
+or substr(diag,1,6)='I70692'
+or substr(diag,1,6)='I70693'
+or substr(diag,1,6)='I70698'
+or substr(diag,1,6)='I70699'
+or substr(diag,1,6)='I70701'
+or substr(diag,1,6)='I70702'
+or substr(diag,1,6)='I70703'
+or substr(diag,1,6)='I70708'
+or substr(diag,1,6)='I70709'
+or substr(diag,1,6)='I70711'
+or substr(diag,1,6)='I70712'
+or substr(diag,1,6)='I70713'
+or substr(diag,1,6)='I70718'
+or substr(diag,1,6)='I70719'
+or substr(diag,1,6)='I70721'
+or substr(diag,1,6)='I70722'
+or substr(diag,1,6)='I70723'
+or substr(diag,1,6)='I70728'
+or substr(diag,1,6)='I70729'
+or substr(diag,1,6)='I70731'
+or substr(diag,1,6)='I70732'
+or substr(diag,1,6)='I70733'
+or substr(diag,1,6)='I70734'
+or substr(diag,1,6)='I70735'
+or substr(diag,1,6)='I70738'
+or substr(diag,1,6)='I70739'
+or substr(diag,1,6)='I70741'
+or substr(diag,1,6)='I70742'
+or substr(diag,1,6)='I70743'
+or substr(diag,1,6)='I70744'
+or substr(diag,1,6)='I70745'
+or substr(diag,1,6)='I70748'
+or substr(diag,1,6)='I70749'
+or substr(diag,1,5)='I7075'
+or substr(diag,1,6)='I70761'
+or substr(diag,1,6)='I70762'
+or substr(diag,1,6)='I70763'
+or substr(diag,1,6)='I70768'
+or substr(diag,1,6)='I70769'
+or substr(diag,1,6)='I70791'
+or substr(diag,1,6)='I70792'
+or substr(diag,1,6)='I70793'
+or substr(diag,1,6)='I70798'
+or substr(diag,1,6)='I70799'
+or substr(diag,1,5)='I7092'
+or substr(diag,1,5)='I7770'
+or substr(diag,1,5)='I7771'
+or substr(diag,1,5)='I7772'
+or substr(diag,1,5)='I7773'
+or substr(diag,1,5)='I7774'
+or substr(diag,1,5)='I7775'
+or substr(diag,1,5)='I7776'
+or substr(diag,1,5)='I7777'
+or substr(diag,1,5)='I7779'
+or substr(diag,1,6)='Z95820'
+or substr(diag,1,6)='Z95828')
+and pvd_icd10=0 then
+pvd_icd10=1;
+
+/*Ischemic Heart Disease*/
+if (substr(diag,1,4)='I200'
+or substr(diag,1,4)='I201'
+or substr(diag,1,4)='I208'
+or substr(diag,1,4)='I209'
+or substr(diag,1,5)='I2101'
+or substr(diag,1,5)='I2102'
+or substr(diag,1,5)='I2109'
+or substr(diag,1,5)='I2111'
+or substr(diag,1,5)='I2119'
+or substr(diag,1,5)='I2121'
+or substr(diag,1,5)='I2129'
+or substr(diag,1,4)='I213'
+or substr(diag,1,4)='I214'
+or substr(diag,1,4)='I219'
+or substr(diag,1,5)='I21A1'
+or substr(diag,1,5)='I21A9'
+or substr(diag,1,4)='I220'
+or substr(diag,1,4)='I221'
+or substr(diag,1,4)='I222'
+or substr(diag,1,4)='I228'
+or substr(diag,1,4)='I229'
+or substr(diag,1,4)='I240'
+or substr(diag,1,4)='I241'
+or substr(diag,1,4)='I248'
+or substr(diag,1,4)='I249'
+or substr(diag,1,5)='I2510'
+or substr(diag,1,6)='I25110'
+or substr(diag,1,6)='I25111'
+or substr(diag,1,6)='I25118'
+or substr(diag,1,6)='I25119'
+or substr(diag,1,4)='I252'
+or substr(diag,1,5)='I2542'
+or substr(diag,1,4)='I255'
+or substr(diag,1,4)='I256'
+or substr(diag,1,6)='I25700'
+or substr(diag,1,6)='I25701'
+or substr(diag,1,6)='I25708'
+or substr(diag,1,6)='I25709'
+or substr(diag,1,6)='I25710'
+or substr(diag,1,6)='I25711'
+or substr(diag,1,6)='I25718'
+or substr(diag,1,6)='I25719'
+or substr(diag,1,6)='I25720'
+or substr(diag,1,6)='I25721'
+or substr(diag,1,6)='I25728'
+or substr(diag,1,6)='I25729'
+or substr(diag,1,6)='I25730'
+or substr(diag,1,6)='I25731'
+or substr(diag,1,6)='I25738'
+or substr(diag,1,6)='I25739'
+or substr(diag,1,6)='I25750'
+or substr(diag,1,6)='I25751'
+or substr(diag,1,6)='I25758'
+or substr(diag,1,6)='I25759'
+or substr(diag,1,6)='I25760'
+or substr(diag,1,6)='I25761'
+or substr(diag,1,6)='I25768'
+or substr(diag,1,6)='I25769'
+or substr(diag,1,6)='I25790'
+or substr(diag,1,6)='I25791'
+or substr(diag,1,6)='I25798'
+or substr(diag,1,6)='I25799'
+or substr(diag,1,6)='I25810'
+or substr(diag,1,6)='I25811'
+or substr(diag,1,6)='I25812'
+or substr(diag,1,5)='I2582'
+or substr(diag,1,5)='I2583'
+or substr(diag,1,5)='I2589'
+or substr(diag,1,4)='I259')
+and cad_icd10=0 then
+cad_icd10=1;
+
+/*dementia*/
+if (substr(diag,1,5)='F0151'
+or substr(diag,1,5)='F0280'
+or substr(diag,1,5)='F0281'
+or substr(diag,1,5)='F0390'
+or substr(diag,1,5)='F0391'
+or substr(diag,1,4)='F051'
+or substr(diag,1,5)='F1027'
+or substr(diag,1,5)='F1097'
+or substr(diag,1,4)='G300'
+or substr(diag,1,4)='G301'
+or substr(diag,1,4)='G308'
+or substr(diag,1,4)='G309'
+or substr(diag,1,5)='G3101'
+or substr(diag,1,5)='G3109'
+or substr(diag,1,4)='G311'
+or substr(diag,1,5)='G3183') 
+		and dementia_icd10=0 
+          then dementia_icd10=1;
+
+/*CHF--just for comparison ICD9/10*/
+if (substr(diag,1,5)='I0981' 
+		or substr(diag,1,4)='I110'
+		or substr(diag,1,4)='I130'
+		or substr(diag,1,4)='I132'
+		or substr(diag,1,4)='I501'
+		or substr(diag,1,5)='I5020'
+		or substr(diag,1,5)='I5021'
+		or substr(diag,1,5)='I5022'
+		or substr(diag,1,5)='I5023'
+		or substr(diag,1,5)='I5030'
+		or substr(diag,1,5)='I5031'
+		or substr(diag,1,5)='I5032'
+		or substr(diag,1,5)='I5033'
+		or substr(diag,1,5)='I5040'
+		or substr(diag,1,5)='I5041'
+		or substr(diag,1,5)='I5042'
+		or substr(diag,1,5)='I5043'
+		or substr(diag,1,5)='I5043'
+		or substr(diag,1,5)='I50810'
+		or substr(diag,1,5)='I50811'
+		or substr(diag,1,5)='I50812'
+		or substr(diag,1,5)='I50813'
+		or substr(diag,1,5)='I50814'
+		or substr(diag,1,5)='I5082'
+		or substr(diag,1,5)='I5083'
+		or substr(diag,1,5)='I5084'
+		or substr(diag,1,5)='I5089'
+		or substr(diag,1,4)='I509')		
+		and chf_icd10=0 
+				then chf_icd10=1;
+
+if (substr(diag,1,5)='G9731'
+or substr(diag,1,5)='G9732'
+or substr(diag,1,5)='I6000'
+or substr(diag,1,5)='I6001'
+or substr(diag,1,5)='I6002'
+or substr(diag,1,5)='I6010'
+or substr(diag,1,5)='I6011'
+or substr(diag,1,5)='I6012'
+or substr(diag,1,4)='I602'
+or substr(diag,1,5)='I6020'
+or substr(diag,1,5)='I6021'
+or substr(diag,1,5)='I6022'
+or substr(diag,1,5)='I6030'
+or substr(diag,1,5)='I6031'
+or substr(diag,1,5)='I6032'
+or substr(diag,1,4)='I604'
+or substr(diag,1,5)='I6050'
+or substr(diag,1,5)='I6051'
+or substr(diag,1,5)='I6052'
+or substr(diag,1,4)='I606'
+or substr(diag,1,4)='I607'
+or substr(diag,1,4)='I608'
+or substr(diag,1,4)='I609'
+or substr(diag,1,4)='I610'
+or substr(diag,1,4)='I611'
+or substr(diag,1,4)='I612'
+or substr(diag,1,4)='I613'
+or substr(diag,1,4)='I614'
+or substr(diag,1,4)='I615'
+or substr(diag,1,4)='I616'
+or substr(diag,1,4)='I618'
+or substr(diag,1,4)='I619'
+or substr(diag,1,5)='I6300'
+or substr(diag,1,6)='I63011'
+or substr(diag,1,6)='I63012'
+or substr(diag,1,6)='I63013'
+or substr(diag,1,6)='I63019'
+or substr(diag,1,5)='I6302'
+or substr(diag,1,6)='I63031'
+or substr(diag,1,6)='I63032'
+or substr(diag,1,6)='I63033'
+or substr(diag,1,6)='I63039'
+or substr(diag,1,5)='I6309'
+or substr(diag,1,5)='I6310'
+or substr(diag,1,6)='I63111'
+or substr(diag,1,6)='I63112'
+or substr(diag,1,6)='I63113'
+or substr(diag,1,6)='I63119'
+or substr(diag,1,5)='I6312'
+or substr(diag,1,6)='I63131'
+or substr(diag,1,6)='I63132'
+or substr(diag,1,6)='I63133'
+or substr(diag,1,6)='I63139'
+or substr(diag,1,5)='I6319'
+or substr(diag,1,5)='I6320'
+or substr(diag,1,6)='I63211'
+or substr(diag,1,6)='I63212'
+or substr(diag,1,6)='I63213'
+or substr(diag,1,6)='I63219'
+or substr(diag,1,5)='I6322'
+or substr(diag,1,6)='I63231'
+or substr(diag,1,6)='I63232'
+or substr(diag,1,6)='I63233'
+or substr(diag,1,6)='I63239'
+or substr(diag,1,5)='I6329'
+or substr(diag,1,5)='I6330'
+or substr(diag,1,6)='I63311'
+or substr(diag,1,6)='I63312'
+or substr(diag,1,6)='I63313'
+or substr(diag,1,6)='I63319'
+or substr(diag,1,6)='I63321'
+or substr(diag,1,6)='I63322'
+or substr(diag,1,6)='I63323'
+or substr(diag,1,6)='I63329'
+or substr(diag,1,6)='I63331'
+or substr(diag,1,6)='I63332'
+or substr(diag,1,6)='I63333'
+or substr(diag,1,6)='I63339'
+or substr(diag,1,6)='I63341'
+or substr(diag,1,6)='I63342'
+or substr(diag,1,6)='I63343'
+or substr(diag,1,6)='I63349'
+or substr(diag,1,5)='I6339'
+or substr(diag,1,5)='I6340'
+or substr(diag,1,6)='I63411'
+or substr(diag,1,6)='I63412'
+or substr(diag,1,6)='I63413'
+or substr(diag,1,6)='I63419'
+or substr(diag,1,6)='I63421'
+or substr(diag,1,6)='I63422'
+or substr(diag,1,6)='I63423'
+or substr(diag,1,6)='I63429'
+or substr(diag,1,6)='I63431'
+or substr(diag,1,6)='I63432'
+or substr(diag,1,6)='I63433'
+or substr(diag,1,6)='I63439'
+or substr(diag,1,6)='I63441'
+or substr(diag,1,6)='I63442'
+or substr(diag,1,6)='I63443'
+or substr(diag,1,6)='I63449'
+or substr(diag,1,5)='I6349'
+or substr(diag,1,5)='I6350'
+or substr(diag,1,6)='I63511'
+or substr(diag,1,6)='I63512'
+or substr(diag,1,6)='I63513'
+or substr(diag,1,6)='I63519'
+or substr(diag,1,6)='I63521'
+or substr(diag,1,6)='I63522'
+or substr(diag,1,6)='I63523'
+or substr(diag,1,6)='I63529'
+or substr(diag,1,6)='I63531'
+or substr(diag,1,6)='I63532'
+or substr(diag,1,6)='I63533'
+or substr(diag,1,6)='I63539'
+or substr(diag,1,6)='I63541'
+or substr(diag,1,6)='I63542'
+or substr(diag,1,6)='I63543'
+or substr(diag,1,6)='I63549'
+or substr(diag,1,6)='I6359'
+or substr(diag,1,4)='I636'
+or substr(diag,1,4)='I638'
+or substr(diag,1,4)='I639'
+or substr(diag,1,6)='I97810'
+or substr(diag,1,6)='I97811'
+or substr(diag,1,6)='I97820'
+or substr(diag,1,6)='I97821')
+and cva_icd10=0 then
+cva_icd10=1;
+
+end;
+run;
+
+
+
+proc sql;
+create table proj_int.icd10_smi as select 
+distinct bene_id, index_year,
+max(cancer_icd10) as cancer_icd10,
+max(esrd_icd10) as esrd_icd10,
+max(copd_icd10) as copd_icd10,
+max(diabetes_icd10) as diabetes_icd10,
+max(hiv_icd10) as hiv_icd10,
+max(als_icd10) as als_icd10,
+max(pvd_icd10) as pvd_icd10,
+max(liver_icd10) as liver_icd10,
+max(renal_icd10) as renal_icd10,
+max(cad_icd10) as cad_icd10,
+max(chf_icd10) as chf_icd10,
+max(cva_icd10) as cva_icd10,
+max(dementia_icd10) as dementia_icd10
+from icd10a
+group by bene_id, index_year;
+quit;
+
+
+
+
 H="get add'l utilization info from claims"
 /*These additional variables are just added to the dataset with the
 elixhauser and cc's 1 year preceeding the interview, can add them
@@ -3005,6 +3931,7 @@ if &name._dx~="" then do;
 chf_&name._dx=0;
 copd_&name._dx=0;
 hip_&name._dx=0;
+cva_&name._dx=0;
 
 /*CHF*/
 if (substr(&name._dx,1,5)='39891' or
@@ -3016,7 +3943,39 @@ if (substr(&name._dx,1,5)='39891' or
 		substr(&name._dx,1,5)='40493' or
 		substr(&name._dx,1,3)='428') 
 		and chf_&name._dx=0 
-		then chf_&name._dx=1;*add one binary variables here.;
+		then chf_&name._dx=1;
+		/*ICD10*/
+if (substr(&name._dx,1,5)='I0981' 
+		or substr(&name._dx,1,4)='I110'
+		or substr(&name._dx,1,4)='I130'
+		or substr(&name._dx,1,4)='I132'
+		or substr(&name._dx,1,4)='I501'
+		or substr(&name._dx,1,5)='I5020'
+		or substr(&name._dx,1,5)='I5021'
+		or substr(&name._dx,1,5)='I5022'
+		or substr(&name._dx,1,5)='I5023'
+		or substr(&name._dx,1,5)='I5030'
+		or substr(&name._dx,1,5)='I5031'
+		or substr(&name._dx,1,5)='I5032'
+		or substr(&name._dx,1,5)='I5033'
+		or substr(&name._dx,1,5)='I5040'
+		or substr(&name._dx,1,5)='I5041'
+		or substr(&name._dx,1,5)='I5042'
+		or substr(&name._dx,1,5)='I5043'
+		or substr(&name._dx,1,5)='I5043'
+		or substr(&name._dx,1,5)='I50810'
+		or substr(&name._dx,1,5)='I50811'
+		or substr(&name._dx,1,5)='I50812'
+		or substr(&name._dx,1,5)='I50813'
+		or substr(&name._dx,1,5)='I50814'
+		or substr(&name._dx,1,5)='I5082'
+		or substr(&name._dx,1,5)='I5083'
+		or substr(&name._dx,1,5)='I5084'
+		or substr(&name._dx,1,5)='I5089'
+		or substr(&name._dx,1,4)='I509')		
+		and chf_&name._dx=0 
+				then chf_&name._dx=1;
+
 /*COPD*/
 	if (substr(&name._dx,1,3)='490' or
 		substr(&name._dx,1,3)='491' or
@@ -3042,10 +4001,213 @@ if (substr(&name._dx,1,5)='39891' or
 		substr(&name._dx,1,4)='5064') 
 			and copd_&name._dx=0 
 		then copd_&name._dx=1;	
+if (substr(&name._dx,1,4)='J411'
+	or substr(&name._dx,1,4)='J418'
+	or substr(&name._dx,1,3)='J42'
+	or substr(&name._dx,1,4)='J430'
+	or substr(&name._dx,1,4)='J431'
+	or substr(&name._dx,1,4)='J432'
+	or substr(&name._dx,1,4)='J438'
+	or substr(&name._dx,1,4)='J439'
+	or substr(&name._dx,1,4)='J440'
+	or substr(&name._dx,1,4)='J441'
+	or substr(&name._dx,1,4)='J449'
+	or substr(&name._dx,1,4)='J470'
+	or substr(&name._dx,1,4)='J471'
+	or substr(&name._dx,1,4)='J479'
+	or substr(&name._dx,1,3)='J60'
+	or substr(&name._dx,1,3)='J61'
+	or substr(&name._dx,1,4)='J620'
+	or substr(&name._dx,1,4)='J628'
+	or substr(&name._dx,1,4)='J630'
+	or substr(&name._dx,1,4)='J631'
+	or substr(&name._dx,1,4)='J632'
+	or substr(&name._dx,1,4)='J633'
+	or substr(&name._dx,1,4)='J634'
+	or substr(&name._dx,1,4)='J635'
+	or substr(&name._dx,1,4)='J636'
+	or substr(&name._dx,1,3)='J64'
+	or substr(&name._dx,1,3)='J65'
+	or substr(&name._dx,1,4)='J660'
+	or substr(&name._dx,1,4)='J661'
+	or substr(&name._dx,1,4)='J662'
+	or substr(&name._dx,1,4)='J668'
+	or substr(&name._dx,1,4)='J670'
+	or substr(&name._dx,1,4)='J671'
+	or substr(&name._dx,1,4)='J672'
+	or substr(&name._dx,1,4)='J673'
+	or substr(&name._dx,1,4)='J674'
+	or substr(&name._dx,1,4)='J675'
+	or substr(&name._dx,1,4)='J676'
+	or substr(&name._dx,1,4)='J677'
+	or substr(&name._dx,1,4)='J678'
+	or substr(&name._dx,1,4)='J679'
+	or substr(&name._dx,1,4)='J684'
+	or substr(&name._dx,1,5)='J8410'
+	or substr(&name._dx,1,6)='J84112'
+	or substr(&name._dx,1,5)='J8417'
+	or substr(&name._dx,1,5)='J9600'
+	or substr(&name._dx,1,5)='J9601'
+	or substr(&name._dx,1,5)='J9602'
+	or substr(&name._dx,1,5)='J9610'
+	or substr(&name._dx,1,5)='J9611'
+	or substr(&name._dx,1,5)='J9612'
+	or substr(&name._dx,1,5)='J9620'
+	or substr(&name._dx,1,5)='J9621'
+	or substr(&name._dx,1,5)='J9622'
+	or substr(&name._dx,1,5)='J9690'
+	or substr(&name._dx,1,5)='J9691'
+	or substr(&name._dx,1,5)='J9692'
+	or substr(&name._dx,1,4)='J982'
+	or substr(&name._dx,1,4)='J983')
+			and copd_&name._dx=0 
+		then copd_&name._dx=1;
+
 *hip fracture;
 if (substr(&name._dx,1,3)='820' ) 
 		and hip_&name._dx=0 
 		then hip_&name._dx=1;*add one binary variables here.;
+
+/*stroke--added into list at behest of AAHPM, only at primary according to Amy's ICD-10 code list*/
+/*ICD-9*/
+if substr(dx,1,3)='430'
+or substr(dx,1,3)='431'
+or substr(dx,1,5)='43411' 
+or substr(dx,1,5)='43491'
+or substr(dx,1,3)='436'
+or substr(dx,1,5)='99702'
+then cva1=1;
+
+/*ICD-10*/
+if (substr(&name._dx,1,5)='G9731'
+or substr(&name._dx,1,5)='G9732'
+or substr(&name._dx,1,5)='I6000'
+or substr(&name._dx,1,5)='I6001'
+or substr(&name._dx,1,5)='I6002'
+or substr(&name._dx,1,5)='I6010'
+or substr(&name._dx,1,5)='I6011'
+or substr(&name._dx,1,5)='I6012'
+or substr(&name._dx,1,4)='I602'
+or substr(&name._dx,1,5)='I6020'
+or substr(&name._dx,1,5)='I6021'
+or substr(&name._dx,1,5)='I6022'
+or substr(&name._dx,1,5)='I6030'
+or substr(&name._dx,1,5)='I6031'
+or substr(&name._dx,1,5)='I6032'
+or substr(&name._dx,1,4)='I604'
+or substr(&name._dx,1,5)='I6050'
+or substr(&name._dx,1,5)='I6051'
+or substr(&name._dx,1,5)='I6052'
+or substr(&name._dx,1,4)='I606'
+or substr(&name._dx,1,4)='I607'
+or substr(&name._dx,1,4)='I608'
+or substr(&name._dx,1,4)='I609'
+or substr(&name._dx,1,4)='I610'
+or substr(&name._dx,1,4)='I611'
+or substr(&name._dx,1,4)='I612'
+or substr(&name._dx,1,4)='I613'
+or substr(&name._dx,1,4)='I614'
+or substr(&name._dx,1,4)='I615'
+or substr(&name._dx,1,4)='I616'
+or substr(&name._dx,1,4)='I618'
+or substr(&name._dx,1,4)='I619'
+or substr(&name._dx,1,5)='I6300'
+or substr(&name._dx,1,6)='I63011'
+or substr(&name._dx,1,6)='I63012'
+or substr(&name._dx,1,6)='I63013'
+or substr(&name._dx,1,6)='I63019'
+or substr(&name._dx,1,5)='I6302'
+or substr(&name._dx,1,6)='I63031'
+or substr(&name._dx,1,6)='I63032'
+or substr(&name._dx,1,6)='I63033'
+or substr(&name._dx,1,6)='I63039'
+or substr(&name._dx,1,5)='I6309'
+or substr(&name._dx,1,5)='I6310'
+or substr(&name._dx,1,6)='I63111'
+or substr(&name._dx,1,6)='I63112'
+or substr(&name._dx,1,6)='I63113'
+or substr(&name._dx,1,6)='I63119'
+or substr(&name._dx,1,5)='I6312'
+or substr(&name._dx,1,6)='I63131'
+or substr(&name._dx,1,6)='I63132'
+or substr(&name._dx,1,6)='I63133'
+or substr(&name._dx,1,6)='I63139'
+or substr(&name._dx,1,5)='I6319'
+or substr(&name._dx,1,5)='I6320'
+or substr(&name._dx,1,6)='I63211'
+or substr(&name._dx,1,6)='I63212'
+or substr(&name._dx,1,6)='I63213'
+or substr(&name._dx,1,6)='I63219'
+or substr(&name._dx,1,5)='I6322'
+or substr(&name._dx,1,6)='I63231'
+or substr(&name._dx,1,6)='I63232'
+or substr(&name._dx,1,6)='I63233'
+or substr(&name._dx,1,6)='I63239'
+or substr(&name._dx,1,5)='I6329'
+or substr(&name._dx,1,5)='I6330'
+or substr(&name._dx,1,6)='I63311'
+or substr(&name._dx,1,6)='I63312'
+or substr(&name._dx,1,6)='I63313'
+or substr(&name._dx,1,6)='I63319'
+or substr(&name._dx,1,6)='I63321'
+or substr(&name._dx,1,6)='I63322'
+or substr(&name._dx,1,6)='I63323'
+or substr(&name._dx,1,6)='I63329'
+or substr(&name._dx,1,6)='I63331'
+or substr(&name._dx,1,6)='I63332'
+or substr(&name._dx,1,6)='I63333'
+or substr(&name._dx,1,6)='I63339'
+or substr(&name._dx,1,6)='I63341'
+or substr(&name._dx,1,6)='I63342'
+or substr(&name._dx,1,6)='I63343'
+or substr(&name._dx,1,6)='I63349'
+or substr(&name._dx,1,5)='I6339'
+or substr(&name._dx,1,5)='I6340'
+or substr(&name._dx,1,6)='I63411'
+or substr(&name._dx,1,6)='I63412'
+or substr(&name._dx,1,6)='I63413'
+or substr(&name._dx,1,6)='I63419'
+or substr(&name._dx,1,6)='I63421'
+or substr(&name._dx,1,6)='I63422'
+or substr(&name._dx,1,6)='I63423'
+or substr(&name._dx,1,6)='I63429'
+or substr(&name._dx,1,6)='I63431'
+or substr(&name._dx,1,6)='I63432'
+or substr(&name._dx,1,6)='I63433'
+or substr(&name._dx,1,6)='I63439'
+or substr(&name._dx,1,6)='I63441'
+or substr(&name._dx,1,6)='I63442'
+or substr(&name._dx,1,6)='I63443'
+or substr(&name._dx,1,6)='I63449'
+or substr(&name._dx,1,5)='I6349'
+or substr(&name._dx,1,5)='I6350'
+or substr(&name._dx,1,6)='I63511'
+or substr(&name._dx,1,6)='I63512'
+or substr(&name._dx,1,6)='I63513'
+or substr(&name._dx,1,6)='I63519'
+or substr(&name._dx,1,6)='I63521'
+or substr(&name._dx,1,6)='I63522'
+or substr(&name._dx,1,6)='I63523'
+or substr(&name._dx,1,6)='I63529'
+or substr(&name._dx,1,6)='I63531'
+or substr(&name._dx,1,6)='I63532'
+or substr(&name._dx,1,6)='I63533'
+or substr(&name._dx,1,6)='I63539'
+or substr(&name._dx,1,6)='I63541'
+or substr(&name._dx,1,6)='I63542'
+or substr(&name._dx,1,6)='I63543'
+or substr(&name._dx,1,6)='I63549'
+or substr(&name._dx,1,6)='I6359'
+or substr(&name._dx,1,4)='I636'
+or substr(&name._dx,1,4)='I638'
+or substr(&name._dx,1,4)='I639'
+or substr(&name._dx,1,6)='I97810'
+or substr(&name._dx,1,6)='I97811'
+or substr(&name._dx,1,6)='I97820'
+or substr(&name._dx,1,6)='I97821')
+and cva_&name._dx=0 then
+cva_&name._dx=1;
+
 end;
 run;
 
@@ -3054,16 +4216,17 @@ create table &name._dx_2 as
 select distinct bene_id,index_year,
 sum(chf_&name._dx) as chf_&name.,
 sum(copd_&name._dx) as copd_&name.,
-sum(hip_&name._dx) as hip_&name.
+sum(hip_&name._dx) as hip_&name.,
+sum(cva_&name._dx) as cva_&name.
 from dx_1_&name.
 group by bene_id,index_year;
 quit;
 
 /*convert counts of diagnoses for each comorbidity to indicator variables*/ 
-data &name._dx_3(keep=bene_id index_year chf_&name._dx copd_&name._dx hip_&name._dx);
+data &name._dx_3(keep=bene_id index_year chf_&name._dx copd_&name._dx hip_&name._dx cva_&name._dx);
 set &name._dx_2 ;
-array list_com chf_&name. copd_&name. hip_&name.;
-array list_com_bin chf_&name._dx copd_&name._dx hip_&name._dx;
+array list_com chf_&name. copd_&name. hip_&name. cva_&name.;
+array list_com_bin chf_&name._dx copd_&name._dx hip_&name._dx cva_&name._dx;
 
 do over list_com;
   list_com_bin=0;
@@ -3102,17 +4265,19 @@ quit;
 data dx_both2;
 set dx_both;
 
-array list chf_pri_dx copd_pri_dx hip_pri_dx chf_adm_dx copd_adm_dx hip_adm_dx;
+array list chf_pri_dx copd_pri_dx hip_pri_dx cva_pri_dx chf_adm_dx copd_adm_dx hip_adm_dx cva_adm_dx;
 do over list;
 	if list = .  then list=0;
 end;
 label chf_pri_dx="CHF as primary dx from IP claim, 1yr pre ivw";
 label copd_pri_dx="COPD as primary dx from IP claim, 1yr pre ivw";
 label hip_pri_dx="Hip fracture as primary dx from IP claim, 1yr pre ivw";
+label cva_pri_dx="Stroke as primary dx from IP claim, 1yr pre ivw";
 
 label chf_adm_dx="CHF as admitting dx from IP claim, 1yr pre ivw";
 label copd_adm_dx="COPD as admitting dx from IP claim, 1yr pre ivw";
 label hip_adm_dx="Hip fracture as admitting dx from IP claim, 1yr pre ivw";
+label cva_adm_dx="Stroke as admitting dx from IP claim, 1yr pre ivw";
 
 run;
 
@@ -4368,7 +5533,10 @@ proj_int.dmouth_0_1yr l
 on a.bene_id=l.bene_id and a.index_year=l.index_year
 left join
 proj_int.hs m
-on a.bene_id=m.bene_id and a.index_year=m.index_year;
+on a.bene_id=m.bene_id and a.index_year=m.index_year
+left join
+proj_int.icd10_smi n
+on a.bene_id=n.bene_id and a.index_year=n.index_year;
 quit;
 
 proc sql;
@@ -4453,13 +5621,13 @@ if el_cancer_1yr=1 | CC_cncr_chronic_1yr=1 | cancer_hrs=1 then cancer_any_ind=1;
 if el_cancer_1yr=0 & CC_cncr_chronic_1yr=0 & cancer_hrs=0 then cancer_any_ind=0; */
 /*cancer flagged as serious medical illness if metastatic cancer 
 or blood cancers new def to be provided from Amy*/
-if comorb_18_0_1yr=1 then smi_cancer_ind=1;
-if comorb_18_0_1yr=0 then smi_cancer_ind=0;
+if comorb_18_0_1yr=1 | cancer_icd10=1 then smi_cancer_ind=1;
+if comorb_18_0_1yr=0 & smi_cancer_ind~=1 then smi_cancer_ind=0;
 label smi_cancer_ind="Indicator of Metastatic Cancer 1yr";
 
 /*ESRD from either dx code per elixhauser or denominator file flag*/
-if comorb_13_0_1yr=1 | esrd_ind_n=1 then smi_esrd_ind=1;
-if comorb_13_0_1yr=0 & esrd_ind_n=0  then smi_esrd_ind=0;
+if comorb_13_0_1yr=1 | esrd_icd10=1 | esrd_ind_n=1 then smi_esrd_ind=1;
+if comorb_13_0_1yr=0 & esrd_ind_n=0  & smi_esrd_ind~=1 then smi_esrd_ind=0;
 label smi_esrd_ind="Indicator of ESRD 1yr, Elix and claims DN file";
 
 /*chf, use dx list for Elixhauser, but as primary DX from a hospitalization only*/
@@ -4470,8 +5638,8 @@ label smi_chf_ind="Indicator of CHF 1yr, Primary dx from IP claim";
 /*COPD indicator meets following criteria:
 1. COPD from Elix (any dx field) and Oxygen use from DME claims or
 2. COPD as a primary diagnosis from a hospitalization*/
-if (comorb_9_0_1yr=1 & oxygen=1) | copd_pri_dx=1 then smi_copd_ind=1;
-if (comorb_9_0_1yr=0 | oxygen=0) & copd_pri_dx=0 then smi_copd_ind=0;
+if ((comorb_9_0_1yr=1 | copd_icd10=1) & oxygen=1) | copd_pri_dx=1 then smi_copd_ind=1;
+if (comorb_9_0_1yr=0 | oxygen=0) & copd_pri_dx=0 & smi_copd_ind~=1 then smi_copd_ind=0;
 label smi_copd_ind="Indicator of COPD 1yr, copd any dx and home o2 use or copd as prim dx";
 
 /*diabetes, Elix 11 (diabetes with complications) if criteria for 
@@ -4479,23 +5647,26 @@ renal disease (comorb 34), ischemic heart disease (cc 12) or
 peripheral vascular disease (comorb 5) are present*/
 if comorb_11_0_1yr=1 & (comorb_5_0_1yr=1 | comorb_34_0_1yr=1 | CC_12_ISCHMCHT_1yr =1) then
 	smi_diab_compl_ind=1;
-if comorb_11_0_1yr=0 | (comorb_5_0_1yr=0 & comorb_34_0_1yr=0 & CC_12_ISCHMCHT_1yr =0) then
+if diabetes_icd10=1 & (renal_icd10=1 | cad_icd10=1 | pvd_icd10=1) then 
+	smi_diab_compl_ind=1;
+if comorb_11_0_1yr=0 | (comorb_5_0_1yr=0 & comorb_34_0_1yr=0 & CC_12_ISCHMCHT_1yr =0) 
+	and smi_diab_compl_ind~=1 then
 	smi_diab_compl_ind=0;
 label smi_diab_compl_ind="Elix compl diabetes + peripheral vas, renal or ischem, 1yr";
 
-if comorb_14_0_1yr=1 then smi_liver_ind=1;
-if comorb_14_0_1yr=0 then smi_liver_ind=0;
+if comorb_14_0_1yr=1 | liver_icd10=1 then smi_liver_ind=1;
+if comorb_14_0_1yr=0 and smi_liver_ind~=1 then smi_liver_ind=0;
 label smi_liver_ind="Indicator of Advanced liver disease/cirrhosis 1yr, elix";
 
 /*Update 6/9/14 - HIV not included in final list of serious medical illnesses for
 the criteria definition
 4/2/15 - Added HIV back into list*/
-if comorb_16_0_1yr=1 then smi_hiv_ind=1;
-if comorb_16_0_1yr=0 then smi_hiv_ind=0;
+if comorb_16_0_1yr=1 | hiv_icd10=1 then smi_hiv_ind=1;
+if comorb_16_0_1yr=0 & smi_hiv_ind~=1 then smi_hiv_ind=0;
 label smi_hiv_ind="Indicator of HIV with and AIDS defining illness 1yr, elix";
 
-if comorb_33_0_1yr=1 then smi_als_ind=1;
-if comorb_33_0_1yr=0 then smi_als_ind=0;
+if comorb_33_0_1yr=1 | als_icd10=1 then smi_als_ind=1;
+if comorb_33_0_1yr=0 & smi_als_ind~=1 then smi_als_ind=0;
 label smi_als_ind="Indicator of ALS 1yr, icd9 code";
 
 /*hip fracture, either admitting diagnosis or CPT from carrier claim AND
@@ -4503,6 +5674,10 @@ surgery or follow up carrier claim within 2 days*/
 if hip_adm_dx=1 | hf_w_visit_2d=1 | hf_w_surgery=1 then smi_hip_ind=1;
 if hip_adm_dx=0 & hf_w_visit_2d=0 & hf_w_surgery=0 then smi_hip_ind=0;
 label smi_hip_ind="Indicator of Hip fracture 1yr, adm dx or from physician claims";
+
+if cva_adm_dx=1 then smi_cva_ind=1;
+if smi_cva_ind~=1 then smi_cva_ind=0;
+label smi_cva_ind="Indicator of stroke admitting diagnosis, 1yr"
 /*******************************************************************/
 /*******************************************************************/
 
@@ -4513,7 +5688,7 @@ label multi_any_ind="Any indicator of Multimorbidity 4+ chronic conditions 1yr";
 
 /*total number of serious medical illnesses per these definitions*/
 smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + smi_copd_ind + 
- smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind;
+ smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind + smi_cva_ind;
 
 /*indicator for 3+serious medical illnesses*/
 if smi_count>=3 then smi_ge3_ind=1;
@@ -4524,11 +5699,11 @@ label smi_ge3_ind="3 or more serious medical illnesses";
 Update 6/9/14 - HIV not included in list of serious medical illnesses*/
 if smi_dem_ind =1 | smi_cancer_ind =1 | smi_esrd_ind =1 | smi_chf_ind =1 | 
  smi_copd_ind =1 | smi_diab_compl_ind =1 | smi_liver_ind =1 | smi_hiv_ind =1 | 
- smi_als_ind =1 | smi_hip_ind=1
+ smi_als_ind =1 | smi_hip_ind=1 | smi_cva_ind=1
  then ser_med_illness=1;
 if smi_dem_ind =0 & smi_cancer_ind =0 & smi_esrd_ind =0 & smi_chf_ind =0 & 
  smi_copd_ind =0 & smi_diab_compl_ind =0 & smi_liver_ind =0 & smi_hiv_ind =0 & 
- smi_als_ind =0 & smi_hip_ind=0
+ smi_als_ind =0 & smi_hip_ind=0 & ser_med_illness~=1
  then ser_med_illness=0;
 label ser_med_illness="Any indicator of serious medical illness 1yr";
 
@@ -4561,7 +5736,7 @@ label ind_ed_op_or_ip_12m="Indicator any ED use 12m pre ivw";
 
 /*criteria (A) serious medical illness and/or ADL impairment*/
 if (ser_med_illness=1 | adl_impair=1) then criteria_a=1;
-if (ser_med_illness=0 & adl_impair=0) then criteria_a=0;
+if criteria_a~=1 then criteria_a=0;
 label criteria_a="Crit A SMI and/or ADL impair";
 
 /*indicator for serious medical illness and ADL impairment*/
@@ -8665,3 +9840,43 @@ ctitles("" "Incident ADL"""  "All 12m FFS" \"""n" "Weighted %" "n" "Weighted %")
 note("Restricted to those with 12m FFS prior to interview (waves 1-4)")
 
 tab wave
+
+
+H="region"
+use "E:\nhats\data\NHATS working data\round_1_to_6.dta", clear 
+
+keep spid wave re*dcensdiv
+
+forvalues i=1/6 {
+
+capture gen northeast = 0
+replace northeast = 1 if re`i'dcensdiv==1 | re`i'dcensdiv==2
+
+capture gen midwest = 0
+replace midwest = 1 if re`i'dcensdiv==3 | re`i'dcensdiv==4
+
+capture gen west = 0
+replace west = 1 if re`i'dcensdiv==8 | re`i'dcensdiv==9
+}
+
+capture gen south = 0
+replace south = 1 if northeast==0 & west==0 & midwest==0
+
+cap drop re*dcensdiv
+
+tempfile region
+save "`region'"
+
+
+
+/*
+use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", clear
+cap drop _m
+duplicates drop spid wave, force
+merge 1:1 spid wave using "`region'"
+keep if _m==3
+cap drop _m
+
+
+save "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
+*/

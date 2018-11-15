@@ -81,10 +81,10 @@ label var ip_rehab_only "Inpatient rehab (no SNF/HH), 1 yr prior to ivw"
 
 /* merge housecalls flag */
 cap drop _m
-merge 1:1 bene_id index_date using "E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta", keepus(cnt)
+merge 1:1 bene_id index_date using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta"
 gen hcallsb4 = 0
-replace hcallsb4 = 1 if cnt==2
-label var hcalls " 2 or more house calls +/- 90 days of ivw"
+replace hcallsb4 = 1 if _m==3
+label var hcalls " 1 or more house calls +/- 90 days of ivw"
 
 
 /* house calls count */
@@ -94,8 +94,6 @@ drop if _m==2
 
 label var housecalls_count "Ave. number of house calls in calendar year of interview"
 cap drop _m
-
-save "E:\nhats\data\Projects\IAH\int_data\iah_wave1-5.dta", replace
 
 /* Get geographic region variables */
 
@@ -146,7 +144,7 @@ sum income_adj, d
 replace housecalls_count = 0 if housecalls_count==.
 
 gen iah_rehab = 0
-replace iah_rehab = 1 if ip_rehab==1
+replace iah_rehab = 1 if ip_rehab==1 | snf==1 | hh==1
 
 cap drop iah_all
 
@@ -175,13 +173,13 @@ label var iah_all "IAH - All Criteria Met"
 
 /* Housecalls population */
 
-merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta", keepus(cnt)
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta"
 drop if _m==2
-drop _m
+*drop _m
 
 gen housecalls_90 = 0
-replace housecalls_90 = 1 if cnt==2
-label var housecalls_90 "2+ housecalls +/- 90 days of ivw"
+replace housecalls_90 = 1 if _m==3
+label var housecalls_90 "1+ housecalls +/- 90 days of ivw"
 
 keep if cont_ffs_n_mos>=6
 preserve 
@@ -328,8 +326,8 @@ mat rownames tab1= `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' N
 
 frmttable using "E:\nhats\projects\IAH\table1_housecalls.doc", replace statmat(tab1) ///
 varlabels title("Table 1: Housecalls Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS") ///
-ctitles("" "2+ Housecalls" "<2 Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
-note("These are unique people, and only survey data from their most recent NHATS interview was used. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
+ctitles("" "Housecalls" "No Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. Monetary variables have been inflation adjusted to 2016. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
 
 mat tab2 = J(`rd',2,.)
 mat stars2 = J(`rd',1,0)
@@ -550,5 +548,5 @@ mat rownames tab3= `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' N
 
 frmttable using "E:\nhats\projects\IAH\table1_housecalls.doc", addtable statmat(tab3) ///
 varlabels title("Table 3: Housecalls Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS (Restricted to Homebound)") ///
-ctitles("" "2+ Housecalls" "<2 HouseCalls") sdec(2) annotate(stars3) asymbol(*,**) ///
-note("These are unique people, and only survey data from their most recent NHATS interview was used. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
+ctitles("" "Housecalls" "No HouseCalls") sdec(2) annotate(stars3) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. Monetary variables have been inflation adjusted to 2016. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")

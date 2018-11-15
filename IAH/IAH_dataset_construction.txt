@@ -5495,37 +5495,25 @@ keep if ind_nonelect_adm_12m // elective hospitalization in past year
 
 
 H="Search for IP rehab and home calls"
-libname claims "E:\nhats\data\CMS_DUA_28016\Merged";
-libname line "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
-libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+libname claims "E:\nhats\data\20180625 NHATS CMS Data\merged";
+libname cyears "E:\nhats\data\20180625 NHATS CMS Data\Cumulative";
 
-proc import datafile="E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta" out=steps123 replace; run;
-
-proc import datafile="E:\nhats\data\Projects\IAH\int_data\steps123.dta" out=steps123 replace; run;
+proc import datafile="E:\nhats\data\Projects\IAH\final_data\iah_wave1-5.dta" out=iv_mb2 dbms=stata replace; run; 
 
 
 /* Identifying Inpatient Rehab */
 
-data ip_check (keep = bene_id index_date wave);
-set steps123;
-where ffs_6m = 1 and community_dwelling=1;
-*where community_dwelling=1;
+data ip_check (keep = bene_id index_date index_month year wave ffs_6m);
+set iv_mb2;
 run;
-
-data ip_check (keep = bene_id index_date wave);
-set steps123;
-where wave=1 and adl_flag=1 and cc_flag=1 and ind_nonelect_adm_12m=1;
-*where community_dwelling=1;
-run;
-
 
 
 data inpatient;
-set claims.ip_06_14;
+set claims.ip_06_16;
 run;
 
 data ip_rev;
-set cyears.inpatient_revenue_center_j_06_14;
+set cyears.inpatient_revenue_center_j_06_16;
 run;
 
 proc sql;
@@ -5562,9 +5550,11 @@ set ip_clm_rev;
 where ip_rehab = 1;
 run;
 
+
 data test;
 set disch_2_iprehab ip_rehab;
 run;
+
 
 proc sort data=test nodupkey; by bene_id admit_date; run;
 
@@ -5586,11 +5576,11 @@ run;
 /* Checking for HH/SNF within 7 days of disch_date */
 
 data homehealth;
-set claims.hh_09_14;
+set claims.hh_09_16;
 run;
 
 data snf;
-set claims.snf_09_14;
+set claims.snf_09_16;
 run;
 
 proc sql;
@@ -5624,7 +5614,6 @@ set snf_nhats_short hh_nhats_short;
 *format rehab_admit rehab_disch date10.;
 run;
 
-
 proc sql;
 create table ip1 as select a.admit_date, a.disch_date, b.*
 from inpatient a
@@ -5645,10 +5634,126 @@ proc freq data=ip1; tables ip_rehab; run;
 proc export data=ip1 outfile="E:\nhats\data\Projects\IAH\final_data\iah_rehab_flag.dta" replace; run;
 
 
+/* Checking Nursing home enrollment on a monthly basis */
+
+data snf_sheet;
+set snf;
+month = month(admit_date);
+year = year(admit_date);
+snf_stay = 1;
+run;
+
+
+data snf_sheet;
+set snf_sheet;
+m_1 = 0;
+m_2 = 0;
+m_3 = 0;
+m_4 = 0;
+m_5 = 0;
+m_6 = 0;
+m_7 = 0;
+m_8 = 0;
+m_9 = 0;
+m_10 = 0;
+m_11 = 0;
+m_12 = 0;
+if month = 1 then m_1 = 1;
+if month = 2 then m_2 = 1;
+if month = 3 then m_3 = 1;
+if month = 4 then m_4 = 1;
+if month = 5 then m_5 = 1;
+if month = 6 then m_6 = 1;
+if month = 7 then m_7 = 1;
+if month = 8 then m_8 = 1;
+if month = 9 then m_9 = 1;
+if month = 10 then m_10 = 1;
+if month = 11 then m_11 = 1;
+if month = 12 then m_12 = 1;
+run;
+
+proc sql;
+create table snf_st as
+select distinct bene_id, year,
+sum(m_1) as Jan,
+sum(m_2) as Feb,
+sum(m_3) as Mar,
+sum(m_4) as Apr,
+sum(m_5) as May,
+sum(m_6) as Jun,
+sum(m_7) as Jul,
+sum(m_8) as Aug,
+sum(m_9) as Sep,
+sum(m_10) as Oct,
+sum(m_11) as Nov,
+sum(m_12) as Dec
+from snf_sheet
+group by bene_id, year;
+quit;
+
+data snf_st;
+set snf_st;
+array list Jan--Dec;
+do over list;
+if list > 0 then list = 1;
+end;
+run;
+
+data snf_st;
+set snf_st;
+snf_months = trim(left(Jan))||trim(left(Feb))||trim(left(Mar))||trim(left(Apr))||trim(left(May))||trim(left(Jun))||trim(left(Jul))||trim(left(Aug))
+||trim(left(Sep))||trim(left(Oct))||trim(left(Nov))||trim(left(Dec));
+snf_months_n1 = snf_months;
+run;
+
+
+proc sql;
+create table snf_ind as select a.*, b.index_month
+from snf_st a
+inner join ip_check b
+on a.bene_id=b.bene_id and a.year=b.year;
+quit;
+
+data snf_ind (drop = snf_months_n1);
+set snf_ind;
+run;
+
+proc sql;
+create table snf_index as select a.*, b.snf_months_n1 
+from snf_ind a
+left join snf_st b
+on a.bene_id=b.bene_id and a.year = b.year-1;
+quit;
+
+data snf_index;
+set snf_index;
+months_post = substr(snf_months,index_month,12);
+snf_n1 = trim(left(reverse(snf_months_n1)));
+run;
+
+data snf_index;
+set snf_index;
+snf_1m = substr(snf_n1,1,1);
+snf_s = trim(left(months_post))||trim(left(snf_n1));
+run;
+
+data snf_index;
+set snf_index;
+snf_m = substr(snf_s,1,3);
+snf_3m = 0;
+if indexc(snf_m,"0")=0 then snf_3m = 1;
+run;
+
+
+proc export data=snf_index (keep = bene_id year snf_3m) outfile="E:\nhats\data\Projects\IAH\final_data\snf_flag.dta" dbms=stata replace; run; 
+
+proc contents data=claims.pb_09_16; run;
+
+
 /* Identifying house calls */
 
 data carrier;
-set claims.pb_09_14;
+set claims.pb_09_16;
 array dx hcpcscd1--hcpcscd13;
 do over dx;
 hcpcs_cd=dx;
@@ -5659,7 +5764,6 @@ run;
 data carrier1;
 set carrier;
 cptcodes1 = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
-*where 993341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337;
 run;
 
 data carrier1;
@@ -5671,7 +5775,7 @@ run;
 proc sort data=carrier1 nodupkey; by bene_id clm_id; run;
 
 data carrierline (keep = bene_id clm_id LINE_PLACE_OF_SRVC_CD cptcodes);
-set line.bcarrier_line_j_09_14;
+set cyears.bcarrier_line_j_09_16;
 cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
 run;
 
@@ -5688,8 +5792,6 @@ set carrierline;
 where cptflag = 1 or posflag = 1;
 run;
 
-proc sort data=linecalls nodupkey; by bene_id clm_id; run;
-
 proc sql;
 create table carrier2 as select a.*, b.*
 from carrier1 a
@@ -5699,116 +5801,132 @@ quit;
 
 data carrier2;
 set carrier2;
-where cpt1flag = 1 or cptflag = 1 or posflag = 1;
+where cptflag = 1 and posflag = 1;
+year = year(admit_date);
 run;
 
+proc sort data=carrier2 nodupkey; by bene_id clm_id; run;
 
 proc sql;
-create table homecallsb4 as select a.*, b.cptcodes
-from ip_check a
-inner join carrier2 b
-on a.bene_id=b.bene_id and 0<a.index_date-b.admit_date<=365;
+create table annual as select distinct bene_id, year,
+sum(posflag) as housecalls_count
+from carrier2
+group by bene_id, year;
 quit;
 
+
+proc export data=annual outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" replace; run;
+
+proc sql;
+create table homecallsb4_90 as select a.*, b.cptcodes
+from ip_check a
+inner join carrier2 b
+on a.bene_id=b.bene_id and -90<a.index_date-b.admit_date<=90;
+quit;
+
+
+proc sort data=homecallsb4_90 nodupkey; by descending wave bene_id; run;
+proc sort data=homecallsb4_90 nodupkey; by bene_id; run;
+
+proc freq data=homecallsb4_90; tables ffs_6m; run;
+
+proc sql;
+create table homecallsb4_180 as select a.*, b.cptcodes
+from ip_check a
+inner join carrier2 b
+on a.bene_id=b.bene_id and -180<a.index_date-b.admit_date<=180;
+quit;
+
+/*
 proc sql;
 create table homecallsafter as select a.*, b.cptcodes
 from ip_check a
 inner join carrier2 b
 on a.bene_id=b.bene_id and 0<b.admit_date-a.index_date<=365;
 quit;
+*/
+proc sort data=homecallsb4_90 out=test; by descending wave bene_id; run;
 
-proc sort data=homecallsb4; by bene_id wave; run;
 
-data homecallsb4_1;
-set homecallsb4;
+
+
+
+
+proc sort data=homecallsb4_180; by bene_id wave; run;
+
+
+/*
+%macro homecallsb4(wave=,days=);
+
+data homecallsb4_&days._&wave.;
+set homecallsb4_&days.;
 by bene_id;
-where wave = 1;
-cnt + 1;
+where wave = &wave.;
+*cnt + 1;
 if first.bene_id then cnt = 1;
 run;
 
-data homecallsb4_1;
-set homecallsb4_1;
-where cnt = 2; 
+data homecallsb4_&days._&wave.;
+set homecallsb4_&wave.;
+*where cnt = 1; 
 run;
 
-data homecallsb4_2;
-set homecallsb4;
-by bene_id;
-where wave = 2;
-cnt + 1;
-if first.bene_id then cnt = 1;
-run;
-
-data homecallsb4_2;
-set homecallsb4_2;
-where cnt = 2; 
-run;
+%mend;
 
 
-data homecallsb4_3;
-set homecallsb4;
-by bene_id;
-where wave = 3;
-cnt + 1;
-if first.bene_id then cnt = 1;
-run;
+%homecallsb4(wave=1, days=90);
+%homecallsb4(wave=2, days=90);
+%homecallsb4(wave=3, days=90);
+%homecallsb4(wave=4, days=90);
+%homecallsb4(wave=5, days=90);
 
-data homecallsb4_3;
-set homecallsb4_3;
-where cnt = 2; 
+%homecallsb4(wave=1, days=180);
+%homecallsb4(wave=2, days=180);
+%homecallsb4(wave=3, days=180);
+%homecallsb4(wave=4, days=180);
+%homecallsb4(wave=5, days=180);
+
+*/
+
+data homecalls_90;
+set homecallsb4_90_1 homecallsb4_90_2 homecallsb4_90_3 homecallsb4_90_4 homecallsb4_90_5;
 run;
 
 
-data homecallsb4_all;
-set homecallsb4_1 homecallsb4_2 homecallsb4_3;
+data homecalls_180;
+set homecallsb4_180_1 homecallsb4_180_2 homecallsb4_180_3 homecallsb4_180_4 homecallsb4_180_5;
 run;
 
-proc export data=homecallsb4_all outfile="E:\nhats\data\Projects\IAH\int_data\homecallsb4.dta" replace; run;
+proc export data=homecalls_90 outfile="E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta" replace; run;
 
-data homecallsafter_1;
+proc export data=homecalls_180 outfile="E:\nhats\data\Projects\IAH\int_data\homecalls_180.dta" replace; run;
+
+
+%macro homecallsafter(wave=);
+
+data homecallsafter_&wave.;
 set homecallsafter;
 by bene_id;
-where wave = 1;
+where wave = &wave.;
 cnt + 1;
 if first.bene_id then cnt = 1;
 run;
 
-data homecallsafter_1;
-set homecallsafter_1;
+data homecallsafter_&wave.;
+set homecallsafter_&wave.;
 where cnt = 2; 
 run;
+%mend;
 
-data homecallsafter_2;
-set homecallsafter;
-by bene_id;
-where wave = 2;
-cnt + 1;
-if first.bene_id then cnt = 1;
-run;
-
-data homecallsafter_2;
-set homecallsafter_2;
-where cnt = 2; 
-run;
-
-
-data homecallsafter_3;
-set homecallsafter;
-by bene_id;
-where wave = 3;
-cnt + 1;
-if first.bene_id then cnt = 1;
-run;
-
-data homecallsafter_3;
-set homecallsafter_3;
-where cnt = 2; 
-run;
+%homecallsafter(wave=1);
+%homecallsafter(wave=2);
+%homecallsafter(wave=3);
+%homecallsafter(wave=4);
+%homecallsafter(wave=5);
 
 
 data homecallsafter_all;
-set homecallsafter_1 homecallsafter_2 homecallsafter_3;
+set homecallsafter_1 homecallsafter_2 homecallsafter_3 homecallsafter_4 homecallsafter_5;
 run;
 
 proc export data=homecallsafter_all outfile="E:\nhats\data\Projects\IAH\int_data\homecallsafter.dta" replace; run;
