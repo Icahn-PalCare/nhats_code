@@ -2885,7 +2885,7 @@ drop time2d
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta", replace version(12)
 
 
-H="New--Tables 1-3"
+H="Tables 1-3"
 clear all 
 set more off
 capture log close
@@ -3903,7 +3903,7 @@ tab wave adl_impair1, matcell(impair1)
 
 
 
-H="NEW Self Report from NHATS vs Claims data 2 tables"
+H="Self Report from NHATS vs Claims data 2 tables"
 //This will create two tables 1 with the full sample.
 //The next will be stratified to include those with an ADL impairment only. 
 
@@ -4290,10 +4290,10 @@ restore
 
 
 
-H="xxxxxxxstart belowxxxxxxxx"
+H="xxxxxxxxxxstart below for FRIxxxxxxxxxxx"
 
 
-H="fri code"
+H="Tables 1-3--New"
 capture log close
 clear all
 set more off
@@ -4309,7 +4309,7 @@ local r6raw E:\nhats\data\NHATS Public\round_6\
 local work E:\nhats\data\NHATS working data
 local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
 local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-local r3s E:\nhats\data\NHATS Sensitive\a\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
@@ -4447,7 +4447,7 @@ label var n "Total Wave 1"
 egen adl_index_new=rowtotal(adl_*_help) 
 tab adl_index_new 
 
-
+//no one is missing all adl help vars.
 gen nomiss=!missing(adl_index_new)
 label var nomiss "With responses to atleast 1 ADL question"
 label var sp_ivw_yes "SP interview conducted"
@@ -4851,3 +4851,2571 @@ mat colnames tab=`colnames'
 
 frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
 title ("Bivariate Odds Ratios, stratified by characteristics") substat(1) addtable
+
+
+H="Self-Report from NHATS vs Claims Tables--New"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\a\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+//local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+cd "`work'"
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+
+//Add in 4/27---FRI specific code
+gen insdhlp=mo1insdhlp 
+label val insdhlp mo1insdhlp
+gen oftgoarea=mo1oftgoarea
+label val oftgoarea mo1oftgoarea 
+gen oflvslepr=mo1oflvslepr 
+label val oflvslepr mo1oflvslepr 
+gen bedhlp=mo1bedhlp 
+label val bedhlp mo1bedhlp
+gen dreshlp=sc1dreshlp
+label val dreshlp sc1dreshlp
+gen dresoft=sc1dresoft 
+label val dresoft sc1dresoft
+gen toilhlp=sc1toilhlp 
+label val toilhlp sc1toilhlp
+gen bathhlp=sc1bathhlp 
+label val bathhlp sc1bathhlp
+gen showrbat1=sc1showrbat1 
+label val showrbat1 sc1showrbat1
+gen showrbat2=sc1showrbat2 
+label val showrbat2 sc1showrbat2
+gen showrbat3=sc1showrbat3 
+label val showrbat3 sc1showrbat3 
+gen eathlp=sc1eathlp 
+label val eathlp sc1eathlp
+//gen eatdev=sc1eatdev 
+//label val eatdev sc1eatdev
+gen outoft=mo1outoft
+label val outoft mo1outoft
+//gen ntlvrmslp=fl1ntlvrmslp
+//label val ntlvrmslp fl1ntlvrmslp
+
+
+
+//Add in 4/6/18---FRI project and then implemented throughout code.
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
+label var dresslf "Often you Dress Yourself"
+
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
+label var dresdif "Difficulty when using Special Items by Self"
+
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
+label var ntlvrmslp "Often had to Stay in Bed"
+
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
+label var eatdev "Ever use Adapted Utensils"
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
+
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats spid wave
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta"
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index spid wave
+
+tempfile nhats
+save "`nhats'"
+
+
+clear all 
+set more off
+capture log close
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1
+
+duplicates drop spid, force
+
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+mat tab=J(5,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "`logpath'table.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+
+/////Tables
+
+gen wheelchr=chair
+gen com=commode
+gen bathtoi=tub_toil
+
+foreach x in cane walker wheelchr com bathtoi{
+sum `x'_nhats if `x'==1 & `x'_nhats==1
+local a=`r(N)'
+sum `x'_nhats if `x'==0 & `x'_nhats==1
+local b=`r(N)'
+sum `x' if `x'==1 & `x'_nhats==0
+local c=`r(N)'
+sum `x' if `x'==0 & `x'_nhats==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & `x'!=. 
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & `x'!=. 
+local f=`r(N)'
+sum `x' if `x'==1 & `x'_nhats!=.
+local g=`r(N)'
+sum `x' if `x'==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+}
+tab cane_nhats cane, row
+mat list cane
+
+
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane
+if "`x'"=="walker" local title Walker
+if "`x'"=="wheelchr" local title Wheelchair
+if "`x'"=="com" local title Commode/Bedpan/Urinal
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/DME", Yes, No, Total) rtitle(Yes\ % \No\% \ Total \ %) ///
+title("`title'") addtable
+}
+
+
+tab cane_nhats adl_bath_diff 
+
+
+foreach x in cane walker wheelchr com bathtoi {
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & `x'_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+}
+tab cane_nhats adl_impair_new, row
+mat list cane
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane v.s. ADL Impairment
+if "`x'"=="walker" local title Walker v.s. ADL Impairment
+if "`x'"=="wheelchr" local title Wheelchair v.s. ADL Impairment
+if "`x'"=="com" local title Commode/Bedpan/Urinal v.s. ADL Impairment
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device v.s. ADL Impairment
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/ADL Impair", Yes, No, Total) rtitle(Yes\ % \ No\ % \Total \ %) ///
+title("`title'") addtable
+}
+
+
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1 | bathtoi_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 & bathtoi_nhats==0
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix any= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+tab any_dev_nhats adl_impair_new, row
+matrix list any
+
+frmttable using "`logpath'table.rtf", replace statmat(any) ///
+sdec(1) ctitle("Any Device NHATS/ADL Impairment", Yes, No, Total, %) rtitle(Yes\ % \No\ % \Total \ %)  ///
+title("`title'") addtable
+
+ 
+
+///DME claim vs adl_impairment 
+capture drop dme_cl*
+egen dme_cl=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair)
+
+egen dme_c=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair oxy ind_snf_or_hh_12m  )
+
+gen dme_cl_1=0
+replace dme_cl_1=1 if dme_cl>=1
+
+gen dme_c_1=0
+replace dme_c_1=1 if dme_c>=1
+
+tab dme_cl_1 adl_impair_new
+
+//Eat and dress vs DME
+capture drop eat_dres
+egen eat_dres=rowtotal(device_dres device_eat)
+replace eat_dres=1 if eat_dres==2
+
+tab dme_cl_1 eat_dres
+
+
+
+sum n if adl_impair>=1 & dme_cl_1==0
+
+
+
+preserve
+keep if adl_impair_new==1 & dme_cl_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+
+restore
+
+preserve
+keep if adl_impair_new==1 & dme_c_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme1= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+restore
+
+foreach x in dme dme1 {
+
+if "`x'"=="dme" local title ADL Impaired Self Report & DME Sample Excluding Oxygen, HH, & SNF 
+if "`x'"=="dme1" local title ADL Impaired Self Report & DME Sample Including Oxygen, HH, & SNF 
+
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("Eating and/or Dressing Device Self Report", Freq., %) rtitle(Yes\ No \ Total)  ///
+title("`title'") addtable
+}
+
+
+//put this into the word doc in same format
+capture drop tag_dme
+egen tag_dme= anymatch(cane walker commode urinal bedpan tub_toil_dev chair), v(1)
+label var tag_dme "Claim for any device"
+
+sum device_any if device_any==1 & tag_dme==1
+local a=`r(N)'
+sum device_any if device_any==1 & tag_dme==0
+local b=`r(N)'
+sum device_any if device_any==0 & tag_dme==1
+local c=`r(N)'
+sum device_any if device_any==0 & tag_dme==0
+local d=`r(N)'
+
+sum device_any if device_any==1 & tag_dme!=.
+local e=`r(N)'
+sum device_any if device_any==0 & tag_dme!=.
+local f=`r(N)'
+sum tag_dme if tag_dme==1 & device_any!=.
+local g=`r(N)'
+sum tag_dme if tag_dme==0 & device_any!=.
+local h=`r(N)'
+
+matrix dev= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+mat list dev
+
+frmttable using "`logpath'table.rtf", replace statmat(dev) ///
+sdec(1) ctitle("Self Report/Claims", Yes, No, Total) rtitle(Yes\ % \ No\ % \ Total \ %)  ///
+title("Self Report using any Device vs. Claim for any Device") addtable ///
+note("Excludes Oxygen & Lift")
+
+
+tab device_any tag_dme, row
+
+
+H="NEW Self Report from NHATS vs Claims data 2 tables"
+//This will create two tables 1 with the full sample.
+//The next will be stratified to include those with an ADL impairment only. 
+
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\a\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+//local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+cd "`work'"
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+
+//Add in 4/27---FRI specific code
+gen insdhlp=mo1insdhlp 
+label val insdhlp mo1insdhlp
+gen oftgoarea=mo1oftgoarea
+label val oftgoarea mo1oftgoarea 
+gen oflvslepr=mo1oflvslepr 
+label val oflvslepr mo1oflvslepr 
+gen bedhlp=mo1bedhlp 
+label val bedhlp mo1bedhlp
+gen dreshlp=sc1dreshlp
+label val dreshlp sc1dreshlp
+gen dresoft=sc1dresoft 
+label val dresoft sc1dresoft
+gen toilhlp=sc1toilhlp 
+label val toilhlp sc1toilhlp
+gen bathhlp=sc1bathhlp 
+label val bathhlp sc1bathhlp
+gen showrbat1=sc1showrbat1 
+label val showrbat1 sc1showrbat1
+gen showrbat2=sc1showrbat2 
+label val showrbat2 sc1showrbat2
+gen showrbat3=sc1showrbat3 
+label val showrbat3 sc1showrbat3 
+gen eathlp=sc1eathlp 
+label val eathlp sc1eathlp
+//gen eatdev=sc1eatdev 
+//label val eatdev sc1eatdev
+gen outoft=mo1outoft
+label val outoft mo1outoft
+//gen ntlvrmslp=fl1ntlvrmslp
+//label val ntlvrmslp fl1ntlvrmslp
+
+
+
+//Add in 4/6/18---FRI project and then implemented throughout code.
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
+label var dresslf "Often you Dress Yourself"
+
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
+label var dresdif "Difficulty when using Special Items by Self"
+
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
+label var ntlvrmslp "Often had to Stay in Bed"
+
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
+label var eatdev "Ever use Adapted Utensils"
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
+
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats spid wave
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta"
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index spid wave
+
+tempfile nhats
+save "`nhats'"
+
+
+
+clear all
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1
+
+duplicates drop spid, force
+
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+mat tab=J(5,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "`logpath'table_all.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+frmttable using "`logpath'table_adl.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+gen all=1 
+gen adl=1 if adl_impair_new==1
+ 
+/////Tables
+
+
+foreach p in all adl{
+preserve
+keep if `p'==1
+
+gen wheelchr=chair
+gen com=commode
+gen bathtoi=tub_toil
+
+foreach x in cane walker wheelchr com bathtoi{
+sum `x'_nhats if `x'==1 & `x'_nhats==1
+local a=`r(N)'
+sum `x'_nhats if `x'==0 & `x'_nhats==1
+local b=`r(N)'
+sum `x' if `x'==1 & `x'_nhats==0
+local c=`r(N)'
+sum `x' if `x'==0 & `x'_nhats==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & `x'!=. 
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & `x'!=. 
+local f=`r(N)'
+sum `x' if `x'==1 & `x'_nhats!=.
+local g=`r(N)'
+sum `x' if `x'==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+}
+tab cane_nhats cane, row
+mat list cane
+
+
+
+foreach x in cane walker wheelchr com bathtoi {
+if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane
+if "`x'"=="walker" local title Walker
+if "`x'"=="wheelchr" local title Wheelchair
+if "`x'"=="com" local title Commode/Bedpan/Urinal
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/DME", Yes, No, Total) rtitle(Yes\ % \No\% \ Total \ %) ///
+title("`title'") addtable
+}
+
+
+tab cane_nhats adl_bath_diff 
+
+
+foreach x in cane walker wheelchr com bathtoi {
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & `x'_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+}
+tab cane_nhats adl_impair_new, row
+mat list cane
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane v.s. ADL Impairment
+if "`x'"=="walker" local title Walker v.s. ADL Impairment
+if "`x'"=="wheelchr" local title Wheelchair v.s. ADL Impairment
+if "`x'"=="com" local title Commode/Bedpan/Urinal v.s. ADL Impairment
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device v.s. ADL Impairment
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/ADL Impair", Yes, No, Total) rtitle(Yes\ % \ No\ % \Total \ %) ///
+title("`title'") addtable
+}
+
+
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1 | bathtoi_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 & bathtoi_nhats==0
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix any= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+tab any_dev_nhats adl_impair_new, row
+matrix list any
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(any) ///
+sdec(1) ctitle("Any Device NHATS/ADL Impairment", Yes, No, Total, %) rtitle(Yes\ % \No\ % \Total \ %)  ///
+title(Any NHATS Device V.S. ADL Impairment) addtable
+
+
+///DME claim vs adl_impairment 
+capture drop dme_cl*
+egen dme_cl=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair)
+
+egen dme_c=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair oxy ind_snf_or_hh_12m  )
+
+gen dme_cl_1=0
+replace dme_cl_1=1 if dme_cl>=1
+
+gen dme_c_1=0
+replace dme_c_1=1 if dme_c>=1
+
+tab dme_cl_1 adl_impair_new
+
+//Eat and dress vs DME
+capture drop eat_dres
+egen eat_dres=rowtotal(device_dres device_eat)
+replace eat_dres=1 if eat_dres==2
+
+tab dme_cl_1 eat_dres
+
+
+
+sum n if adl_impair>=1 & dme_cl_1==0
+
+
+tempfile temp`p'
+save "'temp`p''", replace
+keep if adl_impair_new==1 & dme_cl_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+
+use "'temp`p''", clear
+
+tempfile temp1`p'
+save "'temp1`p''", replace
+
+keep if adl_impair_new==1 & dme_c_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme1= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+use "'temp1`p''", clear
+
+
+foreach x in dme dme1 {
+
+if "`x'"=="dme" local title ADL Impaired Self Report & DME Sample Excluding Oxygen, HH, & SNF 
+if "`x'"=="dme1" local title ADL Impaired Self Report & DME Sample Including Oxygen, HH, & SNF 
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("Eating and/or Dressing Device Self Report", Freq., %) rtitle(Yes\ No \ Total)  ///
+title("`title'") addtable
+}
+
+
+capture drop tag_dme
+egen tag_dme= anymatch(cane walker commode urinal bedpan tub_toil_dev chair), v(1)
+label var tag_dme "Claim for any device"
+
+sum device_any if any_dev_nhats==1 & tag_dme==1
+local a=`r(N)'
+sum device_any if any_dev_nhats==1 & tag_dme==0
+local b=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==1
+local c=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==0
+local d=`r(N)'
+
+sum device_any if any_dev_nhats==1 & tag_dme!=.
+local e=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme!=.
+local f=`r(N)'
+sum tag_dme if tag_dme==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum tag_dme if tag_dme==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix dev= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+mat list dev
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(dev) ///
+sdec(1) ctitle("Self Report/Claims", Yes, No, Total) rtitle(Yes\ % \ No\ % \ Total \ %)  ///
+title("Self Report using any Device vs. Claim for any Device") addtable ///
+note("Excludes Oxygen & Lift")
+
+
+tab device_any tag_dme, row
+
+tab any_dev_nhats device_any
+restore
+}
+
+
+
+H="xxupdated"
+
+
+H="tables 1-3 11/18"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\a\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+//local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+cd "`work'"
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+
+//Add in 4/27---FRI specific code
+gen insdhlp=mo1insdhlp 
+label val insdhlp mo1insdhlp
+gen oftgoarea=mo1oftgoarea
+label val oftgoarea mo1oftgoarea 
+gen oflvslepr=mo1oflvslepr 
+label val oflvslepr mo1oflvslepr 
+gen bedhlp=mo1bedhlp 
+label val bedhlp mo1bedhlp
+gen dreshlp=sc1dreshlp
+label val dreshlp sc1dreshlp
+gen dresoft=sc1dresoft 
+label val dresoft sc1dresoft
+gen toilhlp=sc1toilhlp 
+label val toilhlp sc1toilhlp
+gen bathhlp=sc1bathhlp 
+label val bathhlp sc1bathhlp
+gen showrbat1=sc1showrbat1 
+label val showrbat1 sc1showrbat1
+gen showrbat2=sc1showrbat2 
+label val showrbat2 sc1showrbat2
+gen showrbat3=sc1showrbat3 
+label val showrbat3 sc1showrbat3 
+gen eathlp=sc1eathlp 
+label val eathlp sc1eathlp
+//gen eatdev=sc1eatdev 
+//label val eatdev sc1eatdev
+gen outoft=mo1outoft
+label val outoft mo1outoft
+//gen ntlvrmslp=fl1ntlvrmslp
+//label val ntlvrmslp fl1ntlvrmslp
+
+
+
+//Add in 4/6/18---FRI project and then implemented throughout code.
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
+label var dresslf "Often you Dress Yourself"
+
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
+label var dresdif "Difficulty when using Special Items by Self"
+
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
+label var ntlvrmslp "Often had to Stay in Bed"
+
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
+label var eatdev "Ever use Adapted Utensils"
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
+
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats spid wave
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta"
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index spid wave
+
+tempfile nhats
+save "`nhats'"
+
+
+
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1
+
+duplicates drop spid, force
+
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m non_proxy
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+//no one is missing all adl help vars.
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+gen non_proxy=0 if proxy_ivw==1
+replace non_proxy=1 if proxy_ivw==0
+label var non_proxy "Non-Proxy Interview"
+
+mat tab=J(6,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "`logpath'function.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & proxy_ivw==0, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+//tab bathtoi
+//tab adl_dres_help
+//tab adl_eat_help
+//drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+/* table 1
+demographics, by SR ADL impairment*/
+
+local cvars age aveincome
+gen age_lt75=age<=74
+gen age_lt85=age>=75 & age<85
+gen age_85=age>=85
+label var age_lt75 "Age 65-74"
+label var age_lt85 "Age 75-84"
+label var age_85 "Age 85+"
+
+tab income_cat, gen(inccat)
+cap label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
+label values income_cat income_cat
+forvalues i=0/3 {
+local lab : label income_cat `i'
+label var inccat`=`i'+1' "`lab'"
+}
+
+foreach x  in cancer dem esrd chf copd diab_compl liver {
+	local smi `smi' smi_`x'_ind
+}
+
+
+*gen prob_dem=dem_3_cat==1 if !missing(dem_3)
+label var prob_dem "Probable dementia"
+cap label define homebound_cat 1 "Homebound" 2 "Semi (Never by Self)" 3 "Semi: Needs Help/Diff" 4 "Not Homebound"
+label values homebound_cat homebound_cat
+tab homebound, gen(hb)
+forvalues i=1/4 {
+	local lab: label homebound_cat `i'
+	label var hb`i' "`lab'"
+}
+
+local help
+foreach x of varlist adl*help {
+	local help `help' `x'
+}
+label var educ_hs_ind "Education: HS +"
+
+keep if !missing(adl_index_new)
+gen adl_2=adl_index_new>=2 if !missing(adl_index_new)
+gen adl_3=adl_index_new>=3 if !missing(adl_index_new)
+//note-3/7/18 add indicators for meeting 2 or all 3 criteria
+gen ind_2=(ind_fri==1 & oxy==1) | (ind_fri==1 & ind_snf_or_hh==1) | ///
+(oxy==1 & ind_snf_or_hh==1)
+gen ind_3=ind_fri==1 & oxy==1 & ind_snf_or_hh==1
+label var ind_2 "2+ indicators"
+label var ind_3 "All 3 indicators"
+label var adl_2 "Dependent in 2+ ADLs"
+label var adl_3 "Dependent in 3+ ADLs"
+local cvars age
+local ivars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white black hisp other_race married educ_hs_ind proxy ///
+medicaid medigap srh_fp adl_impair_new hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 ///
+`help' /*iadl_independent*/ `pps' `ind_indication' ///
+`dmouth' `smi' `device' ind_hosp_adm_12m
+local ipps pps100 pps90 pps80 ///
+pps70 pps60 pps50 pps40 pps30 
+local cout tot_paid_by_mc_12m n_hospd_p12m
+local iout ind_hosp_adm_p12m died_12
+foreach x of local ivars {
+sum `x' if `x'==1 & adl_impair_new==1
+}
+local rn : word count `cvars' `ivars'
+local r=1
+local c=1
+mat tab=J(`rn'+3,6,.)
+mat stars=J(`rn'+3,6,0)
+
+gen adl_impair1=1
+gen adl_impair2=1 if adl_impair_new==0
+gen adl_impair3=1 if adl_impair_new==1
+gen adl_impair4=1 if adl_index_new>=2 & !missing(adl_index_new)
+forvalues adl=1/4 {
+	replace adl_impair`adl'=0 if missing(adl_impair`adl')
+	foreach x in `cvars' {
+		sum `x' if inlist(adl_impair`adl',1) [aw=anfinw]
+		mat tab[`r',`c']=r(mean)
+		if `adl'>2 {
+			svy, subpop(if adl_impair2==1 | adl_impair`adl'==1): mean `x', ///
+			over(adl_impair2)
+			test [`x']0=[`x']1
+			mat tab[`r',`c'+1]=r(p)
+			mat stars[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+}
+		local r=`r'+1
+}
+	foreach x in `ivars' {
+		qui sum `x' if inlist(adl_impair`adl',1)
+		local denom=r(mean)*r(N)
+		sum `x' if inlist(adl_impair`adl',1) [aw=anfinw]
+		if `denom'>=11 mat tab[`r',`c']=r(mean)*100
+		if `adl'>2 {
+			svy, subpop(if adl_impair2==1 | adl_impair`adl'==1): tab `x' adl_impair2
+			mat tab[`r',`c'+1]=e(p_Pear)
+			mat stars[`r',`c'+1]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+}
+		local r=`r'+1
+}
+	local r=`r'+1
+	sum n if inlist(adl_impair`adl',1) [aw=anfinw]
+	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+	if `adl'==3 local c=`c'+1
+}
+mat rownames tab=`cvars' `ivars' "_" "N" "National Estimate"
+
+frmttable using "`logpath'function.rtf", statmat(tab) addtable title("Sample Characteristics") ///
+ctitles("" "Full Sample" "Non-ADL dependent" "ADL dependent 1+" "P" "ADL dependent 2+" "P") ///
+sdec(2) varlabels annotate(stars) asymbol(*,**) ///
+ note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare" ///
+"ADL impairment defined as having assistance in 1+ ADL")
+
+/*table 2
+Weighted %
+p-value
+sensitivity=Indicator and ADL/All ADL
+specificity=No Indicator or ADL/All non-ADL
+PPV=Indicator and ADL/All Indicator
+NPV=No indicator or ADL/All non-indicator
+C-statistic=AUC
+*/
+
+//note--3/7/18--added indicator of 2 and/or 3
+local vars `dme' bed_or_chair ind_fri mult_fri oxy ind_snf_12m ind_hh_12m ///
+ind_snf_or_hh_12m ///
+fri_hh_snf fri_oxy hh_snf_oxy fri_hh_snf_oxy ind_2 ind_3
+
+local rn : word count `vars' 1 1 
+
+
+local replace replace
+forvalues timethrough=1/3 {
+preserve
+foreach dem in all {
+replace adl_impair_new=0 if adl_index_new<`timethrough'
+mat tab`dem'=J(`rn',9,.)
+mat stars`dem'=J(`rn',9,0)
+local r=1
+local c=1
+
+foreach i in "0,1" "0" "1" {
+	foreach x of local vars {
+		sum `x' if inlist(adl_impair_new,`i')
+		if r(mean)*r(N)>=11	mat tab`dem'[`r',`c']=r(mean)*r(N)
+		sum `x' if inlist(adl_impair_new,`i') [aw=anfinw]
+		*mat tab`dem'[`r',`c'+1]=r(mean)*100
+		if "`i'"=="1" & !inlist("`x'","bedpan","urinal"){
+			*svy: tab adl_impair `x'
+			*mat tab`dem'[`r',`c'+2]=e(p_Pear)
+			*mat stars`dem'[`r',`c'+2]=(e(p_Pear)<.05)+(e(p_Pear)<.01)
+			tab `x' adl_impair_new , matcell(cell) chi2
+			mat tab`dem'[`r',`c'+1]=r(p)
+			mat stars`dem'[`r',`c'+1]=(r(p)<.05)+(r(p)<.01)
+			mat tab`dem'[`r',`c'+2]=(cell[2,2]/(cell[2,2]+cell[1,2]))*100
+			mat tab`dem'[`r',`c'+3]=(cell[1,1]/(cell[2,1]+cell[1,1]))*100
+			mat tab`dem'[`r',`c'+4]=(cell[2,2]/(cell[2,2]+cell[2,1]))*100
+			mat tab`dem'[`r',`c'+5]=(cell[1,1]/(cell[1,2]+cell[1,1]))*100
+			roctab adl_impair_new `x'
+			mat tab`dem'[`r',`c'+6]=r(area)
+}
+		local r=`r'+1
+}
+	local r=`r'+1
+	sum n if inlist(adl_impair_new,`i') [aw=anfinw]
+	mat tab`dem'[`r',`c']=r(N)
+	*mat tab`dem'[`r'+1,`c']=r(sum)
+	local r=1
+	local c=`c'+1
+}
+keep if dem_3_cat==1
+mat rownames tab`dem'=`vars' "_" "N" 
+}
+restore
+/*local vars `dme' ind_fri mult_fri ind_snf_12m ind_hh_12m ind_snf_or_hh_12m ///
+fri_hh_snf fri_oxy hh_snf_oxy fri_hh_snf_oxy
+*/
+foreach x of local vars {
+	local lab : var label `x'
+	di "`lab'"
+	local lab "`lab' \      % \"
+	local rows `rows'`lab'
+	local sdec `sdec'0,0,0,2\2,2,2,2\
+	di "`sdec'"
+}
+
+local sdec `sdec'0,0,0,0\2,2,2,2\0,0,0,0
+local sdec 0,0,0,2,2,2,2,2,2
+frmttable using "`logpath'function.rtf", statmat(taball)  ctitles("" "Full Sample" ///
+"Non-ADL dependent" "ADL dependent" "P-value" "Sensitivity" "Specificity" "PPV" "NPV" ///
+"AUC") title("SR and claims-based function") ///
+annotate(starsall) asymbol(*,**) sdec(`sdec') varlabels ///
+note("NHATS wave 1 SP interviews, restricted to those with 12m FFS Medicare" ///
+"ADL impairment defined as having assistance in `timethrough'+ ADLs") ///
+addtable
+local replace addtable
+
+
+}
+
+local vars age_lt75 age_lt85 age_85 inccat1 inccat2 inccat3 inccat4 ///
+female white black hisp other_race married educ_hs_ind ///
+medicaid medigap srh_fp adl_impair_new hb1 hb2 hb3 hb4 prob_dem adl_2 adl_3 ///
+sr_cancer_ever
+
+foreach x in sr_cancer_ever prob_dem married female educ_hs_ind {
+	gen no_`x'=`x'==0 if !missing(`x')
+}
+label var no_sr_c "No cancer"
+label var no_prob "Not demented"
+label var no_marr "Not married"
+label var no_fem "Male"
+label var no_edu "Education: <HS"
+
+local vars n sr_cancer_ever no_sr_cancer_ever prob_dem no_prob_dem ///
+inccat1 inccat2 inccat3 inccat4 hb1 hb2 hb3 hb4 ///
+white black hisp other_race age_lt75 age_lt85 age_85 married no_married ///
+female no_female educ_hs_ind no_educ_hs_ind
+label var n "Full Sample"
+local group bed_or_chair ind_fri oxy ind_snf_or_hh_12m fri_hh_snf_oxy
+
+label var fri_hh_snf_oxy "Any HH/SNF/FRI/Oxy"
+label var ind_snf_or_hh_12m "Any HH/SNF"
+
+
+
+local rn: word count `vars' 
+
+local cn : word count `group' 
+
+mat tab=J(`rn',`cn',.)
+mat stars=J(`rn',`cn',0) 
+local r=1
+local c=1
+
+foreach x of local vars {
+	foreach g of local group {
+		roctab adl_impair_new `g' if `x'==1
+		mat tab[`r',`c']=r(area)
+		local c=`c'+1
+}
+	local c=1
+	local r=`r'+1
+}
+
+
+
+mat rownames tab=`vars'
+mat colnames tab=`group'
+
+frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
+title ("C-Statistics, stratified by characteristics") addtable
+
+
+local rn: word count `vars' 
+
+local cn : word count `group' `group'
+
+mat tab=J(`rn',`cn',.)
+mat stars=J(`rn',`cn',0) 
+local r=1
+local c=1
+
+foreach x of local vars {
+	foreach g of local group {
+		logit adl_impair_new `g' if `x'==1, or
+		mat beta=e(b)
+		mat tab[`r',`c']=exp(beta[1,1])
+		mat p=r(table)
+		scalar p=p[4,1]
+		mat tab[`r',`c'+1]=p
+		mat stars[`r',`c'+1]=(p<.05)+(p<.01)
+		local c=`c'+2
+}
+	local c=1
+	local r=`r'+1
+}
+
+foreach x of local group {
+	local colnames `colnames' `x' P 
+}
+
+mat rownames tab=`vars'
+mat colnames tab=`colnames'
+
+frmttable using "`logpath'function.rtf", statmat(tab) varlabels sdec(2) annotate(stars) asymbol(*,**) ///
+title ("Bivariate Odds Ratios, stratified by characteristics") substat(1) addtable
+
+
+H="part 2"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\a\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+//local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+cd "`work'"
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+
+//Add in 4/27---FRI specific code
+gen insdhlp=mo1insdhlp 
+label val insdhlp mo1insdhlp
+gen oftgoarea=mo1oftgoarea
+label val oftgoarea mo1oftgoarea 
+gen oflvslepr=mo1oflvslepr 
+label val oflvslepr mo1oflvslepr 
+gen bedhlp=mo1bedhlp 
+label val bedhlp mo1bedhlp
+gen dreshlp=sc1dreshlp
+label val dreshlp sc1dreshlp
+gen dresoft=sc1dresoft 
+label val dresoft sc1dresoft
+gen toilhlp=sc1toilhlp 
+label val toilhlp sc1toilhlp
+gen bathhlp=sc1bathhlp 
+label val bathhlp sc1bathhlp
+gen showrbat1=sc1showrbat1 
+label val showrbat1 sc1showrbat1
+gen showrbat2=sc1showrbat2 
+label val showrbat2 sc1showrbat2
+gen showrbat3=sc1showrbat3 
+label val showrbat3 sc1showrbat3 
+gen eathlp=sc1eathlp 
+label val eathlp sc1eathlp
+//gen eatdev=sc1eatdev 
+//label val eatdev sc1eatdev
+gen outoft=mo1outoft
+label val outoft mo1outoft
+//gen ntlvrmslp=fl1ntlvrmslp
+//label val ntlvrmslp fl1ntlvrmslp
+
+
+
+//Add in 4/6/18---FRI project and then implemented throughout code.
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
+label var dresslf "Often you Dress Yourself"
+
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
+label var dresdif "Difficulty when using Special Items by Self"
+
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
+label var ntlvrmslp "Often had to Stay in Bed"
+
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
+label var eatdev "Ever use Adapted Utensils"
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
+
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats spid wave
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta"
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats adl_dres_help ///
+adl_eat_help adl_index spid wave
+
+tempfile nhats
+save "`nhats'"
+
+
+
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1
+
+duplicates drop spid, force
+
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m non_proxy
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+//no one is missing all adl help vars.
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+gen non_proxy=0 if proxy_ivw==1
+replace non_proxy=1 if proxy_ivw==0
+label var non_proxy "Non-Proxy Interview"
+
+mat tab=J(6,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+frmttable using "`logpath'table.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & proxy_ivw==0, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+//tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+capture drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+
+/////Tables
+
+gen wheelchr=chair
+gen com=commode
+gen bathtoi=tub_toil
+
+foreach x in cane walker wheelchr com bathtoi{
+sum `x'_nhats if `x'==1 & `x'_nhats==1
+local a=`r(N)'
+sum `x'_nhats if `x'==0 & `x'_nhats==1
+local b=`r(N)'
+sum `x' if `x'==1 & `x'_nhats==0
+local c=`r(N)'
+sum `x' if `x'==0 & `x'_nhats==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & `x'!=. 
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & `x'!=. 
+local f=`r(N)'
+sum `x' if `x'==1 & `x'_nhats!=.
+local g=`r(N)'
+sum `x' if `x'==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+}
+tab cane_nhats cane, row
+mat list cane
+
+
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane
+if "`x'"=="walker" local title Walker
+if "`x'"=="wheelchr" local title Wheelchair
+if "`x'"=="com" local title Commode/Bedpan/Urinal
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/DME", Yes, No, Total) rtitle(Yes\ % \No\% \ Total \ %) ///
+title("`title'") addtable
+}
+
+
+tab cane_nhats adl_bath_diff 
+
+
+foreach x in cane walker wheelchr com bathtoi {
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & `x'_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+}
+tab cane_nhats adl_impair_new, row
+mat list cane
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane v.s. ADL Impairment
+if "`x'"=="walker" local title Walker v.s. ADL Impairment
+if "`x'"=="wheelchr" local title Wheelchair v.s. ADL Impairment
+if "`x'"=="com" local title Commode/Bedpan/Urinal v.s. ADL Impairment
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device v.s. ADL Impairment
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/ADL Impair", Yes, No, Total) rtitle(Yes\ % \ No\ % \Total \ %) ///
+title("`title'") addtable
+}
+
+
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1 | bathtoi_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 & bathtoi_nhats==0
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix any= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+tab any_dev_nhats adl_impair_new, row
+matrix list any
+
+frmttable using "`logpath'table.rtf", replace statmat(any) ///
+sdec(1) ctitle("Any Device NHATS/ADL Impairment", Yes, No, Total, %) rtitle(Yes\ % \No\ % \Total \ %)  ///
+title("`title'") addtable
+
+ 
+
+///DME claim vs adl_impairment 
+capture drop dme_cl*
+egen dme_cl=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair)
+
+egen dme_c=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair oxy ind_snf_or_hh_12m  )
+
+gen dme_cl_1=0
+replace dme_cl_1=1 if dme_cl>=1
+
+gen dme_c_1=0
+replace dme_c_1=1 if dme_c>=1
+
+tab dme_cl_1 adl_impair_new
+
+//Eat and dress vs DME
+capture drop eat_dres
+egen eat_dres=rowtotal(device_dres device_eat)
+replace eat_dres=1 if eat_dres==2
+
+tab dme_cl_1 eat_dres
+
+
+
+sum n if adl_impair>=1 & dme_cl_1==0
+
+
+
+preserve
+keep if adl_impair_new==1 & dme_cl_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+
+restore
+
+preserve
+keep if adl_impair_new==1 & dme_c_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme1= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+restore
+
+foreach x in dme dme1 {
+
+if "`x'"=="dme" local title ADL Impaired Self Report & DME Sample Excluding Oxygen, HH, & SNF 
+if "`x'"=="dme1" local title ADL Impaired Self Report & DME Sample Including Oxygen, HH, & SNF 
+
+frmttable using "`logpath'table.rtf", replace statmat(`x') ///
+sdec(1) ctitle("Eating and/or Dressing Device Self Report", Freq., %) rtitle(Yes\ No \ Total)  ///
+title("`title'") addtable
+}
+
+
+//put this into the word doc in same format
+capture drop tag_dme
+egen tag_dme= anymatch(cane walker commode urinal bedpan tub_toil_dev chair), v(1)
+label var tag_dme "Claim for any device"
+
+sum device_any if device_any==1 & tag_dme==1
+local a=`r(N)'
+sum device_any if device_any==1 & tag_dme==0
+local b=`r(N)'
+sum device_any if device_any==0 & tag_dme==1
+local c=`r(N)'
+sum device_any if device_any==0 & tag_dme==0
+local d=`r(N)'
+
+sum device_any if device_any==1 & tag_dme!=.
+local e=`r(N)'
+sum device_any if device_any==0 & tag_dme!=.
+local f=`r(N)'
+sum tag_dme if tag_dme==1 & device_any!=.
+local g=`r(N)'
+sum tag_dme if tag_dme==0 & device_any!=.
+local h=`r(N)'
+
+matrix dev= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+mat list dev
+
+frmttable using "`logpath'table.rtf", replace statmat(dev) ///
+sdec(1) ctitle("Self Report/Claims", Yes, No, Total) rtitle(Yes\ % \ No\ % \ Total \ %)  ///
+title("Self Report using any Device vs. Claim for any Device") addtable ///
+note("Excludes Oxygen & Lift")
+
+
+tab device_any tag_dme, row
+
+
+H="part 3"
+capture log close
+clear all
+set more off
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\a\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+//local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+tempfile metro
+save `metro'
+
+cd "`work'"
+use round_1_6_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+
+//Add in 4/27---FRI specific code
+gen insdhlp=mo1insdhlp 
+label val insdhlp mo1insdhlp
+gen oftgoarea=mo1oftgoarea
+label val oftgoarea mo1oftgoarea 
+gen oflvslepr=mo1oflvslepr 
+label val oflvslepr mo1oflvslepr 
+gen bedhlp=mo1bedhlp 
+label val bedhlp mo1bedhlp
+gen dreshlp=sc1dreshlp
+label val dreshlp sc1dreshlp
+gen dresoft=sc1dresoft 
+label val dresoft sc1dresoft
+gen toilhlp=sc1toilhlp 
+label val toilhlp sc1toilhlp
+gen bathhlp=sc1bathhlp 
+label val bathhlp sc1bathhlp
+gen showrbat1=sc1showrbat1 
+label val showrbat1 sc1showrbat1
+gen showrbat2=sc1showrbat2 
+label val showrbat2 sc1showrbat2
+gen showrbat3=sc1showrbat3 
+label val showrbat3 sc1showrbat3 
+gen eathlp=sc1eathlp 
+label val eathlp sc1eathlp
+//gen eatdev=sc1eatdev 
+//label val eatdev sc1eatdev
+gen outoft=mo1outoft
+label val outoft mo1outoft
+//gen ntlvrmslp=fl1ntlvrmslp
+//label val ntlvrmslp fl1ntlvrmslp
+
+
+
+//Add in 4/6/18---FRI project and then implemented throughout code.
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
+label var dresslf "Often you Dress Yourself"
+
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
+label var dresdif "Difficulty when using Special Items by Self"
+
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
+label var ntlvrmslp "Often had to Stay in Bed"
+
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
+label var eatdev "Ever use Adapted Utensils"
+
+
+///// 3/5/18 --Adding in FRI questions from round 1
+
+foreach x in cane walker wheelchr {
+capture drop `x'_nhats
+gen `x'_nhats=fl1`x'
+replace `x'_nhats=. if fl1`x'==-9 | (fl1`x'==-1 & sp_ivw==0) 
+replace `x'_nhats=0 if fl1`x'==-1 & sp_ivw==1
+label var `x'_nhats "`x' from NHATS"
+}
+
+capture drop com_nhats
+recode sc1usvartoi1 (2=0) (-9 -1=.), gen(com_nhats)
+
+
+capture drop bathtoi_nhats
+gen bathtoi_nhats=. if wave==1 //if sc1dbathdevi==3 | sc1dbathdevi==4 | sc1dtoildevi==3 | sc1dtoildevi==4
+replace bathtoi_nhats=0 if (sc1dbathdevi==1 & sc1dtoildevi==1) | (ho1bathamen3==2 & ho1bathamen4==2 & ho1bathamen5==2 & ho1bathamen6==2)
+replace bathtoi_nhats=1 if sc1dbathdevi==2 | sc1dtoildevi==2 | ho1bathamen3==1 | ho1bathamen4==1 | ho1bathamen5==1 | ho1bathamen6==1
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats spid wave
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6_public_sens_only.dta"
+
+keep insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats adl_dres_help ///
+adl_eat_help adl_index spid wave
+
+tempfile nhats
+save "`nhats'"
+
+
+
+
+local intpath "E:\nhats\data\Projects\serious_ill\int_data"
+local datapath "E:\nhats\data\Projects\serious_ill\final_data"
+local logpath "E:\nhats\data\Projects\serious_ill\logs\"
+
+cd `datapath'
+*log using `logpath'\nhats_dme_function.txt, text replace
+
+use serious_ill_nhats_sample if wave==1
+
+duplicates drop spid, force
+
+drop adl_eat_help adl_dres_help adl_index
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp bathtoi_nhats adl_dres_help ///
+adl_eat_help adl_index) keep(match)
+drop _merge
+
+local vars n nonh sp_ivw_yes nomiss ffs_12m non_proxy
+
+gen nonh=!nhres
+label var nonh "SP interview eligible (not nursing home resident)"
+gen n=1
+label var n "Total Wave 1"
+//created new adl_index var b/c we want to keep people who even answered one adl question
+egen adl_index_new=rowtotal(adl_*_help) 
+tab adl_index_new 
+
+//no one is missing all adl help vars.
+gen nomiss=!missing(adl_index_new)
+label var nomiss "With responses to atleast 1 ADL question"
+label var sp_ivw_yes "SP interview conducted"
+
+gen non_proxy=0 if proxy_ivw==1
+replace non_proxy=1 if proxy_ivw==0
+label var non_proxy "Non-Proxy Interview"
+
+mat tab=J(6,1,.)
+local r=1
+
+foreach x in `vars' {
+	sum n if `x'==1
+	mat tab[`r',1]=r(N)
+	drop if `x'!=1
+	local r=`r'+1
+}
+
+mat rownames tab=`vars'
+
+frmttable using "`logpath'table_all.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+frmttable using "`logpath'table_adl.rtf", statmat(tab) replace title("Sample Derivation") ///
+sdec(0) varlabels
+
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & proxy_ivw==0, clear 
+//& !missing(adl_index), clear
+foreach x of varlist device* {
+	local device `device' `x'
+}
+//tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+capture drop bathtoi adl_dres_help adl_eat_help
+merge 1:1 spid wave using "`nhats'",  ///
+keepusing(insdhlp oftgoarea oflvslepr bedhlp dreshlp dresoft toilhlp bathhlp ///
+showrbat1 showrbat2 showrbat3 eathlp eatdev outoft ntlvrmslp *_nhats adl_dres_help ///
+adl_eat_help adl_index ) keep(match)
+drop _merge
+//new variable definition taken
+tab bathtoi
+tab adl_dres_help
+tab adl_eat_help
+
+egen adl_index_new=rowtotal(adl_*_help)
+tab adl_index_new
+
+keep if !missing(adl_index_new)
+
+gen adl_impair_new=1 if adl_index_new>0 & !missing(adl_index_new)
+replace adl_impair_new=0 if adl_index_new==0
+
+svyset varunit [pw=anfinw], strata(varstrat)
+*replace adl_impair=0 if adl_index==1
+
+gen caneorwalker=cane==1 | walker==1
+local dme cane walker caneorwalker commode urinal bedpan tub_toil_dev lift bed chair //oxy
+gen n=1
+
+label var caneorwalker "Cane or walker from DME"
+label var cane "Cane from DME"
+label var walker "Walker from DME"
+label var commode "Commode from DME"
+label var urinal "Urinal from DME"
+label var bedpan "Bedpan from DME"
+label var tub_toil_dev "Toilet/tub/shower assistive device from DME"
+label var lift "Lift, transfer board, safety belt/harness/vest from DME"
+label var bed "Hospital bed from DME"
+label var chair "Wheelchair from DME"
+label var oxy "Oxygen from DME"
+
+foreach x of local dme {
+	replace `x'=0 if `x'==.
+}
+
+gen n_fri=0
+
+foreach x of local dme {
+	replace n_fri=n_fri+1 if `x'==1
+}
+gen ind_fri=n_fri>=1 if !missing(n_fri)
+label var ind_fri "Any mobility indicator from DME"
+label var n_fri "Count of mobility indicators from DME"
+gen mult_fri=n_fri>=2
+label var mult_fri "Indicator of multiple mobility indicators from DME"
+
+foreach x in `dme' ind_fri mult_fri n_fri {
+	tab adl_impair_new `x', col nokey chi2
+}
+
+
+sum `dme' ind_fri mult_fri n_fri
+tab1 `dme' ind_fri mult_fri n_fri
+
+/*
+gen ind_snf_12m=snf_paid_by_mc_12m>0
+gen ind_hh_12m=hh_paid_by_mc_12m>0
+*/
+
+gen ind_snf_12m=n_snf_days_12m>0 & !missing(n_snf_days_12m)
+gen ind_snf_or_hh_12m=ind_snf_12m==1 | ind_hh_12m==1
+replace ind_hh_12m=0 if missing(ind_hh_12)
+label var ind_snf_12m "Any SNF utilization"
+label var ind_hh_ "Any HH utilization"
+label var ind_snf_or_hh "Any HH or SNF utilization"
+
+gen fri_hh_snf_oxy=ind_fri==1 | ind_snf_or_hh==1 | oxy==1
+label var fri_hh_snf_oxy "Any HH, SNF, oxygen, or mobility indicator from DME"
+gen fri_hh_snf =ind_snf_or_hh==1 | ind_fri==1
+label var fri_hh_snf "Any HH, SNF, or mobility indicator from DME"
+gen hh_snf_oxy=ind_snf_or_hh==1 | oxy==1
+label var hh_snf_oxy "Any HH, SNF, or oxygen from DME"
+gen fri_oxy =ind_fri | oxy
+label var fri_oxy "Any mobility indcator or oxygen from DME"
+gen bed_or_chair=bed==1 | chair==1
+label var bed_or_chair "Hospital bed or wheelchair from DME"
+
+
+
+gen all=1 
+gen adl=1 if adl_impair_new==1
+ 
+/////Tables
+
+
+foreach p in all adl{
+preserve
+keep if `p'==1
+
+gen wheelchr=chair
+gen com=commode
+gen bathtoi=tub_toil
+
+foreach x in cane walker wheelchr com bathtoi{
+sum `x'_nhats if `x'==1 & `x'_nhats==1
+local a=`r(N)'
+sum `x'_nhats if `x'==0 & `x'_nhats==1
+local b=`r(N)'
+sum `x' if `x'==1 & `x'_nhats==0
+local c=`r(N)'
+sum `x' if `x'==0 & `x'_nhats==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & `x'!=. 
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & `x'!=. 
+local f=`r(N)'
+sum `x' if `x'==1 & `x'_nhats!=.
+local g=`r(N)'
+sum `x' if `x'==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+}
+tab cane_nhats cane, row
+mat list cane
+
+
+
+foreach x in cane walker wheelchr com bathtoi {
+if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane
+if "`x'"=="walker" local title Walker
+if "`x'"=="wheelchr" local title Wheelchair
+if "`x'"=="com" local title Commode/Bedpan/Urinal
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/DME", Yes, No, Total) rtitle(Yes\ % \No\% \ Total \ %) ///
+title("`title'") addtable
+}
+
+
+tab cane_nhats adl_bath_diff 
+
+
+foreach x in cane walker wheelchr com bathtoi {
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum `x'_nhats if `x'_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum `x'_nhats if `x'_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & `x'_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & `x'_nhats!=.
+local h=`r(N)'
+
+matrix `x'= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+}
+tab cane_nhats adl_impair_new, row
+mat list cane
+
+foreach x in cane walker wheelchr com bathtoi {
+//if "`x'"!="cane" local add addtable
+if "`x'"=="cane" local title Cane v.s. ADL Impairment
+if "`x'"=="walker" local title Walker v.s. ADL Impairment
+if "`x'"=="wheelchr" local title Wheelchair v.s. ADL Impairment
+if "`x'"=="com" local title Commode/Bedpan/Urinal v.s. ADL Impairment
+if "`x'"=="bathtoi" local title Shower/Tub/Toilet Assistive Device v.s. ADL Impairment
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("NHATS/ADL Impair", Yes, No, Total) rtitle(Yes\ % \ No\ % \Total \ %) ///
+title("`title'") addtable
+}
+
+
+capture drop any_dev_nhats
+gen any_dev_nhats=1 if cane_nhats==1 | walker_nhats==1 | wheelchr_nhats==1 | com_nhats==1 | bathtoi_nhats==1
+replace any_dev_nhats=0 if cane_nhats==0 & walker_nhats==0 & wheelchr_nhats==0 & com_nhats==0 & bathtoi_nhats==0
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==1
+local a=`r(N)'
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new==0
+local b=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==1
+local c=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new==0
+local d=`r(N)'
+
+sum any_dev_nhats if any_dev_nhats==1 & adl_impair_new!=.
+local e=`r(N)'
+sum any_dev_nhats if any_dev_nhats==0 & adl_impair_new!=.
+local f=`r(N)'
+sum adl_impair_new if adl_impair_new==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum adl_impair_new if adl_impair_new==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix any= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+
+tab any_dev_nhats adl_impair_new, row
+matrix list any
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(any) ///
+sdec(1) ctitle("Any Device NHATS/ADL Impairment", Yes, No, Total, %) rtitle(Yes\ % \No\ % \Total \ %)  ///
+title(Any NHATS Device V.S. ADL Impairment) addtable
+
+
+///DME claim vs adl_impairment 
+capture drop dme_cl*
+egen dme_cl=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair)
+
+egen dme_c=rowtotal(cane walker commode urinal bedpan tub_toil_dev lift bed chair oxy ind_snf_or_hh_12m  )
+
+gen dme_cl_1=0
+replace dme_cl_1=1 if dme_cl>=1
+
+gen dme_c_1=0
+replace dme_c_1=1 if dme_c>=1
+
+tab dme_cl_1 adl_impair_new
+
+//Eat and dress vs DME
+capture drop eat_dres
+egen eat_dres=rowtotal(device_dres device_eat)
+replace eat_dres=1 if eat_dres==2
+
+tab dme_cl_1 eat_dres
+
+
+
+sum n if adl_impair>=1 & dme_cl_1==0
+
+
+tempfile temp`p'
+save "'temp`p''", replace
+keep if adl_impair_new==1 & dme_cl_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+
+use "'temp`p''", clear
+
+tempfile temp1`p'
+save "'temp1`p''", replace
+
+keep if adl_impair_new==1 & dme_c_1==0
+
+sum eat_dres if eat_dres==1
+local a=`r(N)'
+sum eat_dres if eat_dres==0
+local b=`r(N)'
+
+tab eat_dres
+
+matrix dme1= (`a', ((`a'/(`a'+`b'))*100) \ `b', ((`b'/(`a'+`b'))*100) \ `a'+`b', 100)
+use "'temp1`p''", clear
+
+
+foreach x in dme dme1 {
+
+if "`x'"=="dme" local title ADL Impaired Self Report & DME Sample Excluding Oxygen, HH, & SNF 
+if "`x'"=="dme1" local title ADL Impaired Self Report & DME Sample Including Oxygen, HH, & SNF 
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(`x') ///
+sdec(1) ctitle("Eating and/or Dressing Device Self Report", Freq., %) rtitle(Yes\ No \ Total)  ///
+title("`title'") addtable
+}
+
+
+capture drop tag_dme
+egen tag_dme= anymatch(cane walker commode urinal bedpan tub_toil_dev chair), v(1)
+label var tag_dme "Claim for any device"
+
+sum device_any if any_dev_nhats==1 & tag_dme==1
+local a=`r(N)'
+sum device_any if any_dev_nhats==1 & tag_dme==0
+local b=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==1
+local c=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme==0
+local d=`r(N)'
+
+sum device_any if any_dev_nhats==1 & tag_dme!=.
+local e=`r(N)'
+sum device_any if any_dev_nhats==0 & tag_dme!=.
+local f=`r(N)'
+sum tag_dme if tag_dme==1 & any_dev_nhats!=.
+local g=`r(N)'
+sum tag_dme if tag_dme==0 & any_dev_nhats!=.
+local h=`r(N)'
+
+matrix dev= (`a',`b',`e' \ (`a'/`e')*100 , (`b'/`e')*100 , 100 \ `c',`d',`f' \ (`c'/`f')*100 , (`d'/`f')*100 , 100 \ `g',`h',`g'+`h'\(`g'/(`g'+`h'))*100,(`h'/(`g'+`h'))*100, 100) 
+mat list dev
+
+frmttable using "`logpath'table_`p'.rtf", replace statmat(dev) ///
+sdec(1) ctitle("Self Report/Claims", Yes, No, Total) rtitle(Yes\ % \ No\ % \ Total \ %)  ///
+title("Self Report using any Device vs. Claim for any Device") addtable ///
+note("Excludes Oxygen & Lift")
+
+
+tab device_any tag_dme, row
+
+tab any_dev_nhats device_any
+restore
+}
+

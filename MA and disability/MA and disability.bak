@@ -140,11 +140,39 @@ keep spid minnh death_date
 
 save "E:\nhats\data\Projects\MA after disability\date of death and NH.dta"
 
-H="making file for MA status before, after first needing help"
+H="making file for ma status by month"
+use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\mbsf_06_16.dta" 
 
+keep bene_id year bene_hmo_ind_01 bene_hmo_ind_02 bene_hmo_ind_03 bene_hmo_ind_04 bene_hmo_ind_05 bene_hmo_ind_06 bene_hmo_ind_07 bene_hmo_ind_08 bene_hmo_ind_09 bene_hmo_ind_10 bene_hmo_ind_11 bene_hmo_ind_12
+foreach var of varlist bene_hmo_ind_01 bene_hmo_ind_02 bene_hmo_ind_03 bene_hmo_ind_04 bene_hmo_ind_05 bene_hmo_ind_06 bene_hmo_ind_07 bene_hmo_ind_08 bene_hmo_ind_09 bene_hmo_ind_10 bene_hmo_ind_11 bene_hmo_ind_12 {
+recode `var'="0" if `var'=="4"
+recode `var'="1" if `var'=="C"
+}
+
+foreach x in 01 02 03 04 05 06 07 08 09 10 11 12 {
+gen hmo_mo_`x'= 0 if bene_hmo_ind_`x' == "0" | bene_hmo_ind_`x'== "4"
+replace hmo_mo_`x'= 1 if bene_hmo_ind_`x' == "1" | bene_hmo_ind_`x'== "C"
+}
+count
+
+egen hmoind12= concat(hmo_mo_01 hmo_mo_02 hmo_mo_03 hmo_mo_04 hmo_mo_05 hmo_mo_06 hmo_mo_07 hmo_mo_08 hmo_mo_09 hmo_mo_10 hmo_mo_11 hmo_mo_12)
+save "E:\nhats\data\Projects\MA after disability\ma status by month.dta"
+
+
+H="make file for date of hospice entry"
+ use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\hs_09_16.dta" 
+ by bene_id, sort: egen first_hs= min(admit_date)
+ merge m:1 bene_id using "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta"
+ keep first_hs spid
+ by spid, sort: gen nvals=_n
+ by spid: gen nvals= _n==1
+ keep if nvals==1
+save "E:\nhats\data\Projects\MA after disability\bene spid and hospice.dta"
+
+H="making file for MA status before, after first needing help"
 /*first, crosswalk mbsf to spid so can merge with nhats data*/
 
-use bene_id year hmoind12 using "E:\nhats\data\20180625 NHATS CMS Data\merged stata\mbsf_06_16.dta", clear
+use bene_id year hmoind12 using "E:\nhats\data\Projects\MA after disability\ma status by month.dta", clear
 merge m:1 bene_id using "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta", ///
 gen(xmerge)
 tempfile mbsf
@@ -195,8 +223,11 @@ forvalues i=1/2 {
 /*get month of index*/
 gen month=month(index_date)
 gen hmoind_index=substr(hmoind12i,month,1)
-gen hmoind_n=reverse(substr(hmoind12n1,month,13-month)+substr(hmoind12i,1,month-1))
+gen hmoind_n=substr(hmoind12n1,month,13-month)+substr(hmoind12i,1,month-1)
 gen hmoind_p=substr(hmoind12i,month,12-month)+hmoind12p1+substr(hmoind12p2,1,month)
+
+
+
 
 /*turn string in
 to count of ma months*/
@@ -211,23 +242,33 @@ foreach x in n p {
 }
 
 label var ind_ma_index "Indicator MA at first disability"
-label var cont_ma_n_mos "Months of continous MA coverage pre-disability"
+label var cont_ma_n_mos "Months of continous MA coverage pre-disability: first digit is 12 months prior"
 label var cont_ma_p_mos "Months of continous MA coverage post-disability"
 
 *make a variable to show that a person switched into MA after disability*
 gen cont_ma_p_all_mos=strlen(hmoind_p)
 
+
 gen switch_ma_p=0
 replace switch_ma_p=1 if cont_ma_p_all_mos>cont_ma_p_mos & ind_ma_index==1
 label var switch_ma_p "switched from MA to FFS post-disability"
 
-keep spid *ma* index_date
+*make a variable to count the number of months with data prior to disability
+gen cont_ma_n_all_mos=strlen(hmoind_n)
+destring cont_ma_n_all_mos, replace 
+
+*make a variable for being in MA in first month (last digit of hmoind_n)-- this variable is also . if does not have 12 months of data
+gen firsthmo=substr(hmoind_n, 1, 1)
+destring firsthmo, replace
+replace firsthmo=. if cont_ma_n_all_mos<12
+
+keep spid *ma* firsthmo index_date hmoind_n hmoind_p
 
 //note--there seems to be some screwiness going on
 /*merge 1:m spid using "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
 */
 
-merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of first disability.dta", ///
+merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of first disability.dta"
 
 drop _merge
 merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of death and NH.dta"
@@ -236,14 +277,64 @@ keep if _merge==3
 drop _merge
 
 merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\bene spid and hospice.dta"
-drop if _merge==2
+keep if _merge==3
+drop _merge
+
+*trial- is this bc people dying
+gen mos_switch=cont_ma_n_mos if firsthmo==1 & ind_ma_index==0
+replace mos_switch=12+cont_ma_p_mos if firsthmo==1 & ind_ma_index==1 & switch_ma_p==1
+
+*******
+*make a variable for date of switch:
+*first make a variable for the start date: start of study
+gen start_date=index_date-365
+gen switchdays=30*mos_switch
+gen date_switch=start_date+switchdays
+format date_switch %td
+
+*make a variable for if hospice occurs within 30 days after (or before- a fluke- switch)
+gen days_switch_hs= first_hs-date_switch
+recode days_switch_hs (-2878/32=1) (.=0)(33/1066=0), gen (hospswitch)
+
+*make a new variable for months from start to switch: do not count switches onto hospice 
+gen mos_switch_nohosp=mos_switch
+replace mos_switch_nohosp=. if hospswitch==1
+tab mos_switch_nohosp
+
+recode mos_switch_nohosp(1/4= 1)(5/8= 2)(9/12= 3)(13/16= 4)(17/20= 5)(21/24= 6)(25/28=7)(29/32=8)(33/35=9)(36=99 "never switched"), gen(start_to_switch_tri)
+tab start_to_switch_tri
+
+
+recode mos_switch_nohosp(1/6= 1)(7/12= 2)(13/18= 3)(19/24= 4)(25/30= 5)(31/35= 6)(36=99 "never switched"), gen(start_to_switch_half)
+tab start_to_switch_half
+ tab start_to_switch_half if indhelpstop==0
+
+ 
+ *make a variable for switching after disability, not to hospice
+ destring switch_ma_p, replace
+ gen post_dis_switch_nohosp= switch_ma_p
+replace post_dis_switch_nohosp=0 if hospswitch==1
+
+
+*make a variable for time of disability during open enrollment
+gen indexdate_month=month(index_date)
+
+gen openenroll_dis=0
+replace openenroll_dis=1 if indexdate_month==1 | indexdate_month==2 | indexdate_month==10 | indexdate_month==11 | indexdate_month==2
 
 H="analysis"
-tab switch_ma_p if ind_ma_index==1
-tab cont_ma_p_mos if switch_ma_p==1 & ind_ma_index==1
+*analysis
+*total people in starting cohort
+tab firsthmo
 
-*need to figure out if all these are people going into hospice*
+*total people switching out per 4 months before and after disability
+tab start_to_switch_tri
 
+*total people switching out per 6 months
+tab start_to_switch_half
 
-tab first_hs
-tab cont_ma_p_mos if switch_ma_p==1 & ind_ma_index==1 & first_hs==0
+*total people on MA at time of disability who switch to FFS in next 24 months
+tab post_dis_switch_nohosp if ind_ma_index==1
+
+*see if there are monthly patterns
+tabstat post_dis_switch_nohosp, by(indexdate_month)

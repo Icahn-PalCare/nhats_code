@@ -170,7 +170,6 @@ H="make file for date of hospice entry"
 save "E:\nhats\data\Projects\MA after disability\bene spid and hospice.dta"
 
 H="making file for MA status before, after first needing help"
-
 /*first, crosswalk mbsf to spid so can merge with nhats data*/
 
 use bene_id year hmoind12 using "E:\nhats\data\Projects\MA after disability\ma status by month.dta", clear
@@ -269,7 +268,7 @@ keep spid *ma* firsthmo index_date hmoind_n hmoind_p
 /*merge 1:m spid using "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
 */
 
-merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of first disability.dta", ///
+merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of first disability.dta"
 
 drop _merge
 merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\date of death and NH.dta"
@@ -302,29 +301,75 @@ gen mos_switch_nohosp=mos_switch
 replace mos_switch_nohosp=. if hospswitch==1
 tab mos_switch_nohosp
 
-recode mos_switch_nohosp(1/4= 1)(5/8= 2)(9/12= 3)(13/16= 4)(17/20= 5)(21/24= 6)(25/28=7)(29/32=8)(33/35=9)(36=99 "never switched"), gen(start_to_switch_tri)
+*modify this variable to also not count switches because of death
+gen mos_switch_nohosp_nodeath=mos_switch_nohosp
+replace mos_switch_nohosp_nodeath=. if days_switch_death<=0
+tab mos_switch_nohosp_nodeath
+tab mos_switch_nohosp mos_switch_nohosp_nodeath
+
+recode mos_switch_nohosp_nodeath(1/4= 1)(5/8= 2)(9/12= 3)(13/16= 4)(17/20= 5)(21/24= 6)(25/28=7)(29/32=8)(33/35=9)(36=99 "never switched"), gen(start_to_switch_tri)
 tab start_to_switch_tri
 
 
-recode mos_switch_nohosp(1/6= 1)(7/12= 2)(13/18= 3)(19/24= 4)(25/30= 5)(31/35= 6)(36=99 "never switched"), gen(start_to_switch_half)
+recode mos_switch_nohosp_nodeath(1/6= 1)(7/12= 2)(13/18= 3)(19/24= 4)(25/30= 5)(31/35= 6)(36=99 "never switched"), gen(start_to_switch_half)
 tab start_to_switch_half
- 
+ tab start_to_switch_half if indhelpstop==0
 
+ 
+ *make a variable for switching after disability, not to hospice
+ destring switch_ma_p, replace
+ gen post_dis_switch_nohosp= switch_ma_p
+replace post_dis_switch_nohosp=0 if hospswitch==1
+
+
+*make a variable for time of disability during open enrollment
+gen indexdate_month=month(index_date)
+
+gen openenroll_dis=0
+replace openenroll_dis=1 if indexdate_month==1 | indexdate_month==2 | indexdate_month==10 | indexdate_month==11 | indexdate_month==2
+
+
+*****
+
+
+*make a variable for switching after disability, not to hospice and post-death
+gen post_dis_switch_nohosp_nodeath= post_dis_switch_nohosp
+destring days_switch_death, replace
+replace post_dis_switch_nohosp_nodeath=0 if days_switch_death<=0
+
+tab start_to_switch
+
+*make a variable for died after index date
+gen index_to_death= death_date-index_date
+
+recode index_to_death (-347/0=.)(1/180=1 "first 6 mos")(181/365=2 "second 6 mos")(166/545=3 "third 6 mos")(546/730=4 "fourth 6 mos")(731/max=.), gen(died_post_index)
+
+
+
+*how much follow up time do people have?
+gen fumonths= strlen(hmoind_p)
+
+*recode this in case died
+gen index_to_death_mos= index_to_death/30
+
+*make a variable to track follow up months
+replace fumonths=index_to_death_mos if fumonths>index_to_death_mos & index_to_death_mos!=. & index_to_death_mos>0
+recode fumonths (0/6=1  "first 6 mo only")(6/12=2 "second 6 mos only")(12/18=3 "third 6 mos only")(18/23=4 "fourth 6 mos")(23/24=5 "full followip"), gen(follow_lngth_grps)
+tab follow_lngth_grps if ind_ma_index==1 & firsthmo==1
 
 H="analysis"
 *analysis
-*how many benes on MA at time of disability subsequently switch to FFS?
-tab switch_ma_p if ind_ma_index==1
-*for how many of these is this because of going into hospice?
-tab switch_ma_p hospswitch if ind_ma_index==1, row 
+*total people in starting cohort
+tab firsthmo
 
-*what does the time look like for those switching to FFS not going into hospice?
-tab cont_ma_p_mos if switch_ma_p==1  & ind_ma_index==1 & hospswitch==0
+*total people switching out per 4 months before and after disability
+tab start_to_switch_tri
 
-*what does this look like in Q3 months? q6 months
-recode cont_ma_p_mos (0/3= 1)(4/7= 2)(8/11= 3)(12/15= 4)(16/19= 5)(20/24= 6), gen(cont_ma_p_tri)
-recode cont_ma_p_mos (0/5=1)(6/11=2)(12/17=3)(18/24=4), gen(cont_ma_p_biann)
+*total people switching out per 6 months
+tab start_to_switch_half
 
-tab cont_ma_p_mos if switch_ma_p==1  & ind_ma_index==1 & hospswitch==0
-tab cont_ma_p_tri if switch_ma_p==1  & ind_ma_index==1 & hospswitch==0
-tab cont_ma_p_biann if switch_ma_p==1  & ind_ma_index==1 & hospswitch==0
+*total people on MA at time of disability who switch to FFS in next 24 months
+tab post_dis_switch_nohosp if ind_ma_index==1
+
+*see if there are monthly patterns
+tabstat post_dis_switch_nohosp, by(indexdate_month)

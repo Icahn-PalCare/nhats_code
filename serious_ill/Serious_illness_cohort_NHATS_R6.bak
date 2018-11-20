@@ -8665,3 +8665,43 @@ ctitles("" "Incident ADL"""  "All 12m FFS" \"""n" "Weighted %" "n" "Weighted %")
 note("Restricted to those with 12m FFS prior to interview (waves 1-4)")
 
 tab wave
+
+
+H="region"
+use "E:\nhats\data\NHATS working data\round_1_to_6.dta", clear 
+
+keep spid wave re*dcensdiv
+
+forvalues i=1/6 {
+
+capture gen northeast = 0
+replace northeast = 1 if re`i'dcensdiv==1 | re`i'dcensdiv==2
+
+capture gen midwest = 0
+replace midwest = 1 if re`i'dcensdiv==3 | re`i'dcensdiv==4
+
+capture gen west = 0
+replace west = 1 if re`i'dcensdiv==8 | re`i'dcensdiv==9
+}
+
+capture gen south = 0
+replace south = 1 if northeast==0 & west==0 & midwest==0
+
+cap drop re*dcensdiv
+
+tempfile region
+save "`region'"
+
+
+
+/*
+use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", clear
+cap drop _m
+duplicates drop spid wave, force
+merge 1:1 spid wave using "`region'"
+keep if _m==3
+cap drop _m
+
+
+save "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
+*/
