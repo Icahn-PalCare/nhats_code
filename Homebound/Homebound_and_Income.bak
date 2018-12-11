@@ -12307,7 +12307,7 @@ Homebound and Income sample
 
 
 H="sample characteristics"
-/* Homebound and Inome Final version 11/1/2018 -MH */
+/* Homebound and Inome Final version 11/7/2018 -MH */
 
 /* This tab is to create the Sample Characteristics tables:
 PART 1
@@ -12338,6 +12338,22 @@ replace income_adj=aveincome if wave==6
 gen orig_weight=anfinw
 replace anfinw=an2011wgt if (year==2011 & wave==5) | (year==2011 & wave==6)
 drop if yearsample==2015
+
+//For Creating National Estimates
+replace anfinw=anfinw*5491440/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4087340/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3027820/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2169060/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1194880/1224397 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6124980/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4781940/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*3886940/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3249940/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2230480/2257969 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+
 
 //VARIABLE CREATION/CLEANUP
 gen ind_noone=n_social==0
@@ -12536,6 +12552,7 @@ fin_strain mealskip nopayhous nopayutil nopaymed anydebt creditdebt medpaynotcas
 
 label var meals_wheels "Meals on Wheels"
 
+
 //TABLE CREATION
 
 gen n=1
@@ -12592,7 +12609,7 @@ local r=`r'+1
 }
 
 local c=2
-forvalues i=3/6{ 
+foreach i in 3 5 6 7{ 
 local r=2
 forvalues w=1/5{
 svy, subpop(if wave==`w' & com==1): tab nwstatus 
@@ -12623,7 +12640,6 @@ replace group4=1 if everdied==1 & everhb==0 & evernh==0
 gen group5=0
 replace group5=1 if everlfu==1 & everhb==0 & evernh==0
 
-drop if lw==1 & died_12==0
 keep if status==1 & wave==1
 local rn : word count 1 `cvars1' `cvars2' `ivars1' `ivars2' `coutcomes' `coutcomes' `ioutcomes' 1 1
 di `rn'
@@ -12700,7 +12716,7 @@ frmttable using sample_derivation_new.rtf, addtable statmat(tab1) ///
  title("Sample Characteristics by final status") ///
  ctitles("" "Community" "HB Ever, Only" "NH Ever, Only" "Died Ever" "LFU") ///
  sdec(2) annotate(stars) asymbol(*,**) ///
- varlabels note("Waves 1 NHATS community-dwelling sample with 1-5 years follow up" "When status is missing that wave and subsequent waves are removed" ///
+ varlabels note("Waves 1 NHATS community-dwelling sample" "When status is missing that wave and subsequent waves are removed" ///
  "Highest Income: Income Quartile 4" "Individuals exit sample upon incident homebound/nursing home status, LFU, or after wave 6")
  
  restore
@@ -12793,7 +12809,6 @@ restore
 
 preserve
 
-drop if lw==1 & died_12==0
  capture drop group*
 
 
@@ -12907,11 +12922,11 @@ frmttable using sample_derivation_new.rtf, addtable replace statmat(tab1) ///
  ctitles("" "Income Quartile 1"  "Income Quartile 2"  "Income Quartile 3" ///
  "Income Quartile 4") ///
  sdec(2) annotate(stars) asymbol(*,**) ///
- varlabels note("Waves 1 NHATS community-dwelling sample with 1+ year follow up, by income quartile")
+ varlabels note("Waves 1 NHATS community-dwelling sample, by next-wave status")
 
 
 H="by-wave incident homebound"
-/* Homebound and Inome Final version 11/1/2018 -MH */
+/* Homebound and Inome Final version 11/7/2018 -MH */
 
 /* This tab is to create the annual incidence table:
 PART 2
@@ -12942,6 +12957,23 @@ replace income_adj=aveincome if wave==6
 gen orig_weight=anfinw
 replace anfinw=an2011wgt if (year==2011 & wave==5) | (year==2011 & wave==6)
 drop if yearsample==2015
+
+
+//For Creating National Estimates
+replace anfinw=anfinw*5491440/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4087340/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3027820/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2169060/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1194880/1224397 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6124980/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4781940/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*3886940/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3249940/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2230480/2257969 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
+
 
 //VARIABLE CREATION/CLEANUP
 gen ind_noone=n_social==0
@@ -13221,7 +13253,7 @@ log close
 
 
 H="competing risk regression"
-/* Homebound and Inome Final version 11/1/2018 -MH */
+/* Homebound and Inome Final version 11/7/2018 -MH */
 
 /* This tab is to create the annual incidence table:
 PART 3
@@ -13252,6 +13284,21 @@ replace income_adj=aveincome if wave==6
 gen orig_weight=anfinw
 replace anfinw=an2011wgt if (year==2011 & wave==5) | (year==2011 & wave==6)
 drop if yearsample==2015
+
+//For Creating National Estimates
+replace anfinw=anfinw*5491440/4649902 if inrange(age,65,69) & female==0
+replace anfinw=anfinw*4087340/4097017 if inrange(age,70,74) & female==0
+replace anfinw=anfinw*3027820/3001146 if inrange(age,75,79) & female==0
+replace anfinw=anfinw*2169060/2173979 if inrange(age,80,84) & female==0
+replace anfinw=anfinw*1194880/1224397 if inrange(age,85,89) & female==0
+replace anfinw=anfinw*524540/463619 if inrange(age,90,150) & female==0
+
+replace anfinw=anfinw*6124980/5250466 if inrange(age,65,69) & female==1
+replace anfinw=anfinw*4781940/4843444 if inrange(age,70,74) & female==1
+replace anfinw=anfinw*3886940/3878674 if inrange(age,75,79) & female==1
+replace anfinw=anfinw*3249940/3215654 if inrange(age,80,84) & female==1
+replace anfinw=anfinw*2230480/2257969 if inrange(age,85,89) & female==1
+replace anfinw=anfinw*1382160/1329677 if inrange(age,90,150) & female==1
 
 //VARIABLE CREATION/CLEANUP
 gen ind_noone=n_social==0
@@ -13485,12 +13532,12 @@ ind_paid_helper metro_ind northeast midwest south
 
  stcrreg `age' ib4.income_quart female black hisp married, compete(fail==2 3) 
  outreg using homebound_income_comp_risk, replace ///
- stats(e_b p) varlabels note("*Competing Risks are Nuring Home and Dying") ///
+ stats(e_b p e_ci) varlabels note("*Competing Risks are Nuring Home and Dying") ///
  ctitles("" "HB Subhazard Ratio (1)"  )
  
   stcrreg `vars', compete(fail==2 3) 
  outreg using homebound_income_comp_risk, replace ///
- stats(e_b p) varlabels note("*Competing Risks are Nuring Home and Dying") ///
+ stats(e_b p e_ci) varlabels note("*Competing Risks are Nuring Home and Dying") ///
  ctitles("" "HB Subhazard Ratio (2)"  ) merge
  
  

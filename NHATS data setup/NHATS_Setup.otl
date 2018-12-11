@@ -1,4 +1,4 @@
-= V7 Outline MultiLine NoSorting TabWidth=30
+= V4 Outline MultiLine NoSorting TabWidth=30
 
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
 /*Combines rounds 1 and 2 sample person SP interview files,
@@ -10,6 +10,7 @@ Data format is multiple observations per subject, one for each round
 capture log close
 clear all
 set more off
+set maxvar 10000
 
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 log using "`logs'1_nhats_setup1.txt", text replace
@@ -27,6 +28,7 @@ local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
@@ -166,6 +168,12 @@ foreach w in 1 2 3 4 5 6{
 	clear
 }
 
+use "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta"
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup	
+clear
+	
 //combine 3 waves into single dataset
 use round_1_ltd.dta
 append using round_2_ltd.dta
@@ -207,6 +215,11 @@ merge m:1 spid using "`r6s'NHATS_Round_6_SP_Sen_Dem_File.dta", ///
 	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
 drop _merge
 
+//merge in additional r7 sensitive data
+merge m:1 spid using "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta", ///
+	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
+drop _merge
+
 //3B?
 //merge in tracker status information
 merge m:1 spid using "`r7raw'NHATS_Round_7B_Tracker_File", ///
@@ -244,6 +257,7 @@ and also the NSOC caregiver dataset*/
 capture log close
 clear all
 set more off
+set maxvar 10000
 
 local logs E:\nhats\nhats_code\NHATS data setup\logs
 //local logs /Users/rebeccagorges/Documents/data/nhats/logs/
@@ -928,7 +942,7 @@ tab indephigh wave if sp_ivw_yes==1, missing
 *********************************************
 //age at interview, note this is missing for wave 7 b/c no wave 7 sensitive data yet
 gen age=.
-foreach w in 1 2 3 4 5 6 {
+foreach w in 1 2 3 4 5 6 7{
 	replace age=r`w'dintvwrage if wave==`w'
 	sum age if wave==`w', detail
 	}	
@@ -2017,6 +2031,7 @@ local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 cd "`work'"
@@ -2243,6 +2258,7 @@ local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
 local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
 local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
 local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
 
@@ -2268,7 +2284,7 @@ label var an2011wgt "2011 weights"
 
 gen trfinwgt=.
 gen tr2011wgt=.
-forvalues w=1/6{
+forvalues w=1/7{
 replace trfinwgt=w`w'trfinwgt0 if wave==`w'
 capture replace tr2011wgt=w`w'tr2011wgt0 if wave==`w'
 }
@@ -2592,8 +2608,8 @@ foreach x of varlist * {
 //how do you get to the doctor?
 gen howgetdoc=.
 forvalues i=1/9 {
-	forvalues j=1/7 {
-		replace howgetdoc=`i' if mc`j'hwgtregd`i'==1 & wave==`j'
+	forvalues w=1/7 {
+		replace howgetdoc=`i' if mc`w'hwgtregd`i'==1 & wave==`w'
 }
 }
 label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" 8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
@@ -2945,7 +2961,7 @@ label define ivw_day 1 "Not provided"
 label values ivw_day ivw_day
 gen ivw_month=.
 gen ivw_year=.
-forvalues i=1/6 {
+forvalues i=1/7 {
 	replace ivw_month=r`i'spstatdtmt if wave==`i'
 	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
 	replace ivw_year=r`i'spstatdtyr if wave==`i'
@@ -3036,7 +3052,7 @@ label var died_`i' "SP died w/in `i' months, per future wave status"
 gen dd=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
 gen nhats_death_day=. 
-forvalues i=2/6 {
+forvalues i=2/7 {
 	foreach j in mth yr {
 		replace pd`i'`j'died=. if pd`i'`j'<0
 }

@@ -169,7 +169,12 @@ H="make file for date of hospice entry"
  keep if nvals==1
 save "E:\nhats\data\Projects\MA after disability\bene spid and hospice.dta"
 
-H="making file for MA status before, after first needing help"
+H="make a file for weighting vars"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta.dta" 
+keep anfinwgt varstrat varunit spid wave
+ save "E:\nhats\data\Projects\MA after disability\weighting vars.dta"
+
+H="RUN FIRST: making file for MA status before, after first needing help"
 /*first, crosswalk mbsf to spid so can merge with nhats data*/
 
 use bene_id year hmoind12 using "E:\nhats\data\Projects\MA after disability\ma status by month.dta", clear
@@ -228,7 +233,6 @@ gen hmoind_p=substr(hmoind12i,month,12-month)+hmoind12p1+substr(hmoind12p2,1,mon
 
 
 
-
 /*turn string in
 to count of ma months*/
 
@@ -250,17 +254,26 @@ gen cont_ma_p_all_mos=strlen(hmoind_p)
 
 
 gen switch_ma_p=0
+*make switch =1 if in MA at time of disability and months on MA shorter than months observed
 replace switch_ma_p=1 if cont_ma_p_all_mos>cont_ma_p_mos & ind_ma_index==1
+
 label var switch_ma_p "switched from MA to FFS post-disability"
 
 *make a variable to count the number of months with data prior to disability
 gen cont_ma_n_all_mos=strlen(hmoind_n)
 destring cont_ma_n_all_mos, replace 
 
+
+
 *make a variable for being in MA in first month (last digit of hmoind_n)-- this variable is also . if does not have 12 months of data
 gen firsthmo=substr(hmoind_n, 1, 1)
 destring firsthmo, replace
 replace firsthmo=. if cont_ma_n_all_mos<12
+
+
+*make a variable for switching prior to disability
+gen switch_ma_n=1 if firsthmo==1 & cont_ma_n_all_mos>cont_ma_n_mos
+replace switch_ma_n=1 if switch_ma_n==0 & cont_ma_n_mos<12
 
 keep spid *ma* firsthmo index_date hmoind_n hmoind_p
 
@@ -292,34 +305,80 @@ gen switchdays=30*mos_switch
 gen date_switch=start_date+switchdays
 format date_switch %td
 
-*make a variable for if hospice occurs within 30 days after (or before- a fluke- switch)
-gen days_switch_hs= first_hs-date_switch
-recode days_switch_hs (-2878/32=1) (.=0)(33/1066=0), gen (hospswitch)
 
+
+***refine the indicator for a switch after disability to not count switches to hospice or those post-death but include those who switched the same month they became disabled
+*include those who switched the same month they became disabled
+	gen switcht0=. 
+	replace switcht0=1 if firsthmo==1 & cont_ma_n_mos==12 & ind_ma_index==0
+	replace switch_ma_p=1 if switcht0==1
+*weirdly, the ind_ma_index is wonky for 3 individuals this happened to.  fix this--
+	gen switcht0x=.
+	replace switcht0x=1 if firsthmo==1 & cont_ma_n_mos==12 & cont_ma_p_mos==0
+	replace switch_ma_p=1 if switcht0x==1
+
+*make a variable for if hospice occurs within 30 days after (or before- a fluke- switch)
+	gen days_switch_hs= first_hs-date_switch
+	recode days_switch_hs (-2878/31=1) (.=0)(32/1066=0), gen (hospswitch)
+	*recode switch_ma_p to not count if the switch is from hospice
+	replace switch_ma_p=0 if hospswitch==1
+	replace switch_ma_n=0 if hospswitch==1
+*don't count a switch if the person seems to have switched after they died
+	*first make a variable for days from switch to death
+	gen days_switch_death= death_date-date_switch
+	replace switch_ma_p=0 if days_switch_death<=0
+*similarly, double check that is not counted as a switch if number of months followed after disability is longer than months to death
+	*make a variable for days from disability to end of follow up
+	gen fumonths= strlen(hmoind_p)
+	gen fudays=fumonths*30
+	*make a variable for days from disability to death
+	gen dis_to_death= death_date-index_date
+	*now make variable from death to end of follow up: if POSITIVE this means that followed for longer than alive
+	gen afterlife_fu=fudays-dis_to_death
+	tab afterlife_fu if switch_ma_p==1
+	gen flag2= 1 if afterlife_fu>0 & switch_ma_p==1 & death_date!=.
+	*don't follow if the calendar month and year of death are same as calendar and month of switch (or before) and long follow up
+	gen month_death=month(death_date)
+	gen year_death=year(death_date)
+	gen month_switch= month(date_switch)
+	gen year_switch= year(date_switch)
+	gen simple_deathdate= mdy(month_death, 1, year_death)
+	gen simple_switchdate=mdy(month_switch, 1, year_switch)
+	replace flag2=2 if flag2==1 & simple_switchdate==simple_deathdate & death_date!=.
+	replace switch_ma_p=0 if flag2==2
+
+*make a variable for any switch, before or after disability
+gen switch_indicator=0
+replace switch_indicator= 1 if (switch_ma_p==1 | switch_ma_n==1) & firsthmo==1
+	
+	
 *make a new variable for months from start to switch: do not count switches onto hospice 
-gen mos_switch_nohosp=mos_switch
-replace mos_switch_nohosp=. if hospswitch==1
-tab mos_switch_nohosp
+*gen mos_switch_nohosp=mos_switch
+*replace mos_switch_nohosp=. if hospswitch==1
+*tab mos_switch_nohosp
+
+*gen a variable from days from switch to death
+*gen days_switch_death= death_date-date_switch
 
 *modify this variable to also not count switches because of death
-gen mos_switch_nohosp_nodeath=mos_switch_nohosp
-replace mos_switch_nohosp_nodeath=. if days_switch_death<=0
-tab mos_switch_nohosp_nodeath
-tab mos_switch_nohosp mos_switch_nohosp_nodeath
+*gen mos_switch_nohosp_nodeath=mos_switch_nohosp
+*replace mos_switch_nohosp_nodeath=. if days_switch_death<=0
+*tab mos_switch_nohosp_nodeath
+*tab mos_switch_nohosp mos_switch_nohosp_nodeath
 
-recode mos_switch_nohosp_nodeath(1/4= 1)(5/8= 2)(9/12= 3)(13/16= 4)(17/20= 5)(21/24= 6)(25/28=7)(29/32=8)(33/35=9)(36=99 "never switched"), gen(start_to_switch_tri)
-tab start_to_switch_tri
+*recode mos_switch_nohosp_nodeath(1/4= 1)(5/8= 2)(9/12= 3)(13/16= 4)(17/20= 5)(21/24= 6)(25/28=7)(29/32=8)(33/35=9)(36=99 "never switched"), gen(start_to_switch_tri)
+*tab start_to_switch_tri
 
 
-recode mos_switch_nohosp_nodeath(1/6= 1)(7/12= 2)(13/18= 3)(19/24= 4)(25/30= 5)(31/35= 6)(36=99 "never switched"), gen(start_to_switch_half)
-tab start_to_switch_half
- tab start_to_switch_half if indhelpstop==0
+*recode mos_switch_nohosp_nodeath(1/6= 1)(7/12= 2)(13/18= 3)(19/24= 4)(25/30= 5)(31/35= 6)(36=99 "never switched"), gen(start_to_switch_half)
+*tab start_to_switch_half
+ *tab start_to_switch_half if indhelpstop==0
 
  
  *make a variable for switching after disability, not to hospice
- destring switch_ma_p, replace
- gen post_dis_switch_nohosp= switch_ma_p
-replace post_dis_switch_nohosp=0 if hospswitch==1
+ *destring switch_ma_p, replace
+ *gen post_dis_switch_nohosp= switch_ma_p
+*replace post_dis_switch_nohosp=0 if hospswitch==1
 
 
 *make a variable for time of disability during open enrollment
@@ -333,43 +392,206 @@ replace openenroll_dis=1 if indexdate_month==1 | indexdate_month==2 | indexdate_
 
 
 *make a variable for switching after disability, not to hospice and post-death
-gen post_dis_switch_nohosp_nodeath= post_dis_switch_nohosp
-destring days_switch_death, replace
-replace post_dis_switch_nohosp_nodeath=0 if days_switch_death<=0
+*gen post_dis_switch_nohosp_nodeath= post_dis_switch_nohosp
+*destring days_switch_death, replace
+*replace post_dis_switch_nohosp_nodeath=0 if days_switch_death<=0
 
-tab start_to_switch
+*for ease of reporting, recode cont_ma_p_mos into 6 month intervals
+recode cont_ma_p_mos (0/5=1 "0 to 5")(6/11=2 "6 to 11")(12/17=3 "12 to 17")(18/23=4 "18-23") (24=24 "full 24"), gen (cont_ma_p_mos_half)
+
 
 *make a variable for died after index date
 gen index_to_death= death_date-index_date
 
 recode index_to_death (-347/0=.)(1/180=1 "first 6 mos")(181/365=2 "second 6 mos")(166/545=3 "third 6 mos")(546/730=4 "fourth 6 mos")(731/max=.), gen(died_post_index)
-
-
+gen months_dis_death=index_to_death/30
+replace months_dis_death=ceil(months_dis_death)
+tab months_dis_death if firsthmo==1
+replace months_dis_death= 1 if months_dis_death==-3 | months_dis_death==-2
+replace months_dis_death=. if months_dis_death>23
+*question 1: how many people switched out of MA after disability?
+*first, need to fix indicator for months after disability to truncate if died.
 
 *how much follow up time do people have?
-gen fumonths= strlen(hmoind_p)
-
+*gen fumonths= strlen(hmoind_p)
+tab fumonths if firsthmo==1 & ind_ma_index==1
 *recode this in case died
 gen index_to_death_mos= index_to_death/30
 
+*another approach: define time from disability to 12/31/2016 (20,819 in stata dating from 1/1/1960)
+gen days_truncated= 20819-index_date
+recode days_truncated (1/180=1 "left cohort during first 6 mos")(181/365=2 "second 6 mos")(166/545=3 "third 6 mos")(546/730=4 "fourth 6 mos")(731/max=5 "not truncated"), gen(days_truncated_cat)
+tab days_truncated_cat
+gen months_truncated=days_truncated/30
+replace months_truncated=ceil(months_truncated)
+tab months_truncated if firsthmo==1
+replace months_truncated=. if months_truncated>23
+
 *make a variable to track follow up months
-replace fumonths=index_to_death_mos if fumonths>index_to_death_mos & index_to_death_mos!=. & index_to_death_mos>0
-recode fumonths (0/6=1  "first 6 mo only")(6/12=2 "second 6 mos only")(12/18=3 "third 6 mos only")(18/23=4 "fourth 6 mos")(23/24=5 "full followip"), gen(follow_lngth_grps)
-tab follow_lngth_grps if ind_ma_index==1 & firsthmo==1
+*replace fumonths=index_to_death_mos if fumonths>index_to_death_mos & index_to_death_mos!=. & index_to_death_mos>0
+*recode fumonths (0/6=1  "first 6 mo only")(6/12=2 "second 6 mos only")(12/18=3 "third 6 mos only")(18/23=4 "fourth 6 mos")(23/24=5 "full followip"), gen(follow_lngth_grps)
+*tab follow_lngth_grps if ind_ma_index==1 & firsthmo==1
 
-H="analysis"
-*analysis
+
+H="RUN SECOND: making quarter indicators"
+gen q0ind = .
+replace q0ind=1 if firsthmo==1 
+
+gen q1ind=q0ind
+replace q1ind=3 if firsthmo==1 & (cont_ma_n_mos==1 | cont_ma_n_mos==2 | cont_ma_n_mos==3) & hospswitch==0
+
+gen q2ind=q1ind 
+replace q2ind=3 if firsthmo==1 & (cont_ma_n_mos==4 | cont_ma_n_mos==5 | cont_ma_n_mos==6) & hospswitch==0
+
+gen q3ind=q2ind 
+replace q3ind=3 if firsthmo==1 & (cont_ma_n_mos==7 | cont_ma_n_mos==8 | cont_ma_n_mos==9) & hospswitch==0
+
+gen q4ind=q3ind 
+replace q4ind=3 if firsthmo==1 & (cont_ma_n_mos==10 | cont_ma_n_mos==11)
+replace q4ind=3 if cont_ma_n_mos==12 & cont_ma_p_mos==0 & hospswitch==0
+
+gen q5ind=q4ind
+replace q5ind=2 if q4ind==1 & switch_indicator==0 & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
+replace q5ind=3 if switch_indicator==1 &  hospswitch==0 & (cont_ma_p_mos==1 | cont_ma_p_mos==2 | cont_ma_p_mos==3) & (months_dis_death==. | months_dis_death>3)
+replace q5ind=4 if switch_indicator==1 & months_dis_death<4
+
+gen q6ind=q5ind
+replace q6ind=2 if q5ind==1 & switch_indicator==0 & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
+replace q6ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==4 | cont_ma_p_mos==5 | cont_ma_p_mos==6) & (months_dis_death==. | months_dis_death>6)
+replace q6ind=4 if switch_indicator==1 & months_dis_death<7
+replace q6ind=5 if firsthmo==1 & months_truncated<3
+
+gen q7ind=q6ind
+replace q7ind=2 if q6ind==1 & switch_indicator==0 & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
+replace q7ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==7 | cont_ma_p_mos==8 | cont_ma_p_mos==9) & (months_dis_death==. | months_dis_death>9)
+replace q7ind=4 if switch_indicator==1 & months_dis_death<10
+replace q7ind=5 if firsthmo==1 & months_truncated<7
+
+gen q8ind=q7ind
+replace q8ind=2 if q7ind==1 & switch_indicator==0 & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
+replace q8ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==10 | cont_ma_p_mos==11 | cont_ma_p_mos==12) & (months_dis_death==. | months_dis_death>12)
+replace q8ind=4 if switch_indicator==1 & months_dis_death<13
+replace q8ind=5 if firsthmo==1 & months_truncated<10
+
+
+*now, remove everyone from the sample who has incomplete follow up (q8ind==5)
+foreach n of numlist 0/7 {
+replace q`n'ind=5 if q8ind==5
+}
+replace q0ind=5 if q8ind==5
+
+
+H="analysis attempt 1: old"
+
+
 *total people in starting cohort
-tab firsthmo
+keep if firsthmo==1
+count
 
-*total people switching out per 4 months before and after disability
-tab start_to_switch_tri
 
-*total people switching out per 6 months
-tab start_to_switch_half
+**numbers for figure 1**
+*examine switches prior to disability
+tab cont_ma_n_mos 
 
-*total people on MA at time of disability who switch to FFS in next 24 months
-tab post_dis_switch_nohosp if ind_ma_index==1
+*examine switches after disability:
+tab cont_ma_p_mos if switch_ma_p==1 & firsthmo==1
 
-*see if there are monthly patterns
-tabstat post_dis_switch_nohosp, by(indexdate_month)
+*examine deaths after disability:
+tab months_dis_death if switch_ma_p==1 & firsthmo==1
+
+*look at deaths and whether or not they were after disability
+
+
+*examine people dying after disability
+tab died_post_index if firsthmo==1
+*for those who died, for how many per time period was it after a switch vs not?
+tab died_post_index switch_ma_p if firsthmo==1
+
+*examine people truncated not bc death but bc not enough time on nhats. make sure those are included who switched same month they became disabled
+tab  days_truncated_cat if died_post_index==. & firsthmo==1 & (ind_ma_index==1 | (ind_ma_index==0 & switcht0==1))
+
+
+*how many people switched at the same time as disability?
+gen switcht0=. 
+replace switcht0=1 if firsthmo==1 & cont_ma_n_mos==12 & ind_ma_index==0
+sort switcht0
+
+H="figure 1"
+*Making figure 1
+foreach n of numlist 1/12 {
+tab q`n'ind
+}
+
+H="table 1"
+*look at the characteristics of those who switched after disability vs those who did not
+
+
+*for table1:
+*what is death rate of switch vs not switch at one year for those with complete data
+
+*variable for dying within 12 months
+gen died12mo=0 
+replace died12mo=1 if death_date!=. & index_to_death_mos<12
+
+*variable for switching within 12 months, make it =. if truncated follow up
+gen switch_12mo=0 if firsthmo==1
+replace switch_12mo=1 if firsthmo==1 & (switch_ma_n==1 |(switch_ma_p==1 & cont_ma_p_mos<13) | (switch_ma_n==0 & cont_ma_n_mos<12))
+replace switch_12mo=0 if hospswitch==1
+replace switch_12mo=. if q8ind==5
+
+tab q8ind switch_12mo
+tab q8ind died12mo
+
+tab died12mo switch_12mo, column chi2
+
+*what is hospice rate of switch vs not switch at 12mo
+gen hospice=0 if died12mo==1 
+replace hospice=1 if first_hs!=. & died12mo==1
+tab hospice switch_12mo if died12mo==1 & firsthmo==1, column chi2
+
+*what is switch rate by time of year became disabled? this indicator =1 if at a time window in or followed by open enrollment (late summer to early winter)
+recode indexdate_month (1=1)(2/7=0)(8/12=1), gen(dis_switchmo)
+tab  dis_switchmo switch_12mo, column chi
+
+***to prepare to merge, keep a variable for wave at first disability
+gen wave=.
+foreach n of numlist 2/6 {
+replace wave=`n' if dm`n'datehelp==index_date
+replace wave=`n' if wave==. & ds`n'datehelp==index_date
+}
+
+keep spid switch_12mo wave firsthmo index_date
+save "E:\nhats\data\Projects\MA after disability\switch indicator and spid.dta", replace
+
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
+rename _merge _merge1
+drop anfinwgt varstrat varunit
+merge 1:1 spid wave using "E:\nhats\data\Projects\MA after disability\weighting vars.dta"
+
+
+*replace medicaid for prior wave if missing
+sort spid wave
+bysort spid: replace medicaid=medicaid[_n-1] if missing(medicaid)
+
+*keep if _merge==3 -- not for now bc using subpop weighting
+svyset  varunit [pweight=anfinwgt], strat(varstrat)
+gen keep=1 if switch_12mo!=. & wave==6
+svy, subpop (keep): tab switch_12mo, count cellwidth(15) format (%15.2g)
+
+keep if _merge1==3
+*the rest of table 1
+tab female switch_12mo, column chi2
+tabstat age, by(switch_12mo) stat (mean sd)
+ttest age, by(switch_12mo)
+tab race_cat switch_12mo, column chi2
+recode race_cat (1=1 "white") (2=2 "black")(3/4=3 "hispanic or other"), gen(race_cat_3)
+tab race_cat_3 switch_12mo, column chi2
+
+tab medicaid switch_12mo, column chi2
+ttest adl_index, by(switch_12mo) 
+tab livealone switch_12mo, m column chi2
+tab nhres switch_12mo, column chi2
+
+tab educ_hs_ind switch_12mo, column chi2
+tab region switch_12mo, column chi2

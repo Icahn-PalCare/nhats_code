@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:  25 Oct 2018, 11:58:29
+ opened on:  27 Nov 2018, 13:59:19
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -31,6 +31,8 @@
 . local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
 
 . local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+
+. local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
 
 . local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
@@ -255,7 +257,8 @@ file round_7_1.dta saved
 >         re4dcensdiv ip4nginslast
  16. }
  17. if `w'==5 {     
- 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
+ 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew r
+> e5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
  19. }       
  20. if `w'==6 {     
@@ -324,6 +327,23 @@ file round_7_ltd.dta saved
       Total |      7,276      100.00
 
 . 
+. use "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta"
+
+. sort spid 
+
+. quietly by spid: gen dup = cond(_N==1,0,_n)
+
+. tab dup 
+
+        dup |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      6,312      100.00      100.00
+------------+-----------------------------------
+      Total |      6,312      100.00
+
+. clear
+
+.         
 . //combine 3 waves into single dataset
 . use round_1_ltd.dta
 
@@ -449,14 +469,33 @@ file round_7_ltd.dta saved
 . drop _merge
 
 . 
+. //merge in additional r7 sensitive data
+. merge m:1 spid using "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta", ///
+>         keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
+(label r5dbirthyr already defined)
+(label r5dbirthmth already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                        15,926
+        from master                    15,926  (_merge==1)
+        from using                          0  (_merge==2)
+
+    matched                            31,852  (_merge==3)
+    -----------------------------------------
+
+. drop _merge
+
+. 
 . //3B?
 . //merge in tracker status information
 . merge m:1 spid using "`r7raw'NHATS_Round_7B_Tracker_File", ///
 >         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
 >          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
->         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3s
-> tatus r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
->                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+>         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt 
+> r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+>                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1sps
+> tatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
@@ -517,5 +556,5 @@ file E:\nhats\data\NHATS Public\round_6\NHATS_Round_6_SP_File_stata12.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:  25 Oct 2018, 11:59:53
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  27 Nov 2018, 14:00:33
+---------------------------------------------------------------------------------------------------------------------------------------
