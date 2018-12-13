@@ -273,7 +273,7 @@ replace firsthmo=. if cont_ma_n_all_mos<12
 
 *make a variable for switching prior to disability
 gen switch_ma_n=1 if firsthmo==1 & cont_ma_n_all_mos>cont_ma_n_mos
-
+replace switch_ma_n=1 if switch_ma_n==0 & cont_ma_n_mos<12
 
 keep spid *ma* firsthmo index_date hmoind_n hmoind_p
 
@@ -319,7 +319,7 @@ format date_switch %td
 
 *make a variable for if hospice occurs within 30 days after (or before- a fluke- switch)
 	gen days_switch_hs= first_hs-date_switch
-	recode days_switch_hs (-2878/31=1) (.=0)(33/1066=0), gen (hospswitch)
+	recode days_switch_hs (-2878/31=1) (.=0)(32/1066=0), gen (hospswitch)
 	*recode switch_ma_p to not count if the switch is from hospice
 	replace switch_ma_p=0 if hospswitch==1
 	replace switch_ma_n=0 if hospswitch==1
@@ -434,90 +434,51 @@ replace months_truncated=. if months_truncated>23
 
 
 H="RUN SECOND: making quarter indicators"
-/*attempt 2: make quarterly indicators
-.= not in MA at 1 year before disability
-1= still in MA
-2= died without switching out of MA
-3= switched to FFS, still alive
-4= switched to FFS, dead
-5= truncated follow up
-labels for indicator by quarter starting with one year prior to disability: 
-
-*/
-
-*first make each indicator, =1 for starting in MA
-
-recode firsthmo (0=.)(1=1), gen(q0ind)
+gen q0ind = .
+replace q0ind=1 if firsthmo==1 
 
 gen q1ind=q0ind
-replace q1ind= 3 if q1ind==1 & cont_ma_n_mos==1
-replace q1ind= 3 if q1ind==1 & cont_ma_n_mos==2
-replace q1ind= 3 if q1ind==1 & cont_ma_n_mos==3
+replace q1ind=3 if firsthmo==1 & (cont_ma_n_mos==1 | cont_ma_n_mos==2 | cont_ma_n_mos==3) & hospswitch==0
 
-gen q2ind=q1ind
-replace q2ind= 3 if q0ind==1 & cont_ma_n_mos==4
-replace q2ind= 3 if q0ind==1 & cont_ma_n_mos==5
-replace q2ind= 3 if q0ind==1 & cont_ma_n_mos==6
+gen q2ind=q1ind 
+replace q2ind=3 if firsthmo==1 & (cont_ma_n_mos==4 | cont_ma_n_mos==5 | cont_ma_n_mos==6) & hospswitch==0
 
-gen q3ind=q2ind
-replace q3ind= 3 if q0ind==1 & cont_ma_n_mos==7
-replace q3ind= 3 if q0ind==1 & cont_ma_n_mos==8
-replace q3ind= 3 if q0ind==1 & cont_ma_n_mos==9
+gen q3ind=q2ind 
+replace q3ind=3 if firsthmo==1 & (cont_ma_n_mos==7 | cont_ma_n_mos==8 | cont_ma_n_mos==9) & hospswitch==0
 
-gen q4ind=q3ind
-replace q4ind= 3 if q0ind==1 & cont_ma_n_mos==10
-replace q4ind= 3 if q0ind==1 & cont_ma_n_mos==11
-replace q4ind= 3 if q0ind==1 & cont_ma_n_mos==12 & ind_ma_index==0
+gen q4ind=q3ind 
+replace q4ind=3 if firsthmo==1 & (cont_ma_n_mos==10 | cont_ma_n_mos==11)
+replace q4ind=3 if cont_ma_n_mos==12 & cont_ma_p_mos==0 & hospswitch==0
 
 gen q5ind=q4ind
-replace q5ind= 3 if q0ind==1 & q4ind==1 & switch_ma_p==1 & (cont_ma_p_mos==0 | cont_ma_p_mos==1 | cont_ma_p_mos==2 | cont_ma_p_mos==3)
-replace q5ind= 4 if q0ind==1 & (q4ind==3 | switch_ma_p==1) & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
-replace q5ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
-
-
+replace q5ind=2 if q4ind==1 & switch_indicator==0 & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
+replace q5ind=3 if switch_indicator==1 &  hospswitch==0 & (cont_ma_p_mos==1 | cont_ma_p_mos==2 | cont_ma_p_mos==3) & (months_dis_death==. | months_dis_death>3)
+replace q5ind=4 if switch_indicator==1 & months_dis_death<4
 
 gen q6ind=q5ind
-replace q6ind= 3 if q0ind==1 & q5ind==1 & switch_ma_p==1 & (cont_ma_p_mos==4 | cont_ma_p_mos==5 | cont_ma_p_mos==6)
-replace q6ind= 4 if q0ind==1 & (q5ind==3 | switch_ma_p==1) & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
-replace q6ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
-replace q6ind=5 if q0ind==1 & (months_truncated==1 | months_truncated==2 | months_truncated==3)
+replace q6ind=2 if q5ind==1 & switch_indicator==0 & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
+replace q6ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==4 | cont_ma_p_mos==5 | cont_ma_p_mos==6) & (months_dis_death==. | months_dis_death>6)
+replace q6ind=4 if switch_indicator==1 & months_dis_death<7
+replace q6ind=5 if firsthmo==1 & months_truncated<3
 
 gen q7ind=q6ind
-replace q7ind= 3 if q0ind==1 & q6ind==1 & switch_ma_p==1 & (cont_ma_p_mos==7 | cont_ma_p_mos==8 | cont_ma_p_mos==9)
-replace q7ind= 4 if q0ind==1 & (q6ind==3 | switch_ma_p==1) & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
-replace q7ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
-replace q7ind=5 if q0ind==1 & (months_truncated==4 | months_truncated==5 | months_truncated==6)
+replace q7ind=2 if q6ind==1 & switch_indicator==0 & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
+replace q7ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==7 | cont_ma_p_mos==8 | cont_ma_p_mos==9) & (months_dis_death==. | months_dis_death>9)
+replace q7ind=4 if switch_indicator==1 & months_dis_death<10
+replace q7ind=5 if firsthmo==1 & months_truncated<7
 
 gen q8ind=q7ind
-replace q8ind= 3 if q0ind==1 & q7ind==1 & switch_ma_p==1 & (cont_ma_p_mos==10 | cont_ma_p_mos==11 | cont_ma_p_mos==12)
-replace q8ind= 4 if q0ind==1 & (q7ind==3 | switch_ma_p==1) & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
-replace q8ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
-replace q8ind=5 if q0ind==1 & (months_truncated==7 | months_truncated==8 | months_truncated==9)
-
-gen q9ind=q8ind
-replace q9ind= 3 if q0ind==1 & q8ind==1 & switch_ma_p==1 & (cont_ma_p_mos==13 | cont_ma_p_mos==14 | cont_ma_p_mos==15)
-replace q9ind= 4 if q0ind==1 & (q8ind==3 | switch_ma_p==1) & (months_dis_death==13 | months_dis_death==14 | months_dis_death==15)
-replace q9ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==13 | months_dis_death==14 | months_dis_death==15)
-replace q9ind=5 if q0ind==1 & (months_truncated==10 | months_truncated==11 | months_truncated==12)
-
-gen q10ind=q9ind
-replace q10ind= 3 if q0ind==1 & q9ind==1 & switch_ma_p==1 & (cont_ma_p_mos==16 | cont_ma_p_mos==17 | cont_ma_p_mos==18)
-replace q10ind= 4 if q0ind==1 & (q9ind==3 | switch_ma_p==1) & (months_dis_death==16 | months_dis_death==17 | months_dis_death==18)
-replace q10ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==16 | months_dis_death==17 | months_dis_death==18)
-replace q10ind=5 if q0ind==1 & (months_truncated==13 | months_truncated==14 | months_truncated==15)
-
-gen q11ind=q10ind
-replace q11ind= 3 if q0ind==1 & q10ind==1 & switch_ma_p==1 & (cont_ma_p_mos==19 | cont_ma_p_mos==20 | cont_ma_p_mos==21)
-replace q11ind= 4 if q0ind==1 & (q10ind==3 | switch_ma_p==1) & (months_dis_death==19 | months_dis_death==20 | months_dis_death==21)
-replace q11ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==19 | months_dis_death==20 | months_dis_death==21)
-replace q11ind=5 if q0ind==1 & (months_truncated==16 | months_truncated==17 | months_truncated==18)
+replace q8ind=2 if q7ind==1 & switch_indicator==0 & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
+replace q8ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==10 | cont_ma_p_mos==11 | cont_ma_p_mos==12) & (months_dis_death==. | months_dis_death>12)
+replace q8ind=4 if switch_indicator==1 & months_dis_death<13
+replace q8ind=5 if firsthmo==1 & months_truncated<10
 
 
-gen q12ind=q11ind
-replace q12ind= 3 if q0ind==1 & q11ind==1 & switch_ma_p==1 & (cont_ma_p_mos==22 | cont_ma_p_mos==23)
-replace q12ind= 4 if q0ind==1 & (q11ind==3 | switch_ma_p==1) & (months_dis_death==22 | months_dis_death==23)
-replace q12ind=2 if q0ind==1 & switch_indicator==0 & (months_dis_death==22 | months_dis_death==23 )
-replace q12ind=5 if q0ind==1 & (months_truncated==19 | months_truncated==20 | months_truncated==21)
+*now, remove everyone from the sample who has incomplete follow up (q8ind==5)
+foreach n of numlist 0/7 {
+replace q`n'ind=5 if q8ind==5
+}
+replace q0ind=5 if q8ind==5
 
 
 H="analysis attempt 1: old"
@@ -574,8 +535,12 @@ replace died12mo=1 if death_date!=. & index_to_death_mos<12
 
 *variable for switching within 12 months, make it =. if truncated follow up
 gen switch_12mo=0 if firsthmo==1
-replace switch_12mo=1 if firsthmo==1 & (switch_ma_n==1 |(switch_ma_p==1 & cont_ma_p_mos<13))
+replace switch_12mo=1 if firsthmo==1 & (switch_ma_n==1 |(switch_ma_p==1 & cont_ma_p_mos<13) | (switch_ma_n==0 & cont_ma_n_mos<12))
+replace switch_12mo=0 if hospswitch==1
 replace switch_12mo=. if q8ind==5
+
+tab q8ind switch_12mo
+tab q8ind died12mo
 
 tab died12mo switch_12mo, column chi2
 
