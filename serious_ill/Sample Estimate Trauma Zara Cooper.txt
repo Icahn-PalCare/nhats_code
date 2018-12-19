@@ -2,9 +2,14 @@ use "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta.dta" if sp_ivw==1 & lml==0, c
 merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\merged stata\xwalk_2016.dta", ///
  keep(match master) nogen
 
-keep spid wave ivw_date bene_id
+//12/19/18--add smi for hip for quick look 
+merge 1:1 spid wave using "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match master) nogen keepusing(smi_hip_ind)
+keep spid wave ivw_date bene_id smi_hip_ind
+
 tempfile index
 save `index'
+
 
 
 
@@ -23,37 +28,59 @@ reshape long diag, i(num) j(n2)
 gen trauma=inlist(substr(diag,1,1),"8","9") & !inlist(substr(diag,1,3),"905", ///
 "906","907","908") & !inlist(substr(diag,1,3),"909","920","921","922","923","924") & ///
 !inlist(substr(diag,1,2),"91","93","96","97","98","99") 
-
+gen fractures=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"0","1","2")
+gen dislocation=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"3")
+gen sprains=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"4")
+gen intracranial=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"5")
+gen internal=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"6")
+gen open_wounds=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"7","8","9")
+gen crushing=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"2")
+gen nerve=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4","5","6","7")
+gen complications_or_unspecified=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"8","9")
 gen icd=9 if trauma==1
-
+gen icd9=trauma==1
 //ICD-10
 
 replace trauma=1 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
-
+gen specific_body_region=inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
 replace trauma=1 if inlist(substr(diag,1,3),"T07","T14","T30","T31","T32") 
+gen multiple_regions=inlist(substr(diag,1,3),"T07") 
+gen unspecified_region=inlist(substr(diag,1,3),"T14") 
 
 replace trauma=1 if inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
  & !inlist(substr(diag,3,1),"9") 
-
+gen burns=inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
+ & !inlist(substr(diag,3,1),"9") 
+gen burns_unspecified_region=inlist(substr(diag,1,3),"T30","T31","T32") 
 replace trauma=1 if inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
-
+gen early_complications=inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
 replace trauma=0 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,3,1),"0")
 
 keep if trauma==1
 
 replace icd=10 if icd==.
+gen icd10=icd==10
 
 joinby bene_id using `index', _merge(m) unm(none)
 tab m
 
-keep if inrange(admit_date,ivw_date-365,ivw_date)
+keep if inrange(admit_date,ivw_date-365,ivw_date) | smi_hip_ind==1
+replace trauma=1 if smi_hip_ind==1
 
 by spid wave, sort: egen t=max(trauma)
+
+foreach x in trauma fractures dislocation sprains intracranial internal open_wounds ///
+crushing nerve complications_or_unspecified specific_body_region multiple_regions ///
+unspecified_region burns burns_unspecified_region early_complications icd9 icd10 {
+	by spid wave: egen ind_`x'=max(`x')
+}
 
 
 keep if t==1
 
-keep spid wave icd
+keep spid wave icd *ind*
 
 sort spid wave icd
 
@@ -61,8 +88,14 @@ by spid wave: keep if _n==1
 
 tab wave
 
+
 codebook spid
 
+log using "E:\nhats\data\Projects\serious_ill\logs\trauma_frequencies.txt", text replace
+
+tab1 *ind*
+
+log close
 tempfile a
 save "`a'"
 

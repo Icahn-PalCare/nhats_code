@@ -3,7 +3,7 @@
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
 /*Combines rounds 1 and 2 sample person SP interview files,
 sensitive demo files and the round 2 cumulative tracker file case 
-status variables into a single file
+status l into a single file
 
 Data format is multiple observations per subject, one for each round
 */
@@ -101,7 +101,7 @@ save round_6_1.dta, replace
 clear
 
 //round 7 
-use "`r7raw'NHATS_Round_7B_SP_File.dta"
+use "`r7raw'NHATS_Round_7_SP_File.dta"
 //check to make sure sample ids are unique
 sort spid
 quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -153,14 +153,14 @@ keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
 }
 if `w'==7 {	
 keep `keepallwaves' re7intplace re7newstrct re7spadrsnew re7dresistrct ///
-	re7dcensdiv ip7nginslast w7an2011wgt0
+	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0
 }
 
 save round_`w'_ltd.dta, replace
 }
 
 //check sensitive data files, keep only some variables, merge with ltd datasets
-foreach w in 1 2 3 4 5 6{
+foreach w in 1 2 3 4 5 6 7{
 	use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
 	sort spid 
 	quietly by spid: gen dup = cond(_N==1,0,_n)
@@ -216,13 +216,13 @@ merge m:1 spid using "`r6s'NHATS_Round_6_SP_Sen_Dem_File.dta", ///
 drop _merge
 
 //merge in additional r7 sensitive data
-merge m:1 spid using "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta", ///
+merge m:1 spid using "`r7s'NHATS_Round_7_SP_Sen_Dem_File.dta", ///
 	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
 drop _merge
 
 //3B?
 //merge in tracker status information
-merge m:1 spid using "`r7raw'NHATS_Round_7B_Tracker_File", ///
+merge m:1 spid using "`r7raw'NHATS_Round_7_Tracker_File", ///
 	keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
 	 w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
 	w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
@@ -237,7 +237,7 @@ drop _merge
 save round_1_to_7.dta, replace
 
 //10/17/2018--old version of stata
-forvalues w=1/6{
+forvalues w=1/7{
 clear all
 use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
 saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
@@ -344,7 +344,7 @@ keep if _merge==3 //drop obs with no OP entries
 save R6_OPSPlinked.dta, replace
 
 //round 7
-use "`r7raw'NHATS_Round_7B_OP_File.dta", clear
+use "`r7raw'NHATS_Round_7_OP_File.dta", clear
 sort spid opid
 
 merge m:1 spid using round_7_1.dta //bring in sorted sp ivw dataset
@@ -1026,7 +1026,7 @@ forvalues i = 1/5 {
 
 
 egen aveincome=rowmean(imputed_inc1-imputed_inc5)
-foreach w in 1 3 5{
+foreach w in 1 3 5 7{
 	replace aveincome=ia`w'totinc if wave==`w' & ia`w'totinc>=0 & ///
 	!missing(ia`w'totinc)
 }
@@ -2247,7 +2247,7 @@ set maxvar 10000
 local r1raw E:\nhats\data\NHATS Public\round_1\
 local r2raw E:\nhats\data\NHATS Public\round_2\
 local r3raw E:\nhats\data\NHATS Public\round_3\
-local r4raw E:\nhats\a\NHATS Public\round_4\
+local r4raw E:\nhats\data\NHATS Public\round_4\
 local r5raw E:\nhats\data\NHATS Public\round_5\
 local r6raw E:\nhats\data\NHATS Public\round_6\
 local r7raw E:\nhats\data\NHATS Public\round_7\
@@ -3144,10 +3144,10 @@ label var lim_fav "Last month ever kept from favorite activity by health/functio
 capture drop lim_fav_yr
 ////NEW limited favorite activity
 gen lim_fav_yr=.
-//forvalues i=6 {
-	replace lim_fav_yr=pa6fvactlimyr==1 if pa6fvactlimyr>=0 & wave==6
-	replace lim_fav_yr=pa7fvactlimyr==1 if pa7fvactlimyr>=0 & wave==7
-//}
+forvalues w=6/7 {
+	replace lim_fav_yr=pa`w'fvactlimyr==1 if pa`w'fvactlimyr>=0 & wave==`w'
+}
+
 label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
 
 
@@ -3358,7 +3358,7 @@ label var educ_hs_ind "Education: HS+"
 preserve
 
 //note--as of now, doesn't include round 7
-forvalues wave=1/6 {
+forvalues wave=1/7 {
 use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_SP_File.dta", clear
 keep spid cs`wave'dnumchild ho`wave'entrst hh`wave'dhshldnum mo* sc* ha* mc* 
 gen wave=`wave'
@@ -3523,9 +3523,9 @@ save `hours`wave''
 foreach x in hours paid kids {
 	di "`x'"
 	use ``x'1', clear
-	forvalues w=2/6 {
-		di "`w'"
-		append using ``x'`w''
+	forvalues i=2/6 {
+		di "`i'"
+		append using ``x'`i''
 }
 	di "`x'"
 	tempfile `x'
@@ -3639,7 +3639,7 @@ replace an2011wgt=old_an2011wgt*1382160/1329677 if inrange(age,90,150) & female=
 label var anfinwgt "Updated Analytic Weights"
 label var an2011wgt "Updated 2011 Analytic Weight for Rds 5+"
 
-saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta", replace version(12)
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
 
 gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
 
@@ -3648,7 +3648,7 @@ foreach x in 12 24 {
 	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
 }
 
-log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_variable_list.txt", text replace
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
 
@@ -3656,10 +3656,10 @@ drop death_* died_12 died_24
 
 drop time2d 
 
-saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta_public_sens_only.dta", replace version(12)
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta", replace version(12)
 
 
-log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_pub_sens_only_variable_list.txt", text replace
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_pub_sens_only_variable_list.txt", text replace
 describe , fullnames
 log close
 
@@ -3675,7 +3675,7 @@ local i=`i'+1
 }
 }
 
-log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_beta_sensitive_variables.txt", text replace
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_sensitive_variables.txt", text replace
 describe `senslabs', fullnames
 log close
 
@@ -4080,7 +4080,7 @@ forvalues i=1/9 {
 }
 drop ever_enrgy
 local v1 cca5hlpbnkng cca5hlpmed cca5hlpmdapt cca5hlpspkdr cca5hlpordmd cca5hlpinsrn ///
-cca5hlpothin cse1hlpgtdev cse1homsafer cse1hlppdhlp cca5hlpdiet cca5hlpfeet ///
+cca5hlpothin cse5hlpgtdev cse5homsafer cse5hlppdhlp cca5hlpdiet cca5hlpfeet ///
 cca5hlpskin cca5hlpexrcs cca5hlpteeth cca5hlpmdtk cca5hlpshot cse5frfamhlp cpp5wrk4pay ///
 cdc5hlpsched cdc5hlpyrpls cec5wrk4pay
 local v2 help_bills help_track_meds help_make_appts help_speak_doc help_order_med ///
@@ -4187,7 +4187,7 @@ replace lives_in_hh=inlist(hh5dlvngarrg,2,3) if spouse==1 & lives_in_hh==0
 gen cg_drive_sp=inlist(cca5hwoftdrv,1,2,3) if !missing(cca5hwoftdrv)
 label var cg_drive_sp "Drove SP Some/Most/Everyday"
 
-drop spid opid c5relatnshp c5intmonth c5dintdays cca5hwoftchs cca5hwoftshp cca5hlpordmd cca5hlpbnkng cca5cmpgrcry cca5cmpordrx cca5cmpbnkng cca5hwoftpc cca5hwofthom cca5hlplft cca5hlpspt cca5hlpstd cca5hwoftlft cca5hwoftspt cca5hwoftstd cca5hwoftdrv cca5hwoftott cca5hlpmed cca5hlpshot cca5hlpmdtk cca5hlpexrcs cca5hlpdiet cca5hlpteeth cca5hlpfeet cca5hlpskin cca5hlpmdapt cca5hlpspkdr cca5hlpinsrn cca5hlpothin cca5hlpdramt cca5hwget2sp cca5tm2spunt cca5tm2spmin cca5tm2sphrs flcca5routing cca5hlplstyr cca5lstmhlpd cdc5hlpsched cdc5hlpdyswk cdc5hlpdysmt cdc5hlphrsdy cdc5hlphrmvf cdc5hlphrlmt cdc5hlphrpc cdc5hlphrpce cdc5hlpyrpls cdc5hlpmthst cdc5hlpunit cdc5hlpyrs cdc5hlpyrst cdc5hlpyrs5p cac5joylevel cac5arguelv cac5spapprlv cac5nerveslv cac5moreconf cac5dealbetr cac5closr2sp cac5moresat cac5diffinc cac5diffemo cac5diffphy cac5diffinlv cac5diffemlv cac5diffphlv cac5fmlydisa cac5careamt flcac5routing cac5exhaustd cac5toomuch cac5notime cac5uroutchg cse5frfamtlk cse5frfamact cse5frfamhlp cse5spptgrp cse5srv2hlp cse5training cse5fndfnhlp cse5hwfnd1 cse5hwfnd2 cse5hwfnd3 cse5hwfnd4 cse5hwfnd5 cse5hwfnd6 cse5look4hlp cse5look1 cse5look2 cse5look3 cse5look4 cse5look5 cse5look6 cse1hlpgtdev cse1homsafer cse1hlppdhlp cpp5vstfrfam cpp5hlpkptvs cpp5impvst cpp5gorelgs cpp5hlpkptrl cpp5imprel cpp5prtgroup cpp5hlpkptgr cpp5impgroup cpp5go4fun cpp5hlpkptgo cpp5impgo cpp5wrk4pay cpp5hlpkptwk cpp5volun cpp5hlpkptvo cpp5careothr cpp5hlpkptca che5health che5hrtattck che5othheart che5highbld che5arthrits che5osteoprs che5diabetes che5lungdis che5cancer che5seeing che5hearing che5cncrskin che5cncrbrst che5cncrpros che5cncroth che5pain che5painlmt che5brethprb che5brethlmt che5armstr che5armlmt che5legstr che5leglmt che5lowenrgy che5enrgylmt che5sleeptrb che5sleepint flche5routing che5weight che5heightft che5heightin che5lost10lb che5try2lose che5moodcher che5moodpcfl che5moodfull che5moodbord che5moodlone che5moodupst che5fltltlin che5fltdown che5fltnervs che5fltworry che5lifemng che5feelconf che5gaveup che5lifegood che5lifelone che5easychng che5rcvrqick chd5martstat chd5dmartstat chd5marendmt chd5marendyr chd5chldlvng chd5numchild chd5dnumchild chd5numchu18 chd5numinhh chd5dnuminhh flchd5routing chd5educ chd5deduc chd5educsprt chd5deducsprt chd5cgbrthmt chd5dcgbrthmt chd5cgbrthyr chd5dcgbrthyr chd5age chd5spbrthmt chd5dspbrthmt chd5spbrthyr chd5dspbrthyr chd5dspouage c5dgender crl5dcgracehisp crl5draceimpfl cec5wrk4pay cec5ownbusns cec5unpdwrk cec5misswork cec5look4wrk cec5wrkmulti cec5hrsweek cec5hrslstwk cec5hrslast cec5hrswork cec5flexhrs cec5wrksched cec5msswrkmt cec5mswkvctn cec5mswksick cec5mswkhelp cec5mswkfmly cec5mswkpers cec5mswkunit cec5mswkhlph cec5mswkhlpd cec5wkhrperd cec5hlpafwk1 cec5hlpafwk2 cec5busntype cec5occuptn cec5worktype cec5occpdscr chi5medicare chi5medigap chi5medicaid chi5privinsr chi5tricare chi5uninsurd chi5insrtype chi5ownhome chi5chckacct chi5svgsacct chi5certdpst chi5retrplan chi5mutlfnds chi5income chi5inc200pv chi5inc100pv chi5inc400pv chi5paymeds chi5payinsur chi5paymbdvc chi5paysfty chi5payasdvc chi5payhmhlp chi5pay1000 chi5pay2000 chi5pay500 chi5gifttosp chi5gift500 chi5gift1000 chi5gift100 chi5fromsp chi5frsp500 chi5frsp1000 chi5frsp100 c5varstrat c5varunit w5cgfinwgt0 w5cgfinwgt1 w5cgfinwgt2 w5cgfinwgt3 w5cgfinwgt4 w5cgfinwgt5 w5cgfinwgt6 w5cgfinwgt7 w5cgfinwgt8 w5cgfinwgt9 w5cgfinwgt10 w5cgfinwgt11 w5cgfinwgt12 w5cgfinwgt13 w5cgfinwgt14 w5cgfinwgt15 w5cgfinwgt16 w5cgfinwgt17 w5cgfinwgt18 w5cgfinwgt19 w5cgfinwgt20 w5cgfinwgt21 w5cgfinwgt22 w5cgfinwgt23 w5cgfinwgt24 w5cgfinwgt25 w5cgfinwgt26 w5cgfinwgt27 w5cgfinwgt28 w5cgfinwgt29 w5cgfinwgt30 w5cgfinwgt31 w5cgfinwgt32 w5cgfinwgt33 w5cgfinwgt34 w5cgfinwgt35 w5cgfinwgt36 w5cgfinwgt37 w5cgfinwgt38 w5cgfinwgt39 w5cgfinwgt40 w5cgfinwgt41 w5cgfinwgt42 w5cgfinwgt43 w5cgfinwgt44 w5cgfinwgt45 w5cgfinwgt46 w5cgfinwgt47 w5cgfinwgt48 w5cgfinwgt49 w5cgfinwgt50 w5cgfinwgt51 w5cgfinwgt52 w5cgfinwgt53 w5cgfinwgt54 w5cgfinwgt55 w5cgfinwgt56
+drop spid opid c5relatnshp c5intmonth c5dintdays cca5hwoftchs cca5hwoftshp cca5hlpordmd cca5hlpbnkng cca5cmpgrcry cca5cmpordrx cca5cmpbnkng cca5hwoftpc cca5hwofthom cca5hlplft cca5hlpspt cca5hlpstd cca5hwoftlft cca5hwoftspt cca5hwoftstd cca5hwoftdrv cca5hwoftott cca5hlpmed cca5hlpshot cca5hlpmdtk cca5hlpexrcs cca5hlpdiet cca5hlpteeth cca5hlpfeet cca5hlpskin cca5hlpmdapt cca5hlpspkdr cca5hlpinsrn cca5hlpothin cca5hlpdramt cca5hwget2sp cca5tm2spunt cca5tm2spmin cca5tm2sphrs flcca5routing cca5hlplstyr cca5lstmhlpd cdc5hlpsched cdc5hlpdyswk cdc5hlpdysmt cdc5hlphrsdy cdc5hlphrmvf cdc5hlphrlmt cdc5hlphrpc cdc5hlphrpce cdc5hlpyrpls cdc5hlpmthst cdc5hlpunit cdc5hlpyrs cdc5hlpyrst cdc5hlpyrs5p cac5joylevel cac5arguelv cac5spapprlv cac5nerveslv cac5moreconf cac5dealbetr cac5closr2sp cac5moresat cac5diffinc cac5diffemo cac5diffphy cac5diffinlv cac5diffemlv cac5diffphlv cac5fmlydisa cac5careamt flcac5routing cac5exhaustd cac5toomuch cac5notime cac5uroutchg cse5frfamtlk cse5frfamact cse5frfamhlp cse5spptgrp cse5srv2hlp cse5training cse5fndfnhlp cse5hwfnd1 cse5hwfnd2 cse5hwfnd3 cse5hwfnd4 cse5hwfnd5 cse5hwfnd6 cse5look4hlp cse5look1 cse5look2 cse5look3 cse5look4 cse5look5 cse5look6 cse5hlpgtdev cse5homsafer cse5hlppdhlp cpp5vstfrfam cpp5hlpkptvs cpp5impvst cpp5gorelgs cpp5hlpkptrl cpp5imprel cpp5prtgroup cpp5hlpkptgr cpp5impgroup cpp5go4fun cpp5hlpkptgo cpp5impgo cpp5wrk4pay cpp5hlpkptwk cpp5volun cpp5hlpkptvo cpp5careothr cpp5hlpkptca che5health che5hrtattck che5othheart che5highbld che5arthrits che5osteoprs che5diabetes che5lungdis che5cancer che5seeing che5hearing che5cncrskin che5cncrbrst che5cncrpros che5cncroth che5pain che5painlmt che5brethprb che5brethlmt che5armstr che5armlmt che5legstr che5leglmt che5lowenrgy che5enrgylmt che5sleeptrb che5sleepint flche5routing che5weight che5heightft che5heightin che5lost10lb che5try2lose che5moodcher che5moodpcfl che5moodfull che5moodbord che5moodlone che5moodupst che5fltltlin che5fltdown che5fltnervs che5fltworry che5lifemng che5feelconf che5gaveup che5lifegood che5lifelone che5easychng che5rcvrqick chd5martstat chd5dmartstat chd5marendmt chd5marendyr chd5chldlvng chd5numchild chd5dnumchild chd5numchu18 chd5numinhh chd5dnuminhh flchd5routing chd5educ chd5deduc chd5educsprt chd5deducsprt chd5cgbrthmt chd5dcgbrthmt chd5cgbrthyr chd5dcgbrthyr chd5age chd5spbrthmt chd5dspbrthmt chd5spbrthyr chd5dspbrthyr chd5dspouage c5dgender crl5dcgracehisp /*crl5draceimpfl*/ cec5wrk4pay cec5ownbusns cec5unpdwrk cec5misswork cec5look4wrk cec5wrkmulti cec5hrsweek cec5hrslstwk cec5hrslast cec5hrswork cec5flexhrs cec5wrksched cec5msswrkmt cec5mswkvctn cec5mswksick cec5mswkhelp cec5mswkfmly cec5mswkpers cec5mswkunit cec5mswkhlph cec5mswkhlpd cec5wkhrperd cec5hlpafwk1 cec5hlpafwk2 cec5busntype cec5occuptn cec5worktype cec5occpdscr chi5medicare chi5medigap chi5medicaid chi5privinsr chi5tricare chi5uninsurd chi5insrtype chi5ownhome chi5chckacct chi5svgsacct chi5certdpst chi5retrplan chi5mutlfnds chi5income chi5inc200pv chi5inc100pv chi5inc400pv chi5paymeds chi5payinsur chi5paymbdvc chi5paysfty chi5payasdvc chi5payhmhlp chi5pay1000 chi5pay2000 chi5pay500 chi5gifttosp chi5gift500 chi5gift1000 chi5gift100 chi5fromsp chi5frsp500 chi5frsp1000 chi5frsp100 c5varstrat c5varunit w5cgfinwgt0 w5cgfinwgt1 w5cgfinwgt2 w5cgfinwgt3 w5cgfinwgt4 w5cgfinwgt5 w5cgfinwgt6 w5cgfinwgt7 w5cgfinwgt8 w5cgfinwgt9 w5cgfinwgt10 w5cgfinwgt11 w5cgfinwgt12 w5cgfinwgt13 w5cgfinwgt14 w5cgfinwgt15 w5cgfinwgt16 w5cgfinwgt17 w5cgfinwgt18 w5cgfinwgt19 w5cgfinwgt20 w5cgfinwgt21 w5cgfinwgt22 w5cgfinwgt23 w5cgfinwgt24 w5cgfinwgt25 w5cgfinwgt26 w5cgfinwgt27 w5cgfinwgt28 w5cgfinwgt29 w5cgfinwgt30 w5cgfinwgt31 w5cgfinwgt32 w5cgfinwgt33 w5cgfinwgt34 w5cgfinwgt35 w5cgfinwgt36 w5cgfinwgt37 w5cgfinwgt38 w5cgfinwgt39 w5cgfinwgt40 w5cgfinwgt41 w5cgfinwgt42 w5cgfinwgt43 w5cgfinwgt44 w5cgfinwgt45 w5cgfinwgt46 w5cgfinwgt47 w5cgfinwgt48 w5cgfinwgt49 w5cgfinwgt50 w5cgfinwgt51 w5cgfinwgt52 w5cgfinwgt53 w5cgfinwgt54 w5cgfinwgt55 w5cgfinwgt56
 
 
 foreach x of varlist * {
