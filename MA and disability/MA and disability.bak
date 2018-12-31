@@ -259,7 +259,7 @@ H="cleaning variables"
 gen month=month(index_date)
 gen hmoind_index=substr(hmoind12i,month,1)
 gen hmoind_n=substr(hmoind12n1,month,13-month)+substr(hmoind12i,1,month-1)
-gen hmoind_p=substr(hmoind12i,month,12-month)+hmoind12p1+substr(hmoind12p2,1,month)
+gen hmoind_p=substr(hmoind12i,month,13-month)+hmoind12p1+substr(hmoind12p2,1,month)
 
 
 
@@ -317,7 +317,7 @@ don't count as switch if is because enrolling in hospice (needs an indicator for
 	replace date_switch= index_date+(30*cont_ma_p_mos) if switch_ma_p==1 & firsthmo==1 & date_switch==.
 	*make a variable for if hospice occurs within 30 days after (or before- a claims fluke- switch)
 	gen days_switch_hs= first_hs-date_switch
-	recode days_switch_hs (-2878/31=1) (.=0)(32/1066=0), gen (hospswitch)
+	recode days_switch_hs (-2878/15=1) (.=0)(16/1066=0), gen (hospswitch)
 	
 *recode switch_ma_p and switch_ma_n to not count if the switch is from hospice
 	replace switch_ma_p=0 if hospswitch==1
@@ -421,7 +421,7 @@ foreach n of numlist 1/8 {
 tab q`n'ind
 }
 
-H="table 1"
+H="table 1, also merge w serious illness and cleaning covariates for table"
 *look at the characteristics of those who switched  vs those who did not
 
 ***need to merge with rest of serious illness data

@@ -168,11 +168,6 @@ foreach w in 1 2 3 4 5 6 7{
 	clear
 }
 
-use "`r7s'NHATS_Round_7B_SP_Sen_Dem_File.dta"
-sort spid 
-quietly by spid: gen dup = cond(_N==1,0,_n)
-tab dup	
-clear
 	
 //combine 3 waves into single dataset
 use round_1_ltd.dta
@@ -4614,3 +4609,283 @@ replace income_adj= (245.120/236.736)*aveincome if wave==4
 replace income_adj= (245.120/237.017)*aveincome if wave==5
 replace income_adj= (245.120/240.007)*aveincome if wave==6
 replace income_adj=aveincome if wave==7
+
+H="XXXXXXX Working on New Format XXXXXXX "
+/* 
+********************HEADING******************** 
+
+Project Name: NHATS Setup
+
+Date Started: 
+
+Primary Investigator:
+Funding Source:
+
+Created by: Many Authors
+
+Primary Analyst:
+Secondary Analyst:
+
+Datasets Used: NHATS Raw public, sensitive, metro, and NSOC
+
+Simple Outline:
+
+
+*/
+ 
+//STATA
+// Global Macros use $ symbol to be called. 
+//File paths for raw data
+
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
+global r1raw E:\nhats\data\NHATS Public\round_1\
+global r2raw E:\nhats\data\NHATS Public\round_2\
+global r3raw E:\nhats\data\NHATS Public\round_3\
+global r4raw E:\nhats\data\NHATS Public\round_4\
+global r5raw E:\nhats\data\NHATS Public\round_5\
+global r6raw E:\nhats\data\NHATS Public\round_6\
+global r7raw E:\nhats\data\NHATS Public\round_7\
+global work E:\nhats\data\NHATS working data
+global r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+global r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+global r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+global r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+global r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+global r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+global r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+//SAS 
+
+
+//Intermediate Data Path
+//libname intpath "E:\nhats\data\Projects\..."
+
+// Final Data Path
+//libname datapath "E:\nhats\data\Projects\..."
+
+//Log files path
+//libname logpath "E:\nhats\data\Projects\..."
+
+
+H="NHATS Data Cleaning Part 1 (1_combine_waves)"
+/*
+
+Created by: 
+Date Created: 
+
+Updated by: MH
+Date Updated: 12/20/2018
+
+Description: What is going on in this section of the code? 
+i.e. defining variables, labeling variables. Creating new quartiles for income based off of something....
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name NHATS_setup1_`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using `logs'`name'.smcl, text replace
+
+
+/*Combines rounds 1 and 2 sample person SP interview files,
+sensitive demo files and the round 2 cumulative tracker file case 
+status l into a single file
+
+Data format is multiple observations per subject, one for each round
+*/
+*********************************************
+
+forvalues w=1/7 {
+//round w
+use "${r`w'raw}NHATS_Round_`w'_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=`w'
+la var wave "Survey wave"
+save round_`w'_1.dta, replace
+clear
+}
+
+//round 1
+forvalues w=1/7{
+use round_`w'_1.dta
+
+if `w'!=1 local pd pd* 
+
+//keep selected variables only
+local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
+	mo* r`w'd2intvrage hh`w'martlstat ///
+	ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
+	hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
+	is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
+	r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* cs*
+
+if `w'==1 {	
+keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
+ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
+rename (r`w'* w`w'*) (* *)
+****RENAME VARS
+}
+
+if `w'==2 {	
+keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
+	re2dadrscorr re2dcensdiv ip2nginslast
+}
+
+if `w'==3 {	
+keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
+	re3dcensdiv ip3nginslast ia*
+}
+if `w'==4 {	
+keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
+	re4dcensdiv ip4nginslast
+}
+if `w'==5 {	
+keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
+	re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
+}	
+if `w'==6 {	
+keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
+	re6dcensdiv ip6nginslast w6an2011wgt0	
+}
+if `w'==7 {	
+keep `keepallwaves' re7intplace re7newstrct re7spadrsnew re7dresistrct ///
+	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0
+}
+
+save round_`w'_ltd.dta, replace
+}
+
+//check sensitive data files, keep only some variables, merge with ltd datasets
+forvalues w=1/7{
+	use "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File.dta"
+	sort spid 
+	quietly by spid: gen dup = cond(_N==1,0,_n)
+	tab dup	
+	clear
+}
+
+
+//combine waves into single dataset
+use round_1_ltd.dta
+append using round_2_ltd.dta
+append using round_3_ltd.dta
+append using round_4_ltd.dta
+append using round_5_ltd.dta
+append using round_6_ltd.dta
+append using round_7_ltd.dta
+
+foreach x of varlist _all {
+capture drop newvar
+gen newvar=substr(`x'
+}
+capture drop newvar
+gen 
+
+
+//merge in sensitive data, use r1 as basis, added in cancer vars
+merge m:1 spid using "${r1s}NHATS_Round_1_SP_Sen_Dem_File.dta", ///
+	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
+	rl1primarace rl1hisplatno hc1cancerty*)	
+
+drop _merge
+
+//merge in additional r2 sensitive data
+merge m:1 spid using "${r2s}NHATS_Round_2_SP_Sen_Dem_File.dta", ///
+	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
+drop _merge
+
+//merge in additional r3 sensitive data
+merge m:1 spid using "${r3s}NHATS_Round_3_SP_Sen_Dem_File.dta", ///
+	keepusing(r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied)
+drop _merge
+
+//merge in additional r4 sensitive data
+merge m:1 spid using "${r4s}NHATS_Round_4_SP_Sen_Dem_File.dta", ///
+	keepusing(r4dintvwrage hh4dspousage r4ddeathage pd4mthdied pd4yrdied)
+drop _merge
+
+//merge in additional r5 sensitive data
+merge m:1 spid using "${r5s}NHATS_Round_5_SP_Sen_Dem_File.dta", ///
+	keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied)
+drop _merge
+
+//merge in additional r6 sensitive data
+merge m:1 spid using "${r6s}NHATS_Round_6_SP_Sen_Dem_File.dta", ///
+	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
+drop _merge
+
+//merge in additional r7 sensitive data
+merge m:1 spid using "${r7s}NHATS_Round_7_SP_Sen_Dem_File.dta", ///
+	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
+drop _merge
+
+//3B?
+//merge in tracker status information
+merge m:1 spid using "${r7raw}NHATS_Round_7_Tracker_File", ///
+	keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+	 w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+	w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+		w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+		r1fqstatdt*)
+
+//merge in nsoc tracker information
+merge m:1 spid using "${r1s}NSOC_Round_1_SP_tracker_file", nogen
+//drop obs that are in tracker file but not sp file
+drop if _merge==2
+drop _merge	
+save round_1_to_7.dta, replace
+
+//10/17/2018--old version of stata
+forvalues w=1/7{
+clear all
+use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
+saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
+}
+
+*********************************************
+log close
+
+translate `name'.smcl `name'.pdf
+exit
+
+
+
+H="Changelog"
+
+
+********************Change Log******************** 
+
+
+
+Updates:
+
+
+
+12/17/2018 MH
+------------
+A formal template in Notetab was created with different headings. 
+
+12/13/2018 MH
+-------------
+Change log conception was first introduced.
+
+
+*/
