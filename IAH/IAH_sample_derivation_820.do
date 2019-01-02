@@ -267,7 +267,14 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -275,7 +282,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -285,7 +292,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -293,7 +307,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -303,7 +317,13 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -311,7 +331,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -357,6 +377,7 @@ local c = 1
 
 foreach x of local cvars1 {
 
+
 sum `x' if homebound==1
 mat tab2[`r',`c'] = r(mean)
 
@@ -375,7 +396,14 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -383,7 +411,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -393,7 +421,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -401,7 +436,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -411,7 +446,14 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -419,7 +461,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -488,7 +530,13 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -496,7 +544,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -506,7 +554,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -514,7 +569,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -524,7 +579,14 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -532,7 +594,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
