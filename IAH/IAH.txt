@@ -418,7 +418,6 @@ label var income_quart_`w' "Ave. Income in `p'th quartile (adjusted to 2016 doll
 } 
 
 H="IAH Table"
-
 /* IAH population */
 keep if cont_ffs_n_mos>=6
 preserve 
@@ -504,7 +503,14 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -512,7 +518,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -522,7 +528,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -530,7 +543,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -540,7 +553,13 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if iah_all==1
-mat tab1[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -548,7 +567,7 @@ mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab1[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -594,6 +613,7 @@ local c = 1
 
 foreach x of local cvars1 {
 
+
 sum `x' if homebound==1
 mat tab2[`r',`c'] = r(mean)
 
@@ -612,7 +632,14 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -620,7 +647,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -630,7 +657,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -638,7 +672,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -648,7 +682,14 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if homebound==1
-mat tab2[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if homebound==1
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 tab `x' homebound, chi2
 mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -656,7 +697,7 @@ mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if homebound==0 
-mat tab2[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab2[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -725,7 +766,13 @@ local ++r
 foreach x of local ivars1 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -733,7 +780,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -743,7 +790,14 @@ local ++r
 foreach x of local ivars2 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -751,7 +805,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -761,7 +815,14 @@ local ++r
 foreach x of local ivars3 {
 
 sum `x' if iah_all==1
-mat tab3[`r',`c'] = r(mean)*100
+local b = r(mean)*r(N)
+
+sum `x' if iah_all==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if iah_all==1
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 tab `x' iah_all, chi2
 mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
@@ -769,7 +830,7 @@ mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
 local ++c
 
 sum `x' if iah_all==0 
-mat tab3[`r',`c'] = r(mean)*100
+if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
 
 local --c
 local ++r
@@ -807,8 +868,6 @@ frmttable using "E:\nhats\projects\IAH\table1_IAH.doc", addtable statmat(tab3) /
 varlabels title("Table 3: IAH Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS (Restricted to Homebound)") ///
 ctitles("" "IAH" "Not IAH") sdec(2) annotate(stars3) asymbol(*,**) ///
 note("These are unique people, and only survey data from their most recent NHATS interview was used. *p<0.05, **p<0.01")
-
-
 
 H="Housecalls Table"
 gen iah_pacute = 0
@@ -2879,3 +2938,7 @@ proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx"
 
 
 H="***************************"
+
+
+H="Changelog"
+01/02/2019 - Updated the code to include cell size censored tables. Omari

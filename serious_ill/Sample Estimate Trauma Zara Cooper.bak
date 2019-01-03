@@ -1,10 +1,21 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="Outline"
+
+
+H="Initial Sample Estimate"
 use "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta.dta" if sp_ivw==1 & lml==0, clear
 merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\merged stata\xwalk_2016.dta", ///
  keep(match master) nogen
 
-keep spid wave ivw_date bene_id
+//12/19/18--add smi for hip for quick look 
+merge 1:1 spid wave using "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match master) nogen keepusing(smi_hip_ind)
+keep spid wave ivw_date bene_id smi_hip_ind
+
 tempfile index
 save `index'
+
 
 
 
@@ -23,37 +34,81 @@ reshape long diag, i(num) j(n2)
 gen trauma=inlist(substr(diag,1,1),"8","9") & !inlist(substr(diag,1,3),"905", ///
 "906","907","908") & !inlist(substr(diag,1,3),"909","920","921","922","923","924") & ///
 !inlist(substr(diag,1,2),"91","93","96","97","98","99") 
-
+gen fractures=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"0","1","2")
+gen dislocation=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"3")
+gen sprains=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"4")
+gen intracranial=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"5")
+gen internal=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"6")
+gen open_wounds=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"7","8","9")
+gen blood=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"0") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4")
+gen crushing=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"2")
+gen burns=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"4")
+gen nerve=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4","5","6","7")
+gen complications_or_unspecified=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"8","9")
 gen icd=9 if trauma==1
+gen icd9=trauma==1
+
+gen tbi=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"0") & ///
+inlist(substr(diag,3,1),"0","1","3","4")
+
+replace tbi=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4")
+
+replace tbi=trauma==1 & diag=="95901"
 
 //ICD-10
 
 replace trauma=1 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
-
+gen specific_body_region=inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
 replace trauma=1 if inlist(substr(diag,1,3),"T07","T14","T30","T31","T32") 
+gen multiple_regions=inlist(substr(diag,1,3),"T07") 
+gen unspecified_region=inlist(substr(diag,1,3),"T14") 
 
 replace trauma=1 if inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
  & !inlist(substr(diag,3,1),"9") 
-
+replace burns=inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
+ & !inlist(substr(diag,3,1),"9") 
+gen burns_unspecified_region=inlist(substr(diag,1,3),"T30","T31","T32") 
 replace trauma=1 if inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
-
+gen early_complications=inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
 replace trauma=0 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,3,1),"0")
+
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S02") & inlist(substr(diag,4,1),"0","1","8")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S02") & inlist(substr(diag,4,1),"9") ///
+ & inlist(substr(diag,5,1),"1")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S06") & ///
+inlist(substr(diag,4,1),"0","1","2","3","4","5","6","8","9")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S09") & inlist(substr(diag,4,1),"8")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S09") & inlist(substr(diag,4,1),"9") & ///
+inlist(substr(diag,5,1),"0")
+
 
 keep if trauma==1
 
 replace icd=10 if icd==.
+gen icd10=icd==10
 
 joinby bene_id using `index', _merge(m) unm(none)
 tab m
 
-keep if inrange(admit_date,ivw_date-365,ivw_date)
+keep if inrange(admit_date,ivw_date-365,ivw_date) | smi_hip_ind==1
+replace trauma=1 if smi_hip_ind==1
 
 by spid wave, sort: egen t=max(trauma)
+
+foreach x in trauma fractures dislocation sprains intracranial internal open_wounds ///
+blood crushing nerve complications_or_unspecified specific_body_region multiple_regions ///
+unspecified_region burns burns_unspecified_region early_complications icd9 icd10 tbi{
+	by spid wave: egen ind_`x'=max(`x')
+}
 
 
 keep if t==1
 
-keep spid wave icd
+keep spid wave icd *ind*
 
 sort spid wave icd
 
@@ -61,8 +116,14 @@ by spid wave: keep if _n==1
 
 tab wave
 
+
 codebook spid
 
+log using "E:\nhats\data\Projects\serious_ill\logs\trauma_frequencies.txt", text replace
+
+tab1 *ind*
+
+log close
 tempfile a
 save "`a'"
 
@@ -98,3 +159,360 @@ gen nsoc=1 if nsoc1==3 | nsoc5==3
 
 tab nsoc
 
+gen other=0
+replace other=1 if ind_tbi==0 & smi_hip==0
+
+gen two=0
+replace two=1 if smi_hip==1 & ind_tbi==1 
+
+
+
+gen cat=0
+replace cat=1 if ind_tbi==1 & smi_hip==0
+replace cat=2 if ind_tbi==0 & smi_hip==1
+replace cat=3 if other==1
+
+label define cat 0 "None" 1 "TBI" 2 "Hip" 3 "Other" 4 "TBI & Hip"
+label values cat cat
+
+log using "E:\nhats\data\Projects\serious_ill\logs\frequencies_1_3_2019.txt", text replace
+
+tab ind_tbi smi_hip
+
+replace smi_hip=0 if ind_tbi==1
+replace cat=1 if ind_tbi==1 & smi_hip==0
+
+
+tab cat completed*1
+tab cat completed*5
+ 
+
+log close
+
+
+/*
+gen n=1
+
+mat tab=J(5,2,.)
+
+local c=1
+local r=1 
+
+gen two=0
+replace two=1 if smi_hip==1 & ind_tbi==1 
+sum two
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+
+replace smi_hip=0 if ind_tbi==1
+local r=2
+
+foreach x in ind_tbi smi_hip other n{
+sum `x' 
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+local r=`r'+1
+}
+
+mat rownames tab= "Indicator for TBI and Hip" "TBI" "Hip" "Other" "N"
+mat colnames tab= "N" "%"
+mat list tab
+
+frmttable using " ", statmat(tab) varlabels note("Sample size by 
+
+
+H="Adding in NSOC 7"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7_beta.dta" if sp_ivw==1 & lml==0, clear
+merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\merged stata\xwalk_2016.dta", ///
+ keep(match master) nogen
+
+//12/19/18--add smi for hip for quick look 
+merge 1:1 spid wave using "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", ///
+ keep(match master) nogen keepusing(smi_hip_ind)
+keep spid wave ivw_date bene_id smi_hip_ind
+
+tempfile index
+save `index'
+
+
+
+
+use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\ip_06_16.dta", clear
+
+keep bene_id icd_dgns_cd* admit_date
+
+gen num=_n
+
+rename icd_dgns_cd* diag*
+
+reshape long diag, i(num) j(n2)
+
+//ICD-9
+
+gen trauma=inlist(substr(diag,1,1),"8","9") & !inlist(substr(diag,1,3),"905", ///
+"906","907","908") & !inlist(substr(diag,1,3),"909","920","921","922","923","924") & ///
+!inlist(substr(diag,1,2),"91","93","96","97","98","99") 
+gen fractures=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"0","1","2")
+gen dislocation=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"3")
+gen sprains=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"4")
+gen intracranial=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"5")
+gen internal=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"6")
+gen open_wounds=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"7","8","9")
+gen blood=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"0") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4")
+gen crushing=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"2")
+gen burns=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"4")
+gen nerve=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4","5","6","7")
+gen complications_or_unspecified=trauma==1 & inlist(substr(diag,1,1),"9") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"8","9")
+gen icd=9 if trauma==1
+gen icd9=trauma==1
+
+gen tbi=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"0") & ///
+inlist(substr(diag,3,1),"0","1","3","4")
+
+replace tbi=trauma==1 & inlist(substr(diag,1,1),"8") & inlist(substr(diag,2,1),"5") & ///
+inlist(substr(diag,3,1),"0","1","2","3","4")
+
+replace tbi=trauma==1 & diag=="95901"
+
+//ICD-10
+
+replace trauma=1 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
+gen specific_body_region=inlist(substr(diag,1,1),"S") & inlist(substr(diag,7,1),"A","B","C")
+replace trauma=1 if inlist(substr(diag,1,3),"T07","T14","T30","T31","T32") 
+gen multiple_regions=inlist(substr(diag,1,3),"T07") 
+gen unspecified_region=inlist(substr(diag,1,3),"T14") 
+
+replace trauma=1 if inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
+ & !inlist(substr(diag,3,1),"9") 
+replace burns=inlist(substr(diag,1,2),"T2") & inlist(substr(diag,7,1),"A") ///
+ & !inlist(substr(diag,3,1),"9") 
+gen burns_unspecified_region=inlist(substr(diag,1,3),"T30","T31","T32") 
+replace trauma=1 if inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
+gen early_complications=inlist(substr(diag,1,4),"T79A") & inlist(substr(diag,7,1),"A")
+replace trauma=0 if inlist(substr(diag,1,1),"S") & inlist(substr(diag,3,1),"0")
+
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S02") & inlist(substr(diag,4,1),"0","1","8")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S02") & inlist(substr(diag,4,1),"9") ///
+ & inlist(substr(diag,5,1),"1")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S06") & ///
+inlist(substr(diag,4,1),"0","1","2","3","4","5","6","8","9")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S09") & inlist(substr(diag,4,1),"8")
+replace tbi=trauma==1 if inlist(substr(diag,1,3),"S09") & inlist(substr(diag,4,1),"9") & ///
+inlist(substr(diag,5,1),"0")
+
+gen non_tbi=tbi==0
+keep if trauma==1
+
+replace icd=10 if icd==.
+gen icd10=icd==10
+
+joinby bene_id using `index', _merge(m) unm(none)
+tab m
+
+keep if inrange(admit_date,ivw_date-365,ivw_date) | smi_hip_ind==1
+replace trauma=1 if smi_hip_ind==1
+
+by spid wave, sort: egen t=max(trauma)
+
+foreach x in trauma fractures dislocation sprains intracranial internal open_wounds ///
+blood crushing nerve complications_or_unspecified specific_body_region multiple_regions ///
+unspecified_region burns burns_unspecified_region early_complications icd9 icd10 tbi non_tbi {
+	by spid wave: egen ind_`x'=max(`x')
+}
+
+
+keep if t==1
+
+keep spid wave icd *ind*
+
+sort spid wave icd
+
+by spid wave: keep if _n==1
+
+tab wave
+
+//finish defining important variables up here
+
+gen trauma_cat=1 if ind_tbi==1
+replace trauma_cat=2 if smi_hip_ind==1 & ind_tbi!=1 & missing(trauma_cat)
+replace trauma_cat=3 if ind_trauma==1 & !smi_hip_ind & !ind_tbi & missing(trauma_cat)
+
+label define trauma_cat 1 "TBI" 2 "Hip, no TBI" 3 "Other trauma only"
+label values trauma_cat trauma_cat
+
+log using "E:\nhats\data\Projects\serious_ill\logs\trauma_frequencies`c(current_date)'.txt", text replace
+
+tab trauma_cat 
+
+tab wave trauma_cat, row
+
+
+codebook spid
+
+
+tab1 *ind*
+
+log close
+tempfile a
+save "`a'"
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta", clear
+duplicates drop spid, force
+gen wave=1
+ 
+tempfile b
+save "`b'"
+
+
+
+use "E:\nhats\data\NHATS cleaned\nsoc_round_5.dta", clear
+duplicates drop spid, force
+
+ 
+tempfile c
+save "`c'"
+
+
+use "E:\nhats\data\NHATS Sensitive\r7_sensitive\NSOC_R7B_Crss_File.dta", clear
+duplicates drop spid, force
+
+ 
+tempfile d
+save "`d'"
+
+use "`a'", replace
+merge m:1 spid using "`b'", gen(nsoc1) keepusing(opid) keep(1 3)
+
+
+merge m:1 spid using "`c'", gen(nsoc5) keepusing(opid) keep(1 3)
+
+
+merge m:1 spid using "`d'", gen(nsoc7) keepusing(opid) keep(1 3)
+
+gen completed_nsoc_1=nsoc1==3
+gen completed_nsoc_5=nsoc5==3
+gen completed_nsoc_7=nsoc7==3
+
+label var completed_nsoc_7 "NSOC III (wave 7) completed"
+label var completed_nsoc_5 "NSOC II (wave 5) completed"
+label var completed_nsoc_1 "NSOC I (wave 1) completed"
+
+gen nsoc=nsoc1==3 | nsoc5==3 | nsoc7==3
+
+gen nsoc_cat=0
+
+
+//how exactly do we do this?  wave 6 could go with NSOC II or III
+tokenize 1 5 7
+
+forvalues n=1/3 {
+	replace nsoc_cat=`n' if inrange(wave,``n''-1,``n''+1) & nsoc``n''==3
+}
+
+label define nsoc_cat 0 "No NSOC completed within one wave" 1 "NSOC I (wave 1) completed" 2 "NSOC II (wave 5) completed" ///
+3 "NSOC III (wave 7) completed"
+label values nsoc_cat nsoc_cat
+tab nsoc_cat
+
+log using "E:\nhats\data\Projects\serious_ill\logs\trauma_nsoc_frequencies`c(current_date)'.txt", text replace
+
+tab ind_tbi
+tab ind_non_tbi
+tab smi_hip_ind
+tab trauma_cat
+tab wave trauma_cat
+
+
+tab nsoc
+tab wave nsoc, row
+foreach x in 1 5 7 {
+	tab wave completed_nsoc_`x', row
+}
+
+log close
+
+*tab wave nsoc_cat, row
+
+
+/* 
+gen other=0
+replace other=1 if ind_tbi==0 & smi_hip==0
+
+gen two=0
+replace two=1 if smi_hip==1 & ind_tbi==1 
+
+
+
+gen cat=0
+replace cat=1 if ind_tbi==1 & smi_hip==0
+replace cat=2 if ind_tbi==0 & smi_hip==1
+replace cat=3 if other==1
+
+label define cat 0 "None" 1 "TBI" 2 "Hip" 3 "Other" 4 "TBI & Hip"
+label values cat cat
+
+log using "E:\nhats\data\Projects\serious_ill\logs\frequencies_1_3_2019.txt", text replace
+
+tab ind_tbi smi_hip
+
+replace smi_hip=0 if ind_tbi==1
+replace cat=1 if ind_tbi==1 & smi_hip==0
+
+
+tab cat completed*1
+tab cat completed*5
+ 
+
+log close
+
+
+/*
+gen n=1
+
+mat tab=J(5,2,.)
+
+local c=1
+local r=1 
+
+gen two=0
+replace two=1 if smi_hip==1 & ind_tbi==1 
+sum two
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+
+replace smi_hip=0 if ind_tbi==1
+local r=2
+
+foreach x in ind_tbi smi_hip other n{
+sum `x' 
+mat tab[`r',`c']=r(N)*r(mean)
+mat tab[`r',`c'+1]=r(mean)*100
+local r=`r'+1
+}
+
+mat rownames tab= "Indicator for TBI and Hip" "TBI" "Hip" "Other" "N"
+mat colnames tab= "N" "%"
+mat list tab
+
+frmttable using " ", statmat(tab) varlabels note("Sample size by 
+
+
+H="Changelog"
+
+
+********************Change Log******************** 
+
+
+
+Updates:
+
+
+
+1/3/19--EBL--Added in headers to text file.
+MH--Revisions to diagnosis codes.
+*/
+
+	

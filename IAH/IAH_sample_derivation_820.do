@@ -270,7 +270,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if iah_all==1
@@ -295,7 +295,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if iah_all==1
@@ -320,7 +320,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 sum `x' if iah_all==1
 if `b'>=11 & `d'>=11 mat tab1[`r',`c'] = r(mean)*100
@@ -399,7 +399,7 @@ sum `x' if homebound==1
 local b = r(mean)*r(N)
 
 sum `x' if homebound==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if homebound==1
@@ -424,7 +424,7 @@ sum `x' if homebound==1
 local b = r(mean)*r(N)
 
 sum `x' if homebound==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if homebound==1
@@ -449,7 +449,7 @@ sum `x' if homebound==1
 local b = r(mean)*r(N)
 
 sum `x' if homebound==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if homebound==1
@@ -533,7 +533,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 sum `x' if iah_all==1
 if `b'>=11 & `d'>=11 mat tab3[`r',`c'] = r(mean)*100
@@ -557,7 +557,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if iah_all==1
@@ -582,7 +582,7 @@ sum `x' if iah_all==1
 local b = r(mean)*r(N)
 
 sum `x' if iah_all==0 
-local d = r(mean)*(N)
+local d = r(mean)*r(N)
 
 
 sum `x' if iah_all==1
