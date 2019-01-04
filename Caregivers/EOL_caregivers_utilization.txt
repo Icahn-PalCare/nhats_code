@@ -3069,7 +3069,7 @@ label var ind_noone "Nobody in social network"
 label var age "Age at N1 interview"
 local cvars1 age
 local cvars2 income_adj
-local cvars3 sr_numconditions1 comorb_all_0_1yr n_helpers tot_hrswk_help_i death2n1 lol num_chld
+local cvars3 sr_numconditions1 comorb_all_0_1yr n_helpers tot_hrswk_help_i death2n1 lol n_children
 local ivars1 female white black hisp other_race married livealone livesp liveoth ind_noone ///
 rcfres nhres educ_hs_ind medicaid medigap
 local ivars2 creditdebt medpaynotcash govtasst proxy srh_fp 
@@ -3182,7 +3182,7 @@ gen group3=sr_heart_dis_ever
 
 local cvars1 age
 local cvars2 income_adj
-local cvars3 sr_numconditions1 comorb_all_0_1yr n_helpers tot_hrswk_help_i death2n1 lol num_chld
+local cvars3 sr_numconditions1 comorb_all_0_1yr n_helpers tot_hrswk_help_i death2n1 lol n_children
 local ivars1 female white black hisp other_race married livealone livesp liveoth ind_noone ///
 rcfres nhres educ_hs_ind medicaid medigap
 local ivars2 creditdebt medpaynotcash govtasst proxy srh_fp 
@@ -3256,119 +3256,119 @@ gen age2= age*age
 label var age2 "Age-squared"
 
 local vars age age2 female black other_race hisp educ_hs_ind married northeast south midwest medicaid ///
-srh_fp adl_impair nhres prob_dem sr_cancer_ever sr_numconditions1 iadl_impair num_chld 
+srh_fp adl_impair nhres prob_dem sr_cancer_ever sr_numconditions1 iadl_impair n_children 
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model")
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model")
 
 logit ind_hs ind_4_help [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw], or 
-outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Full Sample") replace ///
+outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Full Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken")
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if prob_dem==1, or
-outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Dementia Sample") replace ///
+outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Dementia Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if sr_cancer_ever==1, or
-outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Cancer Sample") replace ///
+outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator Cancer Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") title("Weighted Logit Model on Hospice Indicator Heart Disease Sample") merge replace ///
+outreg using eol_1_5_weighted_model.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") title("Weighted Logit Model on Hospice Indicator Heart Disease Sample") merge replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable 
 
 
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model")
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model")
 
 logit ind_hs ind_4_help [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw], or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw], or 
-outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Full Sample") replace ///
+outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Full Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken")
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if prob_dem==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if prob_dem==1, or
-outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Dementia Sample") replace ///
+outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Dementia Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if sr_cancer_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if sr_cancer_ever==1, or
-outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Cancer Sample") replace ///
+outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge title("Weighted Logit Model on Hospice Indicator >=3 Days Cancer Sample") replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable
 
 logit ind_hs hrswk_unpaid_40 [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") 
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") 
 
 logit ind_hs ind_4_help [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Unadjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Unadjusted Model") merge
 
 logit ind_hs `vars' hrswk_unpaid_40 [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg, varlabels stats(e_b p) ctitles("" "Adjusted Model") merge
+outreg, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") merge
 
 logit ind_hs `vars' ind_4_help [pw=anfinw] if sr_heart_dis_ever==1, or
-outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b p) ctitles("" "Adjusted Model") title("Weighted Logit Model on Hospice Indicator >=3 Days Heart Disease Sample") merge replace ///
+outreg using eol_1_5_weighted_model_3days.rtf, varlabels stats(e_b e_ci p) ctitles("" "Adjusted Model") title("Weighted Logit Model on Hospice Indicator >=3 Days Heart Disease Sample") merge replace ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" \ "1-5 Waves Claims used to determine hospice" ///
 \ "Results based off of interivew before death." \"If multiple ivws in 12m prior to death, earliest is taken") addtable 
 
