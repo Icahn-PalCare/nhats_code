@@ -338,7 +338,7 @@ tab wave
 
 gen trauma_cat=1 if ind_tbi==1
 replace trauma_cat=2 if smi_hip_ind==1 & ind_tbi!=1 & missing(trauma_cat)
-replace trauma_cat=3 if ind_trauma==1 & !smi_hip_ind & !ind_tbi & missing(trauma_cat)
+replace trauma_cat=3 if ind_trauma==1 & smi_hip_ind!=1 & !ind_tbi & missing(trauma_cat)
 
 label define trauma_cat 1 "TBI" 2 "Hip, no TBI" 3 "Other trauma only"
 label values trauma_cat trauma_cat
@@ -432,72 +432,14 @@ foreach x in 1 5 7 {
 	tab wave completed_nsoc_`x', row
 }
 
-log close
-
-*tab wave nsoc_cat, row
-
-
-/* 
-gen other=0
-replace other=1 if ind_tbi==0 & smi_hip==0
-
-gen two=0
-replace two=1 if smi_hip==1 & ind_tbi==1 
-
-
-
-gen cat=0
-replace cat=1 if ind_tbi==1 & smi_hip==0
-replace cat=2 if ind_tbi==0 & smi_hip==1
-replace cat=3 if other==1
-
-label define cat 0 "None" 1 "TBI" 2 "Hip" 3 "Other" 4 "TBI & Hip"
-label values cat cat
-
-log using "E:\nhats\data\Projects\serious_ill\logs\frequencies_1_3_2019.txt", text replace
-
-tab ind_tbi smi_hip
-
-replace smi_hip=0 if ind_tbi==1
-replace cat=1 if ind_tbi==1 & smi_hip==0
-
-
-tab cat completed*1
-tab cat completed*5
- 
-
-log close
-
-
-/*
-gen n=1
-
-mat tab=J(5,2,.)
-
-local c=1
-local r=1 
-
-gen two=0
-replace two=1 if smi_hip==1 & ind_tbi==1 
-sum two
-mat tab[`r',`c']=r(N)*r(mean)
-mat tab[`r',`c'+1]=r(mean)*100
-
-replace smi_hip=0 if ind_tbi==1
-local r=2
-
-foreach x in ind_tbi smi_hip other n{
-sum `x' 
-mat tab[`r',`c']=r(N)*r(mean)
-mat tab[`r',`c'+1]=r(mean)*100
-local r=`r'+1
+gen nsoc_samewave=0
+foreach x in 1 5 7 {	
+	replace nsoc_samewave=1 if completed_nsoc_`x'==1 & wave==`x'
 }
+label var nsoc_samewave "Had at least one caregiver complete NSOC in the wave following trauma"
 
-mat rownames tab= "Indicator for TBI and Hip" "TBI" "Hip" "Other" "N"
-mat colnames tab= "N" "%"
-mat list tab
+log close
 
-frmttable using " ", statmat(tab) varlabels note("Sample size by 
 
 
 H="Changelog"
@@ -509,7 +451,7 @@ H="Changelog"
 
 Updates:
 
-
+1/9/19--EBL--Pulled sample estimates for folks with NSOC during same wave as trauma.
 
 1/3/19--EBL--Added in headers to text file.
 MH--Revisions to diagnosis codes made. New tables made using TBI, Hip, and other. Added in NSOC III data.  
