@@ -407,6 +407,9 @@ replace iah_all = 1 if iah_adl==1 & iah_chronic==1 & iah_nonelect==1 & iah_rehab
 forvalues w = 1/4 {
 
 gen income_quart_`w' = . 
+gen income_cat_`w' = 0
+replace income_cat_`w'= 1 if income_quart_ad==`w'
+
 replace income_quart_`w' = income_adj if income_quart_adj==`w'
 sum income_quart_`w', d
 local p = 25*`w' 
@@ -415,7 +418,12 @@ local r = round(`q',1)
 
 
 label var income_quart_`w' "Ave. Income in `p'th quartile (adjusted to 2016 dollars)"
+label var income_cat_`w' "% with income in the `p'th quartile"
+
 } 
+gen pos_dem = 0
+replace pos_dem = 1 if dem_3_cat==2 
+label var pos_dem "Indicator Possible Dementia"
 
 H="IAH Table"
 /* IAH population */
@@ -913,11 +921,12 @@ keep if ind==1 /* keep most recent nonhousecalls */
 append using "E:\nhats\data\Projects\IAH\int_data\housecalls.dta"
 
 local cvars1 age income_quart_1 income_quart_2 income_quart_3 income_quart_4 // score_community
-local ivars1 female white black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
+local ivars1 income_cat_1 income_cat_2 income_cat_3 income_cat_4 female white  ///
+black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
 homebound medicaid metro_ind northeast midwest south west
 local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever ///
 sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
-sr_diabetes_ever sr_dementia_ever prob_dem
+sr_diabetes_ever sr_dementia_ever prob_dem pos_dem
 local ivars3 adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff ///
 adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help ///
 adl_bed_diff ind_hosp_adm_p12m ind_ed_adm_p12m ind_icu_p12m died_12 housecalls_90

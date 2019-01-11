@@ -1,4 +1,4 @@
-= V4 Outline MultiLine NoSorting TabWidth=30
+= V7 Outline MultiLine NoSorting TabWidth=30
 
 H="MA and disability"
 * Project examining trajectories of utilization after functional disability
@@ -146,3 +146,1983 @@ foreach n of numlist 2 3 4 5 6 7 {
 	replace repsecondhelp=. if repsecondhelp==8
 
 save "E:\nhats\data\Projects\traj util after disability\date of first disability.dta"
+
+H="***************SAS here*************"
+
+
+H="Get index and save so SAS can import it"
+use "E:\nhats\data\Projects\traj util after disability\date of first disability.dta", clear
+saveold "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta" , version(12) replace
+
+keep spid datefirsthelp
+rename datefirsthelp index_date
+gen index_year=year(index_date)
+gen index_month=month(index_date)
+
+saveold "E:\nhats\data\Projects\traj util after disability\int_data\index.dta", version(12) replace
+
+
+
+
+H="set libraries in SAS"
+/*nhats cleaned path*/
+libname nhats 'E:\nhats\data\NHATS cleaned';
+
+/*medicare xwalk and claims path*/
+libname medi 'E:\nhats\data\20180625 NHATS CMS Data\merged';
+
+/*project data paths*/
+libname proj_int 'E:\nhats\data\Projects\traj util after disability\int_data';
+libname proj_fin 'E:\nhats\data\Projects\traj util after disability\final_data';
+
+
+
+
+H="get index date and merge with CMS xwalk"
+proc import datafile="E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta"
+out=proj_int.nhats replace;
+run;
+
+proc import datafile="E:\nhats\data\Projects\traj util after disability\int_data\index.dta" 
+out=index replace;
+run;
+
+proc import out=xwalk
+	    datafile = "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta" replace;
+run;
+
+proc sql;
+create table proj_int.index as select * from
+index a
+left join 
+xwalk b
+on a.spid=b.spid;
+quit;
+
+
+H="get claims before index date"
+/*Get claims 1 year and 2 year before each interview*/
+/*Step 2: pull claims lists using xwalk and ivw date*/
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/****************************************************************************/
+/* Macro to pull claims lists, saves lists to int_data folder               */
+/****************************************************************************/
+%macro claims_pre(days_start=,days_bef_index=,yrs=,source=);
+
+proc sql;
+create table &source._meet_&days_bef_index. as select a.index_date,a.index_year,b.*
+from proj_int.index a inner join
+medi.&source._&yrs. b 
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and &days_start<=a.index_date-b.disch_date<=&days_bef_index;
+quit;
+
+%mend;
+
+
+
+/*3m*/
+%claims_pre(days_start=0,days_bef_index=91,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=dm);
+
+/*6m*/
+%claims_pre(days_start=0,days_bef_index=183,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=dm);
+
+/*9m*/
+%claims_pre(days_start=0,days_bef_index=274,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=dm);
+
+/*1yr*/
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=dm);
+
+
+
+%macro ip_drop(days_bef_index=);
+data proj_int.ip_meet_&days_bef_index.;
+set ip_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 icarecnt crnrydaycnt erdaycnt clm_ip_admsn_type_cd
+  PRCDR_DT1-PRCDR_DT25 hcpcscd1-hcpcscd49);
+run;
+%mend ip_drop;
+
+%macro snf_drop(days_bef_index=);
+data proj_int.snf_meet_&days_bef_index.;
+set snf_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
+ PRCDR_DT1-PRCDR_DT25 );
+run;
+%mend snf_drop;
+
+
+/*hh*/
+%macro hh_drop(days_bef_index=);
+data proj_int.hh_meet_&days_bef_index.;
+set hh_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+run;
+%mend hh_drop;
+
+/*hs*/
+%macro hs_drop(days_bef_index=);
+data proj_int.hs_meet_&days_bef_index.;
+set hs_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+run;
+%mend hs_drop;
+
+/*dme*/
+%macro dm_drop(days_bef_index=);
+data proj_int.dm_meet_&days_bef_index.;
+set dm_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date 
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 h_o2);
+run;
+%mend dm_drop;
+
+/*op*/
+%macro op_drop(days_bef_index=);
+data proj_int.op_meet_&days_bef_index.;
+set op_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt obs_stay);
+run;
+%mend op_drop;
+
+/*carrier*/
+%macro pb_drop(days_bef_index=);
+data proj_int.pb_meet_&days_bef_index.;
+set pb_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+run;
+%mend pb_drop;
+
+
+%ip_drop(days_bef_index=91);
+%ip_drop(days_bef_index=183);
+%ip_drop(days_bef_index=274);
+%ip_drop(days_bef_index=365);
+%ip_drop(days_bef_index=456);
+%ip_drop(days_bef_index=548);
+%ip_drop(days_bef_index=639);
+%ip_drop(days_bef_index=730);
+
+%snf_drop(days_bef_index=91);
+%snf_drop(days_bef_index=183);
+%snf_drop(days_bef_index=274);
+%snf_drop(days_bef_index=365);
+%snf_drop(days_bef_index=456);
+%snf_drop(days_bef_index=548);
+%snf_drop(days_bef_index=639);
+%snf_drop(days_bef_index=730);
+
+
+%hh_drop(days_bef_index=91);
+%hh_drop(days_bef_index=183);
+%hh_drop(days_bef_index=274);
+%hh_drop(days_bef_index=365);
+%hh_drop(days_bef_index=456);
+%hh_drop(days_bef_index=548);
+%hh_drop(days_bef_index=639);
+%hh_drop(days_bef_index=730);
+
+
+%hs_drop(days_bef_index=91);
+%hs_drop(days_bef_index=183);
+%hs_drop(days_bef_index=274);
+%hs_drop(days_bef_index=365);
+%hs_drop(days_bef_index=456);
+%hs_drop(days_bef_index=548);
+%hs_drop(days_bef_index=639);
+%hs_drop(days_bef_index=730);
+
+
+%op_drop(days_bef_index=91);
+%op_drop(days_bef_index=183);
+%op_drop(days_bef_index=274);
+%op_drop(days_bef_index=365);
+%op_drop(days_bef_index=456);
+%op_drop(days_bef_index=548);
+%op_drop(days_bef_index=639);
+%op_drop(days_bef_index=730);
+
+
+%pb_drop(days_bef_index=91);
+%pb_drop(days_bef_index=183);
+%pb_drop(days_bef_index=274);
+%pb_drop(days_bef_index=365);
+%pb_drop(days_bef_index=456);
+%pb_drop(days_bef_index=548);
+%pb_drop(days_bef_index=639);
+%pb_drop(days_bef_index=730);
+
+
+%dm_drop(days_bef_index=91);
+%dm_drop(days_bef_index=183);
+%dm_drop(days_bef_index=274);
+%dm_drop(days_bef_index=365);
+%dm_drop(days_bef_index=456);
+%dm_drop(days_bef_index=548);
+%dm_drop(days_bef_index=639);
+%dm_drop(days_bef_index=730);
+
+
+
+
+/****************************************************************************/
+/****************************************************************************/
+/* Macro to pull dx from claims lists, saves dx lists to int_data folder    */
+/****************************************************************************/
+
+%macro dx_time_range(range1=, range2=, days_bef_core=);
+
+/*Process carrier medicare claims to pull out dx codes
+Multiple lines per each BID*/
+data pb_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.pb_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+/*check for and remove duplicates, note this doesn't remove blanks*/
+proc sort data=pb_last_&range2._dx out=pb_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*Process outpatient medicare claims to pull out dx codes
+Dataset being created: op_last_&range2._dx2*/
+data op_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.op_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25  );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=op_last_&range2._dx out=op_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+proc contents data=proj_int.ip_meet_365; run;
+
+
+/*Dataset being created: ip_last_&range2._dx2*/
+data ip_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.ip_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 hcpcscd1-hcpcscd49);
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=ip_last_&range2._dx out=ip_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Dataset being created: snf_last_&range2._dx2*/
+data snf_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.snf_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=snf_last_&range2._dx out=snf_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process dme medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data dm_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.dm_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=dm_last_&range2._dx out=dm_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hh medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hh_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.hh_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hh_last_&range2._dx out=hh_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hs medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hs_last_&range2._dx(keep=bene_id index_year diag);
+set proj_int.hs_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hs_last_&range2._dx out=hs_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*set diag variable length = 7 chars since that's the max length from the mc claims
+Need to do this because length varies across the different mc claim types*/
+data hs_last_&range2._dx3;
+length diag $7;
+set hs_last_&range2._dx2;
+run;
+data hh_last_&range2._dx3;
+length diag $7;
+set hh_last_&range2._dx2;
+run;
+data ip_last_&range2._dx3;
+length diag $7;
+set ip_last_&range2._dx2;
+run;
+data snf_last_&range2._dx3;
+length diag $7;
+set snf_last_&range2._dx2;
+run;
+data dm_last_&range2._dx3;
+length diag $7;
+set dm_last_&range2._dx2;
+run;
+data op_last_&range2._dx3;
+length diag $7;
+set op_last_&range2._dx2;
+run;
+data pb_last_&range2._dx3;
+length diag $7;
+set pb_last_&range2._dx2;
+run;
+
+
+/*merge diagnoses from each claim type into single dataset*/
+data dx_all_last_1&range2.;
+set hs_last_&range2._dx3
+hh_last_&range2._dx3
+ip_last_&range2._dx3
+snf_last_&range2._dx3
+dm_last_&range2._dx3
+op_last_&range2._dx3
+pb_last_&range2._dx3;
+run;
+
+proc sql;
+create table dx_all_last_&range2. as select * from
+proj_int.index a 
+left join 
+dx_all_last_1&range2. b
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit; 
+
+proc sort data=dx_all_last_&range2.(where=(diag~="")) out=proj_int.dx_&range1._&range2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+%mend;
+
+/*1 and 2 years pre-interview: proj_int.dx_0_1yr, proj_int.dx_0_2yr */
+%dx_time_range(range1=0, range2=3m, days_bef_core=91);
+%dx_time_range(range1=0, range2=6m, days_bef_core=183);
+%dx_time_range(range1=0, range2=9m, days_bef_core=274);
+%dx_time_range(range1=0, range2=12m, days_bef_core=365);
+
+
+
+
+
+
+H="get claims after index date"
+
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/****************************************************************************/
+/* Macro to pull claims lists, saves lists to int_data folder               */
+/****************************************************************************/
+%macro claims_post(days_start=,days_aft_index=,yrs=,source=);
+
+proc sql;
+create table &source._meet_&days_aft_index.p as select a.*,b.index_date,b.index_year
+from medi.&source._&yrs. a inner join
+proj_int.index b 
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and &days_start<=a.admit_date-b.index_date<=&days_aft_index;
+quit;
+
+%mend;
+
+
+/*3m*/
+%claims_post(days_start=0,days_aft_index=91,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=dm);
+
+/*6m*/
+%claims_post(days_start=0,days_aft_index=183,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=dm);
+
+/*9m*/
+%claims_post(days_start=0,days_aft_index=274,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=dm);
+
+/*1yr*/
+%claims_post(days_start=0,days_aft_index=365,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=dm);
+
+
+/*15m*/
+%claims_post(days_start=0,days_aft_index=456,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=dm);
+
+/*18m*/
+%claims_post(days_start=0,days_aft_index=548,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=dm);
+
+/*21m*/
+%claims_post(days_start=0,days_aft_index=639,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=dm);
+
+/*2yrs*/
+%claims_post(days_start=0,days_aft_index=730,yrs=06_16,source=ip);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=snf);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=op);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=pb);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=hh);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=hs);
+%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=dm);
+
+%macro ip_drop(days_aft_index=);
+data proj_int.ip_meet_&days_aft_index.p;
+set ip_meet_&days_aft_index.p(keep=clm_pmt_amt clm_pass_thru_per_diem_amt bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 crnrydaycnt icarecnt erdaycnt clm_ip_admsn_type_cd
+  PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
+run;
+%mend ip_drop;
+
+%macro snf_drop(days_aft_index=);
+data proj_int.snf_meet_&days_aft_index.p;
+set snf_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
+ PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
+run;
+%mend snf_drop;
+
+
+/*hh*/
+%macro hh_drop(days_aft_index=);
+data proj_int.hh_meet_&days_aft_index.p;
+set hh_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+run;
+%mend hh_drop;
+
+/*hs*/
+%macro hs_drop(days_aft_index=);
+data proj_int.hs_meet_&days_aft_index.p;
+set hs_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+run;
+%mend hs_drop;
+
+/*dme*/
+%macro dm_drop(days_aft_index=);
+data proj_int.dm_meet_&days_aft_index.p;
+set dm_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+run;
+%mend dm_drop;
+
+/*op*/
+%macro op_drop(days_aft_index=);
+data proj_int.op_meet_&days_aft_index.p;
+set op_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt);
+run;
+%mend op_drop;
+
+/*carrier*/
+%macro pb_drop(days_aft_index=);
+data proj_int.pb_meet_&days_aft_index.p;
+set pb_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+run;
+%mend pb_drop;
+
+%ip_drop(days_aft_index=91);
+%ip_drop(days_aft_index=183);
+%ip_drop(days_aft_index=274);
+%ip_drop(days_aft_index=365);
+%ip_drop(days_aft_index=456);
+%ip_drop(days_aft_index=548);
+%ip_drop(days_aft_index=639);
+%ip_drop(days_aft_index=730);
+
+%snf_drop(days_aft_index=91);
+%snf_drop(days_aft_index=183);
+%snf_drop(days_aft_index=274);
+%snf_drop(days_aft_index=365);
+%snf_drop(days_aft_index=456);
+%snf_drop(days_aft_index=548);
+%snf_drop(days_aft_index=639);
+%snf_drop(days_aft_index=730);
+
+
+%hh_drop(days_aft_index=91);
+%hh_drop(days_aft_index=183);
+%hh_drop(days_aft_index=274);
+%hh_drop(days_aft_index=365);
+%hh_drop(days_aft_index=456);
+%hh_drop(days_aft_index=548);
+%hh_drop(days_aft_index=639);
+%hh_drop(days_aft_index=730);
+
+
+%hs_drop(days_aft_index=91);
+%hs_drop(days_aft_index=183);
+%hs_drop(days_aft_index=274);
+%hs_drop(days_aft_index=365);
+%hs_drop(days_aft_index=456);
+%hs_drop(days_aft_index=548);
+%hs_drop(days_aft_index=639);
+%hs_drop(days_aft_index=730);
+
+
+%op_drop(days_aft_index=91);
+%op_drop(days_aft_index=183);
+%op_drop(days_aft_index=274);
+%op_drop(days_aft_index=365);
+%op_drop(days_aft_index=456);
+%op_drop(days_aft_index=548);
+%op_drop(days_aft_index=639);
+%op_drop(days_aft_index=730);
+
+
+%pb_drop(days_aft_index=91);
+%pb_drop(days_aft_index=183);
+%pb_drop(days_aft_index=274);
+%pb_drop(days_aft_index=365);
+%pb_drop(days_aft_index=456);
+%pb_drop(days_aft_index=548);
+%pb_drop(days_aft_index=639);
+%pb_drop(days_aft_index=730);
+
+
+%dm_drop(days_aft_index=91);
+%dm_drop(days_aft_index=183);
+%dm_drop(days_aft_index=274);
+%dm_drop(days_aft_index=365);
+%dm_drop(days_aft_index=456);
+%dm_drop(days_aft_index=548);
+%dm_drop(days_aft_index=639);
+%dm_drop(days_aft_index=730);
+
+ 
+
+H="****Must run all below if change the above****"
+
+
+H="get continuous ffs pre"
+
+
+/*sort claims denominator file*/
+
+proc sort data=medi.mbsf_06_16 out=mbsf  nodupkey;
+by bene_id year;
+run;
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/*get mbsf just for interview year*/
+
+proc sql; 
+create table mbsf_index_year as select
+a.*,b.buyin12,b.year,b.hmoind12
+from index1 a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) 
+and a.index_year=b.year;
+quit;
+
+
+proc sql;
+select count(distinct bene_id) from mbsf_index_year;
+quit;
+
+
+
+data mbsf_index_year2;
+set mbsf_index_year;
+if length(trim(left(buyin12)))=12 and index_month>0 then do;
+buyin_iy=substr(trim(left(buyin12)),1,index_month);
+hmo_iy=substr(trim(left(HMOIND12)),1,index_month);
+end;
+else do;
+buyin_iy=trim(left(buyin12));
+hmo_iy=trim(left(HMOIND12));
+end;
+format index_date date9.;
+run;
+proc means n;
+var index_month;
+run;
+
+proc sql;
+create table mbsf_index_year_bef as select
+a.bene_id,a.year as index_year,
+b.year as index_year_bef,
+b.year, b.buyin12,b.HMOIND12
+from mbsf_index_year a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and 0<a.year-b.year<=1 order by bene_id,year;
+quit;
+
+
+/* and the year before... 1922 have the -2 year dn file*/
+proc sql;
+create table mbsf_index_year_2bef as select
+a.bene_id,a.bene_id,a.index_year,a.index_year_bef,
+b.year as index_year_2bef,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year_bef a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and 0<a.index_year_bef-b.year<=1 order by bene_id,year;
+quit;
+
+/*merge the insurance data for death year, -1 and -2 years into single dataset*/
+proc sql;
+create table all_insurance as select a.*,b.buyin12 as buyin_bef,b.HMOIND12 as hmo_bef from
+mbsf_index_year2 a
+left join
+mbsf_index_year_bef b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table all_insurance2 as select a.*,b.buyin12 as buyin_2bef,b.HMOIND12 as hmo_2bef from
+all_insurance a
+left join
+mbsf_index_year_2bef b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year; 
+quit;
+
+
+/*merge death year and year before death buy-in and hmo variables
+Trim so the final variable _6m is 6 months pre-death
+Note: indicator variables for parts a and b and hmo are null if don't
+have information for full 6 months pre-death*/
+data all_insurance3;
+set all_insurance2;
+buyin_2y=trimn(left(buyin_2bef))||trimn(left(buyin_bef))||trimn(left(buyin_iy));
+hmo_2y=trimn(left(hmo_2bef))||trimn(left(hmo_bef))||trimn(left(hmo_iy));
+
+buyin_2y_r=reverse(trim(buyin_2y));
+hmo_2y_r=reverse(trim(hmo_2y));
+
+
+/*create length of continous a&b and non-hmo coverage vars*/
+if indexc(buyin_2y_r,"0","1","2","A","B")=0 then part_ab_n_mos=length(buyin_2y_r)-1;
+if indexc(buyin_2y_r,"0","1","2","A","B") then part_ab_n_mos=indexc(buyin_2y_r,"0","1","2","A","B")-1;
+if indexc(hmo_2y_r,"1","2","4","A","B","C")=0 then non_hmo_d_n_mos=length(hmo_2y_r)-1;
+if indexc(hmo_2y_r,"1","2","4","A","B","C") then non_hmo_d_n_mos=indexc(hmo_2y_r,"1","2","4","A","B","C")-1;
+if part_ab_n_mos<=non_hmo_d_n_mos then cont_ffs_n_mos=part_ab_n_mos;
+if non_hmo_d_n_mos<part_ab_n_mos then cont_ffs_n_mos=non_hmo_d_n_mos;
+run;
+
+
+data proj_int.ffs_before (keep=spid bene_id index_date index_year cont_ffs_n_mos non_hmo_d_n_mos part_ab_n_mos);
+set all_insurance3;
+run;
+
+
+H="get continuous ffs post"
+
+
+/*sort claims denominator file*/
+
+proc sort data=medi.mbsf_06_16 out=mbsf  nodupkey;
+by bene_id year;
+run;
+
+proc sort data=proj_int.index out=index1 nodupkey;
+by bene_id index_year;
+run;
+
+/*get mbsf just for interview year*/
+
+proc sql; 
+create table mbsf_index_year as select
+a.*,b.buyin12,b.year,b.hmoind12
+from index1 a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) 
+and a.index_year=b.year;
+quit;
+
+
+proc sql;
+select count(distinct bene_id) from mbsf_index_year;
+quit;
+
+
+
+data mbsf_index_year2;
+set mbsf_index_year;
+if length(trim(left(buyin12)))=12 and index_month>0 then do;
+buyin_iy=substr(trim(left(buyin12)),index_month,13-index_month);
+hmo_dy=substr(trim(left(HMOIND12)),index_month,13-index_month);
+buyin_at_death=substr(trim(left(buyin12)),index_month,1);
+hmo_at_death=substr(trim(left(HMOIND12)),index_month,1);
+end;
+else do;
+buyin_iy=trim(left(buyin12));
+hmo_iy=trim(left(HMOIND12));
+end;
+format index_date date9.;
+run;
+proc means n;
+var index_month;
+run;
+
+
+proc sql;
+create table mbsf_index_year_aft as select
+a.bene_id,a.bene_id,a.year as index_year,
+b.year as index_year_aft,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and a.year-b.year=-1 order by bene_id,year;
+quit;
+
+
+/* and the year aftore... 1790 have the +2 year dn file*/
+proc sql;
+create table mbsf_index_year_2aft as select
+a.bene_id,a.bene_id,a.index_year,a.index_year_aft,
+b.year as index_year_2aft,
+b.year,b.buyin12,b.HMOIND12
+from mbsf_index_year_aft a inner join
+mbsf b
+on trim(left(a.bene_id))=trim(left(b.bene_id))
+and a.index_year_aft-b.year=-1 order by bene_id,year;
+quit;
+
+/*merge the insurance data for death year, +1 and +2 years into single dataset*/
+proc sql;
+create table all_insurance as select a.*,b.buyin12 as buyin_aft,b.HMOIND12 as hmo_aft from
+mbsf_index_year2 a
+left join
+mbsf_index_year_aft b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table all_insurance2 as select a.*,b.buyin12 as buyin_2aft,b.HMOIND12 as hmo_2aft from
+all_insurance a
+left join
+mbsf_index_year_2aft b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+/*merge death year and year aftore death buy-in and hmo variables
+Trim so the final variable _p6m is 6 months post-death
+Note: indicator variables for parts a and b and hmo are null if don't
+have information for full 6 months post-death*/
+data all_insurance3;
+set all_insurance2;
+buyin_2y=trimn(left(buyin_iy))||trimn(left(buyin_aft))||trimn(left(buyin_2aft));
+hmo_2y=trimn(left(hmo_dy))||trimn(left(hmo_aft))||trimn(left(hmo_2aft));
+
+/*create length of continous a&b and non-hmo coverage vars*/
+if indexc(buyin_2y,"0","1","2","A","B")=0 then part_ab_p_mos=length(buyin_2y);
+if indexc(buyin_2y,"0","1","2","A","B") then part_ab_p_mos=indexc(buyin_2y,"0","1","2","A","B");
+if indexc(hmo_2y,"1","2","4","A","B","C")=0 then non_hmo_d_p_mos=length(hmo_2y);
+if indexc(hmo_2y,"1","2","4","A","B","C") then non_hmo_d_p_mos=indexc(hmo_2y,"1","2","4","A","B","C");
+if indexc(buyin_at_death,"0","1","2","A","B")=1 then part_ab_at_death=0;
+if indexc(buyin_at_death,"0","1","2","A","B")=0 then part_ab_at_death=1;
+if indexc(hmo_at_death,"1","2","4","A","B","C")=1 then hmo_d_at_death=1;
+if indexc(hmo_at_death,"1","2","4","A","B","C")=0 then hmo_d_at_death=0;
+
+if part_ab_p_mos<=non_hmo_d_p_mos then cont_ffs_p_mos=part_ab_p_mos;
+if non_hmo_d_p_mos<part_ab_p_mos then cont_ffs_p_mos=non_hmo_d_p_mos;
+run;
+
+data proj_int.ffs_after(keep=spid bene_id index_date index_year cont_ffs_p_mos non_hmo_d_p_mos part_ab_p_mos);
+set all_insurance3;
+run;
+
+H="get spending from claims pre"
+
+%macro mp(month_n=,days_start=,days_before_core=,source=,equ=,name=);
+
+/*Case 1 - no adjustment needed - claims where entire claim is within the x months before the interview*/
+proc sql;
+create table &source._meet_pre_1 as select *
+from proj_int.&source._meet_&days_before_core.p
+where &days_start<=index_date-admit_date<=&days_before_core and
+&days_start<=index_date-disch_date<=&days_before_core;
+quit;
+
+
+/*Case 2 - adjustment needed because part of stay is in the window but part is before the window has ended
+Claims with admission date within start of x months but discharge date is before the x month window*/
+proc sql;
+create table &source._meet2_pre as select *
+from proj_int.&source._meet_&days_before_core.
+where index_date-disch_date<=&days_before_core and index_date-admit_date>&days_before_core;
+quit;
+
+
+
+/*identify fraction of claims that span x month period that should be 
+attributed to the x month period
+by just using the fraction of time that was included in the span*/
+data &source._meet3_pre;
+set &source._meet2_pre;
+pct_xm=(disch_date-(index_date-&days_before_core.))/(disch_date-admit_date);
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+/*scale the partial claims by the time within the x month period*/
+list=list*pct_xm;
+end;
+
+run;
+
+/*Case 3 - adjustment needed because part of stay is in the window but part is after the window ends
+Claims with discharge date within start of x months but admit date is before the interview date*/
+proc sql;
+create table &source._meet4_pre as select *
+from proj_int.&source._meet_&days_before_core.
+where disch_date>index_date & admit_date<index_date & index_date-admit_date<=&days_before_core.;
+quit;
+
+
+
+
+data &source._meet5_pre;
+set &source._meet4_pre;
+pct_xm=(index_date-admit_date)/(disch_date-admit_date);
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+/*scale the partial claims by the time within the x month period*/
+list=list*pct_xm;
+end;
+
+run;
+
+/*note-12/5/18, switched to CPI-U for inflation adjustment for all projects
+adjust for inflation, Uses CPI for Medical Services from 
+BLS website, accessed 5/4/2015*/
+
+/*create table merging both the claims fully in the 2 index_date period 
+and those partially in that time
+adjust for inflation here also*/
+data &source._cost_pre;
+set &source._meet_pre_1 &source._meet3_pre &source._meet5_pre;
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+end;
+
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.01262;
+if year(admit_date)=2014 then rate=1.01382;
+if year(admit_date)=2013 then rate=1.03026;
+if year(admit_date)=2012 then rate=1.04535;
+if year(admit_date)=2011 then rate=1.06699;
+if year(admit_date)=2010 then rate=1.10067;
+if year(admit_date)=2009 then rate=1.11872;
+if year(admit_date)=2008 then rate=1.11474;
+if year(admit_date)=2007 then rate=1.15754;
+if year(admit_date)=2006 then rate=1.19051;
+
+
+
+&source._paid_by_mc=rate*(clm_pmt_amt+clm_pass_thru_per_diem_amt);
+run;
+*calculates total of mc charges for the claim type by hrs bid;
+proc sql;
+create table &source._pay_pre as select distinct bene_id,index_date,
+sum(&source._paid_by_mc) as &source._paid_by_mc 
+from &source._cost_pre group by bene_id,index_date;
+quit;
+
+*merges the totals above with the full interview list;
+proc sql;
+create table &source._&name._pre as select
+a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc_&name.
+from proj_int.index a
+left join
+ &source._pay_pre b
+ on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_date=b.index_date;
+ quit;
+
+ proc sort data=&source._&name._pre ;
+ by bene_id index_date;
+ run;
+%mend;
+
+/*Runs macro to get total for the SNF claims*/
+%mp(days_start=0,days_before_core=91,source=snf,equ=,name=3m );
+%mp(days_start=0,days_before_core=183,source=snf,equ=,name=6m );
+%mp(days_start=0,days_before_core=274,source=snf,equ=,name=9m );
+%mp(days_start=0,days_before_core=365,source=snf,equ=,name=12m );
+/*Runs macro to get total for the inpatient (not SNF) claims*/
+%mp(days_start=0,days_before_core=91,source=ip,equ=~,name=3m );
+%mp(days_start=0,days_before_core=183,source=ip,equ=~,name=6m );
+%mp(days_start=0,days_before_core=274,source=ip,equ=,name=9m );
+%mp(days_start=0,days_before_core=365,source=ip,equ=~,name=12m );
+
+
+/**********************************************************/
+/**********************************************************/
+/*totals from other claim types*/
+/**********************************************************/
+/**********************************************************/
+/*macro to calculate totals for the claims that are not in medpar files*/
+%macro all_other(source=,month_n=,days_start=,days_before_core=);
+
+/*Adjust for inflation*/
+data &source._meet2_pre;
+set proj_int.&source._meet_&days_before_core.;
+/*adjust to 2016 dollars*/
+
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.01262;
+if year(admit_date)=2014 then rate=1.01382;
+if year(admit_date)=2013 then rate=1.03026;
+if year(admit_date)=2012 then rate=1.04535;
+if year(admit_date)=2011 then rate=1.06699;
+if year(admit_date)=2010 then rate=1.10067;
+if year(admit_date)=2009 then rate=1.11872;
+if year(admit_date)=2008 then rate=1.11474;
+if year(admit_date)=2007 then rate=1.15754;
+if year(admit_date)=2006 then rate=1.19051;
+
+&source._paid_by_mc=rate*(clm_pmt_amt);
+run;
+
+/*Calculate total mc payments by ID*/
+proc sql;
+create table &source._pay_pre as select distinct bene_id,index_date,
+sum(&source._paid_by_mc) as &source._paid_by_mc
+from &source._meet2_pre group by bene_id,index_date;
+quit;
+
+/*merge in mc totals with interview list*/
+proc sql;
+create table &source.&month_n._pre as select
+a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc_n_&month_n.
+from proj_int.index a
+left join
+ &source._pay_pre b
+ on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_date=b.index_date;
+ quit;
+
+ proc sort data=&source&month_n._pre ;
+ by bene_id index_date;
+ run;
+ %mend all_other;
+
+/******************************************************************/
+/* Run the macro over the mc claims files for 2 index_dates prior to death*/
+/******************************************************************/
+
+%all_other(source=op,month_n=_12m,days_start=0,days_before_core=365);
+  %all_other(source=pb,month_n=_12m,days_start=0,days_before_core=365);
+   %all_other(source=hh,month_n=_12m,days_start=0,days_before_core=365);
+    %all_other(source=hs,month_n=_12m,days_start=0,days_before_core=365);
+     %all_other(source=dm,month_n=_12m,days_start=0,days_before_core=365);
+
+ %all_other(source=op,month_n=_9m,days_start=0,days_before_core=274);
+  %all_other(source=pb,month_n=_9m,days_start=0,days_before_core=274);
+   %all_other(source=hh,month_n=_9m,days_start=0,days_before_core=274);
+    %all_other(source=hs,month_n=_9m,days_start=0,days_before_core=274);
+     %all_other(source=dm,month_n=_9m,days_start=0,days_before_core=274);
+
+ %all_other(source=op,month_n=_6m,days_start=0,days_before_core=183);
+  %all_other(source=pb,month_n=_6m,days_start=0,days_before_core=183);
+   %all_other(source=hh,month_n=_6m,days_start=0,days_before_core=183);
+    %all_other(source=hs,month_n=_6m,days_start=0,days_before_core=183);
+     %all_other(source=dm,month_n=_6m,days_start=0,days_before_core=183);
+	 
+ %all_other(source=op,month_n=_3m,days_start=0,days_before_core=91);
+  %all_other(source=pb,month_n=_3m,days_start=0,days_before_core=91);
+   %all_other(source=hh,month_n=_3m,days_start=0,days_before_core=91);
+    %all_other(source=hs,month_n=_3m,days_start=0,days_before_core=91);
+     %all_other(source=dm,month_n=_3m,days_start=0,days_before_core=91);
+	 
+
+
+/******************************************************************/
+/* Merge into single file, by id and interview */
+/******************************************************************/
+*first merge 12m and 6m spending into single dataset;
+data proj_int.mc_costs_all_pre;
+merge 
+ip_12m_pre snf_12m_pre hh_12m_pre hs_12m_pre pb_12m_pre op_12m_pre dm_12m_pre
+ip_9m_pre snf_9m_pre hh_9m_pre hs_9m_pre pb_9m_pre op_9m_pre dm_9m_pre
+ip_6m_pre snf_6m_pre hh_6m_pre hs_6m_pre pb_6m_pre op_6m_pre dm_6m_pre
+ip_3m_pre snf_3m_pre hh_3m_pre hs_3m_pre pb_3m_pre op_3m_pre dm_3m_pre;
+by bene_id index_date;
+run;
+
+
+
+H="get spending from claims post"
+
+%macro mp(month_n=,days_start=,days_after_core=,source=,equ=,name=);
+
+/*Case 1 - no adjustment needed - claims where entire claim is within the x months after the interview*/
+proc sql;
+create table &source._meet_post_1 as select *
+from proj_int.&source._meet_&days_after_core.p
+where &days_start<=disch_date-index_date<=&days_after_core and
+&days_start<=admit_date-index_date<=&days_after_core;
+quit;
+
+data zz_&source._meet_post_1;
+set &source._meet_post_1;
+ivw_to_admit=admit_date-index_date;
+ivw_to_disch=disch_date-index_date;
+run;
+proc means; var ivw_to_admit ivw_to_disch; run;
+
+/*Case 2 - adjustment needed because part of stay is in the window but part is after the window has ended
+Claims with admission date within start of x months but discharge date is after the x month window*/
+proc sql;
+create table &source._meet2_post as select *
+from proj_int.&source._meet_&days_after_core.p
+where disch_date-index_date>&days_after_core and 0<=admit_date-index_date<=&days_after_core;
+quit;
+
+data zz_&source._meet2_post;
+set &source._meet2_post;
+ivw_to_admit=admit_date-index_date;
+ivw_to_disch=disch_date-index_date;
+run;
+proc means; var ivw_to_admit ivw_to_disch; run;
+
+
+/*identify fraction of claims that span x month period that should be 
+attributed to the x month period
+by just using the fraction of time that was included in the span*/
+data &source._meet3_post;
+set &source._meet2_post;
+pct_xm=((index_date+&days_after_core)-admit_date)/(disch_date-admit_date);
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+/*scale the partial claims by the time within the x month period*/
+list=list*pct_xm;
+end;
+
+run;
+
+/*Case 3 - adjustment needed because part of stay is in the window but part is before the window started
+Claims with discharge date within start of x months but admit date is before the interview date*/
+proc sql;
+create table &source._meet4_post as select *
+from proj_int.&source._meet_&days_after_core.p
+where disch_date-index_date<=&days_after_core and admit_date-index_date<&days_start;
+quit;
+
+data zz_&source._meet4_post;
+set &source._meet4_post;
+ivw_to_admit=admit_date-index_date;
+ivw_to_disch=disch_date-index_date;
+run;
+proc means; var ivw_to_admit ivw_to_disch; run;
+
+
+data &source._meet5_post;
+set &source._meet4_post;
+pct_xm=(disch_date-index_date)/(disch_date-admit_date);
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+/*scale the partial claims by the time within the x month period*/
+list=list*pct_xm;
+end;
+
+run;
+
+/*note-12/5/18, switched to CPI-U for inflation adjustment for all projects
+adjust for inflation, Uses CPI for Medical Services from 
+BLS website, accessed 5/4/2015*/
+
+/*create table merging both the claims fully in the 2 index_date period 
+and those partially in that time
+adjust for inflation here also*/
+data &source._cost_post;
+set &source._meet_post_1 &source._meet3_post &source._meet5_post;
+array list clm_pmt_amt clm_pass_thru_per_diem_amt;
+do over list;
+if list=. then list=0;
+end;
+
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.01262;
+if year(admit_date)=2014 then rate=1.01382;
+if year(admit_date)=2013 then rate=1.03026;
+if year(admit_date)=2012 then rate=1.04535;
+if year(admit_date)=2011 then rate=1.06699;
+if year(admit_date)=2010 then rate=1.10067;
+if year(admit_date)=2009 then rate=1.11872;
+if year(admit_date)=2008 then rate=1.11474;
+if year(admit_date)=2007 then rate=1.15754;
+if year(admit_date)=2006 then rate=1.19051;
+
+
+
+&source._paid_by_mc=rate*(clm_pmt_amt+clm_pass_thru_per_diem_amt);
+run;
+*calculates total of mc charges for the claim type by hrs bid;
+proc sql;
+create table &source._pay_post as select distinct bene_id,index_date,
+sum(&source._paid_by_mc) as &source._paid_by_mc 
+from &source._cost_post group by bene_id,index_date;
+quit;
+
+*merges the totals above with the full interview list;
+proc sql;
+create table &source._&name._post as select
+a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc_&name.
+from proj_int.index a
+left join
+ &source._pay_post b
+ on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_date=b.index_date;
+ quit;
+
+ proc sort data=&source._&name._post ;
+ by bene_id index_date;
+ run;
+%mend;
+
+/*Runs macro to get total for the SNF claims*/
+%mp(days_start=0,days_after_core=91,source=snf,equ=,name=3m );
+%mp(days_start=0,days_after_core=183,source=snf,equ=,name=6m );
+%mp(days_start=0,days_after_core=274,source=snf,equ=,name=9m );
+%mp(days_start=0,days_after_core=365,source=snf,equ=,name=12m );
+%mp(days_start=0,days_after_core=456,source=snf,equ=,name=15m );
+%mp(days_start=0,days_after_core=548,source=snf,equ=,name=18m );
+%mp(days_start=0,days_after_core=639,source=snf,equ=,name=21m );
+%mp(days_start=0,days_after_core=730,source=snf,equ=,name=24m );
+/*Runs macro to get total for the inpatient (not SNF) claims*/
+%mp(days_start=0,days_after_core=91,source=ip,equ=~,name=3m );
+%mp(days_start=0,days_after_core=183,source=ip,equ=~,name=6m );
+%mp(days_start=0,days_after_core=274,source=ip,equ=,name=9m );
+%mp(days_start=0,days_after_core=365,source=ip,equ=~,name=12m );
+%mp(days_start=0,days_after_core=456,source=ip,equ=~,name=15m );
+%mp(days_start=0,days_after_core=548,source=ip,equ=~,name=18m );
+%mp(days_start=0,days_after_core=639,source=ip,equ=~,name=21m );
+%mp(days_start=0,days_after_core=730,source=ip,equ=~,name=24m );
+
+/**********************************************************/
+/**********************************************************/
+/*totals from other claim types*/
+/**********************************************************/
+/**********************************************************/
+/*macro to calculate totals for the claims that are not in medpar files*/
+%macro all_other(source=,month_n=,days_start=,days_after_core=);
+
+/*Adjust for inflation*/
+data &source._meet2_post;
+set proj_int.&source._meet_&days_after_core.p;
+/*adjust to 2016 dollars*/
+
+if year(admit_date)=2016 then rate=1;
+if year(admit_date)=2015 then rate=1.01262;
+if year(admit_date)=2014 then rate=1.01382;
+if year(admit_date)=2013 then rate=1.03026;
+if year(admit_date)=2012 then rate=1.04535;
+if year(admit_date)=2011 then rate=1.06699;
+if year(admit_date)=2010 then rate=1.10067;
+if year(admit_date)=2009 then rate=1.11872;
+if year(admit_date)=2008 then rate=1.11474;
+if year(admit_date)=2007 then rate=1.15754;
+if year(admit_date)=2006 then rate=1.19051;
+
+&source._paid_by_mc=rate*(clm_pmt_amt);
+run;
+
+/*Calculate total mc payments by ID*/
+proc sql;
+create table &source._pay_post as select distinct bene_id,index_date,
+sum(&source._paid_by_mc) as &source._paid_by_mc
+from &source._meet2_post group by bene_id,index_date;
+quit;
+
+/*merge in mc totals with interview list*/
+proc sql;
+create table &source.&month_n._post as select
+a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc&month_n 
+from proj_int.index a
+left join
+ &source._pay_post b
+ on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_date=b.index_date;
+ quit;
+
+ proc sort data=&source&month_n._post ;
+ by bene_id index_date;
+ run;
+ %mend all_other;
+
+/******************************************************************/
+/* Run the macro over the mc claims files for 2 index_dates prior to death*/
+/******************************************************************/
+%all_other(source=op,month_n=_24m,days_start=0,days_after_core=730);
+  %all_other(source=pb,month_n=_24m,days_start=0,days_after_core=730);
+   %all_other(source=hh,month_n=_24m,days_start=0,days_after_core=730);
+    %all_other(source=hs,month_n=_24m,days_start=0,days_after_core=730);
+     %all_other(source=dm,month_n=_24m,days_start=0,days_after_core=730);
+
+%all_other(source=op,month_n=_21m,days_start=0,days_after_core=639);
+  %all_other(source=pb,month_n=_21m,days_start=0,days_after_core=639);
+   %all_other(source=hh,month_n=_21m,days_start=0,days_after_core=639);
+    %all_other(source=hs,month_n=_21m,days_start=0,days_after_core=639);
+     %all_other(source=dm,month_n=_21m,days_start=0,days_after_core=639);
+
+
+%all_other(source=op,month_n=_18m,days_start=0,days_after_core=548);
+  %all_other(source=pb,month_n=_18m,days_start=0,days_after_core=548);
+   %all_other(source=hh,month_n=_18m,days_start=0,days_after_core=548);
+    %all_other(source=hs,month_n=_18m,days_start=0,days_after_core=548);
+     %all_other(source=dm,month_n=_18m,days_start=0,days_after_core=548);
+
+%all_other(source=op,month_n=_15m,days_start=0,days_after_core=456);
+  %all_other(source=pb,month_n=_15m,days_start=0,days_after_core=456);
+   %all_other(source=hh,month_n=_15m,days_start=0,days_after_core=456);
+    %all_other(source=hs,month_n=_15m,days_start=0,days_after_core=456);
+     %all_other(source=dm,month_n=_15m,days_start=0,days_after_core=456);
+
+%all_other(source=op,month_n=_12m,days_start=0,days_after_core=365);
+  %all_other(source=pb,month_n=_12m,days_start=0,days_after_core=365);
+   %all_other(source=hh,month_n=_12m,days_start=0,days_after_core=365);
+    %all_other(source=hs,month_n=_12m,days_start=0,days_after_core=365);
+     %all_other(source=dm,month_n=_12m,days_start=0,days_after_core=365);
+
+ %all_other(source=op,month_n=_9m,days_start=0,days_after_core=274);
+  %all_other(source=pb,month_n=_9m,days_start=0,days_after_core=274);
+   %all_other(source=hh,month_n=_9m,days_start=0,days_after_core=274);
+    %all_other(source=hs,month_n=_9m,days_start=0,days_after_core=274);
+     %all_other(source=dm,month_n=_9m,days_start=0,days_after_core=274);
+
+ %all_other(source=op,month_n=_6m,days_start=0,days_after_core=183);
+  %all_other(source=pb,month_n=_6m,days_start=0,days_after_core=183);
+   %all_other(source=hh,month_n=_6m,days_start=0,days_after_core=183);
+    %all_other(source=hs,month_n=_6m,days_start=0,days_after_core=183);
+     %all_other(source=dm,month_n=_6m,days_start=0,days_after_core=183);
+	 
+ %all_other(source=op,month_n=_3m,days_start=0,days_after_core=91);
+  %all_other(source=pb,month_n=_3m,days_start=0,days_after_core=91);
+   %all_other(source=hh,month_n=_3m,days_start=0,days_after_core=91);
+    %all_other(source=hs,month_n=_3m,days_start=0,days_after_core=91);
+     %all_other(source=dm,month_n=_3m,days_start=0,days_after_core=91);
+	 
+
+
+/******************************************************************/
+/* Merge into single file, by id and interview */
+/******************************************************************/
+*first merge 12m and 6m spending into single dataset;
+data proj_int.mc_costs_all_post;
+merge ip_24m_post snf_24m_post hh_24m_post hs_24m_post pb_24m_post op_24m_post dm_24m_post
+ip_21m_post snf_21m_post hh_21m_post hs_21m_post pb_21m_post op_21m_post dm_21m_post
+ip_18m_post snf_18m_post hh_18m_post hs_18m_post pb_18m_post op_18m_post dm_18m_post
+ip_15m_post snf_15m_post hh_15m_post hs_15m_post pb_15m_post op_15m_post dm_15m_post
+ip_12m_post snf_12m_post hh_12m_post hs_12m_post pb_12m_post op_12m_post dm_12m_post
+ip_9m_post snf_9m_post hh_9m_post hs_9m_post pb_9m_post op_9m_post dm_9m_post
+ip_6m_post snf_6m_post hh_6m_post hs_6m_post pb_6m_post op_6m_post dm_6m_post
+ip_3m_post snf_3m_post hh_3m_post hs_3m_post pb_3m_post op_3m_post dm_3m_post;
+by bene_id index_date;
+run;
+
+
+
+H="get ED visits pre"
+/*These additional variables are just added to the dataset with the
+elixhauser and cc's 1 year preceeding the interview, can add them
+later when required to get the 2 year look-back dataset*/
+
+/****************************************************************************/
+/*Get indicator of any hospital admission 6 and 12 months pre-core interview*/
+/****************************************************************************/
+
+%macro admissions(days=,suffix=);
+
+/*pull list of ip claims from all medpar claims x days pre-interview*/
+data ip_meet_&days.;
+set proj_int.ip_meet_&days.;
+run;
+data ip_&days._2;
+set ip_meet_&days.;
+type_adm=clm_ip_admsn_type_cd;
+if icarecnt=. then icarecnt=0; /*medpar intensive care day count*/
+if CRNRYDAY=. then CRNRYDAY=0; /*medpar coronary day count*/
+icu_days=icarecnt+CRNRYDAY;
+em_urgent_admit=0; /*Urgent , emergent admissions from admission type*/
+if type_adm in (1,2) then em_urgent_admit=1;
+em_admit=0;
+if type_adm=1 then em_admit=1;
+urgent_admit=0;
+if type_adm=2 then urgent_admit=1;
+elect_admit=0;
+if type_adm=3 then elect_admit=1;
+ind_ed_charge=0; /*ED charges as another indicator of ED use*/
+if erdaycnt>0 & erdaycnt~=. then ind_ed_charge=1;
+if erdaycnt=0 | erdaycnt=. then ind_ed_charge=0;
+
+/*truncate stays where the admit is more than x days before interview
+or discharge is after the interview date so can get accurate LOS*/
+if index_date-admit_date>&days. then do;
+	admit_date=index_date-&days.;
+	admit_trunc=1;
+	end;
+if index_date<disch_date then do;
+	disch_date=index_date;
+	disch_trunc=1;	
+	end;
+adj_los=disch_date-admit_date;
+if disch_date-admit_date=0 then adj_los=1;
+run;
+
+proc sort data=ip_&days._2;
+by bene_id index_year;
+run;
+
+proc sql;
+create table ip_&days._3 as select distinct bene_id,index_year,
+/*total ICU days*/
+sum(icu_days) as icu_days_&suffix. label="total icu days &suffix. pre ivw ivw",
+/*count of IP admissions, all types*/
+count(*) as n_ip_admit_&suffix. label="total n of hospital admit &suffix. pre ivw ivw",
+/*total Hospital LOS*/
+sum(adj_los) as n_hospd_&suffix. label="total hospital days &suffix. pre ivw ivw",
+/*ICU stays*/
+count(case when icu_days>0 then 1 else . end) as n_icu_stays_&suffix. 
+	label="ICU stays &suffix pre ivw",
+/*count urgent or emergency admissions*/
+count(case when em_urgent_admit=1 then em_urgent_admit else . end) as n_em_urgent_admit_&suffix. 
+	label="total n of urgent/emergent hospital admit &suffix. pre ivw ivw",
+/*count of emergency admissions, from admission type code*/
+count(case when em_admit=1 then em_admit else . end) as n_em_admit_&suffix. 
+	label="total n of emergent hospital admit &suffix. pre ivw ivw",
+/*count of urgent admissions, from admission type code*/
+count(case when urgent_admit=1 then urgent_admit else . end) as n_urgent_admit_&suffix. 
+	label="total n of urgent hospital admit &suffix. pre ivw ivw",
+/*count of elective admissions, from admission type code*/
+count(case when elect_admit=1 then elect_admit else . end) as n_elect_admit_&suffix. 
+	label="total n of elective hospital admit &suffix. pre ivw ivw",
+/*count of admissions with any ED charges*/
+count(case when ind_ed_charge=1 then ind_ed_charge else . end) as n_ED_ip_&suffix. 
+	label="total n of ED visits with subsequent admit &suffix. pre ivw ivw"
+
+ from ip_&days._2 group by bene_id,index_year;
+quit;
+
+
+%mend;
+
+
+%admissions(days=91,suffix=3m);
+%admissions(days=183,suffix=6m);
+%admissions(days=274,suffix=9m);
+%admissions(days=365,suffix=12m);
+
+
+
+
+
+proc sort data=ip_91_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_3m as select a.*,b.n_ED_ip_3m
+from proj_int.index a
+left join
+ip_91_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+proc sort data=ip_183_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_6m as select a.*,b.n_ED_ip_6m
+from proj_int.index a
+left join
+ip_183_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+proc sort data=ip_274_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_9m as select a.*,b.n_ED_ip_9m
+from proj_int.index a
+left join
+ip_274_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_365_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_12m as select a.*,b.n_ED_ip_12m
+from proj_int.index a
+left join
+ip_365_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table ip1 as select *
+from ip_3m a
+left join
+ip_6m b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join 
+ip_9m c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year
+left join
+ip_12m d 
+on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_year;
+quit;
+
+/*Dataset just contains obs with ffs mc 1yr and age 65+
+So if missing, set var to 0*/
+ data ip ;
+ set ip1 ;
+ array list n_ED_ip_3m n_ED_ip_6m n_ED_ip_9m n_ED_ip_12m;
+ do over list;
+ if list=. then list=0;
+ end;
+
+ if n_ED_ip_3m=0 then ind_ED_adm_3m=0;
+ if n_ED_ip_3m>0 & n_ED_ip_3m~=. then ind_ED_adm_3m=1;
+ label ind_ED_adm_3m="Ind ED use with hospital admission 3m pre ivw, from charges";
+
+ if n_ED_ip_6m=0 then ind_ED_adm_6m=0;
+ if n_ED_ip_6m>0 & n_ED_ip_6m~=. then ind_ED_adm_6m=1;
+ label ind_ED_adm_6m="Ind ED use with hospital admission 6m pre ivw, from charges";
+
+ if n_ED_ip_9m=0 then ind_ED_adm_9m=0;
+ if n_ED_ip_9m>0 & n_ED_ip_9m~=. then ind_ED_adm_9m=1;
+ label ind_ED_adm_9m="Ind ED use with hospital admission 9m pre ivw, from charges";
+
+
+ if n_ED_ip_12m=0 then ind_ED_adm_12m=0;
+ if n_ED_ip_12m>0 & n_ED_ip_12m~=. then ind_ED_adm_12m=1;
+ label ind_ED_adm_12m="Ind ED use with hospital admission 12m pre ivw, from charges";
+
+run;
+
+%macro ed_op (days=,months=);
+
+proc contents data=medi.op_09_16; run;
+data ed_op_1;
+set proj_int.op_meet_&days. (keep=bene_id admit_date disch_date index_date index_year erdaycnt obs_stay);
+if erdaycnt>0 then ed_op=1;
+if erdaycnt=0 then ed_op=0;
+if obs_stay=. then obs_stay=0;
+if obs_stay>1 then obs_stay=1;
+run;
+
+proc freq;
+table ed_op;
+run;
+
+proc sql;
+create table ed_op_2 as select distinct bene_id,index_year,
+count(case when ed_op=1 then ed_op else . end)
+	as n_ed_op_visits_&months.,
+sum(obs_stay) as n_obs_stay_&months.,
+max(obs_stay) as obs_stay_&months.
+	from ed_op_1 group by bene_id,index_year;
+quit;
+
+
+
+
+proc sort data=ed_op_2 nodupkey;
+by bene_id index_year;
+run;
+
+
+data ed&months. ;
+set ed_op_2;
+if n_ed_op_visits_&months.=. then n_ed_op_visits_&months.=0;
+label n_ed_op_visits_&months.="Count ED OP visits, 1yr pre ivw";
+
+if n_ed_op_visits_&months.=0 then ind_ed_op_&months.=0;
+if n_ed_op_visits_&months.>0 & n_ed_op_visits_&months.~=. then ind_ed_op_&months.=1;
+label ind_ed_op_&months.="Indicator any ED OP visits, &months. months pre ivw";
+
+if n_obs_stay_&months.=. then n_obs_stay_&months.=0;
+label n_obs_stay_&months.="Number obs stays, &months. months pre ivw";
+
+if n_obs_stay_&months.=. then obs_stay_&months.=0;
+label obs_stay_&months.="Indicator any obs stay, &months. months pre ivw";
+run;
+
+%mend;
+
+%ed_op(days=91,months=3);
+%ed_op(days=183,months=6);
+%ed_op(days=274,months=9);
+%ed_op(days=365,months=12);
+
+
+
+
+proc sql;
+create table ed as select * from 
+ed3 a
+left join
+ed6 b
+on a.bene_id=b.bene_id and a.index_year=b.index_year
+left join
+ed9 c
+on a.bene_id=c.bene_id and a.index_year=c.index_year
+left join
+ed12 d
+on a.bene_id=d.bene_id and a.index_year=d.index_year;
+quit;
+
+proc sort data=ip out=ip nodupkey; by bene_id index_year; run;
+proc sort data=ed out=ed nodupkey; by bene_id index_year; run;
+
+proc sql;
+create table proj_int.utilization_pre as select * 
+from proj_int.index a 
+left join
+ip b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join 
+ed c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year;
+quit;
+
+proc contents data=proj_int.utilization_pre; 
+run;
+
+
+
+H="get ED visits post"
+/*These additional variables are just added to the dataset with the
+elixhauser and cc's 1 year postceeding the interview, can add them
+later when required to get the 2 year look-back dataset*/
+
+/****************************************************************************/
+/*Get indicator of any hospital admission 6 and 12 months post-core interview*/
+/****************************************************************************/
+
+%macro admissions(days=,suffix=);
+
+/*pull list of ip claims from all medpar claims x days post-interview*/
+data ip_meet_&days.;
+set proj_int.ip_meet_&days.p;
+run;
+data ip_&days._2;
+set ip_meet_&days.;
+type_adm=clm_ip_admsn_type_cd;
+if icarecnt=. then icarecnt=0; /*medpar intensive care day count*/
+if CRNRYDAY=. then CRNRYDAY=0; /*medpar coronary day count*/
+icu_days=icarecnt+CRNRYDAY;
+em_urgent_admit=0; /*Urgent , emergent admissions from admission type*/
+if type_adm in (1,2) then em_urgent_admit=1;
+em_admit=0;
+if type_adm=1 then em_admit=1;
+urgent_admit=0;
+if type_adm=2 then urgent_admit=1;
+elect_admit=0;
+if type_adm=3 then elect_admit=1;
+ind_ed_charge=0; /*ED charges as another indicator of ED use*/
+if erdaycnt>0 & erdaycnt~=. then ind_ed_charge=1;
+if erdaycnt=0 | erdaycnt=. then ind_ed_charge=0;
+
+/*truncate stays where the admit is more than x days before interview
+or discharge is after the interview date so can get accurate LOS*/
+if index_date-admit_date>&days. then do;
+	admit_date=index_date-&days.;
+	admit_trunc=1;
+	end;
+if index_date<disch_date then do;
+	disch_date=index_date;
+	disch_trunc=1;	
+	end;
+adj_los=disch_date-admit_date;
+if disch_date-admit_date=0 then adj_los=1;
+run;
+
+proc sort data=ip_&days._2;
+by bene_id index_year;
+run;
+
+proc sql;
+create table ip_&days.p_3 as select distinct bene_id,index_year,
+/*total ICU days*/
+sum(icu_days) as icu_days_&suffix. label="total icu days &suffix. post ivw ivw",
+/*count of IP admissions, all types*/
+count(*) as n_ip_admit_&suffix. label="total n of hospital admit &suffix. post ivw ivw",
+/*total Hospital LOS*/
+sum(adj_los) as n_hospd_&suffix. label="total hospital days &suffix. post ivw ivw",
+/*ICU stays*/
+count(case when icu_days>0 then 1 else . end) as n_icu_stays_&suffix. 
+	label="ICU stays &suffix post ivw",
+/*count urgent or emergency admissions*/
+count(case when em_urgent_admit=1 then em_urgent_admit else . end) as n_em_urgent_admit_&suffix. 
+	label="total n of urgent/emergent hospital admit &suffix. post ivw ivw",
+/*count of emergency admissions, from admission type code*/
+count(case when em_admit=1 then em_admit else . end) as n_em_admit_&suffix. 
+	label="total n of emergent hospital admit &suffix. post ivw ivw",
+/*count of urgent admissions, from admission type code*/
+count(case when urgent_admit=1 then urgent_admit else . end) as n_urgent_admit_&suffix. 
+	label="total n of urgent hospital admit &suffix. post ivw ivw",
+/*count of elective admissions, from admission type code*/
+count(case when elect_admit=1 then elect_admit else . end) as n_elect_admit_&suffix. 
+	label="total n of elective hospital admit &suffix. post ivw ivw",
+/*count of admissions with any ED charges*/
+count(case when ind_ed_charge=1 then ind_ed_charge else . end) as n_ED_ip_&suffix. 
+	label="total n of ED visits with subsequent admit &suffix. post ivw ivw"
+
+ from ip_&days._2 group by bene_id,index_year;
+quit;
+
+
+%mend;
+
+
+%admissions(days=91,suffix=3mp);
+%admissions(days=183,suffix=6mp);
+%admissions(days=274,suffix=9mp);
+%admissions(days=365,suffix=12mp);
+%admissions(days=456,suffix=15mp);
+%admissions(days=548,suffix=18mp);
+%admissions(days=639,suffix=21mp);
+%admissions(days=730,suffix=24mp);
+
+
+
+
+
+proc sort data=ip_91p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_3mp as select a.*,b.n_ED_ip_3mp
+from proj_int.index a
+left join
+ip_91p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+proc sort data=ip_183p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_6mp as select a.*,b.n_ED_ip_6mp
+from proj_int.index a
+left join
+ip_183p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+
+proc sort data=ip_274_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_9mp as select a.*,b.n_ED_ip_9mp
+from proj_int.index a
+left join
+ip_274p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_365p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_12mp as select a.*,b.n_ED_ip_12mp
+from proj_int.index a
+left join
+ip_365p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sql;
+create table ip1 as select *
+from ip_3mp a
+left join
+ip_6mp b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join 
+ip_9mp c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year
+left join
+ip_12mp d 
+on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_year;
+quit;
+
+/*Dataset just contains obs with ffs mc 1yr and age 65+
+So if missing, set var to 0*/
+ data ip ;
+ set ip1 ;
+ array list n_ED_ip_3mp n_ED_ip_6mp n_ED_ip_9mp n_ED_ip_12mp n_ED_ip_15mp n_ED_ip_18mp n_ED_ip_21mp n_ED_ip_24mp;
+ do over list;
+ if list=. then list=0;
+ end;
+
+ if n_ED_ip_3mp=0 then ind_ED_adm_3mp=0;
+ if n_ED_ip_3mp>0 & n_ED_ip_3mp~=. then ind_ED_adm_3mp=1;
+ label ind_ED_adm_3mp="Ind ED use with hospital admission 3m post ivw, from charges";
+
+ if n_ED_ip_6mp=0 then ind_ED_adm_6mp=0;
+ if n_ED_ip_6mp>0 & n_ED_ip_6mp~=. then ind_ED_adm_6mp=1;
+ label ind_ED_adm_6mp="Ind ED use with hospital admission 6m post ivw, from charges";
+
+ if n_ED_ip_9mp=0 then ind_ED_adm_9mp=0;
+ if n_ED_ip_9mp>0 & n_ED_ip_9mp~=. then ind_ED_adm_9mp=1;
+ label ind_ED_adm_9mp="Ind ED use with hospital admission 9m post ivw, from charges";
+
+
+ if n_ED_ip_12mp=0 then ind_ED_adm_12mp=0;
+ if n_ED_ip_12mp>0 & n_ED_ip_12mp~=. then ind_ED_adm_12mp=1;
+ label ind_ED_adm_12mp="Ind ED use with hospital admission 12m post ivw, from charges";
+
+ if n_ED_ip_15mp=0 then ind_ED_adm_15mp=0;
+ if n_ED_ip_15mp>0 & n_ED_ip_15mp~=. then ind_ED_adm_15mp=1;
+ label ind_ED_adm_15mp="Ind ED use with hospital admission 15m post ivw, from charges";
+
+ if n_ED_ip_18mp=0 then ind_ED_adm_18mp=0;
+ if n_ED_ip_18mp>0 & n_ED_ip_18mp~=. then ind_ED_adm_18mp=1;
+ label ind_ED_adm_18mp="Ind ED use with hospital admission 18m post ivw, from charges";
+
+ if n_ED_ip_21mp=0 then ind_ED_adm_21mp=0;
+ if n_ED_ip_21mp>0 & n_ED_ip_21mp~=. then ind_ED_adm_21mp=1;
+ label ind_ED_adm_21mp="Ind ED use with hospital admission 21m post ivw, from charges";
+
+ if n_ED_ip_24mp=0 then ind_ED_adm_24mp=0;
+ if n_ED_ip_24mp>0 & n_ED_ip_24mp~=. then ind_ED_adm_24mp=1;
+ label ind_ED_adm_24mp="Ind ED use with hospital admission 24m post ivw, from charges";
+
+run;
+
+%macro ed_op (days=,months=);
+
+data ed_op_1;
+set proj_int.op_meet_&days.p (keep=bene_id admit_date disch_date index_date index_year erdaycnt);
+if erdaycnt>0 then ed_op=1;
+if erdaycnt=0 then ed_op=0;
+
+run;
+
+
+proc sql;
+create table ed_op_2 as select distinct bene_id,index_year,
+count(case when ed_op=1 then ed_op else . end)
+	as n_ed_op_visits_&months.
+	from ed_op_1 group by bene_id,index_year;
+quit;
+
+
+
+
+proc sort data=ed_op_2 nodupkey;
+by bene_id index_year;
+run;
+
+
+data ed&months. (keep=bene_id index_date index_year n_ed_op_visits_&months. ind_ed_op_&months.);
+set ed_op_2;
+if n_ed_op_visits_&months.=. then n_ed_op_visits_&months.=0;
+label n_ed_op_visits_&months.="Count ED OP visits, 1yr post ivw";
+
+if n_ed_op_visits_&months.=0 then ind_ed_op_&months.=0;
+if n_ed_op_visits_&months.>0 & n_ed_op_visits_&months.~=. then ind_ed_op_&months.=1;
+label ind_ed_op_&months.="Indicator any ED OP visits, &months. months post ivw";
+
+%mend;
+
+%ed_op(days=91,months=3p);
+%ed_op(days=183,months=6p);
+%ed_op(days=274,months=9p);
+%ed_op(days=365,months=12p);
+%ed_op(days=456,months=15p);
+%ed_op(days=548,months=18p);
+%ed_op(days=639,months=21p);
+%ed_op(days=730,months=24p);
+
+proc sql;
+create table ed as select * from 
+ed3p a
+left join
+ed6p b
+on a.bene_id=b.bene_id and a.index_year=b.index_year
+left join
+ed9p c
+on a.bene_id=c.bene_id and a.index_year=c.index_year
+left join
+ed12p d
+on a.bene_id=d.bene_id and a.index_year=d.index_year
+left join
+ed15p e
+on a.bene_id=e.bene_id and a.index_year=e.index_year
+left join
+ed18p f
+on a.bene_id=f.bene_id and a.index_year=f.index_year
+left join
+ed21p g
+on a.bene_id=g.bene_id and a.index_year=g.index_year
+left join
+ed24p h
+on a.bene_id=h.bene_id and a.index_year=h.index_year;
+quit;
+
+
+
+proc sort data=ip out=ip nodupkey; by bene_id index_year; run;
+proc sort data=ed out=ed nodupkey; by bene_id index_year; run;
+
+proc sql;
+create table proj_int.utilization_post as select * 
+from proj_int.index a 
+left join
+ip b
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year
+left join 
+ed c
+on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year;
+quit;
+
+proc contents data=proj_int.utilization_post; 
+run;
+
+
+
+H="combine with interviews into one dataset"
+
+
+proc sql; 
+create table util_post_disability as select * from
+proj_int.index a
+left join proj_int.nhats b
+on a.spid=b.spid and a.index_date=b.datefirsthelp
+left join proj_int.ffs_before c
+on a.bene_id=c.bene_id and a.index_year=c.index_year
+left join proj_int.ffs_after d
+on a.bene_id=d.bene_id and a.index_year=d.index_year
+left join proj_int.mc_costs_all_pre e
+on a.bene_id=e.bene_id and a.index_year=e.index_year
+left join proj_int.mc_costs_all_post f
+on a.bene_id=f.bene_id and a.index_year=f.index_year
+left join proj_int.utilization_pre g
+on a.bene_id=g.bene_id and a.index_year=g.index_year
+left join proj_int.utilization_post h
+on a.bene_id=h.bene_id and a.index_year=h.index_year;
+quit;
+
+proc export data=util_post_disability outfile="E:\nhats\data\Projects\traj util after disability\util_post_disability.dta" replace;
+run;
