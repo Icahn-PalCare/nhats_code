@@ -1,4 +1,4 @@
-= V7 Outline MultiLine NoSorting TabWidth=30
+= V4 Outline MultiLine NoSorting TabWidth=30
 
 H="MA and disability"
 * Project examining trajectories of utilization after functional disability
@@ -1129,7 +1129,7 @@ quit;
 *merges the totals above with the full interview list;
 proc sql;
 create table &source._&name._pre as select
-a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc_&name.
+a.*,coalesce(b.&source._paid_by_mc,0) as &source._paid_by_mc_n__&name.
 from proj_int.index a
 left join
  &source._pay_pre b
@@ -1713,7 +1713,7 @@ run;
 
 proc contents data=medi.op_09_16; run;
 data ed_op_1;
-set proj_int.op_meet_&days. (keep=bene_id admit_date disch_date index_date index_year erdaycnt obs_stay);
+set proj_int.op_meet_&days. (keep=bene_id admit_date disch_date index_date index_year erdaycnt);
 if erdaycnt>0 then ed_op=1;
 if erdaycnt=0 then ed_op=0;
 if obs_stay=. then obs_stay=0;
@@ -1727,9 +1727,7 @@ run;
 proc sql;
 create table ed_op_2 as select distinct bene_id,index_year,
 count(case when ed_op=1 then ed_op else . end)
-	as n_ed_op_visits_&months.,
-sum(obs_stay) as n_obs_stay_&months.,
-max(obs_stay) as obs_stay_&months.
+	as n_ed_op_visits_&months.
 	from ed_op_1 group by bene_id,index_year;
 quit;
 
@@ -1750,12 +1748,6 @@ if n_ed_op_visits_&months.=0 then ind_ed_op_&months.=0;
 if n_ed_op_visits_&months.>0 & n_ed_op_visits_&months.~=. then ind_ed_op_&months.=1;
 label ind_ed_op_&months.="Indicator any ED OP visits, &months. months pre ivw";
 
-if n_obs_stay_&months.=. then n_obs_stay_&months.=0;
-label n_obs_stay_&months.="Number obs stays, &months. months pre ivw";
-
-if n_obs_stay_&months.=. then obs_stay_&months.=0;
-label obs_stay_&months.="Indicator any obs stay, &months. months pre ivw";
-run;
 
 %mend;
 
@@ -1952,6 +1944,58 @@ ip_365p_3 b
 on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
 quit;
 
+proc sort data=ip_456p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_15mp as select a.*,b.n_ED_ip_15mp
+from proj_int.index a
+left join
+ip_456p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_548p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_18mp as select a.*,b.n_ED_ip_18mp
+from proj_int.index a
+left join
+ip_548p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_639p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_21mp as select a.*,b.n_ED_ip_21mp
+from proj_int.index a
+left join
+ip_639p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
+proc sort data=ip_730p_3 nodupkey;
+by bene_id index_year;
+run;
+
+
+proc sql;
+create table ip_24mp as select a.*,b.n_ED_ip_24mp
+from proj_int.index a
+left join
+ip_730p_3 b 
+on trim(left(a.bene_id))=trim(left(b.bene_id)) and a.index_year=b.index_year;
+quit;
+
 proc sql;
 create table ip1 as select *
 from ip_3mp a
@@ -1963,7 +2007,16 @@ ip_9mp c
 on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year
 left join
 ip_12mp d 
-on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_year;
+on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_yearleft join
+ip_16mp e 
+on trim(left(a.bene_id))=trim(left(e.bene_id)) and a.index_year=e.index_yearleft join
+ip_18mp f 
+on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_yearleft join
+ip_21mp g 
+on trim(left(a.bene_id))=trim(left(g.bene_id)) and a.index_year=g.index_yearleft join
+ip_24mp h 
+on trim(left(a.bene_id))=trim(left(h.bene_id)) and a.index_year=h.index_year
+;
 quit;
 
 /*Dataset just contains obs with ffs mc 1yr and age 65+
@@ -2126,3 +2179,47 @@ quit;
 
 proc export data=util_post_disability outfile="E:\nhats\data\Projects\traj util after disability\util_post_disability.dta" replace;
 run;
+
+H="************Stata***************"
+
+
+H="variable creation"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability.dta", clear
+
+//generate total paid from individual amounts
+
+
+forvalues i=3(3)12 {
+	egen tot_paid_by_mc_n_`i'm=rowtotal(ip_paid_by_mc_n__`i'm snf_paid_by_mc_n__`i'm ///
+	hh_paid_by_mc_n__`i'm hs_paid_by_mc_n__`i'm pb_paid_by_mc_n__`i'm op_paid_by_mc_n__`i'm ///
+	dm_paid_by_mc_n__`i'm)
+	label var tot_paid_by_mc_n_`i'm "Total paid by MC `i' months before disability"
+}
+
+forvalues i=3(3)24 {
+	egen tot_paid_by_mc_p_`i'm=rowtotal(ip_paid_by_mc_`i'm snf_paid_by_mc_`i'm ///
+	hh_paid_by_mc_`i'm hs_paid_by_mc_`i'm pb_paid_by_mc_`i'm op_paid_by_mc_`i'm ///
+	dm_paid_by_mc_`i'm)
+	label var tot_paid_by_mc_p_`i'm "Total paid by MC `i' months after disability"
+}
+
+drop ip_* snf_* hh_* hs_* pb_* op_* dm_*
+
+
+ //generate quarterly amounts
+local time before
+ foreach x in n p {
+	gen expq`x'1=tot_paid_by_mc_`x'_3m
+	label var expq`x'1 "Total expenditures the 1st quarter `time' datefirsthelp"
+	forvalues i=6(3)12 {
+		gen expq`x'`=`i'/3'=tot_paid_by_mc_`x'_`i'm-tot_paid_by_mc_`x'_`=`i'-3'm
+		label var expq`x'`=`i'/3' "Total expenditures the `=`i'/3'th quarter `time' datefirsthelp"
+}
+	local time after
+
+}
+
+forvalues i=15(3)24 {
+	gen expqp`=`i'/3'=tot_paid_by_mc_p_`i'm-tot_paid_by_mc_p_`=`i'-3'm
+	label var expqp`=`i'/3' "Total expenditures the `=`i'/3'th quarter `time' datefirsthelp"
+}

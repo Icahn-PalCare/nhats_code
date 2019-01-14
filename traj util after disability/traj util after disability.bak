@@ -1,4 +1,4 @@
-= V4 Outline MultiLine NoSorting TabWidth=30
+= V7 Outline MultiLine NoSorting TabWidth=30
 
 H="MA and disability"
 * Project examining trajectories of utilization after functional disability
@@ -2106,7 +2106,7 @@ H="combine with interviews into one dataset"
 
 
 proc sql; 
-create table spending_post_disability as select * from
+create table util_post_disability as select * from
 proj_int.index a
 left join proj_int.nhats b
 on a.spid=b.spid and a.index_date=b.datefirsthelp
@@ -2123,3 +2123,6 @@ on a.bene_id=g.bene_id and a.index_year=g.index_year
 left join proj_int.utilization_post h
 on a.bene_id=h.bene_id and a.index_year=h.index_year;
 quit;
+
+proc export data=util_post_disability outfile="E:\nhats\data\Projects\traj util after disability\util_post_disability.dta" replace;
+run;
