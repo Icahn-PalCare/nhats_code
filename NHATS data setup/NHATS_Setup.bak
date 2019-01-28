@@ -132,7 +132,7 @@ ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
 
 if `w'==2 {	
 keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
-	re2dadrscorr re2dcensdiv ip2nginslast
+	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
 }
 
 if `w'==3 {	
@@ -2272,6 +2272,42 @@ use round_1_7_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
 
+//1/28/2019-Advance Care Planning based off of Ornstein instructions
+
+tab ep2eoltalk ep2poweratty
+tab ep2poweratty 
+tab ep2livngwill
+
+gen no_acp=0
+replace no_acp=1 if ep2eoltalk==2 & ep2poweratty==2 & ep2livngwill==2
+replace no_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
+
+gen formal_acp=0
+replace formal_acp=1 if ep2eoltalk==2 & (ep2poweratty==1 | ep2livngwill==1)
+replace formal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
+
+gen informal_acp=0
+replace informal_acp=1 if ep2eoltalk==1 & ep2poweratty==2 & ep2livngwill==2
+replace informal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
+
+gen acp=0
+replace acp=1 if ep2eoltalk==1 & (ep2poweratty==1 | ep2livngwill==1)
+replace acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .)
+ 
+label var no_acp "No Advance care planning, 1=yes"
+label var formal_acp "Formal Advance care planning, 1=yes"
+label var informal_acp "Informal Advance care planning, 1=yes"
+label var acp "Advance care planning (Formal & Informal), 1=yes"
+label define acp  0 "No" 1 "Yes" 
+foreach x in no_acp formal_acp informal_acp acp {
+label values `x' acp
+}
+
+
+foreach x in no_acp formal_acp informal_acp acp {
+tab `x' if wave==2 , m
+}
+
 // 8/10/2018 Add in 2011 weight for rd5,6 
 egen an2011wgt=rowmax(w*an2011wgt0)
 drop w*an2011wgt0
@@ -3339,7 +3375,7 @@ forvalues i=1/7 {
 	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'*
 }
 
-drop el1* rl1* ia1* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5*
+drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5*
 
 rename round*status r*status
 
@@ -4627,13 +4663,14 @@ H="new code for dod from claims"
 /*
 //sas code to pull dod from the mbsf (note-there is no information in the ndi 
 libname medi 'E:\nhats\data\20180625 NHATS CMS Data\merged\';
+libname medraw 'E:\nhats\data\20180625 NHATS CMS Data\raw';
 
 proc import out=xwalka
-	    datafile = "E:\nhats\data\CMS_DUA_28016\Kelley_crosswalk_NHATS_old.dta" replace;
+	    datafile = "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta" replace;
 run;
 
 data xwalkb;
-set medi.nhats2bene_xwalk_11;
+set medraw.nhats2bene_xwalk;
 run;
 
 proc sql;  
@@ -4684,22 +4721,20 @@ quit;
 
 
 proc export data=death outfile="E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta" replace; run;
+
+
 */
 
 
 
 
+use spid death_date admit using "E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta", clear
 
-
-use spid using "E:\nhats\data\nhats cleaned\sp_round_1_6.dta", clear
-duplicates drop
-merge 1:m spid using "E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta", nogen ///
-keepusing(spid death_date admit)
 duplicates drop 
 rename death_date dd_claims
 
 by spid, sort: drop if missing(dd) & _N>1
-forvalues i=2/6 {
+forvalues i=2/7 {
 	merge 1:1 spid using "E:\nhats\data\NHATS Public\round_`i'\nhats_round_`i'_tracker_file", ///
 	nogen keep(match master) keepusing(r`i'status r`i'spstatdt*)
 	merge 1:1 spid using "E:\nhats\data\NHATS Sensitive\r`i'_sensitive\nhats_round_`i'_sp_sen_dem_file", ///
@@ -4944,10 +4979,10 @@ Created by:
 Date Created: 
 
 Updated by: MH
-Date Updated: 01/02/2019
+Date Updated: 01/25/2019
 
-Description: What is going on in this section of the code? 
-i.e. defining variables, labeling variables. Creating new quartiles for income based off of something....
+Description: Inital dataset cleaning, renaming varaibles, merging variables from 
+sensitive dataset, and broad structuring.
 
 
 
@@ -5018,11 +5053,11 @@ destring dfavact, replace
 
 if `w'==2 {	
 keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
-	re2dadrscorr re2dcensdiv ip2nginslast
+	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* ep`w'*) ///
 (*) 
 }
 
@@ -5084,17 +5119,13 @@ forvalues w=1/7{
 	clear
 }
 
-use round_5_ltd.dta
 //combine waves into single dataset
 use round_1_ltd.dta
-append using round_2_ltd.dta
-append using round_3_ltd.dta
-append using round_4_ltd.dta
-append using round_5_ltd.dta
-append using round_6_ltd.dta
-append using round_7_ltd.dta
+forvalues w=2/7{
+append using round_`w'_ltd.dta
+}
 
-label values dfavact pa5dfavact
+/*label values dfavact pa5dfavact
 
 foreach x of varlist _all {
 capture drop newvar
@@ -5102,45 +5133,57 @@ gen newvar=substr(`x'
 }
 capture drop newvar
 gen 
+*/
+preserve
 
+forvalues w=1/7{
+use "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File.dta", clear
+gen wave=`w'
+rename (r`w'* hh`w'*) (*)
+if `w'==1 {
+rename (rl`w'* hc`w'*) (*)
+}
+if `w'!=1 {
+rename (pd`w'*) (*)
+}
+save "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File_new.dta", replace
+}
+
+use "${r1s}NHATS_Round_1_SP_Sen_Dem_File_new.dta", clear
+
+restore
 
 //merge in sensitive data, use r1 as basis, added in cancer vars
-merge m:1 spid using "${r1s}NHATS_Round_1_SP_Sen_Dem_File.dta", ///
-	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
-	rl1primarace rl1hisplatno hc1cancerty*)	
-
-drop _merge
+merge m:1 spid wave using "${r1s}NHATS_Round_1_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dbirthmth dbirthyr dintvwrage modob yrdob dspousage ///
+	primarace hisplatno cancerty*) nogen
 
 //merge in additional r2 sensitive data
-merge m:1 spid using "${r2s}NHATS_Round_2_SP_Sen_Dem_File.dta", ///
-	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
-drop _merge
+merge m:1 spid using "${r2s}NHATS_Round_2_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage dspousage ddeathage mthdied yrdied) nogen
 
 //merge in additional r3 sensitive data
-merge m:1 spid using "${r3s}NHATS_Round_3_SP_Sen_Dem_File.dta", ///
-	keepusing(r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied)
-drop _merge
+merge m:1 spid using "${r3s}NHATS_Round_3_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage dspousage ddeathage mthdied yrdied) nogen
 
 //merge in additional r4 sensitive data
-merge m:1 spid using "${r4s}NHATS_Round_4_SP_Sen_Dem_File.dta", ///
-	keepusing(r4dintvwrage hh4dspousage r4ddeathage pd4mthdied pd4yrdied)
-drop _merge
+merge m:1 spid using "${r4s}NHATS_Round_4_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage dspousage ddeathage mthdied yrdied) nogen
 
 //merge in additional r5 sensitive data
-merge m:1 spid using "${r5s}NHATS_Round_5_SP_Sen_Dem_File.dta", ///
-	keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied)
-drop _merge
+merge m:1 spid using "${r5s}NHATS_Round_5_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage spageall ddeathage mthdied yrdied) nogen
 
 //merge in additional r6 sensitive data
-merge m:1 spid using "${r6s}NHATS_Round_6_SP_Sen_Dem_File.dta", ///
-	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
-drop _merge
+merge m:1 spid using "${r6s}NHATS_Round_6_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage spageall ddeathage mthdied yrdied) nogen
 
 //merge in additional r7 sensitive data
-merge m:1 spid using "${r7s}NHATS_Round_7_SP_Sen_Dem_File.dta", ///
-	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
-drop _merge
+merge m:1 spid using "${r7s}NHATS_Round_7_SP_Sen_Dem_File_new.dta", ///
+	keepusing(dintvwrage spageall ddeathage mthdied yrdied) nogen
 
+	
+////////CLEANED UNTIL HERE	
 //3B?
 //merge in tracker status information
 merge m:1 spid using "${r7raw}NHATS_Round_7_Tracker_File", ///
@@ -5181,9 +5224,18 @@ H="Changelog"
 
 Updates:
 
+
+01/28/2019 EBL
+------------
+Fixed error in death date calculation. 
+
+01/25/2019 MH
+------------
+Revion of code, renaming variables and cleaning up sensitive file all for part 1. 
+
 01/03/2019 MH
 ------------
-Added in NSOC III ROund 7 data. Variable names have changed form NSOC II. 
+Added in NSOC III Round 7 data. Variable names have changed form NSOC II. 
 
 01/02/2019 MH
 ------------

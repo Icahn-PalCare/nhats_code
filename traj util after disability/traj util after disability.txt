@@ -201,7 +201,7 @@ quit;
 
 
 H="get claims before index date"
-/*Get claims 1 year and 2 year before each interview*/
+
 /*Step 2: pull claims lists using xwalk and ivw date*/
 
 proc sort data=proj_int.index out=index1 nodupkey;
@@ -265,7 +265,7 @@ quit;
 
 %macro ip_drop(days_bef_index=);
 data proj_int.ip_meet_&days_bef_index.;
-set ip_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+set ip_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date 
   ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 icarecnt crnrydaycnt erdaycnt clm_ip_admsn_type_cd
   PRCDR_DT1-PRCDR_DT25 hcpcscd1-hcpcscd49);
 run;
@@ -273,7 +273,7 @@ run;
 
 %macro snf_drop(days_bef_index=);
 data proj_int.snf_meet_&days_bef_index.;
-set snf_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date 
+set snf_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date 
   ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
  PRCDR_DT1-PRCDR_DT25 );
 run;
@@ -283,21 +283,21 @@ run;
 /*hh*/
 %macro hh_drop(days_bef_index=);
 data proj_int.hh_meet_&days_bef_index.;
-set hh_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+set hh_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
 run;
 %mend hh_drop;
 
 /*hs*/
 %macro hs_drop(days_bef_index=);
 data proj_int.hs_meet_&days_bef_index.;
-set hs_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+set hs_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
 run;
 %mend hs_drop;
 
 /*dme*/
 %macro dm_drop(days_bef_index=);
 data proj_int.dm_meet_&days_bef_index.;
-set dm_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date 
+set dm_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date 
 PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 h_o2);
 run;
 %mend dm_drop;
@@ -305,7 +305,7 @@ run;
 /*op*/
 %macro op_drop(days_bef_index=);
 data proj_int.op_meet_&days_bef_index.;
-set op_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+set op_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date
 PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt obs_stay);
 run;
 %mend op_drop;
@@ -313,7 +313,7 @@ run;
 /*carrier*/
 %macro pb_drop(days_bef_index=);
 data proj_int.pb_meet_&days_bef_index.;
-set pb_meet_&days_bef_index.(keep=bene_id index_year index_date admit_date disch_date
+set pb_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date
 PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
 run;
 %mend pb_drop;
@@ -323,69 +323,48 @@ run;
 %ip_drop(days_bef_index=183);
 %ip_drop(days_bef_index=274);
 %ip_drop(days_bef_index=365);
-%ip_drop(days_bef_index=456);
-%ip_drop(days_bef_index=548);
-%ip_drop(days_bef_index=639);
-%ip_drop(days_bef_index=730);
+
 
 %snf_drop(days_bef_index=91);
 %snf_drop(days_bef_index=183);
 %snf_drop(days_bef_index=274);
 %snf_drop(days_bef_index=365);
-%snf_drop(days_bef_index=456);
-%snf_drop(days_bef_index=548);
-%snf_drop(days_bef_index=639);
-%snf_drop(days_bef_index=730);
+
 
 
 %hh_drop(days_bef_index=91);
 %hh_drop(days_bef_index=183);
 %hh_drop(days_bef_index=274);
 %hh_drop(days_bef_index=365);
-%hh_drop(days_bef_index=456);
-%hh_drop(days_bef_index=548);
-%hh_drop(days_bef_index=639);
-%hh_drop(days_bef_index=730);
+
 
 
 %hs_drop(days_bef_index=91);
 %hs_drop(days_bef_index=183);
 %hs_drop(days_bef_index=274);
 %hs_drop(days_bef_index=365);
-%hs_drop(days_bef_index=456);
-%hs_drop(days_bef_index=548);
-%hs_drop(days_bef_index=639);
-%hs_drop(days_bef_index=730);
+
 
 
 %op_drop(days_bef_index=91);
 %op_drop(days_bef_index=183);
 %op_drop(days_bef_index=274);
 %op_drop(days_bef_index=365);
-%op_drop(days_bef_index=456);
-%op_drop(days_bef_index=548);
-%op_drop(days_bef_index=639);
-%op_drop(days_bef_index=730);
+
 
 
 %pb_drop(days_bef_index=91);
 %pb_drop(days_bef_index=183);
 %pb_drop(days_bef_index=274);
 %pb_drop(days_bef_index=365);
-%pb_drop(days_bef_index=456);
-%pb_drop(days_bef_index=548);
-%pb_drop(days_bef_index=639);
-%pb_drop(days_bef_index=730);
+
 
 
 %dm_drop(days_bef_index=91);
 %dm_drop(days_bef_index=183);
 %dm_drop(days_bef_index=274);
 %dm_drop(days_bef_index=365);
-%dm_drop(days_bef_index=456);
-%dm_drop(days_bef_index=548);
-%dm_drop(days_bef_index=639);
-%dm_drop(days_bef_index=730);
+
 
 
 
@@ -399,8 +378,8 @@ run;
 
 /*Process carrier medicare claims to pull out dx codes
 Multiple lines per each BID*/
-data pb_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.pb_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+data pb_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.pb_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
 array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12;
 do over dx;
 diag=dx ;
@@ -415,8 +394,8 @@ run;
 
 /*Process outpatient medicare claims to pull out dx codes
 Dataset being created: op_last_&range2._dx2*/
-data op_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.op_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25  );
+data op_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.op_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25  );
 array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
 do over dx;
 diag=dx ;
@@ -431,8 +410,8 @@ proc contents data=proj_int.ip_meet_365; run;
 
 
 /*Dataset being created: ip_last_&range2._dx2*/
-data ip_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.ip_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 hcpcscd1-hcpcscd49);
+data ip_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.ip_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 hcpcscd1-hcpcscd49);
 array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
 do over dx;
 diag=dx ;
@@ -444,8 +423,8 @@ by bene_id index_year diag;
 run;
 
 /*Dataset being created: snf_last_&range2._dx2*/
-data snf_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.snf_meet_&days_bef_core.(keep=bene_id index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+data snf_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.snf_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
 array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
 do over dx;
 diag=dx ;
@@ -458,8 +437,8 @@ run;
 
 /*Process dme medicare claims to pull out dx codes
 Dataset being created: dm_last_&range2._dx2*/
-data dm_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.dm_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+data dm_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.dm_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
 array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 ;
 do over dx;
 diag=dx ;
@@ -472,8 +451,8 @@ run;
 
 /*Process hh medicare claims to pull out dx codes
 Dataset being created: dm_last_&range2._dx2*/
-data hh_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.hh_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+data hh_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.hh_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
 array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
 do over dx;
 diag=dx ;
@@ -486,8 +465,8 @@ run;
 
 /*Process hs medicare claims to pull out dx codes
 Dataset being created: dm_last_&range2._dx2*/
-data hs_last_&range2._dx(keep=bene_id index_year diag);
-set proj_int.hs_meet_&days_bef_core.(keep=bene_id index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+data hs_last_&range2._dx(keep=bene_id clm_pmt_amt index_year diag);
+set proj_int.hs_meet_&days_bef_core.(keep=bene_id clm_pmt_amt index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
 array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
 do over dx;
 diag=dx ;
@@ -570,6 +549,7 @@ run;
 
 H="get claims after index date"
 
+/*Step 2: pull claims lists using xwalk and ivw date*/
 
 proc sort data=proj_int.index out=index1 nodupkey;
 by bene_id index_year;
@@ -578,216 +558,341 @@ run;
 /****************************************************************************/
 /* Macro to pull claims lists, saves lists to int_data folder               */
 /****************************************************************************/
-%macro claims_post(days_start=,days_aft_index=,yrs=,source=);
+%macro claims_pre(days_start=,days_bef_index=,yrs=,source=);
 
 proc sql;
-create table &source._meet_&days_aft_index.p as select a.*,b.index_date,b.index_year
-from medi.&source._&yrs. a inner join
-proj_int.index b 
+create table &source._meet_&days_bef_index. as select a.index_date,a.index_year,b.*
+from proj_int.index a inner join
+medi.&source._&yrs. b 
 on trim(left(a.bene_id))=trim(left(b.bene_id))
-and &days_start<=a.admit_date-b.index_date<=&days_aft_index;
+and &days_start<=a.index_date-b.disch_date<=&days_bef_index;
 quit;
 
 %mend;
 
 
+
 /*3m*/
-%claims_post(days_start=0,days_aft_index=91,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=91,yrs=09_16,source=dm);
+%claims_pre(days_start=0,days_bef_index=91,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=91,yrs=09_16,source=dm);
 
 /*6m*/
-%claims_post(days_start=0,days_aft_index=183,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=183,yrs=09_16,source=dm);
+%claims_pre(days_start=0,days_bef_index=183,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=183,yrs=09_16,source=dm);
 
 /*9m*/
-%claims_post(days_start=0,days_aft_index=274,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=274,yrs=09_16,source=dm);
+%claims_pre(days_start=0,days_bef_index=274,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=274,yrs=09_16,source=dm);
 
 /*1yr*/
-%claims_post(days_start=0,days_aft_index=365,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=365,yrs=09_16,source=dm);
+%claims_pre(days_start=0,days_bef_index=365,yrs=06_16,source=ip);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=snf);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=op);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=pb);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=hh);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=hs);
+%claims_pre(days_start=0,days_bef_index=365,yrs=09_16,source=dm);
 
 
-/*15m*/
-%claims_post(days_start=0,days_aft_index=456,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=456,yrs=09_16,source=dm);
 
-/*18m*/
-%claims_post(days_start=0,days_aft_index=548,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=548,yrs=09_16,source=dm);
-
-/*21m*/
-%claims_post(days_start=0,days_aft_index=639,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=639,yrs=09_16,source=dm);
-
-/*2yrs*/
-%claims_post(days_start=0,days_aft_index=730,yrs=06_16,source=ip);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=snf);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=op);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=pb);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=hh);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=hs);
-%claims_post(days_start=0,days_aft_index=730,yrs=09_16,source=dm);
-
-%macro ip_drop(days_aft_index=);
-data proj_int.ip_meet_&days_aft_index.p;
-set ip_meet_&days_aft_index.p(keep=clm_pmt_amt clm_pass_thru_per_diem_amt bene_id index_year index_date admit_date disch_date 
-  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 crnrydaycnt icarecnt erdaycnt clm_ip_admsn_type_cd
-  PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
+%macro ip_drop(days_bef_index=);
+data proj_int.ip_meet_&days_bef_index.;
+set ip_meet_&days_bef_index.(keep=bene_id clm_pmt_amt  clm_pass_thru_per_diem_amt index_year index_date admit_date disch_date 
+  ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 icarecnt crnrydaycnt erdaycnt clm_ip_admsn_type_cd
+  PRCDR_DT1-PRCDR_DT25 hcpcscd1-hcpcscd49);
 run;
 %mend ip_drop;
 
-%macro snf_drop(days_aft_index=);
-data proj_int.snf_meet_&days_aft_index.p;
-set snf_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date 
+%macro snf_drop(days_bef_index=);
+data proj_int.snf_meet_&days_bef_index.;
+set snf_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date 
   ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ICD_PRCDR_CD1-ICD_PRCDR_CD25 
- PRCDR_DT1-PRCDR_DT25 PRNCPAL_DGNS_CD);
+ PRCDR_DT1-PRCDR_DT25 );
 run;
 %mend snf_drop;
 
 
 /*hh*/
-%macro hh_drop(days_aft_index=);
-data proj_int.hh_meet_&days_aft_index.p;
-set hh_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+%macro hh_drop(days_bef_index=);
+data proj_int.hh_meet_&days_bef_index.;
+set hh_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
 run;
 %mend hh_drop;
 
 /*hs*/
-%macro hs_drop(days_aft_index=);
-data proj_int.hs_meet_&days_aft_index.p;
-set hs_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
+%macro hs_drop(days_bef_index=);
+data proj_int.hs_meet_&days_bef_index.;
+set hs_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25);
 run;
 %mend hs_drop;
 
 /*dme*/
-%macro dm_drop(days_aft_index=);
-data proj_int.dm_meet_&days_aft_index.p;
-set dm_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date
-PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+%macro dm_drop(days_bef_index=);
+data proj_int.dm_meet_&days_bef_index.;
+set dm_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date 
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 h_o2);
 run;
 %mend dm_drop;
 
 /*op*/
-%macro op_drop(days_aft_index=);
-data proj_int.op_meet_&days_aft_index.p;
-set op_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date
-PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt);
+%macro op_drop(days_bef_index=);
+data proj_int.op_meet_&days_bef_index.;
+set op_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 erdaycnt obs_stay);
 run;
 %mend op_drop;
 
 /*carrier*/
-%macro pb_drop(days_aft_index=);
-data proj_int.pb_meet_&days_aft_index.p;
-set pb_meet_&days_aft_index.p(keep=clm_pmt_amt bene_id index_year index_date admit_date disch_date
-PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+%macro pb_drop(days_bef_index=);
+data proj_int.pb_meet_&days_bef_index.;
+set pb_meet_&days_bef_index.(keep=bene_id clm_pmt_amt index_year index_date admit_date disch_date
+PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
 run;
 %mend pb_drop;
 
-%ip_drop(days_aft_index=91);
-%ip_drop(days_aft_index=183);
-%ip_drop(days_aft_index=274);
-%ip_drop(days_aft_index=365);
-%ip_drop(days_aft_index=456);
-%ip_drop(days_aft_index=548);
-%ip_drop(days_aft_index=639);
-%ip_drop(days_aft_index=730);
 
-%snf_drop(days_aft_index=91);
-%snf_drop(days_aft_index=183);
-%snf_drop(days_aft_index=274);
-%snf_drop(days_aft_index=365);
-%snf_drop(days_aft_index=456);
-%snf_drop(days_aft_index=548);
-%snf_drop(days_aft_index=639);
-%snf_drop(days_aft_index=730);
+%ip_drop(days_bef_index=91);
+%ip_drop(days_bef_index=183);
+%ip_drop(days_bef_index=274);
+%ip_drop(days_bef_index=365);
 
 
-%hh_drop(days_aft_index=91);
-%hh_drop(days_aft_index=183);
-%hh_drop(days_aft_index=274);
-%hh_drop(days_aft_index=365);
-%hh_drop(days_aft_index=456);
-%hh_drop(days_aft_index=548);
-%hh_drop(days_aft_index=639);
-%hh_drop(days_aft_index=730);
+%snf_drop(days_bef_index=91);
+%snf_drop(days_bef_index=183);
+%snf_drop(days_bef_index=274);
+%snf_drop(days_bef_index=365);
 
 
-%hs_drop(days_aft_index=91);
-%hs_drop(days_aft_index=183);
-%hs_drop(days_aft_index=274);
-%hs_drop(days_aft_index=365);
-%hs_drop(days_aft_index=456);
-%hs_drop(days_aft_index=548);
-%hs_drop(days_aft_index=639);
-%hs_drop(days_aft_index=730);
+
+%hh_drop(days_bef_index=91);
+%hh_drop(days_bef_index=183);
+%hh_drop(days_bef_index=274);
+%hh_drop(days_bef_index=365);
 
 
-%op_drop(days_aft_index=91);
-%op_drop(days_aft_index=183);
-%op_drop(days_aft_index=274);
-%op_drop(days_aft_index=365);
-%op_drop(days_aft_index=456);
-%op_drop(days_aft_index=548);
-%op_drop(days_aft_index=639);
-%op_drop(days_aft_index=730);
+
+%hs_drop(days_bef_index=91);
+%hs_drop(days_bef_index=183);
+%hs_drop(days_bef_index=274);
+%hs_drop(days_bef_index=365);
 
 
-%pb_drop(days_aft_index=91);
-%pb_drop(days_aft_index=183);
-%pb_drop(days_aft_index=274);
-%pb_drop(days_aft_index=365);
-%pb_drop(days_aft_index=456);
-%pb_drop(days_aft_index=548);
-%pb_drop(days_aft_index=639);
-%pb_drop(days_aft_index=730);
+
+%op_drop(days_bef_index=91);
+%op_drop(days_bef_index=183);
+%op_drop(days_bef_index=274);
+%op_drop(days_bef_index=365);
 
 
-%dm_drop(days_aft_index=91);
-%dm_drop(days_aft_index=183);
-%dm_drop(days_aft_index=274);
-%dm_drop(days_aft_index=365);
-%dm_drop(days_aft_index=456);
-%dm_drop(days_aft_index=548);
-%dm_drop(days_aft_index=639);
-%dm_drop(days_aft_index=730);
 
- 
+%pb_drop(days_bef_index=91);
+%pb_drop(days_bef_index=183);
+%pb_drop(days_bef_index=274);
+%pb_drop(days_bef_index=365);
+
+
+
+%dm_drop(days_bef_index=91);
+%dm_drop(days_bef_index=183);
+%dm_drop(days_bef_index=274);
+%dm_drop(days_bef_index=365);
+
+
+
+
+
+/****************************************************************************/
+/****************************************************************************/
+/* Macro to pull dx from claims lists, saves dx lists to int_data folder    */
+/****************************************************************************/
+
+%macro dx_time_range(range1=, range2=, days_bef_core=);
+
+/*Process carrier medicare claims to pull out dx codes
+Multiple lines per each BID*/
+data pb_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.pb_meet_&days_bef_core.(keep=bene_id  index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 hcpcscd1-hcpcscd13);
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+/*check for and remove duplicates, note this doesn't remove blanks*/
+proc sort data=pb_last_&range2._dx out=pb_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*Process outpatient medicare claims to pull out dx codes
+Dataset being created: op_last_&range2._dx2*/
+data op_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.op_meet_&days_bef_core.(keep=bene_id  index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25  );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=op_last_&range2._dx out=op_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+proc contents data=proj_int.ip_meet_365; run;
+
+
+/*Dataset being created: ip_last_&range2._dx2*/
+data ip_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.ip_meet_&days_bef_core.(keep=bene_id  index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 hcpcscd1-hcpcscd49);
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=ip_last_&range2._dx out=ip_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Dataset being created: snf_last_&range2._dx2*/
+data snf_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.snf_meet_&days_bef_core.(keep=bene_id  index_year ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx ADMTG_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=snf_last_&range2._dx out=snf_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process dme medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data dm_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.dm_meet_&days_bef_core.(keep=bene_id  index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD12 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=dm_last_&range2._dx out=dm_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hh medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hh_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.hh_meet_&days_bef_core.(keep=bene_id  index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hh_last_&range2._dx out=hh_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+/*Process hs medicare claims to pull out dx codes
+Dataset being created: dm_last_&range2._dx2*/
+data hs_last_&range2._dx(keep=bene_id  index_year diag);
+set proj_int.hs_meet_&days_bef_core.(keep=bene_id  index_year PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 );
+array dx PRNCPAL_DGNS_CD ICD_DGNS_CD1-ICD_DGNS_CD25 ;
+do over dx;
+diag=dx ;
+output;
+end;
+run;
+proc sort data=hs_last_&range2._dx out=hs_last_&range2._dx2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+/*set diag variable length = 7 chars since that's the max length from the mc claims
+Need to do this because length varies across the different mc claim types*/
+data hs_last_&range2._dx3;
+length diag $7;
+set hs_last_&range2._dx2;
+run;
+data hh_last_&range2._dx3;
+length diag $7;
+set hh_last_&range2._dx2;
+run;
+data ip_last_&range2._dx3;
+length diag $7;
+set ip_last_&range2._dx2;
+run;
+data snf_last_&range2._dx3;
+length diag $7;
+set snf_last_&range2._dx2;
+run;
+data dm_last_&range2._dx3;
+length diag $7;
+set dm_last_&range2._dx2;
+run;
+data op_last_&range2._dx3;
+length diag $7;
+set op_last_&range2._dx2;
+run;
+data pb_last_&range2._dx3;
+length diag $7;
+set pb_last_&range2._dx2;
+run;
+
+
+/*merge diagnoses from each claim type into single dataset*/
+data dx_all_last_1&range2.;
+set hs_last_&range2._dx3
+hh_last_&range2._dx3
+ip_last_&range2._dx3
+snf_last_&range2._dx3
+dm_last_&range2._dx3
+op_last_&range2._dx3
+pb_last_&range2._dx3;
+run;
+
+proc sql;
+create table dx_all_last_&range2. as select * from
+proj_int.index a 
+left join 
+dx_all_last_1&range2. b
+on a.bene_id=b.bene_id and a.index_year=b.index_year;
+quit; 
+
+proc sort data=dx_all_last_&range2.(where=(diag~="")) out=proj_int.dx_&range1._&range2 nodupkey;
+by bene_id index_year diag;
+run;
+
+
+%mend;
+
+/*1 and 2 years pre-interview: proj_int.dx_0_1yr, proj_int.dx_0_2yr */
+%dx_time_range(range1=0, range2=3m, days_bef_core=91);
+%dx_time_range(range1=0, range2=6m, days_bef_core=183);
+%dx_time_range(range1=0, range2=9m, days_bef_core=274);
+%dx_time_range(range1=0, range2=12m, days_bef_core=365);
+
+
+
+
+
 
 H="****Must run all below if change the above****"
 
@@ -1035,7 +1140,7 @@ H="get spending from claims pre"
 /*Case 1 - no adjustment needed - claims where entire claim is within the x months before the interview*/
 proc sql;
 create table &source._meet_pre_1 as select *
-from proj_int.&source._meet_&days_before_core.p
+from proj_int.&source._meet_&days_before_core.
 where &days_start<=index_date-admit_date<=&days_before_core and
 &days_start<=index_date-disch_date<=&days_before_core;
 quit;
@@ -1619,7 +1724,7 @@ run;
 
 
 proc sql;
-create table ip_3m as select a.*,b.n_ED_ip_3m
+create table ip_3m as select a.*,b.n_ED_ip_3m,b.n_ip_admit_3m
 from proj_int.index a
 left join
 ip_91_3 b 
@@ -1633,7 +1738,7 @@ run;
 
 
 proc sql;
-create table ip_6m as select a.*,b.n_ED_ip_6m
+create table ip_6m as select a.*,b.n_ED_ip_6m,b.n_ip_admit_6m
 from proj_int.index a
 left join
 ip_183_3 b 
@@ -1647,7 +1752,7 @@ run;
 
 
 proc sql;
-create table ip_9m as select a.*,b.n_ED_ip_9m
+create table ip_9m as select a.*,b.n_ED_ip_9m,b.n_ip_admit_9m
 from proj_int.index a
 left join
 ip_274_3 b 
@@ -1660,7 +1765,7 @@ run;
 
 
 proc sql;
-create table ip_12m as select a.*,b.n_ED_ip_12m
+create table ip_12m as select a.*,b.n_ED_ip_12m,b.n_ip_admit_12m
 from proj_int.index a
 left join
 ip_365_3 b 
@@ -1896,7 +2001,7 @@ run;
 
 
 proc sql;
-create table ip_3mp as select a.*,b.n_ED_ip_3mp
+create table ip_3mp as select a.*,b.n_ED_ip_3mp,b.n_ip_admit_3mp
 from proj_int.index a
 left join
 ip_91p_3 b 
@@ -1910,7 +2015,7 @@ run;
 
 
 proc sql;
-create table ip_6mp as select a.*,b.n_ED_ip_6mp
+create table ip_6mp as select a.*,b.n_ED_ip_6mp, b.n_ip_admit_6mp
 from proj_int.index a
 left join
 ip_183p_3 b 
@@ -1924,7 +2029,7 @@ run;
 
 
 proc sql;
-create table ip_9mp as select a.*,b.n_ED_ip_9mp
+create table ip_9mp as select a.*,b.n_ED_ip_9mp,b.n_ip_admit_9mp
 from proj_int.index a
 left join
 ip_274p_3 b 
@@ -1937,7 +2042,7 @@ run;
 
 
 proc sql;
-create table ip_12mp as select a.*,b.n_ED_ip_12mp
+create table ip_12mp as select a.*,b.n_ED_ip_12mp,b.n_ip_admit_12mp
 from proj_int.index a
 left join
 ip_365p_3 b 
@@ -1950,7 +2055,7 @@ run;
 
 
 proc sql;
-create table ip_15mp as select a.*,b.n_ED_ip_15mp
+create table ip_15mp as select a.*,b.n_ED_ip_15mp,b.n_ip_admit_15mp
 from proj_int.index a
 left join
 ip_456p_3 b 
@@ -1963,7 +2068,7 @@ run;
 
 
 proc sql;
-create table ip_18mp as select a.*,b.n_ED_ip_18mp
+create table ip_18mp as select a.*,b.n_ED_ip_18mp,b.n_ip_admit_18mp
 from proj_int.index a
 left join
 ip_548p_3 b 
@@ -1976,7 +2081,7 @@ run;
 
 
 proc sql;
-create table ip_21mp as select a.*,b.n_ED_ip_21mp
+create table ip_21mp as select a.*,b.n_ED_ip_21mp,b.n_ip_admit_21mp
 from proj_int.index a
 left join
 ip_639p_3 b 
@@ -1989,7 +2094,7 @@ run;
 
 
 proc sql;
-create table ip_24mp as select a.*,b.n_ED_ip_24mp
+create table ip_24mp as select a.*,b.n_ED_ip_24mp,b.n_ip_admit_24mp
 from proj_int.index a
 left join
 ip_730p_3 b 
@@ -2007,13 +2112,17 @@ ip_9mp c
 on trim(left(a.bene_id))=trim(left(c.bene_id)) and a.index_year=c.index_year
 left join
 ip_12mp d 
-on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_yearleft join
-ip_16mp e 
-on trim(left(a.bene_id))=trim(left(e.bene_id)) and a.index_year=e.index_yearleft join
+on trim(left(a.bene_id))=trim(left(d.bene_id)) and a.index_year=d.index_year
+left join
+ip_15mp e 
+on trim(left(a.bene_id))=trim(left(e.bene_id)) and a.index_year=e.index_year
+left join
 ip_18mp f 
-on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_yearleft join
+on trim(left(a.bene_id))=trim(left(f.bene_id)) and a.index_year=f.index_year
+left join
 ip_21mp g 
-on trim(left(a.bene_id))=trim(left(g.bene_id)) and a.index_year=g.index_yearleft join
+on trim(left(a.bene_id))=trim(left(g.bene_id)) and a.index_year=g.index_year
+left join
 ip_24mp h 
 on trim(left(a.bene_id))=trim(left(h.bene_id)) and a.index_year=h.index_year
 ;
@@ -2205,21 +2314,64 @@ forvalues i=3(3)24 {
 
 drop ip_* snf_* hh_* hs_* pb_* op_* dm_*
 
-
+rename n_ip_admit*m n_ip_admit*mn
+foreach x of varlist n_ip_admit* {
+	replace `x'=0 if missing(`x')
+}
+	
  //generate quarterly amounts
 local time before
  foreach x in n p {
 	gen expq`x'1=tot_paid_by_mc_`x'_3m
 	label var expq`x'1 "Total expenditures the 1st quarter `time' datefirsthelp"
+	gen ipadmq`x'1=n_ip_admit_3m`x'
 	forvalues i=6(3)12 {
 		gen expq`x'`=`i'/3'=tot_paid_by_mc_`x'_`i'm-tot_paid_by_mc_`x'_`=`i'-3'm
 		label var expq`x'`=`i'/3' "Total expenditures the `=`i'/3'th quarter `time' datefirsthelp"
+		gen ipadmq`x'`=`i'/3'=n_ip_admit_`i'm`x'-n_ip_admit_`=`i'-3'm`x'
+		label var ipadmq`x'`=`i'/3' "Number hospital admissions the `=`i'/3'th quarter `time' datefirsthelp"
 }
 	local time after
 
 }
 
+
+local time before
+
+forvalues i=3(3)12 {
+	rename n_ed_ip_`i'm n_ed_ip_`i'mn
+	rename n_ed_op_visits_`i' n_ed_op_visits_`i'mn
+	
+}
+
+rename n_ed_op_visits_*p n_ed_op_visits_*mp
+
+foreach x in n p {
+	forvalues i=3(3)12 {
+		egen edq`x'`=`i'/3'=rowtotal(n_ed_ip_`i'm`x' n_ed_op_visits_`i'm`x')
+		if `i'>3 replace edq`x'`=`i'/3'=edq`x'`=`i'/3'-edq`x'`=`i'/3-1'
+		label var edq`x'`=`i'/3' "Number ED visits (IP or OP) the `=`i'/3'th quarter `time' datefirsthelp"
+}
+local time after
+}
+
 forvalues i=15(3)24 {
 	gen expqp`=`i'/3'=tot_paid_by_mc_p_`i'm-tot_paid_by_mc_p_`=`i'-3'm
 	label var expqp`=`i'/3' "Total expenditures the `=`i'/3'th quarter `time' datefirsthelp"
+	egen edqp`=`i'/3'=rowtotal(n_ed_ip_`i'mp n_ed_op_visits_`i'mp)
+	replace edqp`=`i'/3'=edqp`=`i'/3'-edqp`=`i'/3-1'
+	label var edqp`=`i'/3' "Number ED visits (IP or OP) the `=`i'/3'th quarter `time' datefirsthelp"
+	gen ipadmqp`=`i'/3'=n_ip_admit_`i'mp-n_ip_admit_`=`i'-3'mp
+	label var ipadmqp`=`i'/3' "Number hospital admissions the `=`i'/3'th quarter `time' datefirsthelp"
+
 }
+
+
+keep spid index_date exp* edq* ipadm* *ffs* 
+
+merge 1:m spid using "E:\nhats\data\nhats cleaned\sp_round_1_7.dta", ///
+keep(match) keepusing(death_date) nogen
+
+duplicates drop
+
+save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util.dta"
