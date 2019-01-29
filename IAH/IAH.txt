@@ -5,14 +5,14 @@ H="********"
 
 H="Create IAH Flags"
 use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
-
+/*
 drop community_dwelling SP_completed
 
 merge 1:1 spid wave using "C:\Users\rahmao03\Documents\community.dta"
 cap drop _m
 
 save "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
-
+*/
 keep if community_dwelling
 keep if wave<6
 cap drop bene_id 
@@ -23,7 +23,7 @@ keep if _m==3
 
 save "E:\nhats\data\Projects\IAH\int_data\iah_fullsample.dta", replace
 
-/*
+
 keep bene_id spid wave ivw_month ivw_year
 
 
@@ -40,7 +40,7 @@ keep if _m==3
 
 save "E:\nhats\data\Projects\IAH\final_data\iah_fullsample.dta", replace
 
-*/
+
 
 local cvars sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever
 
@@ -67,7 +67,8 @@ rename adl_flag iah_adl
 rename ind_nonelect_adm_12m iah_nonelect
 
 
-save "E:\nhats\data\Projects\IAH\final_data\iah_wave1-5.dta", replace
+saveold "E:\nhats\data\Projects\IAH\final_data\iah_wave1-5.dta", version(12) replace
+
 
 H="Search for IP rehab and home calls"
 libname claims "E:\nhats\data\20180625 NHATS CMS Data\merged";
@@ -275,10 +276,10 @@ group by bene_id, year;
 quit;
 
 
-proc export data=annual outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" replace; run;
+proc export data=annual(rename=(year = index_year)) outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" replace; run;
 
 proc sql;
-create table homecallsb4_90 as select a.*, b.cptcodes
+create table homecallsb4_90 as select a.*, b.cptcodes, b.admit_date
 from ip_check a
 inner join carrier2 b
 on a.bene_id=b.bene_id and -90<a.index_date-b.admit_date<=90;
@@ -292,11 +293,12 @@ proc freq data=homecallsb4_90; tables ffs_6m; run;
 
 proc sort data=homecallsb4_90 out=test; by descending wave bene_id; run;
 
-
+/*
 data homecalls_90;
 set homecallsb4_90_1 homecallsb4_90_2 homecallsb4_90_3 homecallsb4_90_4 homecallsb4_90_5;
 run;
 
+*/
 proc export data=homecallsb4_90 outfile="E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta" replace; run;
 
 
@@ -424,6 +426,7 @@ label var income_cat_`w' "% with income in the `p'th quartile"
 gen pos_dem = 0
 replace pos_dem = 1 if dem_3_cat==2 
 label var pos_dem "Indicator Possible Dementia"
+
 
 H="IAH Table"
 /* IAH population */
@@ -887,7 +890,7 @@ label var iah_all "IAH - All Criteria Met"
 
 /* Housecalls population */
 
-merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta"
+merge 1:1 bene_id wave using "E:\nhats\data\Projects\IAH\int_data\homecalls_90.dta", keepus(admit_date)
 drop if _m==2
 *drop _m
 
@@ -917,8 +920,43 @@ drop if droplist==1 /* drop spid for those who have housecalls */
 gsort spid -wave
 by spid: gen ind=_n==1
 keep if ind==1 /* keep most recent nonhousecalls */
-
+cap drop _m
 append using "E:\nhats\data\Projects\IAH\int_data\housecalls.dta"
+
+cap drop st_date
+save "E:\nhats\data\Projects\IAH\final_data\housecalls.dta", replace 
+
+use "E:\nhats\data\Projects\serious_ill\final_data\serious_ill_nhats_sample.dta", replace
+
+keep if wave==1
+gen old = 1
+label var old "Original Cohort in Wave 1"
+tempfile old
+gen st_date = index_date - 90 
+label var st_date "Start of observation period, 90 days pre ivw"
+
+save `old'
+
+use "E:\nhats\data\Projects\IAH\final_data\housecalls.dta", clear
+cap drop _m
+merge 1:1 spid using "`old'", keepus(old st_date) update replace
+drop if _m==2
+drop _m
+
+replace old = 0 if old==.
+
+replace st_date = ivw_date - 90 if wave==5 & st_date==.
+
+save "E:\nhats\data\Projects\IAH\final_data\housecalls.dta", replace 
+
+gen end_dt = ivw_date + 90
+
+gen person_time = admit_date - st_date
+replace person_time = end_dt - st_date if person_time==.
+replace person_time = person_time*0.00273
+
+egen person_yrs = total(person_time)
+
 
 local cvars1 age income_quart_1 income_quart_2 income_quart_3 income_quart_4 // score_community
 local ivars1 income_cat_1 income_cat_2 income_cat_3 income_cat_4 female white  ///
@@ -2251,312 +2289,6 @@ run;
 proc export data=proc_p12 outfile="E:\nhats\data\Projects\IAH\int_data\life_proc_p12.dta" replace; run;
 
 
-H="Probable Dementia house calls"
-/* Stata */
-
-use "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", clear
-
-keep if prob_dem==1
-keep spid bene_id index_date wave
-
-save "E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta"
-
-/* SAS      */
-
-libname claims "E:\nhats\data\CMS_DUA_28016\Merged";
-libname line "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
-libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
-
-proc import datafile="E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta" out=nhats replace; run; 
-
-data nhats;
-set nhats;
-run;
-
-/*
-data carrier_pflag;
-set claims.pb_09_14;
-pos1flag = 0;
-array dx pos1--pos13;
-do over dx;
-if dx in:(12,13,14) then pos1flag = 1;
-output;
-end;
-run;
-
-*/
-
-data carrier;
-set claims.pb_09_14;
-array dx hcpcscd1--hcpcscd13;
-do over dx;
-cptcodes=dx;
-output;
-end;
-/*
-pos1flag = 0;
-if pos1 in:(12,13,14) then pos1flag = 1;
-if pos2 in:(12,13,14) then pos1flag = 1;
-if pos3 in:(12,13,14) then pos1flag = 1;
-if pos4 in:(12,13,14) then pos1flag = 1;
-if pos5 in:(12,13,14) then pos1flag = 1;
-if pos6 in:(12,13,14) then pos1flag = 1;
-if pos7 in:(12,13,14) then pos1flag = 1;
-if pos8 in:(12,13,14) then pos1flag = 1;
-if pos9 in:(12,13,14) then pos1flag = 1;
-if pos10 in:(12,13,14) then pos1flag = 1;
-if pos11 in:(12,13,14) then pos1flag = 1;
-if pos12 in:(12,13,14) then pos1flag = 1;
-if pos13 in:(12,13,14) then pos1flag = 1;
-*/
-run;
-
-
-data carrierline (keep = bene_id clm_id LINE_PLACE_OF_SRVC_CD cptcodes hcpcs_cd);
-set line.bcarrier_line_j_09_14;
-cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
-run;
-
-data carrierline;
-set carrierline;
-cptflag = 0;
-posflag = 0;
-if 99341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337 then cptflag=1;
-if LINE_PLACE_OF_SRVC_CD in:(12,13,14) then posflag=1;
-run;
-
-data carrierline;
-set carrierline;
-both = 0;
-if cptflag = 1 and posflag = 1 then both = 1;
-run;
-
-
-proc sql;
-create table carrier2 as select a.*, b.admit_date, b.disch_date
-from carrierline a
-inner join carrier b
-on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
-quit;
-
-proc sql;
-create table carrier3 as select a.*, b.*
-from carrier2 a
-inner join nhats b
-on a.bene_id=b.bene_id and -183<=b.index_date-a.admit_date<=183;
-quit;
-
-
-data carrier3;
-set carrier3;
-*where ffs_6m = 1;
-where both = 1;
-run;
-
-proc sort data=carrier3; by spid wave; run;
-proc sort data=carrier3 nodupkey; by spid; run;
-
-proc freq data=carrier3; tables ffs_6m ffs_12m; run;
-
-/* both */
-
-data bothclaims;
-set carrier3;
-where both = 1;
-same = 0;
-if hcpcs_cd = cptcodes then same = 1; /*checking if the cptcodes from from carrier claims is the same as the hcpcs_cd code in carrier line */
-run;
-
-proc sort data=bothclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
-
-/* gen single line per claim for annual count */
-
-proc sort data=bothclaims out=annual nodupkey; by bene_id clm_id; run;
-
-data annual;
-set annual;
-year = year(admit_date);
-run;
-
-proc sql;
-create table annual_1 as select distinct bene_id, year,
-sum(both) as housecalls_count
-from annual
-group by bene_id, year;
-quit;
-
-data annual_1;
-set annual_1;
-if year = 2011 then wave = 1;
-if year = 2012 then wave = 2;
-if year = 2013 then wave = 3;
-run;
-
-proc export data=annual_1 outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" dbms=stata replace; run;
-
-proc freq data=bothclaims order=freq; tables hcpcs_cd; run;
-
-proc sort data=bothclaims nodupkey; by bene_id wave; run;
-
-
-data both_beneid (keep= bene_id wave bflag);
-set bothclaims;
-bflag = 1;
-run;
-
-proc freq data=both_beneid; tables wave; run;
-
-proc export data=both_beneid outfile="E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta" replace; run;
-
-proc sort data=both_beneid out=test nodupkey; by bene_id; run;
-
-
-/*cptcodes only */
-
-data cptclaims;
-set carrier3;
-where cptflag= 1 and both=0;
-run;
-
-proc sql;
-create table cptclaims1 as select a.*, b.bflag
-from cptclaims a
-left join both_beneid b
-on a.bene_id=b.bene_id and a.wave=b.wave;
-quit;
-
-data cptclaims;
-set cptclaims1;
-if bflag = 1 then delete;
-cflag = 1;
-run;
-
-proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
-
-
-proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
-proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
-
-proc sort data=cptclaims nodupkey; by bene_id wave; run;
-proc freq data=cptclaims ; tables wave; run;
-proc sort data=cptclaims out=test nodupkey; by bene_id; run;
-
-proc export data=cptclaims outfile="E:\nhats\data\Projects\IAH\int_data\cpt+only.dta" replace; run;
-
-
-/*pos only */
-
-data posclaims;
-set carrier3;
-where posflag = 1 and both=0;
-run;
-
-proc sql;
-create table posclaims1 as select a.*, b.cflag
-from posclaims a
-left join cptclaims b
-on a.bene_id=b.bene_id and a.wave=b.wave;
-quit;
-
-proc sql;
-create table posclaims2 as select a.*, b.bflag
-from posclaims1 a
-left join both_beneid b
-on a.bene_id=b.bene_id and a.wave=b.wave;
-quit;
-
-data posclaims;
-set posclaims2;
-if cflag = 1 or bflag = 1 then delete;
-run;
-
-
-
-proc sort data=posclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
-proc freq data=posclaims order=freq; tables hcpcs_cd; run;
-
- 
-proc sort data=posclaims nodupkey; by bene_id wave; run;
-
-proc freq data=posclaims; tables wave; run;
-
-
-proc sort data=posclaims nodupkey; by bene_id; run;
-
-
-proc export data=posclaims outfile="E:\nhats\data\Projects\IAH\int_data\pos+only.dta" replace; run;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*cptcodes only */
-
-data cptclaims;
-set carrier3;
-where cptflag= 1 and both=0;
-run;
-
-proc sql;
-create table cptclaims1 as select a.*, b.pflag
-from cptclaims a
-left join posclaims b
-on a.bene_id=b.bene_id and a.wave=b.wave;
-quit;
-
-data cptclaims;
-set cptclaims1;
-if pflag = 1 then delete;
-run;
-
-proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
-
-
-proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
-proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
-
-proc sort data=cptclaims nodupkey; by bene_id wave; run;
-proc freq data=cptclaims ; tables wave; run;
-
-/* none */
-
-data noclaims;
-set carrier3;
-where cpt
-
-
-data carrier2 (keep = cptcodes hcpcs_cd) ;
-set carrier2;
-where posflag = 1 or pos1flag = 1;
-run;
-
-data carrier2 (keep = hcpcs_cd);
-set carrier2;
-run;
-*/
-
-proc sort data=carrier2 nodup; by hcpcs_cd; run;
-
-
-proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
-
-
 H="Prob Dem - HRS"
 /*2000-2012 medicare claims*/
 libname claims 'E:\data\cms_DUA_24548_2012';
@@ -3002,8 +2734,317 @@ proc sort data=carrier2 nodup; by hcpcs_cd; run;
 proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
 
 
+H="Probable Dementia house calls"
+/* Stata */
+
+use "E:\nhats\data\Projects\IAH\final_data\iah_wave1-3.dta", clear
+
+keep if prob_dem==1
+keep spid bene_id index_date wave
+
+save "E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta"
+
+/* SAS      */
+
+libname claims "E:\nhats\data\CMS_DUA_28016\Merged";
+libname line "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+libname cyears "E:\nhats\data\CMS_DUA_28016\Cumulative Years";
+
+proc import datafile="E:\nhats\data\Projects\IAH\final_data\dementia_wave1-3.dta" out=nhats replace; run; 
+
+data nhats;
+set nhats;
+run;
+
+/*
+data carrier_pflag;
+set claims.pb_09_14;
+pos1flag = 0;
+array dx pos1--pos13;
+do over dx;
+if dx in:(12,13,14) then pos1flag = 1;
+output;
+end;
+run;
+
+*/
+
+data carrier;
+set claims.pb_09_14;
+array dx hcpcscd1--hcpcscd13;
+do over dx;
+cptcodes=dx;
+output;
+end;
+/*
+pos1flag = 0;
+if pos1 in:(12,13,14) then pos1flag = 1;
+if pos2 in:(12,13,14) then pos1flag = 1;
+if pos3 in:(12,13,14) then pos1flag = 1;
+if pos4 in:(12,13,14) then pos1flag = 1;
+if pos5 in:(12,13,14) then pos1flag = 1;
+if pos6 in:(12,13,14) then pos1flag = 1;
+if pos7 in:(12,13,14) then pos1flag = 1;
+if pos8 in:(12,13,14) then pos1flag = 1;
+if pos9 in:(12,13,14) then pos1flag = 1;
+if pos10 in:(12,13,14) then pos1flag = 1;
+if pos11 in:(12,13,14) then pos1flag = 1;
+if pos12 in:(12,13,14) then pos1flag = 1;
+if pos13 in:(12,13,14) then pos1flag = 1;
+*/
+run;
+
+
+data carrierline (keep = bene_id clm_id LINE_PLACE_OF_SRVC_CD cptcodes hcpcs_cd);
+set line.bcarrier_line_j_09_14;
+cptcodes = input(compress(hcpcs_cd,'ABCDEFGHIJKLMNOPQRSTUVWXYZ/',),8.);
+run;
+
+data carrierline;
+set carrierline;
+cptflag = 0;
+posflag = 0;
+if 99341<=cptcodes<=99350 or 99324<=cptcodes<=99328 or 99334<=cptcodes<=99337 then cptflag=1;
+if LINE_PLACE_OF_SRVC_CD in:(12,13,14) then posflag=1;
+run;
+
+data carrierline;
+set carrierline;
+both = 0;
+if cptflag = 1 and posflag = 1 then both = 1;
+run;
+
+
+proc sql;
+create table carrier2 as select a.*, b.admit_date, b.disch_date
+from carrierline a
+inner join carrier b
+on a.bene_id=b.bene_id and a.clm_id=b.clm_id;
+quit;
+
+proc sql;
+create table carrier3 as select a.*, b.*
+from carrier2 a
+inner join nhats b
+on a.bene_id=b.bene_id and -183<=b.index_date-a.admit_date<=183;
+quit;
+
+
+data carrier3;
+set carrier3;
+*where ffs_6m = 1;
+where both = 1;
+run;
+
+proc sort data=carrier3; by spid wave; run;
+proc sort data=carrier3 nodupkey; by spid; run;
+
+proc freq data=carrier3; tables ffs_6m ffs_12m; run;
+
+/* both */
+
+data bothclaims;
+set carrier3;
+where both = 1;
+same = 0;
+if hcpcs_cd = cptcodes then same = 1; /*checking if the cptcodes from from carrier claims is the same as the hcpcs_cd code in carrier line */
+run;
+
+proc sort data=bothclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+/* gen single line per claim for annual count */
+
+proc sort data=bothclaims out=annual nodupkey; by bene_id clm_id; run;
+
+data annual;
+set annual;
+year = year(admit_date);
+run;
+
+proc sql;
+create table annual_1 as select distinct bene_id, year,
+sum(both) as housecalls_count
+from annual
+group by bene_id, year;
+quit;
+
+data annual_1;
+set annual_1;
+if year = 2011 then wave = 1;
+if year = 2012 then wave = 2;
+if year = 2013 then wave = 3;
+run;
+
+proc export data=annual_1 outfile="E:\nhats\data\Projects\IAH\int_data\annualcpt_count.dta" dbms=stata replace; run;
+
+proc freq data=bothclaims order=freq; tables hcpcs_cd; run;
+
+proc sort data=bothclaims nodupkey; by bene_id wave; run;
+
+
+data both_beneid (keep= bene_id wave bflag);
+set bothclaims;
+bflag = 1;
+run;
+
+proc freq data=both_beneid; tables wave; run;
+
+proc export data=both_beneid outfile="E:\nhats\data\Projects\IAH\int_data\cpt+pos.dta" replace; run;
+
+proc sort data=both_beneid out=test nodupkey; by bene_id; run;
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.bflag
+from cptclaims a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if bflag = 1 then delete;
+cflag = 1;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+proc sort data=cptclaims out=test nodupkey; by bene_id; run;
+
+proc export data=cptclaims outfile="E:\nhats\data\Projects\IAH\int_data\cpt+only.dta" replace; run;
+
+
+/*pos only */
+
+data posclaims;
+set carrier3;
+where posflag = 1 and both=0;
+run;
+
+proc sql;
+create table posclaims1 as select a.*, b.cflag
+from posclaims a
+left join cptclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+proc sql;
+create table posclaims2 as select a.*, b.bflag
+from posclaims1 a
+left join both_beneid b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data posclaims;
+set posclaims2;
+if cflag = 1 or bflag = 1 then delete;
+run;
+
+
+
+proc sort data=posclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+proc freq data=posclaims order=freq; tables hcpcs_cd; run;
+
+ 
+proc sort data=posclaims nodupkey; by bene_id wave; run;
+
+proc freq data=posclaims; tables wave; run;
+
+
+proc sort data=posclaims nodupkey; by bene_id; run;
+
+
+proc export data=posclaims outfile="E:\nhats\data\Projects\IAH\int_data\pos+only.dta" replace; run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*cptcodes only */
+
+data cptclaims;
+set carrier3;
+where cptflag= 1 and both=0;
+run;
+
+proc sql;
+create table cptclaims1 as select a.*, b.pflag
+from cptclaims a
+left join posclaims b
+on a.bene_id=b.bene_id and a.wave=b.wave;
+quit;
+
+data cptclaims;
+set cptclaims1;
+if pflag = 1 then delete;
+run;
+
+proc sort data=cptclaims nodupkey; by bene_id clm_id hcpcs_cd; run;
+
+
+proc freq data=cptclaims order=freq; tables hcpcs_cd; run;
+proc freq data=cptclaims order=freq; tables LINE_PLACE_OF_SRVC_CD; run;
+
+proc sort data=cptclaims nodupkey; by bene_id wave; run;
+proc freq data=cptclaims ; tables wave; run;
+
+/* none */
+
+data noclaims;
+set carrier3;
+where cpt
+
+
+data carrier2 (keep = cptcodes hcpcs_cd) ;
+set carrier2;
+where posflag = 1 or pos1flag = 1;
+run;
+
+data carrier2 (keep = hcpcs_cd);
+set carrier2;
+run;
+*/
+
+proc sort data=carrier2 nodup; by hcpcs_cd; run;
+
+
+proc export data=carrier2 outfile="E:\nhats\projects\IAH\20171115\cptcodes.xlsx" dbms=xlsx replace; run;
+
+
 H="***************************"
 
 
 H="Changelog"
+01/29/2019 - Calculated person years. Omari
+
+
 01/02/2019 - Updated the code to include cell size censored tables. Omari

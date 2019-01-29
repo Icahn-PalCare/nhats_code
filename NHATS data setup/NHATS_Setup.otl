@@ -2279,15 +2279,15 @@ tab ep2poweratty
 tab ep2livngwill
 
 gen no_acp=0
-replace no_acp=1 if ep2eoltalk==2 & ep2poweratty==2 & ep2livngwill==2
+replace no_acp=1 if inlist(ep2eoltalk, 2, -8, -7) & inlist(ep2poweratty, 2, -7, -8) & inlist(ep2livngwill, 2, -7, -8)
 replace no_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen formal_acp=0
-replace formal_acp=1 if ep2eoltalk==2 & (ep2poweratty==1 | ep2livngwill==1)
+replace formal_acp=1 if inlist(ep2eoltalk, 2, -8, -7) & (ep2poweratty==1 | ep2livngwill==1)
 replace formal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen informal_acp=0
-replace informal_acp=1 if ep2eoltalk==1 & ep2poweratty==2 & ep2livngwill==2
+replace informal_acp=1 if ep2eoltalk==1 & inlist(ep2poweratty, 2, -7, -8) & inlist(ep2livngwill, 2, -7, -8)
 replace informal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen acp=0
@@ -3372,10 +3372,10 @@ replace west=1 if region==4
 forvalues i=1/7 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
-	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'*
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'* 
 }
 
-drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5*
+drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5* ia7*
 
 rename round*status r*status
 

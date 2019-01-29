@@ -3372,10 +3372,10 @@ replace west=1 if region==4
 forvalues i=1/7 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
-	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'*
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'* 
 }
 
-drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5*
+drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5* ia7*
 
 rename round*status r*status
 
@@ -4733,8 +4733,11 @@ use spid death_date admit using "E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_
 duplicates drop 
 rename death_date dd_claims
 
+
+//use a local that need only be changed once
+local maxwave 7
 by spid, sort: drop if missing(dd) & _N>1
-forvalues i=2/7 {
+forvalues i=2/`maxwave' {
 	merge 1:1 spid using "E:\nhats\data\NHATS Public\round_`i'\nhats_round_`i'_tracker_file", ///
 	nogen keep(match master) keepusing(r`i'status r`i'spstatdt*)
 	merge 1:1 spid using "E:\nhats\data\NHATS Sensitive\r`i'_sensitive\nhats_round_`i'_sp_sen_dem_file", ///
@@ -4746,7 +4749,7 @@ keep spid *died *status dd* adm *spstat*
 gen dd_nhats=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
 gen death_day=. 
-forvalues i=2/6 {
+forvalues i=2/`maxwave' {
 	foreach j in mth yr {
 		replace pd`i'`j'died=. if pd`i'`j'<0
 }
@@ -4776,7 +4779,7 @@ tab r`i'status
 *keep if dd_present_n!=dd_present_c
 tab match
 gen last_ivw_date=.
-forvalues i=2/6 {
+forvalues i=2/`maxwave' {
 tab r`i'status
 replace last_ivw_date=mdy(r`i'spstatdtm,1,r`i'spstatdtyr) if inlist(r`i'status,60,61,63) 
 
@@ -4809,12 +4812,12 @@ drop death_day
 gen death_date=dd_claims
 replace death_date=dd_nhats if dd_claims==.
 replace death_date=last if last>dd_nhats & dd_claims==. & !missing(last)
-label var death_date "SP death date, from tracker (day imputed)"
+
 format death_date %td
 gen death_month=month(death_date)
 gen death_year=year(death_date)
-foreach x in month year {
-label var death_date "SP death `x', from claims or tracker"
+foreach x in date month year {
+label var death_`x' "SP death `x', from claims or tracker"
 }
 gen death_source=1 if death_date==dd_claims 
 replace death_source=2 if death_date==last & dd_claims==.
