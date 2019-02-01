@@ -1,0 +1,176 @@
+--------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\/1a-help_hours_imputation
+> -LOG_1_Feb_2019.smcl
+  log type:  text
+ opened on:   1 Feb 2019, 17:17:02
+
+. 
+. 
+. 
+. 
+. *********************************************
+. 
+. cd "${work}"
+E:\nhats\data\NHATS working data
+
+. 
+. **User note: This section can be commented out after run one time to set up da
+> tasets
+. ********************************************************************
+. //combine op and sp data files
+. 
+. forvalues w=1/2{
+  2. use "${r`w'raw}NHATS_Round_`w'_OP_File_v2.dta", clear
+  3. sort spid opid 
+  4. 
+. merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+  5. keep if _merge==3 //drop obs with no OP entries
+  6. save R`w'_OPSPlinked.dta, replace
+  7. }
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           667
+        from master                         0  (_merge==1)
+        from using                        667  (_merge==2)
+
+    matched                            38,097  (_merge==3)
+    -----------------------------------------
+(667 observations deleted)
+file R1_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           465
+        from master                         0  (_merge==1)
+        from using                        465  (_merge==2)
+
+    matched                            37,944  (_merge==3)
+    -----------------------------------------
+(465 observations deleted)
+file R2_OPSPlinked.dta saved
+
+. 
+. forvalues w=3/7{
+  2. use "${r`w'raw}NHATS_Round_`w'_OP_File.dta", clear
+  3. sort spid opid 
+  4. 
+. merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+  5. keep if _merge==3 //drop obs with no OP entries
+  6. save R`w'_OPSPlinked.dta, replace
+  7. }
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           317
+        from master                         0  (_merge==1)
+        from using                        317  (_merge==2)
+
+    matched                            35,745  (_merge==3)
+    -----------------------------------------
+(317 observations deleted)
+file R3_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           211
+        from master                         0  (_merge==1)
+        from using                        211  (_merge==2)
+
+    matched                            33,016  (_merge==3)
+    -----------------------------------------
+(211 observations deleted)
+file R4_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r5dcontnew already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           394
+        from master                         0  (_merge==1)
+        from using                        394  (_merge==2)
+
+    matched                            52,285  (_merge==3)
+    -----------------------------------------
+(394 observations deleted)
+file R5_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r6dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           284
+        from master                         0  (_merge==1)
+        from using                        284  (_merge==2)
+
+    matched                            51,174  (_merge==3)
+    -----------------------------------------
+(284 observations deleted)
+file R6_OPSPlinked.dta saved
+(label r5dcontnew already defined)
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r6dresid already defined)
+(label r7dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           189
+        from master                         0  (_merge==1)
+        from using                        189  (_merge==2)
+
+    matched                            49,065  (_merge==3)
+    -----------------------------------------
+(189 observations deleted)
+file R7_OPSPlinked.dta saved
+
+. 
+. //now create limited datasets for each wave with only needed variables
+. forvalues w=1/7{
+  2.         use R`w'_OPSPlinked.dta
+  3.         keep spid op* wave w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresi
+> d ///
+>         mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhel
+> p ///
+>         sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmeal
+> reas ///
+>         ha`w'dbankreas mc`w'dmedsreas 
+  4.         
+.         capture keep w`w'an2011wgt0 w`w'tr2011wgt0 w`w'tran
+  5.         
+.         rename (op`w'* w`w'* r`w'* mo`w'* sc`w'* ha`w'* mc`w'*) (*) 
+  6. 
+.         save R`w'_OPSPltd.dta, replace
+  7. }
+file R1_OPSPltd.dta saved
+file R2_OPSPltd.dta saved
+file R3_OPSPltd.dta saved
+file R4_OPSPltd.dta saved
+file R5_OPSPltd.dta saved
+file R6_OPSPltd.dta saved
+file R7_OPSPltd.dta saved
+
+. 
+end of do-file
+

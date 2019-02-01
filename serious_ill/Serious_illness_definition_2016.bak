@@ -2972,7 +2972,6 @@ cva1=0;
 park1=0;
 if substr(dx,1,4)='3330' 
 or substr(dx,1,4)='3334' 
-or substr(dx,1,4)='3320'
 then neurodeg1=1;
 
 if substr(dx,1,4)='3320'
@@ -7147,9 +7146,10 @@ if comorb_16_0_6m=1 | hiv_icd10=1 then smi_hiv_ind=1;
 if comorb_16_0_6m=0 & smi_hiv_ind~=1 then smi_hiv_ind=0;
 label smi_hiv_ind="Indicator of HIV with and AIDS defining illness 6m, elix";
 
-if comorb_33_0_6m=1 | als_icd10=1 then smi_als_ind=1;
-if comorb_33_0_6m=0 & smi_als_ind~=1 then smi_als_ind=0;
-label smi_als_ind="Indicator of ALS 6m, icd9 code";
+/*Update 2/1/19- Including codes Huntington's & other neurodegenerative disease in for ICD-9*/
+if comorb_33_0_6m=1 | neurodeg=1 | als_icd10=1 then smi_neurodeg_ind=1;
+if  smi_neurodeg_ind~=1 then smi_neurodeg_ind=0;
+label smi_neurodeg_ind="Indicator of neurodegenerative disease, 6m";
 
 /*hip fracture, either admitting diagnosis or CPT from carrier claim AND
 surgery or follow up carrier claim within 2 days*/
@@ -7171,7 +7171,7 @@ label multi_any_ind="Any indicator of Multimorbidity 4+ chronic conditions 6m";
 
 /*total number of serious medical illnesses per these definitions*/
 smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + smi_copd_ind + 
- smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind + smi_cva_ind;
+ smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_neurodeg_ind + smi_hip_ind + smi_cva_ind;
 
 /*indicator for 3+serious medical illnesses*/
 if smi_count>=3 then smi_ge3_ind=1;
@@ -7182,11 +7182,11 @@ label smi_ge3_ind="3 or more serious medical illnesses";
 Update 6/9/14 - HIV not included in list of serious medical illnesses*/
 if smi_dem_ind =1 | smi_cancer_ind =1 | smi_esrd_ind =1 | smi_chf_ind =1 | 
  smi_copd_ind =1 | smi_diab_compl_ind =1 | smi_liver_ind =1 | smi_hiv_ind =1 | 
- smi_als_ind =1 | smi_hip_ind=1 | smi_cva_ind=1
+ smi_neurodeg_ind =1 | smi_hip_ind=1 | smi_cva_ind=1
  then ser_med_illness=1;
 if smi_dem_ind =0 & smi_cancer_ind =0 & smi_esrd_ind =0 & smi_chf_ind =0 & 
  smi_copd_ind =0 & smi_diab_compl_ind =0 & smi_liver_ind =0 & smi_hiv_ind =0 & 
- smi_als_ind =0 & smi_hip_ind=0 & ser_med_illness~=1
+ smi_neurodeg_ind =0 & smi_hip_ind=0 & ser_med_illness~=1
  then ser_med_illness=0;
 label ser_med_illness="Any indicator of serious medical illness 6m";
 
@@ -7522,12 +7522,12 @@ replace el_ge3=comorb_all>3 if !missing(comorb_all)
 replace adl_impair=1 if nhres==1
 
 /*update 7/24/17--include neurodeg and cva*/
-
-rename neurodeg smi_neurodeg_ind 
+/*update 2/1/19--neurodeg replace ALS to be more comparable with ICD-10
+*rename neurodeg smi_neurodeg_ind 
 
 replace smi_count=smi_dem_ind + smi_cancer_ind + smi_esrd_ind + smi_chf_ind + ///
 smi_copd_ind + smi_diab_compl_ind + smi_liver_ind + smi_hiv_ind + smi_als_ind + smi_hip_ind ///
-+ smi_neurodeg + smi_cva
++ smi_neurodeg + smi_cva*/
 replace ser_med_illness=smi_count>0 if missing(ser_med_illness) & !missing(smi_count)
 replace criteria_a=smi_count>0 if !missing(smi_count) & missing(criteria_a)
 replace criteria_a=1 if adl_impair==1
@@ -13742,12 +13742,13 @@ cd `datapath'
 local date=subinstr("$S_DATE"," ","_",.)
 
 use serious_ill_nhats_1_6_full_6m if !lml & sp_ivw==1, clear
-
-drop smi_neuro smi_nh smi_ge3
+drop /*smi_neuro*/ smi_nh smi_ge3
 drop smi_count
 egen smi_count=rowtotal(smi_*ind)
 replace smi_count=0 if missing(smi_count)
 replace criteria_a=1 if smi_count>=1
+rename smi_esrd* smi_renal*
+*rename smi_als* smi_neurodeg*
 
 svyset varunit [pw=anfinwgt], strata(varstrat)
 
@@ -13807,8 +13808,8 @@ label var tot_paid_by_mc_6m "Total MC expenditures 6m post"
 label var ind_icu_p6m "Any ICU 6m post"
 label var ind_hs_p6m "Any hospice 6m post"
 label var mult_ip_adm_p6m ">1 hospital admission 6m post"
-label var smi_als_ind "Neurodegenerative disorder, 6m (ALS only for ICD-9)"
-label var smi_esrd_ind "Advanced kidney disease"
+label var smi_neurodeg_ind "Neurodegenerative disorder, 6m"
+label var smi_renal_ind "Advanced kidney disease"
 
 label var died_6 "Died w/in 6m"
 local income
@@ -13952,7 +13953,7 @@ note("6+ months of FFS Medicare prior to interview and 1+ SMI" \ ///
 
 
 
-local smi ind_smi_any smi_dem_ind smi_cancer_ind smi_esrd_ind smi_copd_ind ///
+local smi ind_smi_any smi_dem_ind smi_cancer_ind smi_renal_ind smi_copd_ind ///
 smi_diab_compl_ind
 
 foreach smivar of local smi {
@@ -14011,6 +14012,8 @@ foreach smivar of local smi {
 
 
 H="changelog"
+1/31/19-EBL-updated ALS SMI to include new neurodegenerative codes in ICD-9
+
 1/29/19-EBL-updated ICD-9/10 tables to include months of follow-up
 
 1/28/19-EBL-updated table labeling, etc.  Also found and replaced copied-over SMIs from ICD-10 that had been copied over with Elix code

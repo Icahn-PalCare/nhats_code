@@ -155,85 +155,16 @@ replace cd=1 if no_acp==1
 
 // table
 
-local demo1 age 
-
-local demo2 male female education1 education2 education3 education4 income_quart1 ///
-income_quart2 income_quart3 income_quart4 race_cat1 race_cat2 race_cat3 race_cat4 ///
-ownhome0 ownhome
-
-local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
-livearrang1 livearrang2 livearrang3 livearrang4
-
-local sn1 n_children 
-
-local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
-sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
-
-local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
-
-local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
-
-
-
-mat tab=J(`rn',11,.)
-mat stars=J(`rn',11,0)
-local c=1 
-local r=1
-
-foreach q in n acp informal_acp no_acp formal_acp{
-local r=1
-di `r'
-
-foreach x in `demo1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-anova `x' ab
-
-local r=`r'+1
-}
-
-foreach x in `demo2' `sn'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
-local r=`r'+1
-}
-
-foreach x in `sn1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-local r=`r'+1
-}
-
-foreach x in `health' `psy'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
-local r=`r'+1
-}
-
-sum n if `q'==1 
-mat tab[`r', `c']=`r(N)'
-local c=`c'+1
-
-}
-mat list tab
-
-mat colnames tab= "ACP Module Recieved" "Two-Pronged ACP" "Discussions Only" "No ACP" "Formal Only"
-mat rownames tab= `demo1' `demo2' `sn' `sn1' `health' `psy' "N"
-mat list tab
-
-frmttable using "E:\nhats\data\Projects\ACP\logs\NHATS.rtf", replace /// 
-statmat(tab) varlabels title("2012 NHATS Means/ Proportions") annotate(stars) asymbol("ab", "ac", "ad", "bc", "bd", "cd") 
-
-
 putexcel set "E:\nhats\data\Projects\ACP\logs\NHATS.xls", replace
 tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
 local lab1 " "
 local lab2 Full Sample
-local lab3 ACP
-local lab4 Discussions Only
-local lab5 No ACP
-local lab6 Formal Only
+local lab3 ACP (a)
+local lab4 Discussions Only (b)
+local lab5 No ACP (c)
+local lab6 Formal Only (d)
+local lab7 Significant Subgroup Differences
+
 
 local demo1 age 
 
@@ -253,7 +184,7 @@ local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety
 
 local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
 
-forvalues i=1/6{
+forvalues i=1/7{
 putexcel ``i''1="`lab`i''"
 }
 
@@ -359,34 +290,6 @@ tab `x' if wave==2 , m
 }
 
 
-gen acp_cat=.
-replace acp_cat=1 if acp==1 
-replace acp_cat=2 if formal_acp==1
-replace acp_cat=3 if informal_acp==1
-replace acp_cat=4 if no_acp==1
-
-
-
-anova acp age
-
-anova formal_acp age
-
-anova informal_acp age
-
-anova ab age
-
-anova acp_cat age if acp_cat==1 | acp_cat==3
-
-ttest age if ab==1, by(acp_cat)
-
-
-anova age ab
-
-di Ftail(e(df_m), e(df_r), e(F))
-
-
-
-
 H="HRS "
 /*
 
@@ -427,6 +330,9 @@ Data format is multiple observations per subject, one for each round
 */
 */
 
+clear all
+
+set maxvar 100000
 
 use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
 
@@ -472,13 +378,15 @@ save `a'
 
 use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
 
-merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen
+merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen keep(matched)
 
-merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force
+merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force keep(matched)
 
-merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force
+merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force keep(matched)
 
-merge 1:1 hhid pn using , nogen
+merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
+
+
 
 format %td birth_date
 
@@ -487,44 +395,46 @@ gen age= c_ivw_date-birth_date
 gen male=0
 replace male=1 if female==0
 
+gen live_alone=0
+replace live_alone=1 if hhm==0
 
-
-gen srh_g=0
-replace srh_g=1 if srh<4
+gen live_others=0
+replace live_others=1 if hhm>0
 
 gen cesd_tot_ge3_n=0
-replace cesd_tot_ge3_n=1 if rowtotal(cesd1 cesd2 cesd4 cesd5 cesd6 cesd7 cesd8)=>3
+replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
 
-value degreef 0 ="none"
-	1 ="GED"
-	2 ="High school"
-	3 ="2 yr college"
-	4 ="4 yr college"
-	5 ="Masters"
-	6 ="Professional"
-	9 ="Unknown, some college";
-	
-nw_lowest nw_midlow nw_midhigh nw_highest
+foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
+gen `x'0=0 
+replace `x'0=1 if `x'==0
+}
 
-marital_sd marital_nev marital_wid marital_div marital_sep
-
-hhm
-
-child
-
-cesd_tot_ge3_n
-
-depr_2_wks_hrs
-
-imprelig
 
 //reverse coding for scales
-conscientiousness
-nlb033e nlb033i nlb033z_5 nlb033n nlb033v 
-neuroticism
-nlb033h nlb033d nlb033q
+//conc
+tab nlb033v
+gen nlb033v_n=nlb033v
+foreach x in nlb033e nlb033i nlb033z_5 nlb033n  {
+tab `x'
+gen `x'_n=5-`x'
+}
+egen consc= rowmean(nlb033e_n nlb033i_n nlb033z_5_n nlb033n_n nlb033v_n) if ///
+!missing(nlb033e_n, nlb033i_n, nlb033z_5_n, nlb033n_n, nlb033v_n)
+
+//neuro
+tab nlb033q
+gen nlb033q_n=nlb033q
+foreach x in nlb033h nlb033d {
+tab `x'
+gen `x'_n=5-`x'
+}
+egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d_n, nlb033q_n)
 
 tab degree, gen(degree)
+tab imprelig, gen(imprelig)
+
+lab var age "Age"
+lab var male "Male"
 lab var degree1 "None"
 lab var degree2 "GED"
 lab var degree3 "High school"
@@ -533,24 +443,345 @@ lab var degree5 "4 yr college"
 lab var degree6 "Masters"
 lab var degree7 "Professional"
 lab var degree8 "Unknown, some college"
+lab var h12wohous0 "Does not own home"
+lab var h12wohous "Own's home"
+lab var live_alone "Live's alone"
+lab var live_others "Live with others"
+lab var soc_visit0 "No social visits with neighbors"
+lab var srh_pf0 "Self Rates Health: Good+"
+lab var hosp_last_2yr0 "No hospitalization"
+lab var dem_hrs0 "Np SR Dementia"
+lab var cesd_tot_ge3_n0 "No Depression"
+lab var cesd_tot_ge3_n "Depression"
+lab var consc "Conscientiousness (non-missing q's)"
+lab var neuro "Neuroticism (non-missing q's)"
+lab var imprelig1 "Importance of Religion: very important"
+lab var imprelig2 "Importance of Religion: somewhat important"
+lab var imprelig3 "Importance of Religion: not too "
+
+gen ab=.
+replace ab=0 if informal==1
+replace ab=1 if acp==1
+
+gen ac=.
+replace ac=0 if no_acp==1
+replace ac=1 if acp==1
+
+gen ad=.
+replace ad=0 if formal==1
+replace ad=1 if acp==1
+
+gen bc=.
+replace bc=0 if no_acp==1
+replace bc=1 if informal==1
+
+gen bd=.
+replace bd=0 if formal==1
+replace bd=1 if informal==1
+
+gen cd=.
+replace cd=0 if formal==1
+replace cd=1 if no_acp==1
+gen n=1 if acp!=.
+
+// table 1 --full sample
+putexcel set "E:\nhats\data\Projects\ACP\logs\hrs.xls", replace
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
+local lab1 " "
+local lab2 Full Sample
+local lab3 ACP (a)
+local lab4 Discussions Only (b)
+local lab5 No ACP (c)
+local lab6 Formal Only (d)
+local lab7 Significant Subgroup Differences
 
 local demo1 age 
 
 local demo2 male female ed_less_hs ed_hs_plus ed_coll nw_lowest nw_midlow ///
-nw_midhigh nw_highest white black hisp_eth other_race  ///
-ownhome0 ownhome
+nw_midhigh nw_highest white black hisp_eth other_race h12wohous0 h12wohous
 
-local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
-livearrang1 livearrang2 livearrang3 livearrang4
 
-local sn1 n_children 
+local sn married marital_nev marital_wid marital_div marital_sep ///
+live_alone live_others
 
-local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
-sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
+local sn1 child 
 
-local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
+local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem_hrs0 ///
+dem_hrs cesd_tot_ge3_n0 cesd_tot_ge3_n  
 
-local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' 
+local psy imprelig1 imprelig2 imprelig3 
+
+local psy1 consc neuro
+
+local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+
+forvalues i=1/7{
+putexcel ``i''1="`lab`i''"
+}
+
+mat tab=J(`rn',5,.)
+
+local c=1 
+local r=1
+
+foreach q in n acp informal_acp no_acp formal_acp{
+local r=1
+di `r'
+
+foreach x in `demo1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+local t=2
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `demo2' `sn'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `sn1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `health' `psy'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `psy1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+sum n if `q'==1 
+mat tab[`r', `c']=`r(N)'
+local c=`c'+1
+
+}
+putexcel (B2)=mat(tab)
+
+local r=2
+foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1'{
+local lab: var label `x'
+putexcel A`r'=("`lab'")
+local r=`r'+1
+}
+putexcel A`r'=("N")
+
+
+
+
+// table 2-- only individuals who had leave behind survey
+gen lb=1 if !missing(neuro, consc)
+preserve
+
+keep if lb==1
+
+putexcel set "E:\nhats\data\Projects\ACP\logs\hrs_lb.xls", replace
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
+local lab1 " "
+local lab2 Full Sample
+local lab3 ACP (a)
+local lab4 Discussions Only (b)
+local lab5 No ACP (c)
+local lab6 Formal Only (d)
+local lab7 Significant Subgroup Differences
+
+local demo1 age 
+
+local demo2 male female ed_less_hs ed_hs_plus ed_coll nw_lowest nw_midlow ///
+nw_midhigh nw_highest white black hisp_eth other_race h12wohous0 h12wohous
+
+
+local sn married marital_nev marital_wid marital_div marital_sep ///
+live_alone live_others
+
+local sn1 child 
+
+local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem_hrs0 ///
+dem_hrs cesd_tot_ge3_n0 cesd_tot_ge3_n  
+
+local psy imprelig1 imprelig2 imprelig3 
+
+local psy1 consc neuro
+
+local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+
+forvalues i=1/7{
+putexcel ``i''1="`lab`i''"
+}
+
+mat tab=J(`rn',5,.)
+
+local c=1 
+local r=1
+
+foreach q in n acp informal_acp no_acp formal_acp{
+local r=1
+di `r'
+
+foreach x in `demo1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+local t=2
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `demo2' `sn'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `sn1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `health' `psy'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `psy1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+sum n if `q'==1 
+mat tab[`r', `c']=`r(N)'
+local c=`c'+1
+
+}
+putexcel (B2)=mat(tab)
+
+local r=2
+foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1'{
+local lab: var label `x'
+putexcel A`r'=("`lab'")
+local r=`r'+1
+}
+putexcel A`r'=("N")
+
 
 H="Changelog"
 
@@ -561,11 +792,13 @@ H="Changelog"
 
 Updates:
 
-
-
-01/31/2018 MH
+02/01/2019 MH
 ------------
-Table for NHATS under NHATS ACP for ACP summary statistics. 
+Created table for HRS under HRS tab. Done for summary statistics. Created vars for neuroticism and conscientiousness.
+
+01/31/2019 MH
+------------
+Table for NHATS under NHATS ACP for ACP summary statistics.
 
 
 */
