@@ -1,0 +1,613 @@
+/*Descriptives of how many patients are identified with different criteria*/
+libname out "E:\nhats\projects\Naomi QoL";
+proc import out=test datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
+dbms=dta replace;
+run;
+
+data nhats; set out.nhats_multiple_cancers; run;
+
+proc contents data=nhats; run;
+
+proc format; 
+value maritalstat 
+1="Married/Living with Partner"
+2="Unmarried (Widowed/Div/Never Married)";
+
+value race_recode
+1="White Non-His"
+2="Black Non-His"
+3="Hispanic/Other";
+
+value frailty
+0="Not Frail"
+1="Pre Frailty"
+2="Frailty";
+
+value education
+0="<=HS"
+1=">HS";
+
+run;
+
+proc contents data=nhats; run;
+
+proc freq data=nhats(where=(sample=1)); tables dem_2_cat dem_3_cat prob_dem education; /*format _all_;*/ run;
+
+/*get rid of men with breast and women with prostate*/
+data nhats; set nhats; 
+if firstdx="bc" and female=0 then sample=0;
+if firstdx="bc" and female=0 then sample1=0;
+if firstdx="bc" and female=0 then sample2=0;
+
+if firstdx="pc" and female=1 then sample=0;
+if firstdx="pc" and female=1 then sample1=0;
+if firstdx="pc" and female=1 then sample2=0;
+
+/*define no cancer time*/
+if firstdx="lc" then nocancert=nolct; label nocancert="Known Cancer Free Time";
+if firstdx="bc" then nocancert=nobct;
+if firstdx="pc" then nocancert=nopct;
+if firstdx="cc" then nocancert=nocct;
+
+if race_cat in (3,4) then race_recode=3; 
+if race_cat in (1,2) then race_recode=race_cat;
+format race_recode race_recode.;
+
+/*define frailty index*/
+/*use scores of 0 or 1 for low grip strength and low walk score(lowest quintile)?  
+Is that appropriate?- paper says they used lowest 20% by gender, BMI for grip strenth, slowness was lowest 20% by gender/height */
+/*use average walk score and grip score?*/
+
+if nhatsgrav in (0,1) then lowgrip=1; else lowgrip=0; label lowgrip="Low Grip Strength";
+if nhatsgrav=. then lowgrip=.;
+if nhatswksc in (0,1) then slowwalk=1; else slowwalk=0; label slowwalk="Slow Walking Speed";
+if nhatswksc=. then slowwalk=.;
+
+frailty_count=sum(unwgtloss, lowenrgy, lowgrip, slowwalk, lowphysact);
+
+if frailty_count=0 then frailty_ind=0; /*not frail*/ label frailty_ind="Frailty Index";
+if frailty_count in (1, 2) then frailty_ind=1; /*pre-frailty*/
+if frailty_count>=3 then frailty_ind=2; /*frailty*/  format frailty_ind frailty.;
+
+if frailty_ind=1 then prefrail=1; else prefrail=0; /*prefrailty y/n*/
+if frailty_ind=. then prefrail=.;
+if frailty_ind=2 then frail=1; else frail=0; /*frail y/n*/
+if frailty_ind=. then frail=.;
+
+/*redefine missing*/
+if oftcheer=5 then oftcheer1=.; else oftcheer1=oftcheer; label oftcheer1="How often cheerful-missing";
+if oftbored=5 then oftbored1=.; else oftbored1=oftbored; label oftbored1="How often bored-missing";
+if oftfol=5 then oftfol1=.; else oftfol1=oftfol; label oftfol1="How often feel full of life-missing";
+if oftupset=5 then oftupset1=.; else oftupset1=oftupset; label oftupset1="How often feel upset-missing";
+
+if lifemean=4 then lifemean1=.; else lifemean1=lifemean; label lifemean1="Feel life has meaning-missing";
+if confident=4 then confident1=.; else confident1=confident; label confident1="Feel confident-missing";
+if giveup=4 then giveup1=.; else giveup1=giveup; label giveup1="Given up on making life better-missing";
+if livingsit=4 then livingsit1=.; else livingsit1=livingsit; label livingsit1="like living situation-missing";
+if selfdeter=4 then selfdeter1=.; else selfdeter1=selfdeter; label selfdeter1="Others determine what i can do-missing";
+if findway=4 then findway1=.; else findway1=findway; label findway1="Can find way when i want to do something-missing";
+if adjchg=4 then adjchg1=.; else adjchg1=adjchg; label adjchg1="Easily adjust to change-missing";
+
+if maritalstat in (1, 2) then marstat=1; /*married or living with partner*/
+if maritalstat in (3,4,5,6) then marstat=2; /*unmarried*/
+format marstat maritalstat.; 
+
+if n_social_network in (0,1) then high_support=0;
+if n_social_network>=2 then high_support=1; label high_support="High Social support";
+
+N1_cancer_time=firstdxt-n1_int; label N1_cancer_time="Time from N1 interview to first dx";
+cancer_P1_time=P1_int-firstdxt; label cancer_P1_time="time from diagnosis to follow up interview";
+
+if srh in  (4,5) then srh_fp=1; if srh in (1,2,3) then srh_fp=0;
+
+if education in (1,2) then HS=0; label HS="More than HS education";
+if education in (3,4) then HS=1; format HS education.;
+
+format oftcheer1 oftchee. oftbored1 oftbore. oftfol1 oftfol. oftupset1 oftupse. lifemean1 lifemea. 
+confident1 confide. giveup1 giveup. livingsit1 livings. selfdeter1 selfdet. findway1  findway. adjchg1 adjchg.;
+run;
+
+proc freq data=nhats(where=(wave=1 and sample=1)); table srh*srh_fp education*HS maritalstat*marstat; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1 and firstdx="lc")); table lcdxnum; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1 and firstdx="bc")); table bcdxnum; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1 and firstdx="cc")); table ccdxnum; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1 and firstdx="pc")); table pcdxnum; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample2=1)); run;
+
+proc freq data=test; tables wave; run;
+
+proc freq data=test(where=(firstdx="lc")); table sr_cancer_new; run;
+
+proc freq data=test(where=(firstdx="bc")); table sr_cancer_new; run;
+
+proc freq data=test(where=(firstdx="cc")); table sr_cancer_new; run;
+
+proc freq data=test(where=(firstdx="pc")); table sr_cancer_new; run;
+
+
+/********multiple diagnoses*/
+data test; set nhats(where=(ivw_date=p1_int and /*sample2=1*/ sample=1 and lcdxnum>1 and firstdx="lc")) ; run;
+
+proc freq data=test (where=(firstdx="lc")); table sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample/*2*/=1 and bcdxnum>1 and firstdx="bc")) ; run;
+
+proc freq data=test; table sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample/*2*/=1 and ccdxnum>1 and firstdx="cc")) ; run;
+
+proc freq data=test; table sr_cancer_new; run;
+
+
+data test; set nhats(where=(ivw_date=p1_int and sample/*2*/=1 and pcdxnum>1 and firstdx="pc")) ; run;
+
+proc freq data=test; table sr_cancer_new; run;
+
+
+/*wave 2 self report*/
+data test; set nhats(where=(wave=2)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample2=1 and wave=2)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+/*wave 3 self report*/
+data test; set nhats(where=(wave=3)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample2=1 and wave=3)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+/*wave 4 self report*/
+data test; set nhats(where=(wave=4)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample2=1 and wave=4)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+/*wave 5 self report*/
+data test; set nhats(where=(wave=5)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+data test; set nhats(where=(ivw_date=p1_int and sample2=1 and wave=5)); run;
+proc freq data=test; tables sr_cancer_new; run;
+
+
+/***Analysis**/
+
+/*wave 1 weights and demographics*/
+data weights; set nhats(where=(wave=1)); keep bene_id anfinwgt varstrat varunit female race_recode HS/*marstat
+education income_cat sr_numconditions1 srh_fp*/;
+rename anfinwgt=W1_anfinwgt varstrat=W1_varstrat varunit=W1_varunit female=W1_female race_recode=W1_race_recode HS=W1_HS
+/*marstat=W1_marstat education=W1_education income_cat=W1_income_cat sr_numconditions1=W1_sr_numconditions1 srh_fp=W1_srh_fp*/; 
+run;
+
+
+data nhats1; merge nhats weights; by bene_id; run;
+
+proc print data=nhats1(where=(wave=1)obs=10); var bene_id anfinwgt W1_anfinwgt varstrat W1_varstrat
+varunit W1_varunit female W1_female race_recode W1_race_recode HS W1_HS /*marstat W1_marstat education W1_education 
+income_cat W1_income_cat sr_numconditions1 W1_sr_numconditions1 srh_fp W1_srh_fp*/; run;
+
+/*Descriptive characteristics of 242 patients prior to a cancer diagnosis*/
+data n1; set nhats1(where=(ivw_date=n1_int and sample=1)); run;
+data nonsample; set nhats1(where=(sample=0 and wave=1)); run;
+
+data predx; set n1 nonsample; run;
+
+proc surveymeans data=predx nobs mean std clm; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample;
+var age_firstdx n_helpers tot_hrswk_help_i sr_phq2_score sr_gad2_score sr_numconditions1; run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(W1_female W1_race_recode marstat education income_cat sr_phq2_depressed sr_gad2_anxiety srh_fp frailty_ind 
+sr_heart_dis_ever sr_lung_dis_ever prob_dem adl_impair ind_pain )/row col;
+run;
+
+/*plots of pre/post values*/
+data n1; set nhats1(where=(ivw_date=n1_int and sample2=1)); keep bene_id W1_anfinwgt W1_varstrat W1_varunit
+sample2 W1_female W1_race_recode W1_HS marstat education income_cat sr_numconditions1 srh_fp sr_phq2_depressed sr_gad2_anxiety 
+frailty_ind prob_dem adl_impair ind_pain firstdx sr_phq2_score sr_gad2_score age_firstdx;
+rename marstat=N1_marstat education=N1_education income_cat=N1_income_cat sr_numconditions1=N1_sr_numconditions1
+srh_fp=N1_srh_fp sr_phq2_depressed=N1_sr_phq2_depressed sr_gad2_anxiety=N1_sr_gad2_anxiety frailty_ind=N1_frailty_ind
+prob_dem=N1_prob_dem adl_impair=N1_adl_impair ind_pain=N1_ind_pain sr_phq2_score=N1_sr_phq2_score sr_gad2_score=N1_sr_gad2_score;
+run;
+
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); keep bene_id sr_numconditions1 srh_fp sr_phq2_depressed sr_gad2_anxiety 
+frailty_ind prob_dem adl_impair ind_pain firstdx sr_phq2_score sr_gad2_score marstat income_cat;
+rename sr_numconditions1=P1_sr_numconditions1
+srh_fp=P1_srh_fp sr_phq2_depressed=P1_sr_phq2_depressed sr_gad2_anxiety=P1_sr_gad2_anxiety frailty_ind=P1_frailty_ind
+prob_dem=P1_prob_dem adl_impair=P1_adl_impair ind_pain=P1_ind_pain sr_phq2_score=P1_sr_phq2_score sr_gad2_score=P1_sr_gad2_score
+marstat=P1_marstat income_cat=P1_income_cat;
+run;
+
+data nonsample; set nhats1(where=(sample2=0 and wave=1)); keep bene_id W1_anfinwgt W1_varstrat W1_varunit sample2; run;
+
+data pre_post; merge n1 p1; by bene_id; run;
+proc print data=pre_post; run;
+
+data pre_post; set pre_post nonsample; run;
+
+proc surveyfreq data=pre_post; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+table sample2*(N1_sr_phq2_depressed N1_sr_gad2_anxiety N1_srh_fp N1_frailty_ind N1_prob_dem N1_adl_impair N1_ind_pain
+P1_sr_phq2_depressed P1_sr_gad2_anxiety P1_srh_fp P1_frailty_ind P1_prob_dem P1_adl_impair P1_ind_pain)/row col;
+run;
+
+
+/*calculate change score for depression*/
+data pre_post; set pre_post;
+dep_change=P1_sr_phq2_score-N1_sr_phq2_score;
+anx_change=P1_sr_gad2_score-N1_sr_gad2_score;
+run;
+
+proc surveymeans data=pre_post nobs mean stderr t;
+domain sample2*n1_sr_phq2_depressed;
+var dep_change;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+run;
+
+proc sgplot data=pre_post(where=(sample2=1));
+reg x=n1_sr_phq2_depressed y=dep_change/group=firstdx;run;
+
+proc sgplot data=pre_post(where=(sample2=1));
+reg x=n1_sr_phq2_score y=dep_change/group=firstdx;run;
+proc sgplot data=pre_post(where=(sample2=1));
+reg x=n1_sr_phq2_score y=p1_sr_phq2_score/group=firstdx;run;
+
+proc surveymeans data=pre_post nobs mean stderr t;
+domain sample2*n1_sr_gad2_anxiety;
+var anx_change;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+run;
+
+proc sgplot data=pre_post;
+reg x=n1_sr_gad2_anxiety y=anx_change/group=firstdx;run;
+
+
+proc surveyreg data=pre_post;
+domain sample2;
+class n1_sr_phq2_depressed firstdx ;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+model dep_change=n1_sr_phq2_depressed firstdx W1_female/solution; run;
+
+proc contents data=pre_post; run;
+
+
+/**Logistic regression modeling post depression controlling for pre**/
+proc surveylogistic data=pre_post;
+domain sample2;
+class  p1_sr_phq2_depressed (ref="0") n1_sr_phq2_depressed(ref="0") firstdx (ref="lc") 
+p1_income_cat(ref="<15000") W1_race_recode p1_marstat W1_HS(ref="<=HS") W1_female(ref="Male")/param=ref;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+model p1_sr_phq2_depressed= firstdx n1_sr_phq2_depressed age_firstdx W1_race_recode
+p1_marstat p1_income_cat W1_HS W1_female; run;
+
+proc surveylogistic data=pre_post;
+domain sample2;
+class  p1_sr_gad2_anxiety (ref="0") n1_sr_phq2_depressed(ref="0") firstdx (ref="lc") 
+p1_income_cat(ref="<15000") W1_race_recode p1_marstat W1_HS(ref="<=HS") W1_female(ref="Male")/param=ref;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+model p1_sr_gad2_anxiety= firstdx n1_sr_phq2_depressed age_firstdx W1_race_recode
+p1_marstat p1_income_cat W1_HS W1_female; run;
+
+
+/*conditional logistic regression- GEE, accounting for repeated measures, but not for survey design*/
+data n1; set nhats1(where=(ivw_date=n1_int and sample2=1)); keep bene_id /* age_firstdx W1_anfinwgt W1_varstrat W1_varunit
+sample2 W1_female W1_race_recode W1_HS marstat income_cat*/ sr_phq2_depressed sr_gad2_anxiety time /*marstat income_cat*/;
+time=0;
+run;
+
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); keep bene_id  sr_phq2_depressed sr_gad2_anxiety time
+/*marstat income_cat*/; 
+time=1;
+run;
+
+
+data long; set n1 p1; run;
+proc sort data=long; by bene_id; run;
+proc print data=long; run;
+
+/*demographics*/
+data demo; set nhats1(where=(ivw_date=n1_int and sample2=1)); keep bene_id age_firstdx firstdx W1_anfinwgt W1_varstrat W1_varunit
+sample2 W1_female W1_race_recode W1_HS marstat income_cat;
+run;
+
+proc print data=demo; run;
+proc sort data=demo; by bene_id; run;
+
+data long1; merge long demo; by bene_id; run; 
+proc print data=long1; run;
+
+/*proc logistic data=long1 descending;
+strata bene_id;
+class time(ref="0") sr_phq2_depressed (ref="0") firstdx(ref="lc") W1_female(ref="Male")/param=ref;
+model time =sr_phq2_depressed age_firstdx;
+exact sr_phq2_depressed/estimate=both; 
+run;*/
+
+/**Depression**/
+
+proc freq data=long1; table income_cat*time; run;
+
+proc genmod data=long1 descending;
+class sr_phq2_depressed(ref="0") bene_id time (ref="0") firstdx(ref="lc") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_phq2_depressed=time /*firstdx age_firstdx W1_female /*W1_race_recode W1_HS*/ marstat /*income_cat*/
+/*time*firstdx*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+proc genmod data=long1 (where=(firstdx="lc")) descending;
+class sr_phq2_depressed(ref="0") bene_id time (ref="0") firstdx(ref="lc") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+proc genmod data=long1 (where=(firstdx="bc")) descending;
+class sr_phq2_depressed(ref="0") bene_id time (ref="0") /*W1_female(ref="Male") */
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx /*W1_female*/ /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+proc genmod data=long1 (where=(firstdx="pc")) descending;
+class sr_phq2_depressed(ref="0") bene_id time (ref="0") /*W1_female(ref="Male") */
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx /*W1_female*/ /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+
+proc genmod data=long1 (where=(firstdx="cc")) descending;
+class sr_phq2_depressed(ref="0") bene_id time (ref="0") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female /*W1_race_recode*/ /*W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+/**Anxiety**/
+
+proc genmod data=long1 descending;
+class sr_gad2_anxiety(ref="0") bene_id time (ref="0") firstdx(ref="lc") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_gad2_anxiety=time firstdx age_firstdx W1_female /*W1_race_recode W1_HS*/ marstat /*income_cat*/
+/*time*firstdx*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+proc genmod data=long1 (where=(firstdx="lc")) descending;
+class sr_gad2_anxiety(ref="0") bene_id time (ref="0") firstdx(ref="lc") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+proc genmod data=long1 (where=(firstdx="bc")) descending;
+class sr_gad2_anxiety(ref="0") bene_id time (ref="0") /*W1_female(ref="Male") */
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx /*W1_female*/ /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+
+proc genmod data=long1 (where=(firstdx="pc")) descending;
+class sr_gad2_anxiety(ref="0") bene_id time (ref="0") /*W1_female(ref="Male") */
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx /*W1_female*/ /*W1_race_recode W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+
+
+proc genmod data=long1 (where=(firstdx="cc")) descending;
+class sr_gad2_anxiety(ref="0") bene_id time (ref="0") W1_female(ref="Male") 
+W1_race_recode(ref="White Non-His") W1_HS(ref="<=HS") marstat(ref="Married/Living with Partner") 
+income_cat(ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female /*W1_race_recode*/ /*W1_HS*/ marstat /*income_cat*//d=bin link=logit;
+repeated subject=bene_id/corr=cs corrw; 
+estimate "log OR time" time 1/exp;
+run;
+
+/**Survey Logistic, not accounted for Repeated measures, Accounted for survey design*/
+
+
+data n1; set nhats1(where=(ivw_date=n1_int and sample2=1)); keep bene_id 
+W1_anfinwgt W1_varstrat W1_varunit sample2  sr_phq2_depressed sr_gad2_anxiety time ;
+time=0;
+run;
+
+
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); keep bene_id  sr_phq2_depressed sr_gad2_anxiety time sample2
+W1_anfinwgt W1_varstrat W1_varunit; 
+time=1;
+run;
+
+data non; set nhats1(where=(wave=1 and sample2=0)); keep bene_id sample2 W1_anfinwgt W1_varstrat W1_varunit;
+run;
+
+
+data long_surv; set n1 p1 non; run;
+proc sort data=long_surv; by bene_id; run;
+proc print data=long_surv(where=(sample2=0)obs=10); run;
+proc print data=long_surv(where=(sample2=1)obs=10); run;
+
+/*demographics*/
+data demo; set nhats1(where=(ivw_date=n1_int and sample2=1)); keep bene_id age_firstdx firstdx W1_anfinwgt W1_varstrat W1_varunit
+sample2 W1_female W1_race_recode W1_HS marstat income_cat;
+run;
+
+proc sort data=demo; by bene_id; run;
+
+data long_surv; merge long_surv demo; by bene_id; 
+if sample2=1 then rep_weight=W1_anfinwgt/2; /*since each person is in 2x their weight should be 1/2*/
+run;
+
+/*overall*/
+/*depression*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_phq2_depressed(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000") firstdx(ref="lc")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female marstat firstdx/*W1_race_recode  W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample2;
+run;
+
+/*anxiety*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_gad2_anxiety(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000") firstdx(ref="lc")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female marstat firstdx /*W1_HS income_cat W1_race_recode*/ ;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample2;
+run;
+
+/*Lung*/
+data long_surv; set long_surv; if firstdx="lc" and sample2=1 then sample_lc=1; else sample_lc=0;
+run;
+
+proc freq data=long_surv; tables sample_lc; run;
+
+/*depression*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_phq2_depressed(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female marstat /*W1_race_recode*/ /*W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_lc;
+run;
+
+/*anxiety*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_gad2_anxiety(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female marstat /*W1_race_recode* W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_lc;
+run;
+
+/*Breast*/
+data long_surv; set long_surv; if firstdx="bc" and sample2=1 then sample_bc=1; else sample_bc=0;
+run;
+
+proc freq data=long_surv; tables sample_bc; run;
+
+/*depression*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_phq2_depressed(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female marstat/*W1_race_recode  W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_bc;
+run;
+
+/*anxiety*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_gad2_anxiety(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female marstat /*W1_race_recode*/ /*W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_bc;
+run;
+
+
+/*Prostate*/
+data long_surv; set long_surv; if firstdx="pc" and sample2=1 then sample_pc=1; else sample_pc=0;
+run;
+
+proc freq data=long_surv; tables sample_pc*W1_female; run;
+
+/*depression*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_phq2_depressed(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx /*W1_female*/ marstat/*W1_race_recode W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_pc;
+run;
+
+/*anxiety*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_gad2_anxiety(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx  marstat /*W1_female W1_race_recode W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_pc;
+run;
+
+/*colorectal*/
+data long_surv; set long_surv; if firstdx="cc" and sample2=1 then sample_cc=1; else sample_cc=0;
+run;
+
+proc freq data=long_surv; tables sample_cc; run;
+
+/*depression*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_phq2_depressed(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_phq2_depressed=time age_firstdx W1_female marstat /*W1_race_recode*/  /*W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_cc;
+run;
+
+/*anxiety*/
+proc surveylogistic data=long_surv;
+class time(ref="0") sr_gad2_anxiety(ref="0") W1_female(ref="Male") W1_race_recode (ref="White Non-His")
+marstat(ref="Married/Living with Partner") W1_HS(ref="<=HS") income_cat (ref="<15000")/param=ref;
+model sr_gad2_anxiety=time age_firstdx W1_female marstat  /*W1_race_recode*/ /*W1_HS income_cat*/;
+weight rep_weight;
+strata W1_varstrat;
+cluster W1_varunit;
+domain sample_cc;
+run;

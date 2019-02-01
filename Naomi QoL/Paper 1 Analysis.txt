@@ -1,0 +1,1119 @@
+/*Analysis-paper #1- Characteristics of Patients before a cancer diagnosis*/
+
+libname out "E:\nhats\projects\Naomi QoL";
+proc import out=test datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
+dbms=dta replace;
+run;
+/*
+proc contents data=test; run;
+proc freq data=test(where=(wave=1)); tables adl_bath_diff adl_bath_help adl_bath_diff*adl_bath_help adverse_bath; run;
+proc freq data=test(where=(wave=1 and (adl_bath_diff=1 or adl_bath_help=1))); tables adverse_bath; run;
+
+proc freq data=test(where=(wave=1 and (adl_bath_diff=. and adl_bath_help=.))); 
+tables adverse_bath; run;
+
+data test; set test;
+adverse_bath_recode=adverse_bath;
+if adl_bath_diff=0 and adl_bath_help=0 then adverse_bath_recode=0;
+run;
+proc freq data=test(where=(wave=1)); tables adverse_bath_recode; run;
+proc freq data=test(where=(wave=1 and adverse_bath_recode=.)); tables adl_bath_diff adl_bath_help; run;*/
+
+/*adverse events*/
+data adverse; set out.unmetneeds; run;
+proc contents data=adverse; run;
+
+/*list of ids of people who self reported cancer before Medicare picked them up*/
+data srcancer_id; set out.srcancer_id_icd10; keep bene_id spid; run; proc print data=srcancer_id; run;
+
+/*full data set*/
+data nhats; set out.nhats_mult_canc_1516_ffs_icd10;
+drop adverse_eat adverse_bath adverse_toilet adverse_dress adverse_sc
+adverse_outside adverse_inside adverse_bed adverse_mobility
+adverse_laun adverse_shop adverse_meal adverse_meds adverse_ha
+adverse_all_cat ;
+run; proc freq data=nhats(where=(wave=1)); tables sample; run;
+/*data set of whether people talk to family or friends*/
+data talk; set out.talk_family_friends; run;
+
+proc sort data=nhats; by spid wave; run;
+proc sort data=talk; by spid wave; run;
+proc sort data=adverse; by spid wave; run;
+
+proc print data=talk (obs=20); run;
+proc print data=nhats (obs=20); var wave spid; run;
+
+/*merge with variables about who they talk to and specific adverse events*/
+data nhats; merge nhats (in=a) talk adverse; by spid wave; if a; run;
+proc print data=nhats (obs=100); var spid wave talk_friend talk_family noone_talk ; run;
+proc print data=nhats (obs=100); var spid wave  adverse_sc adverse_mobility adverse_ha adverse_all_cat; run;
+proc freq data=nhats(where=(wave=1)); tables adverse_sc adverse_mobility adverse_ha adverse_all_cat; run;
+
+proc print data=nhats(where=(wave^=1) obs=100); var nopayhous nopayutil nopaymed mealskip; run;
+proc freq data=nhats(where=(wave^=1)); tables nopayhous nopayutil nopaymed mealskip; run;
+
+proc freq data=nhats(where=(wave=1)); tables sample sample1 sample2; run;
+
+proc contents data=nhats; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1)); tables adl_bath_diff adl_bath_help adl_bath_not_done adl_bath_diff*adl_bath_help; run;
+
+
+/*merge with ids of those who self report a new cancer before pre-cancer interview, redefine those as sample/sample2=0*/
+proc sort data=srcancer_id; by spid; run;
+data nhats; merge nhats srcancer_id (in=a); by spid; 
+if a=1 then sample=0;
+if a=1 then sample1=0;
+if a=1 then sample2=0;
+run;
+
+proc freq data=nhats(where=(wave=1)); tables sample sample2; run;
+proc freq data=nhats(where=(wave=1 and sample=1)); tables female*firstdx; run;
+
+
+proc format; 
+value maritalstat 
+1="Married/Living with Partner"
+2="Unmarried (Widowed/Div/Never Married)";
+
+value race_recode
+1="White Non-His"
+2="Black Non-His"
+3="Hispanic/Other";
+
+value race2gp
+1="Non-Hispanic White"
+2="Black/Hispanic/Other";
+
+value quartile
+1="Lowest Income Quartile"
+2="Top 3 Income Quartiles";
+
+value frailty
+0="Not Frail"
+1="Pre Frailty"
+2="Frailty";
+
+value education
+0="<=HS"
+1=">HS";
+
+value index
+0="0"
+1="1-2"
+2="3+";
+
+run;
+
+proc contents data=nhats; run;
+
+proc freq data=nhats(where=(sample=1 and wave=1)); 
+tables dem_2_cat dem_3_cat prob_dem education
+nopayhous nopayutil nopaymed mealskip livearrang rcfres residence nhres medicaid adl_diff_ind adl_diff_index adl_impair
+adl_independent adl_index iadl_impair iadl_index adl_diff_ind adverse race_cat
+; /*format _all_;*/ run;
+
+proc freq data=nhats (where=(sample=1 and wave^=1)); tables nopayhous nopayutil nopaymed mealskip; format _all_; run;
+
+proc freq data=nhats(where=(sample=1 and wave=1)); 
+tables maritalstat not_talk_friend not_talk_family visitfrfam attrelig attclub; format _all_; run;
+
+proc freq data=nhats(where=(sample=1 and wave=1)); tables ind_no_helpers*(adverse_bank adverse_bath adverse_dres
+adverse_eat adverse_laun adverse_meal adverse_shop adverse_toil adverse); run;
+
+/*get rid of men with breast and women with prostate*/
+data nhats; set nhats; 
+if firstdx="bc" and female=0 then sample=0;
+if firstdx="bc" and female=0 then sample1=0;
+if firstdx="bc" and female=0 then sample2=0;
+
+if firstdx="pc" and female=1 then sample=0;
+if firstdx="pc" and female=1 then sample1=0;
+if firstdx="pc" and female=1 then sample2=0;
+
+/*define no cancer time*/
+if firstdx="lc" then nocancert=nolct; label nocancert="Known Cancer Free Time";
+if firstdx="bc" then nocancert=nobct;
+if firstdx="pc" then nocancert=nopct;
+if firstdx="cc" then nocancert=nocct;
+
+if race_cat in (3,4) then race_recode=3; 
+if race_cat in (1,2) then race_recode=race_cat;
+format race_recode race_recode.;
+
+if race_cat=1 then race2gp=1;
+if race_cat in (2,3,4) then race2gp=2;
+format race2gp race2gp.;
+
+/*define frailty index*/
+/*use scores of 0 or 1 for low grip strength and low walk score(lowest quintile)?  
+Is that appropriate?- paper says they used lowest 20% by gender, BMI for grip strenth, slowness was lowest 20% by gender/height */
+/*use average walk score and grip score?*/
+
+if nhatsgrav in (0,1) then lowgrip=1; else lowgrip=0; label lowgrip="Low Grip Strength";
+if nhatsgrav=. then lowgrip=.;
+if nhatswksc in (0,1) then slowwalk=1; else slowwalk=0; label slowwalk="Slow Walking Speed";
+if nhatswksc=. then slowwalk=.;
+
+frailty_count=sum(unwgtloss, lowenrgy, lowgrip, slowwalk, lowphysact);
+
+if frailty_count=0 then frailty_ind=0; /*not frail*/ label frailty_ind="Frailty Index";
+if frailty_count in (1, 2) then frailty_ind=1; /*pre-frailty*/
+if frailty_count>=3 then frailty_ind=2; /*frailty*/  format frailty_ind frailty.;
+
+if frailty_ind=1 then prefrail=1; else prefrail=0; /*prefrailty y/n*/
+if frailty_ind=. then prefrail=.;
+if frailty_ind=2 then frail=1; else frail=0; /*frail y/n*/
+if frailty_ind=. then frail=.;
+
+/*redefine missing*/
+if oftcheer=5 then oftcheer1=.; else oftcheer1=oftcheer; label oftcheer1="How often cheerful-missing";
+if oftbored=5 then oftbored1=.; else oftbored1=oftbored; label oftbored1="How often bored-missing";
+if oftfol=5 then oftfol1=.; else oftfol1=oftfol; label oftfol1="How often feel full of life-missing";
+if oftupset=5 then oftupset1=.; else oftupset1=oftupset; label oftupset1="How often feel upset-missing";
+
+if lifemean=4 then lifemean1=.; else lifemean1=lifemean; label lifemean1="Feel life has meaning-missing";
+if confident=4 then confident1=.; else confident1=confident; label confident1="Feel confident-missing";
+if giveup=4 then giveup1=.; else giveup1=giveup; label giveup1="Given up on making life better-missing";
+if livingsit=4 then livingsit1=.; else livingsit1=livingsit; label livingsit1="like living situation-missing";
+if selfdeter=4 then selfdeter1=.; else selfdeter1=selfdeter; label selfdeter1="Others determine what i can do-missing";
+if findway=4 then findway1=.; else findway1=findway; label findway1="Can find way when i want to do something-missing";
+if adjchg=4 then adjchg1=.; else adjchg1=adjchg; label adjchg1="Easily adjust to change-missing";
+
+if maritalstat in (1, 2) then marstat=1; /*married or living with partner*/
+if maritalstat in (3,4,5,6) then marstat=2; /*unmarried*/
+format marstat maritalstat.; 
+
+if n_social_network in (0,1) then high_support=0;
+if n_social_network>=2 then high_support=1; label high_support="High Social support";
+
+N1_cancer_time=firstdxt-n1_int; label N1_cancer_time="Time from N1 interview to first dx";
+cancer_P1_time=P1_int-firstdxt; label cancer_P1_time="time from diagnosis to follow up interview";
+
+if srh in  (4,5) then srh_fp=1; if srh in (1,2,3) then srh_fp=0;
+
+if education in (1,2) then HS=0; label HS="More than HS education";
+if education in (3,4) then HS=1; format HS education.;
+
+if nopayhous=0 and nopayutil=0 and nopaymed=0 and mealskip=0 then fin_strain=0; label fin_strain="Financial Strain";
+if nopayhous=1 or nopayutil=1 or nopaymed=1 or mealskip=1 then fin_strain=1;
+
+any_asst=govtasst;
+if section8=1 then any_asst=1; label any_asst="Government Assistance (food, utilities, housing)";
+
+/*define using medpayno??*/
+if creditdebt=1 or medpaynotcash=1 then anydebt=1;
+if creditdebt=0 and medpaynotcash=0 then anydebt=0; label anydebt="Credit or Medical Debt";
+
+/*adl and iadl index*/
+if adl_index=0 then adl=0;
+if adl_index in(1,2) then adl=1;
+if adl_index >=3 then adl=2;  format adl index.;
+
+if iadl_index=0 then iadl=0;
+if iadl_index in (1,2) then iadl=1;
+if iadl_index>=3 then iadl=2; format iadl index.;
+
+/*define income quartiles*/
+if wave=1 then income_adj=(240.007/224.939)*aveincome;
+if wave=2 then income_adj=(240.007/229.594)*aveincome;
+if wave=3 then income_adj=(240.007/232.957)*aveincome;
+if wave=4 then income_adj=(240.007/236.736)*aveincome;
+if wave=5 then income_adj=(240.007/237.017)*aveincome;
+if wave=6 then income_adj=aveincome; 
+
+if income_adj<15321.93 then income_quartile=1;
+if 15321.93<=income_adj<28808.65 then income_quartile=2;
+if 28808.65<=income_adj<53349.35 then income_quartile=3;
+if 53349.35<=income_adj then income_quartile=4;
+
+if income_quartile=1 then quartile2cat=1;
+if income_quartile in (2,3,4) then quartile2cat=2;
+format quartile2cat quartile.;
+
+ind_paid_helper_recode=ind_paid_helper;
+if ind_no_helpers=1 then ind_paid_helper_recode=.;
+
+
+/*Define Social isolation*/
+if maritalstat in (3,4,5,6) then notmarried=1; if maritalstat in (1,2) then notmarried=0;
+if visitfrfam=0 then no_visitfrfam=1; if visitfrfam=1 then no_visitfrfam=0;
+if attrelig=0 then no_attrelig=1; if attrelig=1 then no_attrelig=0;
+if attclub=0 then no_attclub=1; if attclub=1 then no_attclub=0;
+social_isolation=sum(notmarried, not_talk_family,not_talk_friend,no_visitfrfam, no_attrelig, no_attclub); 
+if not_talk_family=. or not_talk_friend=. then social_isolation=.;
+if social_isolation in (0,1,2,3) then social_isolation=0; if social_isolation>=4 then social_isolation=1;
+
+format oftcheer1 oftchee. oftbored1 oftbore. oftfol1 oftfol. oftupset1 oftupse. lifemean1 lifemea. 
+confident1 confide. giveup1 giveup. livingsit1 livings. selfdeter1 selfdet. findway1  findway. adjchg1 adjchg.;
+run;
+
+proc freq data=nhats (where=(sample=1 and wave^=1)); tables nopayhous*(nopayutil nopaymed mealskip)
+fin_strain ;  run; 
+
+proc freq data=nhats (where=(sample=1 and wave=1)); tables social_isolation notmarried not_talk_family 
+not_talk_friend no_visitfrfam no_attrelig no_attclub;  run; 
+
+proc print data=nhats(where=(sample=1 and wave=1 and not_talk_family=.)); var spid social_isolation
+notmarried not_talk_family not_talk_friend no_visitfrfam no_attrelig no_attclub; run;
+
+proc print data=nhats(where=(sample=1 and wave=2 and (nopayhous=1 or nopayutil=1 or nopaymed=1 or mealskip=1))); 
+var spid nopayhous nopayutil nopaymed mealskip fin_strain; run;
+
+proc freq data=nhats(where=(sample=1 and wave^=1)); tables wave*(nopayhous nopayutil nopaymed mealskip fin_strain); run;
+
+proc means data=nhats (where=(wave=1))n nmiss  q1 median q3; var income_adj; run;
+
+proc freq data=nhats(where=(wave=1)); tables sample sample1 sample2; run;
+
+proc freq data=nhats(where=(wave=1)); tables education*HS race_cat race2gp income_quartile quartile2cat; run;
+
+proc freq data=nhats(where=(wave=1 and sample=1)); tables /*fin_strain nopayhous nopayutil nopaymed mealskip any_asst section8 govtasst section8*govtasst
+anydebt creditdebt medcreditdebt creditdebt*medcreditdebt finhlpfam medpaynotcash*creditdebt adl_index*adl iadl_index*iadl
+
+income_quartile
+adl_bath_diff*adl_bath_help adl_bath_unmet adl_bed_diff*adl_bed_help adl_bed_unmet adl_dres_diff*adl_dres_help adl_dres_unmet
+adl_eat_diff*adl_eat_help adl_eat_unmet adl_ins_diff*adl_ins_help adl_ins_unmet adl_toil_diff*adl_toil_help adl_toil_unmet adl_unmet
+iadl_bank_diff iadl_bank_help iadl_bank_unmet iadl_laun_diff iadl_laun_help iadl_laun_unmet iadl_meal_diff iadl_meal_help iadl_meal_unmet
+iadl_meds_diff iadl_meds_help iadl_meds_unmet iadl_shop_diff iadl_shop_help iadl_shop_unmet iadl_unmet*/
+adverse_recode*ind_no_helpers adverse*ind_no_helpers adverse_recode adverse_bath_recode adverse_bath*ind_no_helpers;
+
+; run;
+
+proc freq data=nhats(where=(wave=1)); tables adverse_recode*ind_no_helpers adverse*ind_no_helpers
+ind_no_helpers*(adverse_bank_recode adverse_dres_recode adverse_eat_recode adverse_laun_recode
+adverse_meal_recode adverse_shop_recode adverse_toil_recode); run;
+
+
+
+proc print data=nhats(where=(wave=1 and sample=1 and adl_bath_diff=.)); var adl_bath_diff adl_bath_help adl_bath_unmet; run;
+proc freq data=nhats(where=(wave=2 and sample=1)); tables fin_strain nopayhous nopayutil nopaymed mealskip; run;
+
+proc freq data=nhats(where=(wave=1)); tables sample; run;
+
+data test; set nhats(where=(sample=1 and tot_hrswk_help_i=.)); run;
+
+proc freq data=test; tables ind_no_helpers n_helpers; run;
+
+
+
+
+/*wave 1 weights and demographics*/
+proc sort data=nhats; by bene_id; run;
+
+data weights; set nhats(where=(wave=1)); keep bene_id anfinwgt varstrat varunit female race_recode HS/*marstat
+education income_cat sr_numconditions1 srh_fp*/;
+rename anfinwgt=W1_anfinwgt varstrat=W1_varstrat varunit=W1_varunit female=W1_female race_recode=W1_race_recode HS=W1_HS
+/*marstat=W1_marstat education=W1_education income_cat=W1_income_cat sr_numconditions1=W1_sr_numconditions1 srh_fp=W1_srh_fp*/; 
+run;
+
+
+data nhats1; merge nhats weights; by bene_id; run;
+
+proc print data=nhats1(where=(wave=1)obs=10); var bene_id anfinwgt W1_anfinwgt varstrat W1_varstrat
+varunit W1_varunit female W1_female race_recode W1_race_recode HS W1_HS /*marstat W1_marstat education W1_education 
+income_cat W1_income_cat sr_numconditions1 W1_sr_numconditions1 srh_fp W1_srh_fp*/; run;
+
+
+
+/*Descriptive characteristics of 253 patients prior to a cancer diagnosis*/
+data n1; set nhats1(where=(ivw_date=n1_int and sample=1)); run;
+data nonsample; set nhats1(where=(sample=0 and wave=1)); run;
+
+data predx; set n1 nonsample; run;
+
+data predx; set predx;
+yrdx=year(firstdxt); run;
+
+proc print data=predx(obs=10); var bene_id firstdxt firstdx yrdx pcdxt0 lcdxt0 bcdxt0 ccdxt0; run;
+
+proc freq data=predx(where=(sample=1)); tables yrdx; run;
+
+proc freq data=predx(where=(sample=1)); tables nhres rcfres res_care sp_status; run;
+
+proc surveyfreq data=predx; weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(firstdx yrdx)/row; run;
+
+
+/*table 1-Demographics, social, and health/functional characteristics*/
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample;
+var n1_cancer_time age age_firstdx n_social_network sr_numconditions1; run;
+
+proc univariate data=predx (where=(n_social_network=. and sample=1)); var W1_anfinwgt; run;
+ run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(firstdx W1_female W1_race_recode marstat education income_quartile  rcfres medicaid any_asst
+finhlpfam anydebt social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers adverse_all_cat adverse_sc adverse_ha adverse_mobility)/row col;
+run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*firstdx;
+var age age_firstdx n_social_network sr_numconditions1; run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*firstdx*(W1_female W1_race_recode marstat education income_quartile  rcfres medicaid any_asst
+finhlpfam anydebt social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers adverse_all_cat adverse_sc adverse_ha adverse_mobility)/row col;
+run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(race2gp HS quartile2cat)/row; run;
+
+/*Table 1 Continued- Financial Resources*/
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(fin_strain any_asst finhlpfam anydebt)/row col;
+run;
+
+proc surveyfreq data=predx (where=(wave^=1)) missing;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*(fin_strain)/row col;
+run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*firstdx*(income_quartile fin_strain any_asst medicaid finhlpfam anydebt)/row col;
+run;
+
+proc print data=predx(where=(sample=1 and fin_strain=1 ));
+var firstdx fin_strain nopayhous nopayutil nopaymed mealskip W1_anfinwgt; run;
+proc freq data=predx (where=(sample=1 and wave^=1));
+tables fin_strain*firstdx firstdx*(nopayhous nopayutil nopaymed mealskip); run;
+proc print data=predx(where=(sample=1 and fin_strain=1)); var nopayhous nopayutil nopaymed mealskip; run;
+proc freq data=predx(where=(sample=1 and fin_strain=.)); tables firstdx; run;
+
+
+/*table 2- characteristics of help among those who received help*/
+proc freq data=predx(where=(n_helpers=0)); tables ind_no_helpers; run;
+proc means data=predx(where=(ind_no_helpers=1)); var n_helpers; run; 
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*ind_no_helpers;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*(ind_paid_helper ind_family_helper prim_helper_cat)/row col;
+run;
+
+/*proc surveyfreq data=predx ;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_paid_helper_recode/row col;
+run;*/
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*ind_no_helpers*firstdx;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*firstdx*(ind_paid_helper_recode ind_family_helper prim_helper_cat)/row col;
+run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*firstdx/row col;
+run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*firstdx*(ind_paid_helper_recode ind_family_helper prim_helper_cat adverse
+ adverse_bath adverse_toil adverse_dres adverse_eat adverse_meal adverse_laun
+ adverse_shop adverse_bank)/row col;
+run;
+
+proc freq data=predx(where=(sample=1)); tables ind_no_helpers*adverse; run;
+proc surveyfreq data=predx; weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*firstdx*ind_no_helpers/row col; run;
+
+
+
+/*Table 3- Characteristics by Race/ethnicity */
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*race2gp;
+var age age_firstdx n_social_network sr_numconditions1; run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*ind_no_helpers*race2gp;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class race2gp;
+model /*age_firstdx*/ n_social_network /*sr_numconditions1*/=race2gp;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class race2gp;
+model n_helpers /*tot_hrswk_help_i*/=race2gp;
+domain sample*ind_no_helpers; run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*race2gp*(firstdx W1_female W1_race_recode marstat education income_quartile  rcfres medicaid 
+ any_asst finhlpfam anydebt social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers adverse_all_cat adverse_sc adverse_ha adverse_mobility
+)/row chisq(secondorder);
+run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*race2gp*(income_quartile fin_strain any_asst medicaid finhlpfam anydebt)/row col chisq(secondorder);
+run;
+
+/*Table 4*/
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*race2gp*(ind_paid_helper_recode ind_family_helper prim_helper_cat )/row chisq(secondorder);
+run;
+
+
+/**********************************************************************************************************/
+/*                                        SENSITIVITY ANALYSIS                                            */
+/*********************************************************************************************************/
+/*self reported cancer in next year, >2 dx codes*/
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); run;
+data nonsample; set nhats1(where=(sample2=0 and wave=1)); run;
+
+data postdx; set p1 nonsample; run;
+
+proc freq data=postdx; tables sample2; run;
+
+data postdx; set postdx;
+if (sample2=1 and lcdxnum>1 and firstdx="lc") or
+(sample2=1 and bcdxnum>1 and firstdx="bc") or
+(sample2=1 and pcdxnum>1 and firstdx="pc") or
+(sample2=1 and ccdxnum>1 and firstdx="cc") then sample_dx2codes=1; else sample_dx2codes=0;
+
+if sample_dx2codes=1 and sr_cancer_new=1 then sample_sens=1; else sample_sens=0;
+
+run;
+
+proc freq data=postdx; tables sample_dx2codes sample_dx2codes*sr_cancer_new sample_sens; run;
+
+proc freq data=postdx; tables firstdx*sample_sens sample_sens*sample2; run;
+
+proc surveyfreq data=postdx; tables sample2*sample_sens/row col; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit; run;
+
+proc surveyfreq data=postdx; tables sample*sample_sens/row col; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit; run;
+
+
+/*list of ids*/
+data sens_id; set postdx(where=(sample_sens=1)); keep spid bene_id sample_sens; run;
+proc sort data=sens_id; by spid; run;
+proc sort data=nhats1; by spid; run;
+
+data nhats2; merge nhats1 sens_id (in=a); by spid; 
+if a=1 then sample_sens=1; if a=0 then sample_sens=0;
+run;
+
+proc freq data=nhats2(where=(wave=1)); tables sample_sens; run;
+
+/*Table 1*/
+data n1; set nhats2(where=(ivw_date=n1_int and sample_sens=1)); run;
+data nonsample; set nhats2(where=(sample_sens=0 and wave=1)); run;
+
+data predx; set n1 nonsample; run;
+
+data predx; set predx;
+yrdx=year(firstdxt); run;
+
+proc freq data=predx; tables sample_sens; run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens;
+var n1_cancer_time age age_firstdx n_social_network sr_numconditions1; run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*(firstdx W1_female W1_race_recode marstat education income_quartile  rcfres medicaid 
+social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers adverse_all_cat adverse_sc adverse_ha adverse_mobility)/row col;
+run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens*firstdx;
+var age age_firstdx n_social_network sr_numconditions1; run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*firstdx*(W1_female W1_race_recode marstat education income_quartile  rcfres medicaid 
+social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers)/row col;
+run;
+
+
+/*Table 1 Continued- Financial Resources*/
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*(fin_strain any_asst finhlpfam anydebt)/row col;
+run;
+
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*firstdx*( fin_strain any_asst finhlpfam anydebt)/row col;
+run;
+
+
+/*characteristics of help among those who received help*/
+proc freq data=predx(where=(n_helpers=0)); tables ind_no_helpers; run;
+proc means data=predx(where=(ind_no_helpers=1)); var n_helpers; run; 
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens*ind_no_helpers;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyfreq data=predx missing;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*ind_no_helpers*(ind_paid_helper ind_family_helper prim_helper_cat adverse
+adverse_bath adverse_toil adverse_dres adverse_eat adverse_meal adverse_laun
+ adverse_shop adverse_bank)/row col;
+run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens*ind_no_helpers*firstdx;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*ind_no_helpers*firstdx*(ind_paid_helper_recode ind_family_helper prim_helper_cat adverse adverse_bath adverse_toil adverse_dres adverse_eat adverse_meal adverse_laun
+ adverse_shop adverse_bank)/row col;
+run;
+
+
+
+
+/*Table 2- Characteristics by Race/ethnicity */
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens*race2gp;
+var age age_firstdx n_social_network sr_numconditions1; run;
+
+proc surveymeans data=predx nobs mean std clm sum min max; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample_sens*ind_no_helpers*race2gp;
+var n_helpers tot_hrswk_help_i; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class race2gp;
+model /*age_firstdx*/ /*n_social_network*/ sr_numconditions1=race2gp;
+domain sample_sens; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class race2gp;
+model /*n_helpers*/ tot_hrswk_help_i=race2gp;
+domain sample_sens*ind_no_helpers; run;
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*race2gp*(firstdx W1_female W1_race_recode marstat education income_quartile  rcfres medicaid 
+social_isolation livealone srh_fp  dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair  iadl_impair ind_no_helpers adverse_all_cat adverse_sc adverse_ha adverse_mobility
+)/row chisq(secondorder);
+run;
+
+proc surveyfreq data=predx /*missing*/;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*race2gp*(fin_strain any_asst  finhlpfam anydebt)/row col chisq(secondorder);
+run;
+
+
+proc surveyfreq data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_sens*ind_no_helpers*race2gp*(ind_paid_helper_recode ind_family_helper prim_helper_cat adverse
+adverse_bath adverse_toil adverse_dres adverse_eat adverse_meal adverse_laun
+ adverse_shop adverse_bank)/row chisq(secondorder);
+run;
+
+
+
+proc freq data=nhats1(where=(wave=1 and sample=1)); tables firstdx; run;
+
+proc freq data=nhats2(where=(wave=1 and sample_sens=1)); tables race2gp firstdx; run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*****************************************************************************************************************/
+/******************************************************************************************************************/
+
+/*look at differences between those who receive help and those who don't*/
+proc surveyfreq data=predx ;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*ind_no_helpers*(firstdx W1_female W1_race_recode marstat education income_quartile /*income_cat*/ 
+srh_fp sr_htn_ever sr_heart_dis_ever sr_diabetes_ever sr_lung_dis_ever dem_3_cat dem_2_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair adl /*adl_unmet*/ iadl_impair iadl
+ /*iadl_unmet*/   fin_strain any_asst medicaid finhlpfam anydebt rcfres nhres 
+adverse)/row chisq(secondorder);
+run;
+
+proc surveymeans data=predx nobs mean std clm sum; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*ind_no_helpers;
+var age age_firstdx n_helpers tot_hrswk_help_i sr_phq2_score sr_gad2_score sr_numconditions1 n1_cancer_time
+n_social_network; run;
+
+
+/*Characteristics by Education Level */
+proc surveymeans data=predx nobs mean std clm sum; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*HS;
+var age age_firstdx n_helpers tot_hrswk_help_i sr_phq2_score sr_gad2_score sr_numconditions1 n1_cancer_time
+n_social_network; run;
+
+
+proc freq data=predx(where=(sample=1)); tables race2gp*rcfres sample; run;
+proc surveyfreq data=predx ;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*HS*(firstdx W1_female marstat /*education*/ race_recode /*income_cat*/ rcfres medicaid
+srh_fp sr_htn_ever sr_heart_dis_ever sr_diabetes_ever sr_lung_dis_ever dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair adl iadl_impair iadl adverse income_quartile fin_strain any_asst finhlpfam anydebt
+ind_no_helpers /*ind_paid_helper*/ ind_paid_helper_recode ind_family_helper  prim_helper_cat)/row chisq(secondorder);
+run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model age=HS;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model age_firstdx=HS;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model sr_numconditions1=HS;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model n_helpers=HS;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model tot_hrswk_help_i= HS;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class HS;
+model n_social_network= HS;
+domain sample; run;
+
+
+
+/*Characteristics by income*/
+proc surveymeans data=predx nobs mean std clm sum; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample*quartile2cat;
+var age age_firstdx n_helpers tot_hrswk_help_i sr_numconditions1 
+n_social_network; run;
+
+
+proc freq data=predx(where=(sample=1)); tables race2gp*rcfres sample firstdx;  run;
+proc surveyfreq data=predx ;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*quartile2cat*(firstdx W1_female marstat race_recode education  /*income_cat*/ rcfres medicaid
+srh_fp sr_htn_ever sr_heart_dis_ever sr_diabetes_ever sr_lung_dis_ever dem_3_cat ind_pain
+sr_phq2_depressed sr_gad2_anxiety frailty_ind sr_hosp_ind fall_last_month
+adl_impair adl iadl_impair iadl adverse /*income_quartile*/ fin_strain any_asst finhlpfam anydebt
+ind_no_helpers /*ind_paid_helper*/ ind_paid_helper_recode ind_family_helper  prim_helper_cat)/row chisq(secondorder);
+run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class quartile2cat;
+model age=quartile2cat;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class quartile2cat;
+model age_firstdx=quartile2cat;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class quartile2cat;
+model sr_numconditions1= quartile2cat;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class  quartile2cat;
+model n_helpers= quartile2cat;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class  quartile2cat;
+model tot_hrswk_help_i=  quartile2cat;
+domain sample; run;
+
+proc surveyreg data=predx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+class  quartile2cat;
+model n_social_network=  quartile2cat;
+domain sample; run;
+
+
+
+/*******************************How many are identified via self report and multiple dx****************/
+/**weighted results for sensitivity*/
+/*self reported cancer in next year, 1 dx code*/
+proc surveyfreq data=nhats1(where=(wave=1)); tables sample sample*(firstdx yrdx);
+weight W1_anfinwgt;
+strata W1_varstrat;
+cluster W1_varunit;
+run;
+
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); run; 
+data nonsample; set nhats1(where=(sample2=0 and wave=1)); run;
+
+data postdx; set p1 nonsample; run;
+
+proc freq data=postdx; tables sample2; run;
+
+proc surveyfreq data=postdx; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample2*sr_cancer_new/row col; run;
+
+/*lung*/
+data lungpost; set postdx;
+if firstdx="lc" and sr_cancer_new=1 then sample_sr_lc=1; else sample_sr_lc=0; 
+if firstdx="lc" and sr_cancer_new=0 then sample_sr_lc=0; 
+
+if firstdx="lc" and sample2=1 then sample_lc=1; else sample_lc=0; run;
+
+proc freq data=lungpost; tables sample_sr_lc*sample_lc; run;
+
+proc surveyfreq data=lungpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_lc*sample_sr_lc/row col; run;
+
+/*breast*/
+data breastpost; set postdx;
+if firstdx="bc" and sr_cancer_new=1 then sample_sr_bc=1; else sample_sr_bc=0; 
+if firstdx="bc" and sr_cancer_new=0 then sample_sr_bc=0; 
+
+if firstdx="bc" and sample2=1 then sample_bc=1; else sample_bc=0; run;
+
+proc freq data=breastpost; tables sample_sr_bc*sample_bc; run;
+
+proc surveyfreq data=breastpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_bc*sample_sr_bc/row col; run;
+
+/*prostate*/
+data prostatepost; set postdx;
+if firstdx="pc" and sr_cancer_new=1 then sample_sr_pc=1; else sample_sr_pc=0; 
+if firstdx="pc" and sr_cancer_new=0 then sample_sr_pc=0; 
+
+if firstdx="pc" and sample2=1 then sample_pc=1; else sample_pc=0; run;
+
+proc freq data=prostatepost; tables sample_sr_pc*sample_pc; run;
+
+proc surveyfreq data=prostatepost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_pc*sample_sr_pc/row col; run;
+
+/*colorectal*/
+data crcpost; set postdx;
+if firstdx="cc" and sr_cancer_new=1 then sample_sr_cc=1; else sample_sr_cc=0; 
+if firstdx="cc" and sr_cancer_new=0 then sample_sr_cc=0; 
+
+if firstdx="cc" and sample2=1 then sample_cc=1; else sample_cc=0; run;
+
+proc freq data=crcpost; tables sample_sr_cc*sample_cc; run;
+
+proc surveyfreq data=crcpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_cc*sample_sr_cc/row col; run;
+
+
+
+/********multiple diagnoses*/
+/*overall*/
+data n1; set nhats1(where=(ivw_date=n1_int and sample=1)); run;
+data nonsample; set nhats1(where=(sample=0 and wave=1)); run;
+
+data predx; set n1 nonsample; run;
+
+proc freq data=predx; tables sample; run;
+
+data test; set predx;
+if (sample=1 and lcdxnum>1 and firstdx="lc") or
+(sample=1 and bcdxnum>1 and firstdx="bc") or
+(sample=1 and pcdxnum>1 and firstdx="pc") or
+(sample=1 and ccdxnum>1 and firstdx="cc") then sample_dx2codes=1; else sample_dx2codes=0;
+
+if ivw_date=n1_int and sample=1 then sample_dx1code=1; else sample_dx1code=0;
+run;
+
+proc surveyfreq data=test;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_dx1code*sample_dx2codes/row col; run;
+
+/*lung*/
+data test; set predx;
+if ivw_date=n1_int and sample=1 and lcdxnum>1 and firstdx="lc" then sample_lc2=1;else sample_lc2=0; 
+if ivw_date=n1_int and sample=1 and firstdx="lc" then sample_lc1=1; else sample_lc1=0; run; 
+
+proc surveyfreq data=test; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_lc1*sample_lc2/row col; run;
+
+/*breast*/
+data test; set predx;
+if ivw_date=n1_int and sample=1 and bcdxnum>1 and firstdx="bc" then sample_bc2=1;else sample_bc2=0; 
+if ivw_date=n1_int and sample=1 and firstdx="bc" then sample_bc1=1; else sample_bc1=0; run; 
+
+proc surveyfreq data=test; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_bc1*sample_bc2/row col; run;
+
+/*prostate*/
+data test; set predx;
+if ivw_date=n1_int and sample=1 and pcdxnum>1 and firstdx="pc" then sample_pc2=1;else sample_pc2=0; 
+if ivw_date=n1_int and sample=1 and firstdx="pc" then sample_pc1=1; else sample_pc1=0; run; 
+
+proc surveyfreq data=test; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_pc1*sample_pc2/row col; run;
+
+/*colorectal*/
+data test; set predx;
+if ivw_date=n1_int and sample=1 and ccdxnum>1 and firstdx="cc" then sample_cc2=1;else sample_cc2=0; 
+if ivw_date=n1_int and sample=1 and firstdx="cc" then sample_cc1=1; else sample_cc1=0; run; 
+
+proc surveyfreq data=test; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_cc1*sample_cc2/row col; run;
+
+
+/*self reported cancer in next year, >2 dx codes*/
+data p1; set nhats1(where=(ivw_date=p1_int and sample2=1)); run;
+data nonsample; set nhats1(where=(sample2=0 and wave=1)); run;
+
+data postdx; set p1 nonsample; run;
+
+proc freq data=postdx; tables sample2; run;
+
+data postdx; set postdx;
+if (sample2=1 and lcdxnum>1 and firstdx="lc") or
+(sample2=1 and bcdxnum>1 and firstdx="bc") or
+(sample2=1 and pcdxnum>1 and firstdx="pc") or
+(sample2=1 and ccdxnum>1 and firstdx="cc") then sample_dx2codes=1; else sample_dx2codes=0;
+
+run;
+
+proc freq data=postdx; tables sample_dx2codes; run;
+
+proc surveyfreq data=postdx;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_dx2codes*sr_cancer_new/row col; run;
+
+/*lung*/
+data lungpost; set postdx;
+if firstdx="lc" and sr_cancer_new=1 and sample_dx2codes=1 then sample_sr_lc=1 ; else sample_sr_lc=0; 
+if firstdx="lc" and sr_cancer_new=0 then sample_sr_lc=0; 
+
+if firstdx="lc" and sample_dx2codes=1 then sample_lc=1; else sample_lc=0; run;
+
+proc freq data=lungpost; tables sample_sr_lc*sample_lc; run;
+
+proc surveyfreq data=lungpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_lc*sample_sr_lc/row col; run;
+
+/*breast*/
+data breastpost; set postdx;
+if firstdx="bc" and sr_cancer_new=1 and sample_dx2codes=1 then sample_sr_bc=1; else sample_sr_bc=0; 
+if firstdx="bc" and sr_cancer_new=0 then sample_sr_bc=0; 
+
+if firstdx="bc" and sample_dx2codes=1 then sample_bc=1; else sample_bc=0; run;
+
+proc freq data=breastpost; tables sample_sr_bc*sample_bc; run;
+
+proc surveyfreq data=breastpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_bc*sample_sr_bc/row col; run;
+
+/*prostate*/
+data prostatepost; set postdx;
+if firstdx="pc" and sr_cancer_new=1 and sample_dx2codes=1 then sample_sr_pc=1; else sample_sr_pc=0; 
+if firstdx="pc" and sr_cancer_new=0 then sample_sr_pc=0; 
+
+if firstdx="pc" and sample_dx2codes=1 then sample_pc=1; else sample_pc=0; run;
+
+proc freq data=prostatepost; tables sample_sr_pc*sample_pc; run;
+
+proc surveyfreq data=prostatepost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_pc*sample_sr_pc/row col; run;
+
+/*colorectal*/
+data crcpost; set postdx;
+if firstdx="cc" and sr_cancer_new=1 and sample_dx2codes=1 then sample_sr_cc=1; else sample_sr_cc=0; 
+if firstdx="cc" and sr_cancer_new=0 then sample_sr_cc=0; 
+
+if firstdx="cc" and sample_dx2codes=1 then sample_cc=1; else sample_cc=0; run;
+
+proc freq data=crcpost; tables sample_sr_cc*sample_cc; run;
+
+proc surveyfreq data=crcpost; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample_cc*sample_sr_cc/row col; run;
+
+
+
+
+/*************************************************************************************************/
+/*overall characteristics at Wave 1 for community dwellers with no self reported history of cancer*/
+/*pick community dwellers at Wave 1*/
+proc freq data=nhats1(where=(wave=1)); tables nhres R1status; run; /*468 patients in nursing homes at wave 1*/
+
+data nhres; set nhats1(where=(wave=1 and nhres=1)); keep spid; run; /*468*/
+
+data nhats2; set nhats1; drop sample; run;
+proc sort data=nhats2; by spid; run;
+proc sort data=nhres; by spid; run;
+
+data nhats2; merge nhres(in=a) nhats2; by spid; 
+	if a=0 then sample=1; if a=1 then sample=0; run;
+	data test; set nhats2; keep spid sample;
+		proc sort data=test nodup out=test; by spid; run;
+			proc freq data=test; table sample; run;/*7777 community dwelling patients at wave 1*/
+
+/*exclude patients who did not have an SP interview in wave 1*/
+proc freq data=nhats2(where=(wave=1 and sample=1)); tables R1status*R2Status R1status*R3status 
+R1status*R4status R1status*R5status; run; /*168 without SP interview complete*/
+
+data noSP; set nhats2(where=(wave=1 and R1status=64)); keep spid; run;/*168*/
+
+data nhats2; merge noSP (in=a) nhats2; by spid;
+if a=1 then sample=0; run;
+	data test; set nhats2; keep spid sample;
+		proc sort data=test nodup out=test; by spid; run;
+			proc freq data=test; tables sample; run; /*7609*/
+
+
+/*exclude patients with breast, prostate, colorectal or other cancer prior to interview 1*/
+/*exclude those patients with an "Other cancer" prior to interview 1*/
+proc freq data=nhats2(where=(wave=1 and sample=1)); tables sr_cancer_ever; run;
+														/*1953 with ever cancer*/
+
+proc freq data=nhats2(where=(wave=1 and sample=1 and sr_cancer_ever=1)); tables sr_othercancer_had 
+sr_breastcancer_had sr_prostatecancer_had sr_coloncancer_had; run;
+
+/*exclude those with cancers of interest (or other), or for whom the type of cancer is missing, or who are missing
+whether they ever had cancer*/
+data cancerhist; set nhats2(where=((wave=1 and sample=1 and sr_cancer_ever=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=1)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_breastcancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_breastcancer_had=1)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_prostatecancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_prostatecancer_had=1)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_coloncancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_coloncancer_had=1)));
+								keep spid; run;
+
+data test; set cancerhist; keep spid; run;
+	proc sort data=test nodup out=test; by spid; run; /*1246 patients with self reported previous cancer*/
+
+proc sort data=nhats2; by spid;run;
+proc sort data=cancerhist; by spid; run;
+
+
+data nhats2; merge cancerhist(in=a) nhats2; by spid; 
+if a=1 then sample=0;  run;
+	data test; set nhats2; keep spid sample;
+		proc sort data=test nodup out=test; by spid; run; 
+			proc freq data=test; tables sample; run;
+
+
+proc freq data=nhats2(where=(wave=1)); tables sample*predx; run;
+
+data nhats2; set nhats2; 
+if predx=1 then sample=0; run;
+
+data test; set nhats2; keep spid sample; 
+proc sort data=test nodup out=test; by spid;
+proc freq data=test; table sample; run;
+
+proc freq data=nhats1(where=(wave=1)); table sample; run;
+
+data cancer; set nhats1(where=(wave=1 and sample=1)); keep spid; run;
+proc sort data=cancer; by spid; run;
+
+data nhats2; merge cancer (in=a) nhats2; by spid;
+if a=1 then cancer=1; if a=0 then cancer=0; run;
+	data test; set nhats2; keep sample spid cancer; 
+	proc sort data=test nodup out=test; by spid; 
+	proc freq data=test; table sample cancer sample*cancer; run;
+
+data overall; set nhats2(where=(wave=1)); 
+run;
+
+proc surveyfreq data=overall;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+tables sample*cancer*(W1_female W1_race_recode marstat education income_cat srh_fp srh sr_htn_ever sr_heart_dis_ever
+sr_diabetes_ever sr_lung_dis_ever prob_dem ind_pain sr_phq2_depressed sr_gad2_anxiety adl_impair iadl_impair)/row col
+chisq(secondorder);
+run;
+
+proc surveymeans data=overall nobs mean std clm sum; 
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+domain sample;
+var age age_firstdx n_helpers tot_hrswk_help_i sr_phq2_score sr_gad2_score sr_numconditions1 n1_cancer_time; run;
+

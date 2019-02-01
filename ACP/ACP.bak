@@ -1,0 +1,571 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="****************************************************"
+/* 
+********************HEADING******************** 
+
+Project Name: Katherine Advance Care Planning Matchy-Matchy
+
+Date Started: 01/28/2019
+
+Primary Investigator: Katherine Ornstein 
+Funding Source:
+
+Created by: Mohammed 
+
+Primary Analyst: Mohammed 
+Secondary Analyst:
+
+Datasets Used: NHATS Round 2, HRS 2012 Data
+
+Simple Outline:
+Looking to match together ACP questions from both NHATS and HRS data. 
+
+
+*/
+ 
+//STATA
+// Global Macros use $ symbol to be called. 
+//File paths for raw data
+/*
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
+global r1raw E:\nhats\data\NHATS Public\round_1\
+global r2raw E:\nhats\data\NHATS Public\round_2\
+global r3raw E:\nhats\data\NHATS Public\round_3\
+global r4raw E:\nhats\data\NHATS Public\round_4\
+global r5raw E:\nhats\data\NHATS Public\round_5\
+global r6raw E:\nhats\data\NHATS Public\round_6\
+global r7raw E:\nhats\data\NHATS Public\round_7\
+global work E:\nhats\data\NHATS working data
+global r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+global r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+global r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+global r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+global r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+global r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+global r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+
+//SAS 
+
+
+//Intermediate Data Path
+//libname intpath "E:\nhats\data\Projects\..."
+
+// Final Data Path
+//libname datapath "E:\nhats\data\Projects\..."
+
+//Log files path
+//libname logpath "E:\nhats\data\Projects\..."
+
+
+H="NHATS ACP"
+/*
+
+Created by: Mohammed 
+Date Created: 01/29/2019
+
+Updated by: MH
+Date Updated: 01/25/2019
+
+Description: Inital exploration, data cleaning, table creation.
+
+
+
+**************************************************
+
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name NHATS_setup1_`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using `logs'`name'.smcl, text replace
+
+
+/*Combines rounds 1 and 2 sample person SP interview files,
+sensitive demo files and the round 2 cumulative tracker file case 
+status l into a single file
+
+Data format is multiple observations per subject, one for each round
+*/
+*/
+
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
+
+gen soc_iso=1 if n_social_network!=.
+replace soc_iso=0 if n_social_network==0
+
+gen n=1 if acp!=.
+
+gen male=0
+replace male=1 if female==0
+
+foreach x in education income_quart race_cat livearrang maritalstat imprelig {
+tab `x', gen(`x')
+}
+
+foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
+gen `x'0=0 if `x'==1
+replace `x'0=1 if `x'==0
+}
+
+label var male "Male"
+label var ownhome0 "No Own Home"
+label var srh_fp0 "Self reported health==Good+"
+label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
+label var sr_dementia_ever0 "No Self report Dementia"
+label var sr_phq2_depressed0 "Not Depressed"
+label var sr_gad2_anxiety0 "No Anxiety"
+label var soc_iso0 "No one in social network"
+label var soc_iso ">=1 in social network"
+
+gen ab=.
+replace ab=0 if informal==1
+replace ab=1 if acp==1
+
+gen ac=.
+replace ac=0 if no_acp==1
+replace ac=1 if acp==1
+
+gen ad=.
+replace ad=0 if formal==1
+replace ad=1 if acp==1
+
+gen bc=.
+replace bc=0 if no_acp==1
+replace bc=1 if informal==1
+
+gen bd=.
+replace bd=0 if formal==1
+replace bd=1 if informal==1
+
+gen cd=.
+replace cd=0 if formal==1
+replace cd=1 if no_acp==1
+
+// table
+
+local demo1 age 
+
+local demo2 male female education1 education2 education3 education4 income_quart1 ///
+income_quart2 income_quart3 income_quart4 race_cat1 race_cat2 race_cat3 race_cat4 ///
+ownhome0 ownhome
+
+local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
+livearrang1 livearrang2 livearrang3 livearrang4
+
+local sn1 n_children 
+
+local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
+sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
+
+local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
+
+local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
+
+
+
+mat tab=J(`rn',11,.)
+mat stars=J(`rn',11,0)
+local c=1 
+local r=1
+
+foreach q in n acp informal_acp no_acp formal_acp{
+local r=1
+di `r'
+
+foreach x in `demo1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+anova `x' ab
+
+local r=`r'+1
+}
+
+foreach x in `demo2' `sn'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+local r=`r'+1
+}
+
+foreach x in `sn1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+local r=`r'+1
+}
+
+foreach x in `health' `psy'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+local r=`r'+1
+}
+
+sum n if `q'==1 
+mat tab[`r', `c']=`r(N)'
+local c=`c'+1
+
+}
+mat list tab
+
+mat colnames tab= "ACP Module Recieved" "Two-Pronged ACP" "Discussions Only" "No ACP" "Formal Only"
+mat rownames tab= `demo1' `demo2' `sn' `sn1' `health' `psy' "N"
+mat list tab
+
+frmttable using "E:\nhats\data\Projects\ACP\logs\NHATS.rtf", replace /// 
+statmat(tab) varlabels title("2012 NHATS Means/ Proportions") annotate(stars) asymbol("ab", "ac", "ad", "bc", "bd", "cd") 
+
+
+putexcel set "E:\nhats\data\Projects\ACP\logs\NHATS.xls", replace
+tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
+local lab1 " "
+local lab2 Full Sample
+local lab3 ACP
+local lab4 Discussions Only
+local lab5 No ACP
+local lab6 Formal Only
+
+local demo1 age 
+
+local demo2 male female education1 education2 education3 education4 income_quart1 ///
+income_quart2 income_quart3 income_quart4 race_cat1 race_cat2 race_cat3 race_cat4 ///
+ownhome0 ownhome
+
+local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
+livearrang1 livearrang2 livearrang3 livearrang4
+
+local sn1 n_children 
+
+local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
+sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
+
+local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
+
+local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
+
+forvalues i=1/6{
+putexcel ``i''1="`lab`i''"
+}
+
+mat tab=J(`rn',5,.)
+//mat stars=J(`rn',15,0)
+local c=1 
+local r=1
+
+foreach q in n acp informal_acp no_acp formal_acp{
+local r=1
+di `r'
+
+foreach x in `demo1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+local t=2
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `demo2' `sn'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `sn1' {
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)' 
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `health' `psy'{
+sum `x' if `x'==1 & `q'==1
+mat tab[`r',`c']=`r(N)'
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+sum n if `q'==1 
+mat tab[`r', `c']=`r(N)'
+local c=`c'+1
+
+}
+putexcel (B2)=mat(tab)
+
+local r=2
+foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy'{
+local lab: var label `x'
+putexcel A`r'=("`lab'")
+local r=`r'+1
+}
+putexcel A`r'=("N")
+
+
+
+
+
+foreach x in no_acp formal_acp informal_acp acp {
+tab `x' if wave==2 , m
+}
+
+
+gen acp_cat=.
+replace acp_cat=1 if acp==1 
+replace acp_cat=2 if formal_acp==1
+replace acp_cat=3 if informal_acp==1
+replace acp_cat=4 if no_acp==1
+
+
+
+anova acp age
+
+anova formal_acp age
+
+anova informal_acp age
+
+anova ab age
+
+anova acp_cat age if acp_cat==1 | acp_cat==3
+
+ttest age if ab==1, by(acp_cat)
+
+
+anova age ab
+
+di Ftail(e(df_m), e(df_r), e(F))
+
+
+
+
+H="HRS "
+/*
+
+Created by: Mohammed 
+Date Created: 01/31/2019
+
+Updated by: MH
+Date Updated: 01/31/2019
+
+Description: Inital exploration, data cleaning, table creation.
+
+
+
+**************************************************
+
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name NHATS_setup1_`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using `logs'`name'.smcl, text replace
+
+
+/*Combines rounds 1 and 2 sample person SP interview files,
+sensitive demo files and the round 2 cumulative tracker file case 
+status l into a single file
+
+Data format is multiple observations per subject, one for each round
+*/
+*/
+
+
+use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
+
+tab nt245,m
+tab nt246,m
+tab nt250,m
+
+
+gen no_acp=0
+replace no_acp=1 if inlist(nt245, 5, 8, 9) & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
+replace no_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
+
+gen formal_acp=0
+replace formal_acp=1 if inlist(nt245, 5, 8, 9) & (nt246==1 | nt250==1)
+replace formal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
+
+gen informal_acp=0
+replace informal_acp=1 if nt245==1 & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
+replace informal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
+
+gen acp=0
+replace acp=1 if nt245==1 & (nt246==1 | nt250==1)
+replace acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
+
+label var no_acp "No Advance care planning, 1=yes"
+label var formal_acp "Formal Advance care planning, 1=yes"
+label var informal_acp "Informal Advance care planning, 1=yes"
+label var acp "Advance care planning (Formal & Informal), 1=yes"
+label define acp  0 "No" 1 "Yes" 
+
+foreach x in no_acp formal_acp informal_acp acp {
+label values `x' acp
+}
+
+
+foreach x in no_acp formal_acp informal_acp acp {
+tab `x', m
+}
+
+tempfile a
+save `a'
+
+
+use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
+
+merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen
+
+merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force
+
+merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force
+
+merge 1:1 hhid pn using , nogen
+
+format %td birth_date
+
+gen age= c_ivw_date-birth_date
+
+gen male=0
+replace male=1 if female==0
+
+
+
+gen srh_g=0
+replace srh_g=1 if srh<4
+
+gen cesd_tot_ge3_n=0
+replace cesd_tot_ge3_n=1 if rowtotal(cesd1 cesd2 cesd4 cesd5 cesd6 cesd7 cesd8)=>3
+
+value degreef 0 ="none"
+	1 ="GED"
+	2 ="High school"
+	3 ="2 yr college"
+	4 ="4 yr college"
+	5 ="Masters"
+	6 ="Professional"
+	9 ="Unknown, some college";
+	
+nw_lowest nw_midlow nw_midhigh nw_highest
+
+marital_sd marital_nev marital_wid marital_div marital_sep
+
+hhm
+
+child
+
+cesd_tot_ge3_n
+
+depr_2_wks_hrs
+
+imprelig
+
+//reverse coding for scales
+conscientiousness
+nlb033e nlb033i nlb033z_5 nlb033n nlb033v 
+neuroticism
+nlb033h nlb033d nlb033q
+
+tab degree, gen(degree)
+lab var degree1 "None"
+lab var degree2 "GED"
+lab var degree3 "High school"
+lab var degree4 "2 yr college"
+lab var degree5 "4 yr college"
+lab var degree6 "Masters"
+lab var degree7 "Professional"
+lab var degree8 "Unknown, some college"
+
+local demo1 age 
+
+local demo2 male female ed_less_hs ed_hs_plus ed_coll nw_lowest nw_midlow ///
+nw_midhigh nw_highest white black hisp_eth other_race  ///
+ownhome0 ownhome
+
+local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
+livearrang1 livearrang2 livearrang3 livearrang4
+
+local sn1 n_children 
+
+local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
+sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
+
+local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
+
+local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' 
+
+H="Changelog"
+
+
+********************Change Log******************** 
+
+
+
+Updates:
+
+
+
+01/31/2018 MH
+------------
+Table for NHATS under NHATS ACP for ACP summary statistics. 
+
+
+*/

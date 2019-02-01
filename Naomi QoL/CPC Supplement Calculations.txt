@@ -1,0 +1,161 @@
+/**CPC SUPPLEMENT**/
+libname out "E:\nhats\projects\Naomi QoL";
+proc import out=test datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
+dbms=dta replace;
+run;
+
+data nhats; set out.nhats_multiple_cancers; run;
+
+proc contents data=nhats; run;
+
+proc format; 
+value maritalstat 
+1="Married/Living with Partner"
+2="Unmarried (Widowed/Div/Never Married)";
+
+value race_recode
+1="White Non-His"
+2="Black Non-His"
+3="Hispanic/Other";
+
+value frailty
+0="Not Frail"
+1="Pre Frailty"
+2="Frailty";
+
+
+run;
+
+proc contents data=nhats; run;
+
+proc freq data=nhats(where=(sample=1)); tables dem_2_cat dem_3_cat prob_dem; format _all_; run;
+
+/*get rid of men with breast and women with prostate*/
+data nhats; set nhats; 
+if firstdx="bc" and female=0 then sample=0;
+if firstdx="bc" and female=0 then sample1=0;
+if firstdx="bc" and female=0 then sample2=0;
+
+if firstdx="pc" and female=1 then sample=0;
+if firstdx="pc" and female=1 then sample1=0;
+if firstdx="pc" and female=1 then sample2=0;
+
+/*define no cancer time*/
+if firstdx="lc" then nocancert=nolct; label nocancert="Known Cancer Free Time";
+if firstdx="bc" then nocancert=nobct;
+if firstdx="pc" then nocancert=nopct;
+if firstdx="cc" then nocancert=nocct;
+
+if race_cat in (3,4) then race_recode=3; 
+if race_cat in (1,2) then race_recode=race_cat;
+format race_recode race_recode.;
+
+/*define frailty index*/
+/*use scores of 0 or 1 for low grip strength and low walk score(lowest quintile)?  
+Is that appropriate?- paper says they used lowest 20% by gender, BMI for grip strenth, slowness was lowest 20% by gender/height */
+/*use average walk score and grip score?*/
+
+if nhatsgrav in (0,1) then lowgrip=1; else lowgrip=0; label lowgrip="Low Grip Strength";
+if nhatsgrav=. then lowgrip=.;
+if nhatswksc in (0,1) then slowwalk=1; else slowwalk=0; label slowwalk="Slow Walking Speed";
+if nhatswksc=. then slowwalk=.;
+
+frailty_count=sum(unwgtloss, lowenrgy, lowgrip, slowwalk, lowphysact);
+
+if frailty_count=0 then frailty_ind=0; /*not frail*/ label frailty_ind="Frailty Index";
+if frailty_count in (1, 2) then frailty_ind=1; /*pre-frailty*/
+if frailty_count>=3 then frailty_ind=2; /*frailty*/  format frailty_ind frailty.;
+
+if frailty_ind=1 then prefrail=1; else prefrail=0; /*prefrailty y/n*/
+if frailty_ind=. then prefrail=.;
+if frailty_ind=2 then frail=1; else frail=0; /*frail y/n*/
+if frailty_ind=. then frail=.;
+
+/*redefine missing*/
+if oftcheer=5 then oftcheer1=.; else oftcheer1=oftcheer; label oftcheer1="How often cheerful-missing";
+if oftbored=5 then oftbored1=.; else oftbored1=oftbored; label oftbored1="How often bored-missing";
+if oftfol=5 then oftfol1=.; else oftfol1=oftfol; label oftfol1="How often feel full of life-missing";
+if oftupset=5 then oftupset1=.; else oftupset1=oftupset; label oftupset1="How often feel upset-missing";
+
+if lifemean=4 then lifemean1=.; else lifemean1=lifemean; label lifemean1="Feel life has meaning-missing";
+if confident=4 then confident1=.; else confident1=confident; label confident1="Feel confident-missing";
+if giveup=4 then giveup1=.; else giveup1=giveup; label giveup1="Given up on making life better-missing";
+if livingsit=4 then livingsit1=.; else livingsit1=livingsit; label livingsit1="like living situation-missing";
+if selfdeter=4 then selfdeter1=.; else selfdeter1=selfdeter; label selfdeter1="Others determine what i can do-missing";
+if findway=4 then findway1=.; else findway1=findway; label findway1="Can find way when i want to do something-missing";
+if adjchg=4 then adjchg1=.; else adjchg1=adjchg; label adjchg1="Easily adjust to change-missing";
+
+if maritalstat in (1, 2) then marstat=1; /*married or living with partner*/
+if maritalstat in (3,4,5,6) then marstat=2; /*unmarried*/
+format marstat maritalstat.; 
+
+if n_social_network in (0,1) then high_support=0;
+if n_social_network>=2 then high_support=1; label high_support="High Social support";
+
+N1_cancer_time=firstdxt-n1_int; label N1_cancer_time="Time from N1 interview to first dx";
+cancer_P1_time=P1_int-firstdxt; label cancer_P1_time="time from diagnosis to follow up interview";
+
+if srh in  (4,5) then srh_fp=1; if srh in (1,2,3) then srh_fp=0;
+
+format oftcheer1 oftchee. oftbored1 oftbore. oftfol1 oftfol. oftupset1 oftupse. lifemean1 lifemea. 
+confident1 confide. giveup1 giveup. livingsit1 livings. selfdeter1 selfdet. findway1  findway. adjchg1 adjchg.;
+run;
+
+proc freq data=nhats(where=(ivw_date=n1_int and sample=1)); tables firstdx wave wave*dem_3_cat wave*dem_2_cat; run;
+
+/*wave 1 weights and demographics*/
+data weights; set nhats(where=(wave=1)); keep bene_id anfinwgt varstrat varunit female race_recode;
+rename anfinwgt=W1_anfinwgt varstrat=W1_varstrat varunit=W1_varunit female=W1_female race_recode=W1_race_recode;
+run;
+
+data nhats1; merge nhats weights; by bene_id; run;
+
+data n1; set nhats1(where=(ivw_date=n1_int and sample=1)); run;
+data nonsample; set nhats1(where=(sample=0 and wave=1)); run;
+
+/*weighted percents of incident cancer cases who had dementia prior to dx*/
+data predx; set n1 nonsample; run;
+
+proc surveyfreq data=predx; tables sample*wave*(dem_3_cat dem_2_cat)/row col; 
+weight W1_anfinwgt; strata W1_varstrat; cluster W1_varunit;
+run;
+
+/*percent with depression*/
+proc surveyfreq data=predx; tables sample*(prob_dem dem_2_cat)*(sr_phq2_depressed sr_gad2_anxiety)/row col; 
+weight W1_anfinwgt; strata W1_varstrat; cluster W1_varunit;
+run;
+
+proc surveyfreq data=predx; tables sample*(dem_2_cat dem_3_cat)/row col; 
+weight W1_anfinwgt; strata W1_varstrat; cluster W1_varunit;
+run;
+
+proc power;
+twosamplefreq test=pchi
+groupproportions=(0.07, 0.242)
+groupns=(208, 33)
+power=.;
+run;
+
+proc power;
+twosamplefreq test=pchi
+groupproportions=(0.065, 0.193)
+groupns=(173, 68)
+power=.;
+run;
+
+proc power;
+twosamplemeans test=diff
+meandiff=3060
+stddev=7600
+groupns=(173,68)
+power=.;
+run;
+
+proc power;
+twosamplemeans test=diff
+meandiff=4850
+stddev=12000
+groupns=(173,68)
+power=.;
+run;
+

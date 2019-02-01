@@ -1,0 +1,243 @@
+/*Social Isolation*/
+proc import out=op datafile="E:\nhats\data\NHATS cleaned\op_round_1_6.dta"
+dbms=dta replace;
+run;
+
+proc contents data=op; run;
+
+proc sort data=op; by spid opid; run;
+
+proc print data=op (firstobs=50 obs=100); var spid opid wave spouse otherrel nonrel op_sn; run;
+proc freq data=op; tables spouse otherrel nonrel op_sn; run;
+
+/*Talk to friends or family about important things*/
+data op; set op;
+if (spouse=1 or otherrel=1) and op_sn=1 then talk_family=1; else talk_family=0;
+if nonrel=1 and op_sn=1 then talk_friend=1; else talk_friend=0;
+run;
+
+proc sort data=op; by spid wave opid; run;
+proc print data=op (obs=100); var spid opid wave spouse otherrel nonrel op_sn talk_family talk_friend; run;
+proc freq data=op (where=(wave=1)); tables talk_friend talk_family; run;
+
+
+/*Wave 1*/
+data wave1; set op (where=(wave=1));
+keep spid opid wave spouse otherrel nonrel op_sn talk_family talk_friend wave;
+run;
+
+proc print data=wave1 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave1
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave1
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave1; merge family friend; by spid; 
+wave=1;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave1; tables talk_friend talk_family; run;
+
+/**Wave 2*/
+data wave2; set op (where=(wave=2));
+keep spid talk_family talk_friend ;
+run;
+
+proc print data=wave2 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave2
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave2
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave2; merge family friend; by spid; 
+wave=2;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave2; tables talk_friend talk_family; run;
+
+/**Wave 3*/
+data wave3; set op (where=(wave=3));
+keep spid talk_family talk_friend ;
+run;
+
+proc print data=wave3 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave3
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave3
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave3; merge family friend; by spid; 
+wave=3;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave3; tables talk_friend talk_family; run;
+
+/**Wave 4*/
+data wave4; set op (where=(wave=4));
+keep spid talk_family talk_friend ;
+run;
+
+proc print data=wave4 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave4
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave4
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave4; merge family friend; by spid; 
+wave=4;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave4; tables talk_friend talk_family; run;
+
+/**Wave 5*/
+data wave5; set op (where=(wave=5));
+keep spid talk_family talk_friend ;
+run;
+
+proc print data=wave5 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave5
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave5
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave5; merge family friend; by spid; 
+wave=5;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave5; tables talk_friend talk_family; run;
+
+/**Wave 6*/
+data wave6; set op (where=(wave=6));
+keep spid talk_family talk_friend ;
+run;
+
+proc print data=wave6 (obs=50); run;
+
+proc sql;
+create table family as
+select spid, sum(talk_family) as talk_family
+from wave6
+group by spid;
+quit;
+
+proc freq data=family; tables talk_family; run;
+
+proc sql;
+create table friend as
+select spid, sum(talk_friend) as talk_friend
+from wave6
+group by spid;
+quit;
+
+proc freq data=friend; tables talk_friend; run;
+
+data wave6; merge family friend; by spid; 
+wave=6;
+if talk_friend>=1 then talk_friend=1; else talk_friend=0;
+if talk_family>=1 then talk_family=1; else talk_family=0;
+run;
+
+proc freq data=wave6; tables talk_friend talk_family; run;
+
+proc freq data=op; tables wave; run;
+
+/*stack all waves*/
+data op_talk; set wave1 wave2 wave3 wave4 wave5 wave6; 
+if talk_friend=1 then not_talk_friend=0; if talk_friend=0 then not_talk_friend=1;  
+label not_talk_friend="Does not talk to friends about important things";
+label talk_friend="Talks to Friends about important things";
+
+if talk_family=1 then not_talk_family=0; if talk_family=0 then not_talk_family=1;
+label not_talk_family="Does not talk to family about important things";
+label talk_family="Talks to family about important things";
+
+run;
+
+proc freq data=op_talk; tables talk_friend*not_talk_friend talk_family*not_talk_family; run;
+
+proc sort data=op_talk; by spid wave; run;
+proc print data=op_talk (obs=100); run;
+
+libname out "E:\nhats\projects\Naomi QoL";
+
+data out.talk_family_friends; set op_talk; run;

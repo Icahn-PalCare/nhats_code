@@ -1,0 +1,1880 @@
+/*Select patients with incident lung, colorectal, breast, prostate diagnoses*/
+
+libname nhats "E:\nhats\data\NHATS cleaned";
+libname medicare "E:\nhats\data\20180625 NHATS CMS Data\merged";
+
+
+proc import out=nhats datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta"
+dbms=dta replace;
+run;
+
+proc contents data=nhats;
+run;
+
+proc print data=nhats(obs=20); var oftcheer; run;
+
+proc print data=nhats(where=(death_date^=nhats_death_date)obs=20); var spid death_date nhats_death_date; run;
+proc means data=nhats min max; var death_year death_month; run;
+
+/*unique patients in nhats*/
+data test; set nhats; keep spid; run;
+	proc sort data=test nodup out=test; by spid; run; /*12,427 unique patients*/
+
+/*variable for nursing home status*/
+proc freq data=nhats(where=(wave=1)); table R1status; run;
+proc freq data=nhats(where=(wave=1)); table nhres; run;
+
+data test; set nhats(where=(wave=1)); keep spid; run;
+	proc sort data=test nodup out=test; by spid; run; /*8245 patients*/
+
+/*list of patient ids that are not in wave 1*/
+data id; merge test (in=a) nhats; if a=0; by spid; run;
+
+	data test2; set id; keep spid; 
+		proc sort data=test2 nodup out=test2; by spid; run; /*4182 patients*/
+
+/*when did replenishment wave happen*/
+proc freq data=id; tables wave; run; /*replenishment wave happened in wave 5*/
+proc freq data=id; tables yearsample; run;
+
+/*how many in nursing homes in replenishment sample*/
+proc freq data=id (where=(wave=5)); tables R5status nhres; run;
+proc freq data=nhats(where=(wave=5)); tables R5status nhres; run;
+
+/*pick patients in first wave*/
+data wave1; set nhats(where=(wave=1)); keep spid; run;
+	proc sort data=wave1 nodup out=wave1; by spid; run; /*8,245*/
+
+data nhats1; merge wave1(in=a) nhats; by spid; if a; run;
+	data test; set nhats1; keep spid;
+		proc sort data=test nodup out=test; by spid; run;
+
+/*pick community dwellers at Wave 1*/
+proc freq data=nhats1(where=(wave=1)); tables nhres R1status; run; /*468 patients in nursing homes at wave 1*/
+
+data nhres; set nhats1(where=(wave=1 and nhres=1)); keep spid; run; /*468*/
+
+data nhats1; merge nhres(in=a) nhats1; by spid; 
+	if a=0 then sample=1; if a=1 then sample=0; run;
+	data test; set nhats1; keep spid sample;
+		proc sort data=test nodup out=test; by spid; run;
+			proc freq data=test; table sample; run;/*7777 community dwelling patients at wave 1*/
+
+/*exclude patients who did not have an SP interview in wave 1*/
+proc freq data=nhats1(where=(wave=1 and sample=1)); tables R1status*R2Status R1status*R3status 
+R1status*R4status R1status*R5status; run; /*168 without SP interview complete*/
+
+data noSP; set nhats1(where=(wave=1 and R1status=64)); keep spid; run;/*168*/
+
+data nhats1; merge noSP (in=a) nhats1; by spid;
+if a=1 then sample=0; run;
+	data test; set nhats1; keep spid sample;
+		proc sort data=test nodup out=test; by spid; run;
+			proc freq data=test; tables sample; run; /*7609*/
+
+
+/**Crosswalk exclusion**/
+data xwalk; set medicare.xwalk_cms_to_nhats_complete;
+run;
+
+proc contents data=xwalk; run;
+
+proc sort data=xwalk; by spid; run;
+
+proc freq data=xwalk; tables nhats_cms_num/noprint out=list; run;
+proc print data=list; where count>=2; run;
+proc print data=xwalk(where=(spid=10001414)); run;
+proc print data=xwalk(where=(nhats_cms_num="10001276")); run;
+
+/*drop patient with duplicate bene_id for the same spid/nhats_cms_num*/
+data xwalk1; set xwalk(where=(spid^=10001414)); run;/*8244 patients*/
+
+/*merge nhats with crosswalk and create set of patient IDs*/
+data nhats1; merge nhats1 (in=a) xwalk1 (in=b); if a; by spid;
+if b=0 then sample=0;  run;
+
+data test; set nhats1 (where=(wave=1)); keep spid nhats_cms_num bene_id sample ivw_date; 
+	proc sort data=test nodup out=id; by spid; run; 
+		proc freq data=id; table sample; run;/*7608 patients in the sample*/
+
+proc contents data=nhats1; run;
+
+/***************************FFS exclusion (1 or 2 years prior to interview)*****************************/
+data mbsf; set medicare.mbsf_06_16; run;
+proc contents data=mbsf; run;
+
+proc print data=mbsf (obs=10); run;
+proc print data=mbsf(where=(bene_id="eeeeeeeeeeqB6eO") obs=10); run;
+proc sort data=mbsf; by bene_id; run;
+
+data id; set nhats1 (where=(wave=1 and sample=1)); keep spid bene_id ivw_date ivw_month; run;
+proc sort data=id; by bene_id; run;
+
+data mbsf_red; merge mbsf id (in=a); by bene_id; if a; run;
+data test; set mbsf_red; keep bene_id ivw_month; run;
+	proc sort data=test nodup out=test; by bene_id; run;
+	proc freq data=test; tables ivw_month; run;
+
+data mbsf_red; set mbsf_red (where=(BENE_ENROLLMT_REF_YR in (2009, 2010, 2011))); run;
+data test; set mbsf_red; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*all participants have enrollment data in those years*/
+
+
+/*define # of months of coverage in those years*/
+data mbsf_red; set mbsf_red;
+array Ind {12}$ BENE_MDCR_ENTLMT_BUYIN_IND_01-BENE_MDCR_ENTLMT_BUYIN_IND_12;
+array AB {12} AB1-AB12;
+array HMOind{12} $BENE_HMO_IND_01-BENE_HMO_IND_12;
+array HMO {12} HMO1-HMO12;
+
+do i=1 to 12;
+if Ind(i) in ("3", "C") then AB(i)=1; else AB(i)=0;
+
+if HMOind(i)="0" then HMO(i)=0; else HMO(i)=1;
+end;
+
+ABsum=sum(of AB1-AB12);
+HMOsum=sum(of HMO1-HMO12);
+
+if ivw_month=5 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 and AB10=1 and AB9=1 and AB8=1 and AB7=1 and AB6=1 then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1 or HMO10=1 or HMO9=1 or HMO8=1 or HMO7=1 or HMO6=1 then HMO2010=1; else HMO2010=0;
+end;
+
+if ivw_month=6 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1  and AB6=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1 then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 and AB10=1 and AB9=1 and AB8=1 and AB7=1 then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1 or HMO10=1 or HMO9=1 or HMO8=1 or HMO7=1  then HMO2010=1; else HMO2010=0;
+
+end;
+
+if ivw_month=7 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1  and AB6=1 and AB7=1 
+then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1
+or HMO7=1 then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 and AB10=1 and AB9=1 and AB8=1  then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1 or HMO10=1 or HMO9=1 or HMO8=1  then HMO2010=1; else HMO2010=0;
+end;
+
+if ivw_month=8 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1  and AB6=1 and AB7=1 and AB8=1
+then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1
+or HMO7=1 or HMO8=1  then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 and AB10=1 and AB9=1   then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1 or HMO10=1 or HMO9=1  then HMO2010=1; else HMO2010=0;
+end;
+
+if ivw_month=9 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1  and AB6=1 and AB7=1 and AB8=1 and AB9=1 
+then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1
+or HMO7=1 or HMO8=1 or HMO9=1  then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 and AB10=1 then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1 or HMO10=1  then HMO2010=1; else HMO2010=0;
+end;
+
+if ivw_month=10 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1  and AB6=1 and AB7=1 and AB8=1 and AB9=1  and AB10=1
+then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1
+or HMO7=1 or HMO8=1 or HMO9=1 or HMO10=1 then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2010 and AB12=1 and AB11=1 then AB2010=1; else AB2010=0;
+if BENE_ENROLLMT_REF_YR=2010 and HMO12=1 or HMO11=1   then HMO2010=1; else HMO2010=0;
+end;
+
+if AB2011=1 and HMO2011=0 then FFS2011=1; else FFS2011=0;
+if AB2010=1 and HMO2010=0 then FFS2010=1; else FFS2010=0;
+
+run;
+
+proc print data=mbsf_red (where=(FFS2011=1 or FFS2010=1) obs=25); var bene_id  BENE_AGE_AT_END_REF_YR ivw_month 
+BENE_ENROLLMT_REF_YR AB1-AB12 AB2011 AB2010 
+HMO1-HMO12 HMO2011 HMO2010 FFS2011 FFS2010 ABsum HMOsum BENE_HI_CVRAGE_TOT_MONS BENE_SMI_CVRAGE_TOT_MONS BENE_HMO_CVRAGE_TOT_MONS;
+run;
+
+proc freq data=mbsf_red; tables FFS2011 FFS2010; run;
+
+data FFS2010; set mbsf_red(where=(BENE_ENROLLMT_REF_YR=2010)); keep bene_id FFS2010; run;
+data FFS2011; set mbsf_red (where=(BENE_ENROLLMT_REF_YR=2011)); keep bene_id FFS2011; run;
+
+data FFS; merge FFS2010 FFS2011; by bene_id; 
+if FFS2010=1 and FFS2011=1 then FFS=1; else FFS=0; 
+run;
+
+proc freq data=FFS; tables FFS; run;
+
+/*list of ids of patients with FFS*/
+data FFS_id; set FFS (where=(FFS=1)); run;
+
+/* merge back with NHATS*/
+proc sort data=nhats1; by bene_id; run;
+data nhats1; merge nhats1 (in=a) FFS_id(in=b); if a; by bene_id;
+if b=0 then sample=0;  run;
+
+data test; set nhats1 (where=(wave=1)); keep spid nhats_cms_num bene_id sample ivw_date; 
+	proc sort data=test nodup out=id; by spid; run; 
+		proc freq data=id; table sample; run;/*4781 patients in the sample*/
+
+proc contents data=nhats1; run;
+
+/*********************************************************************************************************/
+/*                    Look for prior diagnoses in Medicare                                               */
+/********************************************************************************************************/
+
+/*create list of IDs and ivw dates*/
+data test; set nhats1(where=(wave=1)); keep spid nhats_cms_num bene_id sample ivw_date;
+	proc sort data=test nodup out=id; by bene_id; run;
+		proc freq data=id; table sample; run;
+
+/*exclude patients lung cancer diagnosis in Medicare prior to their interview date*/
+/*NCH*/
+data nch_clm; set medicare.pb_09_16; run;
+proc sort data=nch_clm; by bene_id; run;
+proc contents data=nch_clm; run;
+proc freq data=nch_clm; tables ICD_DGNS_VRSN_CD1; run;
+
+proc freq data=nch_clm; tables clm_id/noprint out=list; run;
+proc print data=list; where count ge 2; run; /*no duplicate claim IDs*/
+
+
+data sampleid; set id(where=(sample=1)); run; 
+
+data nch_clm; merge sampleid(in=a) nch_clm(in=b); by bene_id; if a; if b; run;
+	data test; set nch_clm; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run; /*4278*/
+
+proc contents data=nch_clm; run;
+
+/*define time frame of 1 year prior to interview*/
+data nch_clm; set nch_clm;
+if ivw_date>admit_date and ivw_date-admit_date<=365 then timegood=1; else timegood=0;
+run;
+
+proc print data=nch_clm (where=(timegood=0) obs=20); var ivw_date admit_date timegood; run;
+
+data tempnch; set nch_clm (where=(timegood=1));
+array dx{13} $ICD_DGNS_CD1-ICD_DGNS_CD12 PRNCPAL_DGNS_CD;
+array dx_type{13} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD12 PRNCPAL_DGNS_VRSN_CD;
+
+/*cancer diagnosis*/
+do i=1 to 13;
+if dx_type(i)="9" and dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312", "V1011", "V1012") then Nlcdx=1; 
+if dx_type(i)="9" and dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749", "V103") then Nbcdx=1; /*breast cancer diagnosis or history*/
+if dx_type(i)="9" and dx(i) in ("185", "1850", "2334", "V1046") then Npcdx=1; /*prostate cancer or history of prostate cancer*/
+if dx_type(i)="9" and dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541", "V1006")
+then Nccdx=1; /*colorectal cancer or history of colorectal cancer*/
+end;
+
+if Nlcdx=. then Nlcdx=0;
+if Nbcdx=. then Nbcdx=0;
+if Npcdx=. then Npcdx=0;
+if Nccdx=. then Nccdx=0;
+
+if Nlcdx=1 then Nlcdxt=admit_date;
+if Nbcdx=1 then Nbcdxt=admit_date;
+if Npcdx=1 then Npcdxt=admit_date;
+if Nccdx=1 then Nccdxt=admit_date;
+
+if (Nlcdxt^=. and Nlcdxt<ivw_date) then nlcpredx=1; else nlcpredx=0;
+if (Nbcdxt^=. and Nbcdxt<ivw_date) then nbcpredx=1; else nbcpredx=0;
+if (Npcdxt^=. and Npcdxt<ivw_date) then npcpredx=1; else npcpredx=0;
+if (Nccdxt^=. and Nccdxt<ivw_date) then nccpredx=1; else nccpredx=0;
+
+if nlcpredx=1 or nbcpredx=1 or npcpredx=1 or nccpredx=1 then npredx=1; else npredx=0;
+
+drop i;
+run;
+
+proc freq data=tempnch; tables Nlcdx Nbcdx Npcdx Nccdx Nlcpredx nbcpredx npcpredx nccpredx npredx; run;
+
+/*sum npredx*/
+proc sql; 
+create table Npre as
+select bene_id, sum(nPreDx) as NpreDxnum
+from tempnch
+group by bene_id; 
+quit;
+
+proc print data=Npre (obs=10); run;  proc freq data=Npre; tables NpreDxnum; run;
+ 
+data Npre; set Npre;
+if NpreDxnum>0 then NpreDx=1; else npreDx=0;
+drop nPreDxnum;
+run;
+
+proc freq data=Npre; tables NpreDx; run; /*542*/
+
+/*sum each type of cancer*/
+/*lung*/
+proc sql;
+create table Nlcpre as
+select bene_id, sum(nlcpredx) as lcdxnum
+from tempnch
+group by bene_id;
+quit;
+
+proc print data=Nlcpre (obs=10); run;  proc freq data=Nlcpre; tables lcdxnum; run;
+ 
+data Nlcpre; set Nlcpre;
+if lcDxnum>0 then NlcpreDx=1; else nlcpreDx=0;
+drop lcDxnum;
+run;
+
+proc freq data=Nlcpre; tables NlcpreDx; run; /*57*/
+
+/*breast*/
+proc sql;
+create table Nbcpre as
+select bene_id, sum(nbcpredx) as bcdxnum
+from tempnch
+group by bene_id;
+quit;
+
+proc print data=Nbcpre (obs=10); run;  proc freq data=Nbcpre; tables bcdxnum; run; 
+ 
+data Nbcpre; set Nbcpre;
+if bcDxnum>0 then NbcpreDx=1; else nbcpreDx=0;
+drop bcDxnum;
+run;
+
+proc freq data=Nbcpre; tables NbcpreDx; run; /*194*/
+
+/*prostate*/
+proc sql;
+create table Npcpre as
+select bene_id, sum(npcpredx) as pcdxnum
+from tempnch
+group by bene_id;
+quit;
+
+proc print data=Npcpre (obs=10); run;  proc freq data=Npcpre; tables pcdxnum; run;
+ 
+data Npcpre; set Npcpre;
+if pcDxnum>0 then NpcpreDx=1; else npcpreDx=0;
+drop pcDxnum;
+run;
+
+proc freq data=Npcpre; tables NpcpreDx; run; /*250*/
+
+/*colon*/
+proc sql;
+create table Nccpre as
+select bene_id, sum(nccpredx) as ccdxnum
+from tempnch
+group by bene_id;
+quit;
+
+proc print data=Nccpre (obs=10); run;  proc freq data=Nccpre; tables ccdxnum; run;
+ 
+data Nccpre; set Nccpre;
+if ccDxnum>0 then NccpreDx=1; else nccpreDx=0;
+drop ccDxnum;
+run;
+
+proc freq data=Nccpre; tables NccpreDx; run; /*70*/
+
+data pre_all_cancer; merge Nlcpre Nbcpre Npcpre Nccpre; by bene_id;
+if NlcpreDx=1 or NbcpreDx=1 or Npcpredx=1 or Nccpredx=1 then Npredx=1;else Npredx=0;
+run;
+
+/*check numbers*/
+proc freq data=pre_all_cancer; tables Npredx; run; /*542*/
+
+
+/*merge Npre back with all types of cancer*/
+data Npre; merge Npre Nlcpre Nbcpre Npcpre Nccpre; by bene_id; run;
+
+proc print data=Npre(where=(NpreDx=1)); run;
+
+data NCHpre; set Npre; where NpreDx=1; run;
+proc print data=NCHpre; run;
+
+/*Outpatient*/
+data op; set medicare.op_09_16; run;
+proc sort data=op; by bene_id; run;
+
+proc freq data=op; tables clm_id/noprint out=list; run;
+proc print data=list; where count ge 2; run; /*no duplicate claim IDs*/
+
+data op; merge sampleid(in=a) op(in=b); by bene_id; if a; if b; run;
+	data test; set op; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run;
+			proc freq data=test; tables sample; run; /*4553*/
+
+ proc contents data=op; run;
+ proc freq data=op; tables ICD_DGNS_VRSN_CD1; run;
+ proc print data=op (where=(ICD_DGNS_VRSN_CD1=" ")obs=10); var ICD_DGNS_VRSN_CD1 ICD_DGNS_CD1 admit_date; run;
+ data year; set op (where=(ICD_DGNS_VRSN_CD1=" ")); year= year(admit_date); run; proc freq data=year; tables year; run;
+/*everything missing is in 2016, so it's ICD-10*/
+
+/*define time frame of 1 year prior to interview*/
+data op; set op;
+if ivw_date>admit_date and ivw_date-admit_date<=365 then timegood=1; else timegood=0;
+run;
+
+proc print data=op (where=(timegood=1) obs=20); var ivw_date admit_date timegood; run;
+
+/*Define cancer diagnosis y/n and pick date of first diagnosis*/
+data tempop; set op(where=(timegood=1));
+/*diagnosis*/
+array dx{29} $ICD_DGNS_CD1-ICD_DGNS_CD25 PRNCPAL_DGNS_CD RSN_VISIT_CD1-RSN_VISIT_CD3;
+array dx_type{29} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD25 PRNCPAL_DGNS_VRSN_CD RSN_VISIT_VRSN_CD1-RSN_VISIT_VRSN_CD3;
+
+do i=1 to 29;
+if  dx_type(i)="9" and dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312", "V1011", "V1012") then Olcdx=1; 
+if  dx_type(i)="9" and dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749", "V103") then Obcdx=1; /*breast cancer diagnosis or history*/
+if  dx_type(i)="9" and dx(i) in ("185", "1850", "2334", "V1046") then Opcdx=1; /*prostate cancer or history of prostate cancer*/
+if  dx_type(i)="9" and dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541", "V1006")
+then Occdx=1; /*colorectal cancer or history of colorectal cancer*/
+end;
+
+if Olcdx=. then Olcdx=0;
+if Obcdx=. then Obcdx=0;
+if Opcdx=. then Opcdx=0;
+if Occdx=. then Occdx=0;
+
+if Olcdx=1 then Olcdxt=admit_date;
+if Obcdx=1 then Obcdxt=admit_date;
+if Opcdx=1 then Opcdxt=admit_date;
+if Occdx=1 then Occdxt=admit_date;
+
+if (Olcdxt^=. and Olcdxt<ivw_date) then olcpredx=1; else olcpredx=0;
+if (Obcdxt^=. and Obcdxt<ivw_date) then obcpredx=1; else obcpredx=0;
+if (Opcdxt^=. and Opcdxt<ivw_date) then Opcpredx=1; else opcpredx=0;
+if (Occdxt^=. and Occdxt<ivw_date) then occpredx=1; else occpredx=0;
+
+if olcpredx=1 or obcpredx=1 or opcpredx=1 or occpredx=1 then opredx=1; else opredx=0;
+drop i;
+run;
+
+proc freq data=tempop; tables Olcdx Obcdx Opcdx Occdx olcpredx obcpredx opcpredx occpredx OpreDx; run;
+
+/*sum Opredx*/
+proc sql; 
+create table Opre as
+select bene_id, sum(oPreDx) as OpreDxnum
+from tempop
+group by bene_id; 
+quit;
+
+proc print data=opre (obs=10); run;  proc freq data=opre; tables OpreDxnum; run;
+ 
+data Opre; set Opre;
+if OpreDxnum>0 then OpreDx=1; else OpreDx=0;
+drop OPreDxnum;
+run;
+
+proc freq data=Opre; tables OpreDx; run; /*372*/
+
+/*sum each type of cancer*/
+/*lung*/
+proc sql;
+create table Olcpre as
+select bene_id, sum(olcpredx) as lcdxnum
+from tempop
+group by bene_id;
+quit;
+
+proc print data=olcpre (obs=10); run;  proc freq data=olcpre; tables lcdxnum; run;
+ 
+data Olcpre; set Olcpre;
+if lcDxnum>0 then olcpreDx=1; else olcpreDx=0;
+drop lcDxnum;
+run;
+
+proc freq data=olcpre; tables olcpreDx; run; /*45*/
+
+/*breast*/
+proc sql;
+create table Obcpre as
+select bene_id, sum(obcpredx) as bcdxnum
+from tempop
+group by bene_id;
+quit;
+
+proc print data=obcpre (obs=10); run;  proc freq data=Obcpre; tables bcdxnum; run; 
+ 
+data Obcpre; set Obcpre;
+if bcDxnum>0 then ObcpreDx=1; else ObcpreDx=0;
+drop bcDxnum;
+run;
+
+proc freq data=Obcpre; tables ObcpreDx; run; /*163*/
+
+/*prostate*/
+proc sql;
+create table Opcpre as
+select bene_id, sum(opcpredx) as pcdxnum
+from tempop
+group by bene_id;
+quit;
+
+proc print data=Opcpre (obs=10); run;  proc freq data=Opcpre; tables pcdxnum; run;
+ 
+data opcpre; set opcpre;
+if pcDxnum>0 then opcpreDx=1; else opcpreDx=0;
+drop pcDxnum;
+run;
+
+proc freq data=opcpre; tables OpcpreDx; run; /*146*/
+
+/*colon*/
+proc sql;
+create table Occpre as
+select bene_id, sum(Occpredx) as ccdxnum
+from tempop
+group by bene_id;
+quit;
+
+proc print data=Occpre (obs=10); run;  proc freq data=Occpre; tables ccdxnum; run;
+ 
+data Occpre; set Occpre;
+if ccDxnum>0 then OccpreDx=1; else OccpreDx=0;
+drop ccDxnum;
+run;
+
+proc freq data=Occpre; tables OccpreDx; run; /*42*/
+
+/*check numbers*/
+data pre_all_cancer; merge Olcpre Obcpre opcpre occpre; by bene_id;
+if OlcpreDx=1 or ObcpreDx=1 or Opcpredx=1 or Occpredx=1 then Opredx=1;else Opredx=0;
+run;
+
+
+proc freq data=pre_all_cancer; tables Opredx; run; /*372*/
+
+/*merge Opre back with all types of cancer*/
+data Opre; merge Opre Olcpre Obcpre Opcpre Occpre; by bene_id; run;
+
+proc print data=Opre(where=(OpreDx=1)); run;
+
+data OPpre; set Opre; where OpreDx=1; run;
+proc print data=OPpre; run;
+
+/*Inpatient*/
+data ip; set medicare.ip_06_16; run;
+proc contents data=ip; run;
+proc sort data=ip; by bene_id; run;
+
+proc freq data=ip; tables clm_id/noprint out=list; run;
+proc print data=list; where count ge 2; run; /*no duplicate claim IDs*/
+
+
+data ip; merge sampleid(in=a) ip(in=b); by bene_id; if a; if b; run;
+	data test; set ip; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run; /*3482*/
+			proc freq data=test; tables sample; run; 
+
+proc contents data=ip; run;
+
+/*define time frame of 1 year prior to interview*/
+data ip; set ip;
+if ivw_date>admit_date and ivw_date-admit_date<=365 then timegood=1; else timegood=0;
+run;
+
+proc print data=ip (where=(timegood=1) obs=20); var ivw_date admit_date timegood; run;
+proc freq data=ip; tables ICD_DGNS_VRSN_CD1; run;
+data year; set ip(where=(ICD_DGNS_VRSN_CD1=" ")); year=year(admit_date); month=month(admit_date);
+; run; proc freq data=year(where=(year=2015)); tables month; run; /*all missing are icd-10*/
+
+/*Define cancer diagnosis y/n and pick date of first diagnosis*/
+data tempip; set ip(where=(timegood=1));
+array dx{27} $ICD_DGNS_CD1-ICD_DGNS_CD25 ADMTG_DGNS_CD PRNCPAL_DGNS_CD;
+array dx_type{27} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD25 ADMTG_DGNS_VRSN_CD PRNCPAL_DGNS_VRSN_CD;
+
+/*diagnosis*/
+do i=1 to 27;
+if dx_type(i)="9" and dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312", "V1011", "V1012") then Ilcdx=1; 
+if dx_type(i)="9" and dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749", "V103") then Ibcdx=1; /*breast cancer diagnosis or history*/
+if dx_type(i)="9" and dx(i) in ("185", "1850", "2334", "V1046") then Ipcdx=1; /*prostate cancer or history of prostate cancer*/
+if dx_type(i)="9" and dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541", "V1006")
+then Iccdx=1; /*colorectal cancer or history of colorectal cancer*/
+end;
+
+if Ilcdx=. then Ilcdx=0;
+if Ibcdx=. then Ibcdx=0;
+if Ipcdx=. then Ipcdx=0;
+if Iccdx=. then Iccdx=0;
+
+if Ilcdx=1 then Ilcdxt=admit_date;
+if Ibcdx=1 then Ibcdxt=admit_date;
+if Ipcdx=1 then Ipcdxt=admit_date;
+if Iccdx=1 then Iccdxt=admit_date;
+
+if (Ilcdxt^=. and Ilcdxt<ivw_date) then ilcpredx=1; else ilcpredx=0;
+if (Ibcdxt^=. and Ibcdxt<ivw_date) then ibcpredx=1; else ibcpredx=0;
+if (Ipcdxt^=. and Ipcdxt<ivw_date) then Ipcpredx=1; else ipcpredx=0;
+if (Iccdxt^=. and Iccdxt<ivw_date) then iccpredx=1; else iccpredx=0;
+
+if ilcpredx=1 or ibcpredx=1 or ipcpredx=1 or iccpredx=1 then ipredx=1; else ipredx=0;
+drop i ;
+run;
+
+proc freq data=tempip; tables Ilcdx ibcdx Ipcdx Iccdx ilcpredx ibcpredx ipcpredx iccpredx IpreDx; run;
+
+/*sum Ipredx*/
+proc sql; 
+create table Ipre as
+select bene_id, sum(IPreDx) as IpreDxnum
+from tempip
+group by bene_id; 
+quit;
+
+proc print data=Ipre (obs=10); run;  proc freq data=Ipre; tables IpreDxnum; run;
+ 
+data Ipre; set Ipre;
+if IpreDxnum>0 then IpreDx=1; else IpreDx=0;
+drop IPreDxnum;
+run;
+
+proc freq data=Ipre; tables IpreDx; run; /*120*/
+
+
+/*sum each type of cancer*/
+/*lung*/
+proc sql;
+create table Ilcpre as
+select bene_id, sum(ilcpredx) as lcdxnum
+from tempip
+group by bene_id;
+quit;
+
+proc print data=ilcpre (obs=10); run;  proc freq data=ilcpre; tables lcdxnum; run;
+ 
+data ilcpre; set ilcpre;
+if lcDxnum>0 then ilcpreDx=1; else ilcpreDx=0;
+drop lcDxnum;
+run;
+
+proc freq data=ilcpre; tables ilcpreDx; run; /*18*/
+
+/*breast*/
+proc sql;
+create table ibcpre as
+select bene_id, sum(ibcpredx) as bcdxnum
+from tempip
+group by bene_id;
+quit;
+
+proc print data=ibcpre (obs=10); run;  proc freq data=ibcpre; tables bcdxnum; run; 
+ 
+data ibcpre; set ibcpre;
+if bcDxnum>0 then ibcpreDx=1; else ibcpreDx=0;
+drop bcDxnum;
+run;
+
+proc freq data=ibcpre; tables ibcpreDx; run; /*45*/
+
+/*prostate*/
+proc sql;
+create table Ipcpre as
+select bene_id, sum(ipcpredx) as pcdxnum
+from tempip
+group by bene_id;
+quit;
+
+proc print data=ipcpre (obs=10); run;  proc freq data=ipcpre; tables pcdxnum; run;
+ 
+data ipcpre; set ipcpre;
+if pcDxnum>0 then ipcpreDx=1; else ipcpreDx=0;
+drop pcDxnum;
+run;
+
+proc freq data=ipcpre; tables ipcpreDx; run; /*49*/
+
+/*colon*/
+proc sql;
+create table iccpre as
+select bene_id, sum(iccpredx) as ccdxnum
+from tempip
+group by bene_id;
+quit;
+
+proc print data=iccpre (obs=10); run;  proc freq data=iccpre; tables ccdxnum; run;
+ 
+data iccpre; set iccpre;
+if ccDxnum>0 then iccpreDx=1; else iccpreDx=0;
+drop ccDxnum;
+run;
+
+proc freq data=iccpre; tables iccpreDx; run; /*16*/
+
+/*check numbers*/
+data pre_all_cancer; merge ilcpre ibcpre ipcpre iccpre; by bene_id;
+if ilcpreDx=1 or ibcpreDx=1 or ipcpredx=1 or iccpredx=1 then ipredx=1;else ipredx=0;
+run;
+
+
+proc freq data=pre_all_cancer; tables ipredx; run; /*120*/
+
+/*merge Opre back with all types of cancer*/
+data Ipre; merge Ipre Ilcpre Ibcpre Ipcpre Iccpre; by bene_id; run;
+
+proc print data=Ipre(where=(IpreDx=1)); run;
+
+
+data IPpre; set Ipre; where IpreDx=1; run;
+proc print data=IPpre; run;
+
+/*combine for list of patients with a prior diagnosis code of lung cancer*/
+data PreDx; merge NCHpre OPpre IPpre; by bene_id; 
+if ipredx=1 or opredx=1 or npredx=1 then Predx=1; else Predx=0;
+if ilcpredx=1 or olcpredx=1 or nlcpredx=1 then LCpredx=1; else LCpredx=0;
+if ibcpredx=1 or obcpredx=1 or nbcpredx=1 then BCpredx=1; else BCpredx=0;
+if ipcpredx=1 or opcpredx=1 or npcpredx=1 then PCpredx=1; else PCpredx=0;
+if iccpredx=1 or occpredx=1 or nccpredx=1 then CCpredx=1; else CCpredx=0;
+keep bene_id Predx LcPredx BCpredx PCpredx CCpredx;
+run; /*607 observations*/
+
+proc print data=PreDx; run;
+
+proc freq data=PreDx; tables PreDX LCpredx BCpredx PCpredx CCpredx LCpreDX*PCpreDx PCpreDX*CCpredx; run;
+
+/*data PreDx; set PreDx; keep bene_id; run;*/
+
+/*merge list of patients with prior diagnosis back*/
+
+data nhats1; merge PreDx(in=a) nhats1; by bene_id; 
+if a=1 then sample=0;  run;
+	data test; set nhats1; keep bene_id sample; run;
+		proc sort data=test nodup out=test; by bene_id; run; 
+			proc freq data=test; tables sample; run;
+
+data test; set nhats1(where=(wave=1)); keep bene_id sample ivw_date; run;
+	proc sort data=test nodup out=id; by bene_id; run;
+		proc freq data=id; tables sample; run;
+
+/*exclude patients with breast, prostate, colorectal or other cancer prior to interview 1*/
+/*exclude those patients with an "Other cancer" prior to interview 1*/
+proc freq data=nhats1(where=(wave=1 and sample=1)); tables sr_cancer_ever; run;
+														/*769 with ever cancer*/
+
+proc freq data=nhats1(where=(wave=1 and sample=1 and sr_cancer_ever=1)); tables sr_othercancer_had 
+sr_breastcancer_had sr_prostatecancer_had sr_coloncancer_had; run;
+
+/*exclude those with cancers of interest (or other), or for whom the type of cancer is missing, or who are missing
+whether they ever had cancer*/
+data cancerhist; set nhats1(where=((wave=1 and sample=1 and sr_cancer_ever=.)
+								/*or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=1)*/
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_breastcancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_breastcancer_had=1)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_prostatecancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_prostatecancer_had=1)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_coloncancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_coloncancer_had=1)));
+								keep bene_id; run;
+
+data test; set cancerhist; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*182 patients with self reported previous cancer*/
+
+proc sort data=nhats1; by bene_id;run;
+proc sort data=cancerhist; by bene_id; run;
+
+
+data nhats1; merge cancerhist(in=a) nhats1; by bene_id; 
+if a=1 then sample=0;  run;
+	data test; set nhats1; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run; 
+			proc freq data=test; tables sample; run;/*3951 patients who reported no other cancer or were missing*/
+
+
+/*exclude other cancer history*/
+proc freq data=nhats1(where=(wave=1 and sample=1)); tables sr_cancer_ever; run;
+														/*769 with ever cancer*/
+
+proc freq data=nhats1(where=(wave=1 and sample=1 and sr_cancer_ever=1)); tables sr_othercancer_had; run;
+
+/*exclude those with cancers of interest (or other), or for whom the type of cancer is missing, or who are missing
+whether they ever had cancer*/
+data cancerhist; set nhats1(where=((wave=1 and sample=1 and sr_cancer_ever=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=.)
+								or (wave=1 and sample=1 and sr_cancer_ever=1 and sr_othercancer_had=1)));
+								keep bene_id; run;
+
+data test; set cancerhist; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*124 patients with self reported previous cancer*/
+
+proc sort data=nhats1; by bene_id;run;
+proc sort data=cancerhist; by bene_id; run;
+
+
+data nhats1; merge cancerhist(in=a) nhats1; by bene_id; 
+if a=1 then sample=0;  run;
+	data test; set nhats1; keep bene_id sample;
+		proc sort data=test nodup out=id; by bene_id; run; 
+			proc freq data=id; tables sample; run;/*3,868 patients who reported no other cancer or were missing*/
+
+
+
+
+
+/*ids of the 3868 patients with no history-USE FOR LATER TO CHECK FFS COVERAGE FOR THIS GROUP*/
+data no_cancer_hist_id; set nhats1 (where=( wave=1 and sample=1)); keep spid bene_id ivw_date ivw_month; run;
+
+libname data "E:\nhats\projects\Naomi QoL";
+data out.no_cancer_hist_id; set no_cancer_hist_id; keep spid bene_id; run;
+/************************************************************************/
+
+
+
+/*******************************************************************************************************************/
+/*                                          End of Major EXCLUSIONS                                                */
+/*			                           Look now for affirmative LC diagnoses                                       */
+/******************************************************************************************************************/
+
+/*********************************************NCH***************************************************************/
+
+proc sort data=nch_clm; by bene_id admit_date; run;
+proc contents data=nch_clm; run;
+proc freq data=nch_clm; tables ICD_DGNS_VRSN_CD1; run;/*non missing version code*/
+
+data sampleid; set id(where=(sample=1)); run; 
+
+data nch_clm; merge sampleid(in=a) nch_clm(in=b); by bene_id; if a; if b; run;
+	data test; set nch_clm; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run; /*3818*/
+
+data Nearlybill; set nch_clm; by bene_id; 
+if first.bene_id then earlybill=admit_date;
+if earlybill^=.;
+keep bene_id earlybill;
+format earlybill date9.; 
+run; /*3818 earliest bills in NCH*/
+
+proc print data=Nearlybill (obs=20); run;
+
+/*add date of earliest bill for that patient back into dataset*/
+data nch_clm; merge nch_clm nearlybill; by bene_id; run;
+data test; set nch_clm; keep bene_id earlybill;
+		proc sort data=test nodup out=test; by bene_id; run;
+		proc contents data=nch_clm; run;
+
+proc print data=nch_clm(where=(ICD_DGNS_VRSN_CD1="0" and substr(ICD_DGNS_CD1, 1, 3)="C34") obs=10); var ICD_DGNS_CD1; run;
+/*
+libname test "E:\nhats\data\20180625 NHATS CMS Data\merged";
+proc contents data=test.pb_09_16; run;*/
+
+/*Define cancer diagnosis y/n and pick date of first diagnosis*/
+data tempnch; set nch_clm (where=(admit_date>=ivw_date));
+array dx{13} $ICD_DGNS_CD1-ICD_DGNS_CD12 PRNCPAL_DGNS_CD;
+array dx_type{13} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD12 PRNCPAL_DGNS_VRSN_CD;
+array pr{13} $hcpcscd1-hcpcscd13;
+
+/*cancer diagnosis*/
+do i=1 to 13;
+/*ICD-9*/
+if dx_type(i)="9" and dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312") then lcdx=1; /*lung cancer*/
+if dx_type(i)="9" and dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749") then bcdx=1; /*breast cancer*/
+if dx_type(i)="9" and dx(i) in ("185", "1850", "2334") then pcdx=1; /*prostate cancer*/
+if dx_type(i)="9" and dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541")
+then ccdx=1; /* colorectal cancer*/
+
+/*ICD 10*/
+if dx_type(i)="0" and substr(dx(i), 1, 3)="C34" then lcdx=1; /*lung cancer*/
+if dx_type(i)="0" and substr(dx(i), 1, 3)="C50" then bcdx=1; /*breast cancer*/
+if dx_type(i)="0" and substr(dx(i), 1, 3)="C61" then pcdx=1; /*prostate cancer*/
+if dx_type(i)="0" and substr(dx(i), 1, 3) in ("C18", "C19", "C20") then ccdx=1; /*colorectal cancer*/
+
+
+end;
+
+
+if lcdx=. then lcdx=0;
+if bcdx=. then bcdx=0;
+if pcdx=. then pcdx=0;
+if ccdx=. then ccdx=0;
+
+if lcdx=1 then lcdxt=admit_date;
+if bcdx=1 then bcdxt=admit_date;
+if pcdx=1 then pcdxt=admit_date;
+if ccdx=1 then ccdxt=admit_date;
+
+if lcdxt^=. and lcdxt<ivw_date then lcpredx=1; else lcpredx=0; /*should be 0- reality very small since we only excluded within the last year. */
+if bcdxt^=. and bcdxt<ivw_date then bcpredx=1; else bcpredx=0;  /*There are a couple of straggler claims, but VERY few*/
+if pcdxt^=. and pcdxt<ivw_date then pcpredx=1; else pcpredx=0;
+if ccdxt^=. and ccdxt<ivw_date then ccpredx=1; else ccpredx=0;
+
+if lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1 then cancerdx=1; else cancerdx=0;
+
+/*surgery*/
+/*do j=1 to 13;
+if "32440"<=pr(j)<="32525" 
+or pr(j) in ("32657", "32663", "32657", "32666", "32667", "32668", "32669", "32670",
+"32671", "32672", "32999", "31640", "31641") then NRx=1; 
+end;
+
+if NRx=. then NRX=0;
+
+if NRX=1 then NRxt=admit_date; */ /*leave out surgery definition for now*/
+
+/*define radiation*/
+do i=1 to 13;
+if dx(i) in ("V580", "V661", "V671") then RT=1;
+end;
+
+do j=1 to 13;
+if pr(j) in ("77401", "77402", "77403", "77404", "77405", "77406", "77407", "77408", "77409")
+ or substr(pr(j), 1,4) in ("7741", "7742", "7743", "7744", "7745", "7746", "7747", "7748", "7749")
+ or substr(pr(j),1,4) in ("7775", "7776", "7777", "7778", "7779")
+ then RT=1;
+ end;
+
+ if RT=. then RT=0;
+ if RT=1 then RTt=admit_date;
+
+ /*define chemo*/
+ do i=1 to 13;
+if dx(i) in ("V581", "V662", "V672") then Chemo=1;
+end;
+
+do j=1 to 13;
+if substr(pr(j), 1, 3) in ("964", "965") 
+or pr(j) in ("Q0083", "Q0084", "Q0085")
+or pr(j) in ("J9190", "J8610", "J9250", "J9260")
+or substr(pr(j), 1,4) in ("J907", "J908")
+or pr(j) in ("J9090", "J9091", "J9092", "J9093", "J9094", "J9095", "J9096", "J9097")
+or pr(j) in ("J9060", "J9062", "J9045") then chemo=1;
+end;
+
+if chemo=. then chemo=0;
+if chemo=1 then chemot=admit_date;
+
+drop i j;
+run;
+
+proc freq data=tempnch; tables lcdx bcdx pcdx ccdx  RT Chemo lcpredx bcpredx pcpredx ccpredx cancerdx; run;
+
+proc contents data=tempnch; run;
+
+data nchdx; set tempnch(where=(lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1)); keep bene_id lcdx bcdx pcdx ccdx cancerdx
+lcdxt bcdxt pcdxt ccdxt RT RTt Chemo Chemot Earlybill filetype dob_dt;
+filetype="N";
+format DOB_dt date9.;
+run; /*6566 observations*/
+
+proc print data=nchdx (obs=200); run;
+
+
+/***************************************************OP*******************************************************/
+data op; merge sampleid(in=a) op(in=b); by bene_id; if a; if b; run;
+	data test; set op; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run;
+			proc freq data=test; tables sample; run; /*3655*/
+
+ /*define date of earliest bill*/
+proc sort data=OP; by bene_id admit_date; run;
+
+data Oearlybill; set op; by bene_id; 
+if first.bene_id then earlybill=admit_date;
+if earlybill^=.;
+keep bene_id earlybill;
+format earlybill date9.; 
+run; /*3655 earliest bills in OP*/
+
+proc print data=Oearlybill (obs=20); run;
+
+/*add date of earliest bill for that patient back into dataset*/
+data op; merge op Oearlybill; by bene_id; run;
+data test; set op; keep bene_id earlybill;
+		proc sort data=test nodup out=test; by bene_id; run;
+
+proc contents data=op; run;
+
+proc freq data=op; tables ICD_DGNS_VRSN_CD1; run;
+data year; set op(where=(ICD_DGNS_VRSN_CD1="")); year=year(admit_date); proc freq data=year; tables year; run;
+/*all missing version are ICD-10*/
+
+/*Define cancer diagnosis y/n and pick date of first diagnosis*/
+data tempop; set op(where=(admit_date>=ivw_date));
+/*diagnosis*/
+array dx{29} $ICD_DGNS_CD1-ICD_DGNS_CD25 PRNCPAL_DGNS_CD RSN_VISIT_CD1-RSN_VISIT_CD3;
+array dx_type{29} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD25 PRNGPAL_DGNS_VRSN_CD RSN_VISIT_VRSN_CD1-RSN_VISIT_VRSN_CD3;
+array p{25} $ICD_PRCDR_CD1-ICD_PRCDR_CD25;
+
+do i=1 to 29;
+/*ICD-9*/
+if dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312") then lcdx=1; /*lung cancer*/
+if dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749") then bcdx=1; /*breast cancer*/
+if dx(i) in ("185", "1850", "2334") then pcdx=1; /*prostate cancer*/
+if dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541")
+then ccdx=1; /* colorectal cancer*/
+
+/*ICD 10*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C34" then lcdx=1; /*lung cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C50" then bcdx=1; /*breast cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C61" then pcdx=1; /*prostate cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3) in ("C18", "C19", "C20") then ccdx=1; /*colorectal cancer*/
+
+
+end;
+
+
+if lcdx=. then lcdx=0;
+if bcdx=. then bcdx=0;
+if pcdx=. then pcdx=0;
+if ccdx=. then ccdx=0;
+
+if lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1 then cancerdx=1; else cancerdx=0;
+
+if lcdx=1 then lcdxt=admit_date;
+if bcdx=1 then bcdxt=admit_date;
+if pcdx=1 then pcdxt=admit_date;
+if ccdx=1 then ccdxt=admit_date;
+
+if lcdxt^=. and lcdxt<ivw_date then lcpredx=1; else lcpredx=0; /*should be 0*/
+if bcdxt^=. and bcdxt<ivw_date then bcpredx=1; else bcpredx=0;
+if pcdxt^=. and pcdxt<ivw_date then pcpredx=1; else pcpredx=0;
+if ccdxt^=. and ccdxt<ivw_date then ccpredx=1; else ccpredx=0;
+
+
+/*surgery*/ /*Don't include surgery for now*/
+/*do j=1 to 25;
+if substr(p(j), 1, 3) in ("322", "323", "324", "325", "326") then ORx=1; 
+
+end;
+
+if "32440"<=HCPCS_CD<="32525" or HCPCS_CD in ("32657", "32663", "32657", "32666", "32667", "32668", "32669", "32670",
+"32671", "32672", "32999", "31640", "31641") then Rx=1; 
+
+if ORX=. then ORX=0;
+
+if ORX=1 then ORxt=admit_date;*/
+
+/*radiation*/
+do i=1 to 29;
+if dx(i) in ("V580","V661","V671") then RT=1;
+end;
+
+do j=1 to 25;
+if p(j) in ("9221", "9222", "9223", "9224", "9225", "9226", "9227", "9228", "9229") then RT=1;
+end;
+
+if RT=. then RT=0;
+if RT=1 then RTt=admit_date;
+
+/*Chemo*/
+do i=1 to 29;
+if dx(i) in ("V581", "V662", "V672") then Chemo=1;
+end;
+
+do j=1 to 25;
+if p(j)= "9925" then Chemo=1;
+end;
+
+if chemo=. then Chemo=0;
+if Chemo=1 then Chemot=admit_date; 
+
+drop i j;
+run;
+
+proc freq data=tempop; tables lcdx bcdx pcdx ccdx Rt Chemo lcpreDx bcpredx pcpredx ccpredx cancerdx; run;
+
+data opdx; set tempop(where=(lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1)); keep bene_id dob_dt lcdx bcdx pcdx ccdx cancerdx
+lcdxt bcdxt pcdxt ccdxt RT RTt Chemo Chemot Earlybill filetype;
+filetype="O";
+format dob_dt date9.;
+run; /*1373 observations*/
+
+proc print data=opdx (obs=200); run;
+
+
+/************************************************ IP *************************************************************/
+data ip; merge sampleid(in=a) ip(in=b); by bene_id; if a; if b; run;
+	data test; set ip; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run;
+			proc freq data=test; tables sample; run; /*2745*/
+
+
+ /*define date of earliest bill*/
+proc sort data=ip; by bene_id admit_date; run;
+
+data Iearlybill; set ip; by bene_id; 
+if first.bene_id then earlybill=admit_date;
+if earlybill^=.;
+keep bene_id earlybill;
+format earlybill date9.; 
+run; /*2745 earliest bills in IP*/
+
+proc print data=Iearlybill (obs=20); run;
+
+/*add date of earliest bill for that patient back into dataset*/
+data ip; merge ip Iearlybill; by bene_id; run;
+data test; set ip; keep bene_id earlybill;
+		proc sort data=test nodup out=test; by bene_id; run;
+
+proc freq data=ip; tables ICD_DGNS_VRSN_CD1; run;
+data year; set ip(where=(ICD_DGNS_VRSN_CD1="")); year=year(admit_date); month=month(admit_date);
+proc freq data=year; tables year; run;
+proc freq data=Year(where=(year=2015)); tables month; run;/*all missing codes are ICD-10*/
+
+proc contents data=ip; run;
+/*Define cancer diagnosis y/n and pick date of first diagnosis*/
+data tempip; set ip (where=(admit_date>=ivw_date));
+array dx{27} $ICD_DGNS_CD1-ICD_DGNS_CD25 ADMTG_DGNS_CD PRNCPAL_DGNS_CD;
+array dx_type{27} $ICD_DGNS_VRSN_CD1-ICD_DGNS_VRSN_CD25 ADMTG_DGNS_VRSN_CD PRNCPAL_DGNS_VRSN_CD;
+array p{25} $ICD_PRCDR_CD1-ICD_PRCDR_CD25;
+
+/*diagnosis*/
+do i=1 to 27;
+/*ICD 9*/
+if dx(i) in ("1622", "1623", "1624", "1625", "1628", "1629" "2312") then lcdx=1; /*lung cancer*/
+if dx(i) in ("1740", "174", "1741", "1742", "1743", "1744", "1745", "1746", "1748", "1749") then bcdx=1; /*breast cancer*/
+if dx(i) in ("185", "1850", "2334") then pcdx=1; /*prostate cancer*/
+if dx(i) in ("1530", "1531", "1532", "1533", "1534", "1535", "1536", "1537", "1538", "1539", "1540", "1541")
+then ccdx=1; /* colorectal cancer*/
+
+/*ICD-10*/
+/*ICD 10*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C34" then lcdx=1; /*lung cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C50" then bcdx=1; /*breast cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3)="C61" then pcdx=1; /*prostate cancer*/
+if dx_type(i)^="9" and substr(dx(i), 1, 3) in ("C18", "C19", "C20") then ccdx=1; /*colorectal cancer*/
+
+
+end;
+
+
+if lcdx=. then lcdx=0;
+if bcdx=. then bcdx=0;
+if pcdx=. then pcdx=0;
+if ccdx=. then ccdx=0;
+
+if lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1 then cancerdx=1; else cancerdx=0;
+
+if lcdx=1 then lcdxt=admit_date;
+if bcdx=1 then bcdxt=admit_date;
+if pcdx=1 then pcdxt=admit_date;
+if ccdx=1 then ccdxt=admit_date;
+
+if lcdxt^=. and lcdxt<ivw_date then lcpredx=1; else lcpredx=0; /*should be 0*/
+if bcdxt^=. and bcdxt<ivw_date then bcpredx=1; else bcpredx=0;
+if pcdxt^=. and pcdxt<ivw_date then pcpredx=1; else pcpredx=0;
+if ccdxt^=. and ccdxt<ivw_date then ccpredx=1; else ccpredx=0;
+
+
+/*surgery*/
+/*do j=1 to 25;
+if substr(p(j), 1, 3) in ("322", "323", "324", "325", "326") then IRx=1;
+end;
+
+if IRx=. then IRX=0;
+
+if IRX=1 then IRxt=admit_date;*/
+
+/*radiation*/
+do i=1 to 27;
+if dx(i) in ("V580", "V661", "V671") then RT=1;
+end;
+
+do j=1 to 25;
+if p(j) in ("9221", "9222", "9223", "9224", "9225", "9226", "9227", "9228", "9229") then RT=1;
+end;
+
+if RT=. then RT=0;
+if RT=1 then RTt=admit_date;
+
+/*chemo*/
+do i=1 to 27;
+if dx(i) in ("V581", "V662", "V672") then chemo=1;
+end;
+
+do j=1 to 25;
+if p(j)="9925" then chemo=1;
+end;
+
+if chemo=. then chemo=0;
+if chemo=1 then chemot=admit_date;
+
+drop i j;
+run;
+
+proc freq data=tempip; tables lcdx bcdx pcdx ccdx RT Chemo lcpredx bcpredx pcpredx ccpredx cancerdx; run; /*167 with cancer dx*/
+
+data ipdx; set tempip(where=(lcdx=1 or bcdx=1 or pcdx=1 or ccdx=1)); keep bene_id dob_dt lcdx bcdx pcdx ccdx cancerdx
+lcdxt bcdxt pcdxt ccdxt RT RTt Chemo Chemot Earlybill filetype;
+filetype="I";
+format dob_dt date9.;
+run; /*203 observations*/
+
+proc print data=ipdx; run;
+
+
+/*Stack NCH, OP, IP files with a cancer diagnosis present*/
+data CancerDx; set nchdx opdx ipdx;
+format lcdxt bcdxt pcdxt ccdxt RTt Chemot Earlybill date9.;
+run; /*8142*/
+
+data test; set CancerDx; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*299 patients*/
+
+proc sort data=CancerDx; by bene_id; run;
+
+proc print data=CancerDx (obs=200); run;
+
+/*define overall earliest bill for each patient*/
+/*earliest bill is now the earliest bill after the interview date*/
+/*if need to use it, can add 365 days to each because we know they all had 12 months coverage prior and no codes in that time*/
+proc sort data=CancerDx; by bene_id Earlybill; run;
+proc print data=CancerDx (obs=200); run;
+proc print data=CancerDx (where=(bene_id="eeeeeee6YqBqefM")); run;
+
+data test; set CancerDx; by bene_id;
+if first.bene_id then Earlybill=earlybill; else earlybill=.; label earlybill ="Earliest bill present";
+if earlybill^=.;
+keep bene_id Earlybill;
+run; /*296 patients*/
+
+proc print data=test (obs=20); run;
+proc print data=test(where=(bene_id="eeeeeee6YqBqefM")); run;
+
+data CancerDx; set Cancerdx; drop Earlybill; run;
+proc print data=CancerDx(obs=10); run;
+
+data Cancerdx; merge CancerDx test; by bene_id; run;
+
+proc print data=CancerDx (obs=10); run;
+proc print data=CancerDx(where=(bene_id="eeeeeee6YqBqefM")); run;
+
+/*define first and last Dx times for each cancer*/
+
+/***********/
+/*  Lung   */
+/**********/
+
+data lcdx; set CancerDx(where=(lcdx=1)); run;
+proc sort data=lcdx; by bene_id lcdxt; run;
+proc print data=lcdx(obs=20); run;
+data test; set lcdx; keep bene_id; 
+	proc sort data=test nodup out=test; by bene_id; run; /*102 lung cancer cases*/
+proc print data=lcdx(where=(bene_id="eeeeeee6YqBqefM")); run;
+
+data test; set lcdx; by bene_id;
+if first.bene_id then lcDxt0=lcDxt; label lcDxt0="First LC date";
+if last.bene_id then lcdxt1=lcdxt; label lcdxt1="last LC date";
+format lcdxt0 lcdxt1 date9.;
+run;
+
+proc print data=test (obs=200); run;
+
+data test1; set test(where=(lcDxt0^=.)); keep bene_id lcdxt0; run;
+data test2; set test(where=(lcdxt1^=.)); keep bene_id lcdxt1; run;
+
+proc print data=test1; 
+proc print data=test2; run;
+
+data lcdx; merge lcdx test1 test2; by bene_id;
+lcdxtime=lcdxt1-lcdxt0; label lcdxtime="time between first and last lc dx code";
+nolct=lcdxt0-earlybill; label nolct="known time before first lc dx"; /*use with caution since we only looked at diagnoses in 1 year prior*/
+rename earlybill=billT0;
+run;
+
+proc print data=LCdx (obs=50); run;
+
+proc means data=LCdx min max; var nolct; run;
+
+/*create count of lc diagnosis codes*/
+proc sql; 
+create table lcdxcount as 
+select bene_id, sum(lcdx) as lcdxnum
+from lcdx
+group by bene_id;
+quit;
+
+proc print data=lcdxcount; run;
+
+/*list of ids*/
+data lcdxid; set lcdxcount; keep bene_id; run;
+proc print data=lcdxid; run;
+
+/*merge back*/
+data lcdx; merge lcdx lcdxcount; by bene_id; keep bene_id lcdx lcdxnum nolct lcdxtime lcdxt0 lcdxt1; run;
+
+proc print data=lcdx (obs=20); run;
+
+/*get rid of duplicates*/
+proc sort data=lcdx nodup out=lcdx; by bene_id; run;
+
+proc print data=lcdx; run;
+
+
+
+/***********/
+/* Breast  */
+/**********/
+data bcdx; set CancerDx(where=(bcdx=1)); run;
+proc sort data=bcdx; by bene_id bcdxt; run;
+proc print data=bcdx(obs=20); run;
+data test; set bcdx; keep bene_id; 
+	proc sort data=test nodup out=test; by bene_id; run; /*64 breast cancer cases*/
+
+data test; set bcdx; by bene_id;
+if first.bene_id then bcDxt0=bcDxt; label bcDxt0="First BC date";
+if last.bene_id then bcdxt1=bcdxt; label bcdxt1="last BC date";
+format bcdxt0 bcdxt1 date9.;
+run;
+
+proc print data=test (obs=200); run;
+
+data test1; set test(where=(bcDxt0^=.)); keep bene_id bcdxt0; run;
+data test2; set test(where=(bcdxt1^=.)); keep bene_id bcdxt1; run;
+
+proc print data=test1; 
+proc print data=test2; run;
+
+data bcdx; merge bcdx test1 test2; by bene_id;
+bcdxtime=bcdxt1-bcdxt0; label bcdxtime="time between first and last bc dx code";
+nobct=bcdxt0-earlybill; label nobct="known time before first bc dx";
+rename earlybill=billT0;
+run;
+
+proc print data=bCdx (obs=50); run;
+
+/*create count of lc diagnosis codes*/
+proc sql; 
+create table bcdxcount as 
+select bene_id, sum(bcdx) as bcdxnum
+from bcdx
+group by bene_id;
+quit;
+
+proc print data=bcdxcount; run;
+
+/*list of ids*/
+data bcdxid; set bcdxcount; keep bene_id; run;
+proc print data=bcdxid; run;
+
+/*merge back*/
+data bcdx; merge bcdx bcdxcount; by bene_id; keep bene_id bcdx bcdxnum nobct bcdxtime bcdxt0 bcdxt1;run;
+
+proc print data=bcdx (obs=20); run;
+
+/*no dup*/
+proc sort data=bcdx nodup out=bcdx; by bene_id; run;
+proc print data=bcdx; run;
+
+proc means data=bcdx min max; var nobct; run;
+
+/*************/
+/* Prostate */
+/************/
+data pcdx; set CancerDx(where=(pcdx=1)); run;
+proc sort data=pcdx; by bene_id pcdxt; run;
+proc print data=pcdx(obs=20); run;
+data test; set pcdx; keep bene_id; 
+	proc sort data=test nodup out=test; by bene_id; run; /*99 prostate cancer cases*/
+
+data test; set pcdx; by bene_id;
+if first.bene_id then pcDxt0=pcDxt; label pcDxt0="First PC date";
+if last.bene_id then pcdxt1=pcdxt; label pcdxt1="last PC date";
+format pcdxt0 pcdxt1 date9.;
+run;
+
+proc print data=test (obs=200); run;
+
+data test1; set test(where=(pcDxt0^=.)); keep bene_id pcdxt0; run;
+data test2; set test(where=(pcdxt1^=.)); keep bene_id pcdxt1; run;
+
+proc print data=test1; 
+proc print data=test2; run;
+
+data pcdx; merge pcdx test1 test2; by bene_id;
+pcdxtime=pcdxt1-pcdxt0; label pcdxtime="time between first and last pc dx code";
+nopct=pcdxt0-earlybill; label nopct="known time before first pc dx";
+rename earlybill=billT0;
+run;
+
+proc print data=pCdx (obs=50); run;
+
+/*create count of pc diagnosis codes*/
+proc sql; 
+create table pcdxcount as 
+select bene_id, sum(pcdx) as pcdxnum
+from pcdx
+group by bene_id;
+quit;
+
+proc print data=pcdxcount; run;
+
+/*list of ids*/
+data pcdxid; set pcdxcount; keep bene_id; run;
+proc print data=pcdxid; run;
+
+/*merge back*/
+data pcdx; merge pcdx pcdxcount; by bene_id; keep bene_id pcdx pcdxnum nopct pcdxtime pcdxt0 pcdxt1; run;
+
+proc print data=pcdx (obs=20); run;
+
+/*no dup*/
+proc sort data=pcdx nodup out=pcdx; by bene_id; run;
+proc print data=pcdx; run;
+
+proc means data=pcdx min max; var nopct; run;
+
+
+/*************/
+/* Colon     */
+/************/
+data ccdx; set CancerDx(where=(ccdx=1)); run;
+proc sort data=ccdx; by bene_id ccdxt; run;
+proc print data=ccdx(obs=20); run;
+data test; set ccdx; keep bene_id; 
+	proc sort data=test nodup out=test; by bene_id; run; /*59 colorectal cancer cases*/
+
+data test; set ccdx; by bene_id;
+if first.bene_id then ccDxt0=ccDxt; label ccDxt0="First CC date";
+if last.bene_id then ccdxt1=ccdxt; label ccdxt1="last CC date";
+format ccdxt0 ccdxt1 date9.;
+run;
+
+proc print data=test (obs=200); run;
+
+data test1; set test(where=(ccDxt0^=.)); keep bene_id ccdxt0; run;
+data test2; set test(where=(ccdxt1^=.)); keep bene_id ccdxt1; run;
+
+proc print data=test1; 
+proc print data=test2; run;
+
+data ccdx; merge ccdx test1 test2; by bene_id;
+ccdxtime=ccdxt1-ccdxt0; label ccdxtime="time between first and last cc dx code";
+nocct=ccdxt0-earlybill; label nocct="known time before first cc dx";
+rename earlybill=billT0;
+run;
+
+proc print data=cCdx (obs=50); run;
+
+/*create count of lc diagnosis codes*/
+proc sql; 
+create table ccdxcount as 
+select bene_id, sum(ccdx) as ccdxnum
+from ccdx
+group by bene_id;
+quit;
+
+proc print data=ccdxcount; run;
+
+/*list of ids*/
+data ccdxid; set ccdxcount; keep bene_id; run;
+proc print data=ccdxid; run;
+
+/*merge back*/
+data ccdx; merge ccdx ccdxcount; by bene_id; keep bene_id ccdx ccdxnum nocct ccdxtime ccdxt0 ccdxt1; run;
+
+proc print data=ccdx (obs=20); run;
+
+/*nodup*/
+proc sort data=ccdx nodup out=ccdx; by bene_id; run;
+proc print data=ccdx; run;
+
+proc means data=ccdx min max; var nocct; run;
+
+
+/*merge individual cancer information back with overall cancer dataset*/
+/*data Cancerdx; set Cancerdx; drop lcdx bcdx pcdx ccdx; by bene_id; run;*/
+proc contents data=cancerdx; run;
+data Cancerdx; merge Cancerdx lcdx bcdx pcdx ccdx; by bene_id; run;
+
+proc print data=Cancerdx (obs=200); run;
+
+/*For patients with cancer, add in Radiation and Chemo information*/
+data test; set Cancerdx; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run;/*296*/
+
+/*Radiation*/
+	/*will need to redo once HCPCS are included in the data set**/
+data RT; set Cancerdx(where=(RT=1)); keep bene_id RT RTt; run;
+	proc sort data=RT; by bene_id RTt; run;
+	proc freq data=CancerDx; tables RT Chemo; run; /* 726 radiation records, 304 chemo records*/
+
+	data test; set RT; keep bene_id;
+		proc sort data=test nodup out=test; by bene_id; run; /* 54 patients with radiation*/
+
+	/*1st and last RT date*/
+	data RT; set RT; by bene_id; keep bene_id RTt0 RT RTt1;
+	if first.bene_id then Rtt0=RTt;
+	if last.bene_id then RTt1=Rtt;
+	format RTt0 RTt1 date9.;
+	run;
+
+	proc print data=RT(obs=40); run;
+
+	data RT0; set RT(where=(RTt0^=.)); keep bene_id RTt0;run;
+	data RT1; set RT(where=(RTt1^=.));  keep bene_id RTt1; run;
+
+	proc print data=RT0; proc print data=RT1; run;
+
+	/*radiation count*/
+	proc sql;
+	create table RTcount as
+	select bene_id, sum(RT) as RTcount
+	from RT
+	group by bene_id;
+	quit;
+
+	proc print data=RTcount; run;
+
+	data RT; merge RT0 RT1 RTcount; by bene_id; run;
+	proc print data=RT; run;
+
+/*Chemotherapy*/
+data Chemo; set Cancerdx(where=(Chemo=1)); keep bene_id Chemo Chemot; run;
+	proc sort data=Chemo; by bene_id Chemot; run;
+	proc freq data=CancerDx; tables RT Chemo; run; /* 726 radiation records, 304 chemo records*/
+
+	data test; set Chemo; keep bene_id;
+		proc sort data=test nodup out=test; by bene_id; run; /* 36 patients with chemo*/
+
+	/*1st and last chemo date*/
+	data Chemo; set Chemo; by bene_id; keep bene_id Chemot0 Chemo Chemot1;
+	if first.bene_id then Chemot0=Chemot;
+	if last.bene_id then Chemot1=Chemot;
+	format Chemot0 Chemot1 date9.;
+	run;
+
+	proc print data=Chemo(obs=40); run;
+
+	data Chemo0; set Chemo(where=(Chemot0^=.)); keep bene_id Chemot0;run;
+	data Chemo1; set Chemo(where=(Chemot1^=.));  keep bene_id Chemot1; run;
+
+	proc print data=Chemo0; proc print data=Chemo1; run;
+
+	/*chemo count*/
+	proc sql;
+	create table Chemocount as
+	select bene_id, sum(Chemo) as Chemocount
+	from Chemo
+	group by bene_id;
+	quit;
+
+	proc print data=Chemocount; run;
+
+	data chemo; merge Chemo0 Chemo1 Chemocount; by bene_id; run;
+	proc print data=Chemo; run;
+
+/*combine chemo and radiation treatment*/
+data tx; merge RT chemo; by bene_id;
+if RTcount>0 then RT=1; 
+if Chemocount>0 then Chemo=1;
+run;
+
+proc print data=tx; run;
+
+/*merge treatment info back with diagnosis information*/
+data cancerdx; set cancerdx; drop RT Chemo; run;
+proc print data=cancerdx(obs=10); run;
+
+proc print data=cancerdx(where=(lcdxt0^=. and lcdx=0)); run;
+
+/*at this point, the y/n for each cancer corresponds to the individual bill- create a dataset that has 1 y/n
+value for each cancer for each patient*/
+data lc_unq; set cancerdx(where=(lcdx=1)); keep bene_id  cancerdx earlybill lcdx  lcdxT0 lcdxT1 lcdxtime nolct lcdxnum dob_dt; 
+run;
+proc sort data=lc_unq nodup out=lc_unq; by bene_id; run; /*102 lung cancer*/
+
+data bc_unq; set cancerdx(where=(bcdx=1)); keep bene_id cancerdx earlybill  bcdx bcdxT0 bcdxT1 bcdxtime nobct bcdxnum dob_dt; run;
+proc sort data=bc_unq nodup out=bc_unq; by bene_id; run; /*64 breast cancer*/
+
+data pc_unq; set cancerdx(where=(pcdx=1)); keep bene_id cancerdx earlybill  pcdx pcdxT0 pcdxT1 pcdxtime nopct pcdxnum dob_dt; run;
+proc sort data=pc_unq nodup out=pc_unq; by bene_id; run; /*99*/
+
+data cc_unq; set cancerdx(where=(ccdx=1)); keep bene_id  cancerdx earlybill ccdx ccdxT0 ccdxT1 ccdxtime nocct ccdxnum dob_dt; run;
+proc sort data=cc_unq nodup out=cc_unq; by bene_id; run; /*59*/
+
+
+data cancer_unq; merge lc_unq bc_unq pc_unq cc_unq; by bene_id; 
+if lcdx=. then lcdx=0;
+if bcdx=. then bcdx=0;
+if pcdx=. then pcdx=0;
+if ccdx=. then ccdx=0;
+run;
+
+proc print data=cancer_unq; run;
+
+proc print data=cancer_unq(where=(lcdxt0^=. and lcdx=0)); run;
+
+proc freq data=cancer_unq; tables cancerdx lcdx bcdx pcdx ccdx lcdx*bcdx lcdx*pcdx lcdx*ccdx bcdx*ccdx pcdx*ccdx; run;
+
+
+/*combine unique cancer dataset with treatment information*/
+data cancer_unq_tx; merge cancer_unq tx; by bene_id; 
+firstdxt=min(lcdxt0, bcdxt0, pcdxt0, ccdxt0); 
+if RT=. then RT=0;
+if Chemo=. then Chemo=0;
+yrdx=year(firstdxt);
+format firstdxt date9.; run;
+
+proc print data=cancer_unq_tx(obs=10); run;
+
+proc freq data=cancer_unq_tx; tables RT chemo RT*Chemo; run;
+
+
+data cancer_unq_tx; set cancer_unq_tx;
+if firstdxt=lcdxt0 then firstdx="lc";
+if firstdxt=bcdxt0 then firstdx="bc";
+if firstdxt=pcdxt0 then firstdx="pc";
+if firstdxt=ccdxt0 then firstdx="cc";
+run;
+
+
+proc freq data=cancer_unq_tx; tables firstdx; run;
+
+proc print data=cancer_unq_tx(where=((lcdx=1 and bcdx=1) or (lcdx=1 and pcdx=1) or (lcdx=1 and ccdx=1) or (bcdx=1 and ccdx=1) or (pcdx=1 and ccdx=1))); 
+var bene_id  lcdx lcdxt0 bcdx bcdxt0 pcdx pcdxt0  ccdx ccdxt0 firstdxt firstdx; run;
+
+
+/*****************************************************************************/
+/*start here if we want to look at at last 2 codes for at least 1 cancer?*/
+/*data Cancerdx_tx; merge Cancerdx tx; by bene_id; 
+proc print data=Cancerdx_tx (obs=200); run; 
+data test; set Cancerdx_tx; keep bene_id lcdx bcdx pcdx ccdx; run;
+	proc sort data=test nodup out=test; by bene_id; run;
+		proc freq data=test; tables lcdx bcdx pcdx ccdx; run;*/
+
+
+/*merge back with NHATS dataset*/
+data nhats1; merge cancer_unq_tx (in=a) nhats1; by bene_id;
+if a=0 then sample=0;run;
+	data test; set nhats1; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run;
+			proc freq data=test; tables sample; run;
+
+proc contents data=nhats1; run;
+
+/*look at pre and post interview dates*/
+data test; set nhats1(where=(sample=1)); keep bene_id yrdx; run;
+	proc sort data=test nodup out=test; by bene_id; run;
+		proc freq data=test; tables yrdx; run;
+
+ proc print data=nhats1(where=(sample=0 and firstdxt^=.)); run;
+
+data nhats1; set nhats1;
+if ivw_date<firstDxt and firstDxt^=. then pre_DX=1;
+if ivw_date>firstDxt and firstDxt^=. then post_DX=1;
+run;
+
+proc print data=nhats1(where=(sample=1) obs=20); var bene_id yrdx firstDxt ivw_date wave pre_Dx post_Dx; run;
+
+proc freq data=nhats1; table pre_DX post_DX; run;
+
+proc sort data=nhats1; by bene_id ivw_date; run;
+proc print data=nhats1 (where=(sample=1) obs=20); var bene_id yrdx firstDxt ivw_date wave pre_dx post_dx; run;
+data test; set nhats1(where=(pre_DX=1)); by bene_id; keep bene_id n1_int ivw_date firstdxt;
+if last.bene_id then n1_int=ivw_date;
+if last.bene_id; 
+format n1_int date9.;
+run;
+
+proc print data=test; var bene_id firstdxt ivw_date n1_int; run;
+
+data test1; set nhats1 (where=(post_Dx=1)); by bene_id; keep bene_id p1_int ivw_date firstdxt;
+if first.bene_id then p1_int=ivw_date;
+if first.bene_id;
+format p1_int date9.;
+run;
+
+proc print data=test1; var bene_id firstdxt ivw_date p1_int; run;
+
+data pre_post_ivw; merge test test1; by bene_id; 
+keep bene_id p1_int n1_int; 
+run;
+
+proc print data=pre_post_ivw; run;
+
+data nhats1; merge nhats1 pre_post_ivw; by bene_id;
+sample1=0;
+if p1_int^=. then sample1=1;
+run;
+
+data test; set nhats1; keep bene_id sample1; run;
+	proc sort data=test nodup out=test; by bene_id; run;
+		proc freq data=test; table sample1; run; /*194 people with a before and after interview*/
+
+
+proc freq data=nhats1(where=(ivw_date=p1_int)); tables ivw_type; run;
+
+data test; set nhats1(where=(ivw_date=p1_int and ivw_type=1)); keep bene_id; run;
+
+data nhats1; merge nhats1 test (in=a); by bene_id;
+sample2=0;
+if a=1 then sample2=1;
+run;
+
+data test; set nhats1; keep bene_id  sample sample1 sample2; run;
+	proc sort data=test nodup out=test; by bene_id; run;
+		proc freq data=test; table sample sample1 sample2; run; /*147 people with a before and after SP interview (no LML)*/
+
+
+proc freq data=nhats1(where=(wave=1 and sample=1)); tables cancerdx lcdx bcdx pcdx ccdx RT Chemo
+lcdx*bcdx lcdx*pcdx lcdx*ccdx bcdx*ccdx pcdx*ccdx RT*chemo; run;
+
+/*calculate age at first diagnosis*/
+proc contents data=nhats1; run;
+proc print data=nhats1(where=(sample=1)obs=10); var bene_id DOB_DT; run;
+
+data test; set nhats1(where=(sample=0 and sample2=1)); run;
+
+data nhats1; set nhats1; 
+if firstdxt^=. then age_firstdx=(firstdxt-DOB_DT)/365.24; 
+run;
+
+proc print data=nhats1(where=( wave=1 and sample=1) obs=10); var bene_id firstdxt DOB_DT age_firstdx; run;
+
+proc means data=nhats1 (where=(wave=1 and sample=1)) n min max mean; var age_firstdx; run;
+proc univariate data=nhats1 (where=(wave=1 and sample=1)); var age_firstdx; run;
+proc print data=nhats1(where=(wave=1 and sample=1 and age_firstdx> 100)); 
+var bene_id firstdxt firstdx DOB_dt age_firstdx; run;
+
+
+data nhats1; set nhats1; 
+if firstdx="bc" and female=0 then sample=0;
+if firstdx="bc" and female=0 then sample1=0;
+if firstdx="bc" and female=0 then sample2=0;
+
+if firstdx="pc" and female=1 then sample=0;
+if firstdx="pc" and female=1 then sample1=0;
+if firstdx="pc" and female=1 then sample2=0;
+run;
+
+data test; set nhats1; keep bene_id sample;
+		proc sort data=test nodup out=test; by bene_id; run;
+			proc freq data=test; tables sample; run;
+
+libname out "E:\nhats\projects\Naomi QoL";
+data out.nhats_mult_canc_1516_ffs_icd10; set nhats1; run;
+
+
+/*list of ids in cancer sample*/
+data cancer_id; set nhats1(where=(sample=1 and wave=1)); keep spid bene_id sample; run;
+/******************************************************************************************************************/
+/*                                               Months of coverage after enrollment Check                        */
+/******************************************************************************************************************/
+
+
+data mbsf; set medicare.mbsf_06_16; run;
+proc contents data=mbsf; run;
+proc sort data=mbsf; by bene_id; run;
+
+data id; set no_cancer_hist_id; keep spid bene_id ivw_date ivw_month; run;
+proc sort data=id; by bene_id; run;
+proc print data=id (obs=20); run;
+
+data mbsf_red; merge mbsf id (in=a); by bene_id; if a; run;
+data test; set mbsf_red; keep bene_id ivw_month; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*3868*/
+	proc freq data=test; tables ivw_month; run;
+
+proc freq data=mbsf_red; tables BENE_ENROLLMT_REF_YR; run; /*limit to 2011-2016*/ 
+/*Sum months after month of enrollment in 2011, sum all months in 2012-2016*/
+
+data mbsf_red; set mbsf_red (where=(BENE_ENROLLMT_REF_YR in (2011, 2012, 2013, 2014, 2015, 2016))); run;
+data test; set mbsf_red; keep bene_id; run;
+	proc sort data=test nodup out=test; by bene_id; run; /*all participants have enrollment data in those years*/
+
+
+/*define # of months of coverage in those years*/
+data mbsf_red; set mbsf_red;
+array Ind {12}$ BENE_MDCR_ENTLMT_BUYIN_IND_01-BENE_MDCR_ENTLMT_BUYIN_IND_12;
+array AB {12} AB1-AB12;
+array HMOind{12} $BENE_HMO_IND_01-BENE_HMO_IND_12;
+array HMO {12} HMO1-HMO12;
+array FFS {12} FFS1-FFS12;
+
+do i=1 to 12;
+if Ind(i) in ("3", "C") then AB(i)=1; else AB(i)=0;
+
+if HMOind(i)="0" then HMO(i)=0; else HMO(i)=1;
+end;
+
+do i=1 to 12;
+if ivw_month=5 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS6, FFS7, FFS8, FFS9, FFS10, FFS11, FFS12);
+end;
+
+if ivw_month=6 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS7, FFS8, FFS9, FFS10, FFS11, FFS12);
+end;
+
+if ivw_month=7 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS8, FFS9, FFS10, FFS11, FFS12);
+end;
+
+if ivw_month=8 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS9, FFS10, FFS11, FFS12);
+end;
+
+if ivw_month=9 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS10, FFS11, FFS12);
+end;
+
+if ivw_month=10 and BENE_ENROLLMT_REF_YR=2011 then do;
+if(AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS11, FFS12);
+end;
+
+if BENE_ENROLLMT_REF_YR^=2011 then do;
+if (AB(i)=1 and HMO(i)=0) then FFS(i)=1;
+FFSsum=sum(FFS1, FFS2, FFS3, FFS4, FFS5, FFS6, FFS7, FFS8, FFS9, FFS10, FFS11, FFS12);
+end;
+end; 
+run;
+
+proc print data=mbsf_red (obs=25); var bene_id ivw_month BENE_ENROLLMT_REF_YR FFS1-FFS12 FFSsum death_date; run; 
+
+proc sort data=mbsf_red; by bene_id; run;
+proc sort data=cancer_id; by bene_id; run;
+
+data FFS_long; merge mbsf_red cancer_id (in=a); by bene_id;
+if a=1 then cancer=1;
+if a=0 then cancer=0;
+run;
+
+proc print data=FFS_long (where=(cancer=1)); var bene_id ivw_month BENE_ENROLLMT_REF_YR FFS1-FFS12 FFSsum death_date; run; 
+
+
+/*Sum over all years*/
+proc sql;
+create table FFS as
+select bene_id, sum(FFSsum) as FFS_allyears
+from FFS_long
+group by bene_id;
+quit;
+
+proc print data=FFS (obs=10); run;  
+ 
+proc means data=FFS; var FFS_allyears; run;
+
+/*
+proc sort data=FFS; by bene_id; run;
+
+data no_cancer_hist_id; merge no_cancer_hist_id FFS; by bene_id; run;
+
+proc sort data=cancer_id; by bene_id; run;
+
+data no_cancer_hist_id; merge no_cancer_hist_id cancer_id (in=a); by bene_id;
+if a=1 then cancer=1;
+if a=0 then cancer=0;
+run;*/
+
+proc print data=no_cancer_hist_id (obs=20); run;
+
+proc means data=no_cancer_hist_id; var FFS_allyears;
+class cancer; 
+run;
+
+proc univariate data=no_cancer_hist_id; var FFS_allyears;
+class cancer; 
+run;
+
+
+
+
