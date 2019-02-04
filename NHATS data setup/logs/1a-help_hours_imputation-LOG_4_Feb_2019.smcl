@@ -1,0 +1,2041 @@
+--------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\/1a-help_hours_imputation
+> -LOG_4_Feb_2019.smcl
+  log type:  text
+ opened on:   4 Feb 2019, 16:24:57
+
+. 
+. 
+. 
+. 
+. *********************************************
+. 
+. cd "${work}"
+E:\nhats\data\NHATS working data
+
+. 
+. **User note: This section can be commented out after run one time to set up da
+> tasets
+. ********************************************************************
+. //combine op and sp data files
+. 
+. forvalues w=1/2{
+  2. use "${r`w'raw}NHATS_Round_`w'_OP_File_v2.dta", clear
+  3. sort spid opid 
+  4. 
+. merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+  5. keep if _merge==3 //drop obs with no OP entries
+  6. save R`w'_OPSPlinked.dta, replace
+  7. }
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           667
+        from master                         0  (_merge==1)
+        from using                        667  (_merge==2)
+
+    matched                            38,097  (_merge==3)
+    -----------------------------------------
+(667 observations deleted)
+file R1_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           465
+        from master                         0  (_merge==1)
+        from using                        465  (_merge==2)
+
+    matched                            37,944  (_merge==3)
+    -----------------------------------------
+(465 observations deleted)
+file R2_OPSPlinked.dta saved
+
+. 
+. forvalues w=3/7{
+  2. use "${r`w'raw}NHATS_Round_`w'_OP_File.dta", clear
+  3. sort spid opid 
+  4. 
+. merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+  5. keep if _merge==3 //drop obs with no OP entries
+  6. save R`w'_OPSPlinked.dta, replace
+  7. }
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           317
+        from master                         0  (_merge==1)
+        from using                        317  (_merge==2)
+
+    matched                            35,745  (_merge==3)
+    -----------------------------------------
+(317 observations deleted)
+file R3_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           211
+        from master                         0  (_merge==1)
+        from using                        211  (_merge==2)
+
+    matched                            33,016  (_merge==3)
+    -----------------------------------------
+(211 observations deleted)
+file R4_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r5dcontnew already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           394
+        from master                         0  (_merge==1)
+        from using                        394  (_merge==2)
+
+    matched                            52,285  (_merge==3)
+    -----------------------------------------
+(394 observations deleted)
+file R5_OPSPlinked.dta saved
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r6dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           284
+        from master                         0  (_merge==1)
+        from using                        284  (_merge==2)
+
+    matched                            51,174  (_merge==3)
+    -----------------------------------------
+(284 observations deleted)
+file R6_OPSPlinked.dta saved
+(label r5dcontnew already defined)
+(label r1dresid already defined)
+(label r2dresid already defined)
+(label r3dresid already defined)
+(label r4dresid already defined)
+(label r5dresid already defined)
+(label r6dresid already defined)
+(label r7dresid already defined)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           189
+        from master                         0  (_merge==1)
+        from using                        189  (_merge==2)
+
+    matched                            49,065  (_merge==3)
+    -----------------------------------------
+(189 observations deleted)
+file R7_OPSPlinked.dta saved
+
+. 
+. 
+. //now create limited datasets for each wave with only needed variables
+. forvalues w=1/7{
+  2.         use R`w'_OPSPlinked.dta
+  3.         
+.                 if inlist(`w',1,2,3,4){
+  4.                         keep spid opid * wave w`w'anfinwgt0 w`w'varstrat w`
+> w'varunit r`w'dresid ///
+>                 mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'
+> dbathhelp ///
+>                 sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha
+> `w'dmealreas ///
+>                 ha`w'dbankreas mc`w'dmedsreas
+  5.                 }
+  6.                 
+.                 if inlist(`w',5,6,7){
+  7.                         keep spid opid * wave w`w'anfinwgt0 w`w'varstrat w`
+> w'varunit r`w'dresid ///
+>                 mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'
+> dbathhelp ///
+>                 sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha
+> `w'dmealreas ///
+>                 ha`w'dbankreas mc`w'dmedsreas w`w'an2011wgt0 
+  8.                 }
+  9.                 
+.         rename (w`w'* r`w'* mo`w'* ha`w'* mc`w'*) (*) 
+ 10.         rename (op`w'* sc`w'*) (*_op *_sc)
+ 11.         save R`w'_OPSPltd.dta, replace
+ 12. }
+file R1_OPSPltd.dta saved
+file R2_OPSPltd.dta saved
+file R3_OPSPltd.dta saved
+file R4_OPSPltd.dta saved
+file R5_OPSPltd.dta saved
+file R6_OPSPltd.dta saved
+file R7_OPSPltd.dta saved
+
+. 
+end of do-file
+
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
+
+. 
+. ********************************************************************
+. //merge into single file for initial setup
+. use R1_OPSPltd.dta, clear
+
+. forvalues w=2/7{
+  2. append using R`w'_OPSPltd.dta
+  3. }
+(label r1dresid already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label _merge already defined)
+(note: variable breakoffqt was str26, now str40 to accommodate using data's
+       values)
+(label r2dresid already defined)
+(label r1dresid already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label pa1dv2favact already defined)
+(label fl1dneverdrv already defined)
+(label rl1dracehisp already defined)
+(label r1dgender already defined)
+(label _merge already defined)
+(label r3dresid already defined)
+(label r2dresid already defined)
+(label r1dresid already defined)
+(label op3proxy already defined)
+(label op3relatnshp already defined)
+(label op3drelatfl already defined)
+(label op3drelflro already defined)
+(label op3dgender already defined)
+(label op3prsninhh already defined)
+(label op3dage already defined)
+(label op3dagefl already defined)
+(label op3dageflro already defined)
+(label op3dgenderfl already defined)
+(label op3dgenderflro already defined)
+(label op3spouprtnr already defined)
+(label op3nwspouprt already defined)
+(label op3eduspo already defined)
+(label op3leveledu already defined)
+(label op3childinhh already defined)
+(label op3reasgone already defined)
+(label op3dspoudec already defined)
+(label op3ddeceased already defined)
+(label op3chnotinhh already defined)
+(label op3educhild already defined)
+(label op3martlstat already defined)
+(label op3numchldrn already defined)
+(label op3anychdu18 already defined)
+(label op3numchdu18 already defined)
+(label op3dchilddec already defined)
+(label op3dchldedit already defined)
+(label op3soclntwrk already defined)
+(label op3dsocwrkfl already defined)
+(label op3outhlp already defined)
+(label op3insdhlp already defined)
+(label op3bedhlp already defined)
+(label op3tkplhlp1 already defined)
+(label op3tkplhlp2 already defined)
+(label op3launhlp already defined)
+(label op3shophlp already defined)
+(label op3mealhlp already defined)
+(label op3bankhlp already defined)
+(label op3moneyhlp already defined)
+(label op3eathlp already defined)
+(label op3bathhlp already defined)
+(label op3toilhlp already defined)
+(label op3dreshlp already defined)
+(label op3medshlp already defined)
+(label op3dochlp already defined)
+(label op3dochlpmst already defined)
+(label op3insurhlp already defined)
+(label op3spcaredfr already defined)
+(label op3chhlpfin already defined)
+(label op3hlpchfin already defined)
+(label op3ishelper already defined)
+(label op3helpsched already defined)
+(label op3numdayswk already defined)
+(label op3numdaysmn already defined)
+(label op3numhrsday already defined)
+(label op3paidhelpr already defined)
+(label op3sppayshlp already defined)
+(label op3govpayhlp already defined)
+(label op3inspayhlp already defined)
+(label op3othpayhlp already defined)
+(label op3payunit already defined)
+(label op3hourlypay already defined)
+(label op3weeklypay already defined)
+(label op3monthlypy already defined)
+(label op3progmpaid already defined)
+(label op3dhrsmth already defined)
+(label op3contctflg already defined)
+(label op3dflmiss already defined)
+(label op3dmissadd already defined)
+(label op3dprobdup already defined)
+(label op3ddiffop already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label pa1dv2favact already defined)
+(label fl1dneverdrv already defined)
+(label rl1dracehisp already defined)
+(label r1dgender already defined)
+(label _merge already defined)
+(label r4dresid already defined)
+(label r3dresid already defined)
+(label r2dresid already defined)
+(label r1dresid already defined)
+(label op4proxy already defined)
+(label op4relatnshp already defined)
+(label op4drelatfl already defined)
+(label op4drelflro already defined)
+(label op4dgender already defined)
+(label op4prsninhh already defined)
+(label op4dage already defined)
+(label op4dagefl already defined)
+(label op4dageflro already defined)
+(label op4dgenderfl already defined)
+(label op4dgenderflro already defined)
+(label op4spouprtnr already defined)
+(label op4nwspouprt already defined)
+(label op4eduspo already defined)
+(label op4leveledu already defined)
+(label op4childinhh already defined)
+(label op4reasgone already defined)
+(label op4dspoudec already defined)
+(label op4ddeceased already defined)
+(label op4chnotinhh already defined)
+(label op4educhild already defined)
+(label op4martlstat already defined)
+(label op4numchldrn already defined)
+(label op4anychdu18 already defined)
+(label op4numchdu18 already defined)
+(label op4dchilddec already defined)
+(label op4dchldedit already defined)
+(label op4soclntwrk already defined)
+(label op4dsocwrkfl already defined)
+(label op4outhlp already defined)
+(label op4insdhlp already defined)
+(label op4bedhlp already defined)
+(label op4tkplhlp1 already defined)
+(label op4tkplhlp2 already defined)
+(label op4launhlp already defined)
+(label op4shophlp already defined)
+(label op4mealhlp already defined)
+(label op4bankhlp already defined)
+(label op4moneyhlp already defined)
+(label op4eathlp already defined)
+(label op4bathhlp already defined)
+(label op4toilhlp already defined)
+(label op4dreshlp already defined)
+(label op4medshlp already defined)
+(label op4dochlp already defined)
+(label op4dochlpmst already defined)
+(label op4insurhlp already defined)
+(label op4spcaredfr already defined)
+(label op4chhlpfin already defined)
+(label op4hlpchfin already defined)
+(label op4ishelper already defined)
+(label op4helpsched already defined)
+(label op4numdayswk already defined)
+(label op4numdaysmn already defined)
+(label op4numhrsday already defined)
+(label op4paidhelpr already defined)
+(label op4sppayshlp already defined)
+(label op4govpayhlp already defined)
+(label op4inspayhlp already defined)
+(label op4othpayhlp already defined)
+(label op4payunit already defined)
+(label op4hourlypay already defined)
+(label op4weeklypay already defined)
+(label op4monthlypy already defined)
+(label op4progmpaid already defined)
+(label op4dhrsmth already defined)
+(label op4contctflg already defined)
+(label op4dflmiss already defined)
+(label op4dmissadd already defined)
+(label op4dprobdup already defined)
+(label op4ddiffop already defined)
+(label op3proxy already defined)
+(label op3relatnshp already defined)
+(label op3drelatfl already defined)
+(label op3drelflro already defined)
+(label op3dgender already defined)
+(label op3prsninhh already defined)
+(label op3dage already defined)
+(label op3dagefl already defined)
+(label op3dageflro already defined)
+(label op3dgenderfl already defined)
+(label op3dgenderflro already defined)
+(label op3spouprtnr already defined)
+(label op3nwspouprt already defined)
+(label op3eduspo already defined)
+(label op3leveledu already defined)
+(label op3childinhh already defined)
+(label op3reasgone already defined)
+(label op3dspoudec already defined)
+(label op3ddeceased already defined)
+(label op3chnotinhh already defined)
+(label op3educhild already defined)
+(label op3martlstat already defined)
+(label op3numchldrn already defined)
+(label op3anychdu18 already defined)
+(label op3numchdu18 already defined)
+(label op3dchilddec already defined)
+(label op3dchldedit already defined)
+(label op3soclntwrk already defined)
+(label op3dsocwrkfl already defined)
+(label op3outhlp already defined)
+(label op3insdhlp already defined)
+(label op3bedhlp already defined)
+(label op3tkplhlp1 already defined)
+(label op3tkplhlp2 already defined)
+(label op3launhlp already defined)
+(label op3shophlp already defined)
+(label op3mealhlp already defined)
+(label op3bankhlp already defined)
+(label op3moneyhlp already defined)
+(label op3eathlp already defined)
+(label op3bathhlp already defined)
+(label op3toilhlp already defined)
+(label op3dreshlp already defined)
+(label op3medshlp already defined)
+(label op3dochlp already defined)
+(label op3dochlpmst already defined)
+(label op3insurhlp already defined)
+(label op3spcaredfr already defined)
+(label op3chhlpfin already defined)
+(label op3hlpchfin already defined)
+(label op3ishelper already defined)
+(label op3helpsched already defined)
+(label op3numdayswk already defined)
+(label op3numdaysmn already defined)
+(label op3numhrsday already defined)
+(label op3paidhelpr already defined)
+(label op3sppayshlp already defined)
+(label op3govpayhlp already defined)
+(label op3inspayhlp already defined)
+(label op3othpayhlp already defined)
+(label op3payunit already defined)
+(label op3hourlypay already defined)
+(label op3weeklypay already defined)
+(label op3monthlypy already defined)
+(label op3progmpaid already defined)
+(label op3dhrsmth already defined)
+(label op3contctflg already defined)
+(label op3dflmiss already defined)
+(label op3dmissadd already defined)
+(label op3dprobdup already defined)
+(label op3ddiffop already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label pa1dv2favact already defined)
+(label _merge already defined)
+(label r5dresid already defined)
+(label r4dresid already defined)
+(label r3dresid already defined)
+(label r2dresid already defined)
+(label r1dresid already defined)
+(label op5proxy already defined)
+(label op5relatnshp already defined)
+(label op5drelatfl already defined)
+(label op5drelflro already defined)
+(label op5dgender already defined)
+(label op5prsninhh already defined)
+(label op5dage already defined)
+(label op5dagefl already defined)
+(label op5dageflro already defined)
+(label op5dgenderfl already defined)
+(label op5dgenderflro already defined)
+(label op5spouprtnr already defined)
+(label op5nwspouprt already defined)
+(label op5eduspo already defined)
+(label op5leveledu already defined)
+(label op5childinhh already defined)
+(label op5reasgone already defined)
+(label op5dspoudec already defined)
+(label op5ddeceased already defined)
+(label op5chnotinhh already defined)
+(label op5educhild already defined)
+(label op5martlstat already defined)
+(label op5numchldrn already defined)
+(label op5anychdu18 already defined)
+(label op5numchdu18 already defined)
+(label op5dchldedit already defined)
+(label op5soclntwrk already defined)
+(label op5dsocwrkfl already defined)
+(label op5outhlp already defined)
+(label op5insdhlp already defined)
+(label op5bedhlp already defined)
+(label op5tkplhlp1 already defined)
+(label op5tkplhlp2 already defined)
+(label op5launhlp already defined)
+(label op5shophlp already defined)
+(label op5mealhlp already defined)
+(label op5bankhlp already defined)
+(label op5moneyhlp already defined)
+(label op5eathlp already defined)
+(label op5bathhlp already defined)
+(label op5toilhlp already defined)
+(label op5dreshlp already defined)
+(label op5medshlp already defined)
+(label op5dochlp already defined)
+(label op5dochlpmst already defined)
+(label op5insurhlp already defined)
+(label op5spcaredfr already defined)
+(label op5chhlpfin already defined)
+(label op5hlpchfin already defined)
+(label op5ishelper already defined)
+(label op5helpsched already defined)
+(label op5numdayswk already defined)
+(label op5numdaysmn already defined)
+(label op5numhrsday already defined)
+(label op5paidhelpr already defined)
+(label op5sppayshlp already defined)
+(label op5govpayhlp already defined)
+(label op5inspayhlp already defined)
+(label op5othpayhlp already defined)
+(label op5payunit already defined)
+(label op5hourlypay already defined)
+(label op5weeklypay already defined)
+(label op5monthlypy already defined)
+(label op5progmpaid already defined)
+(label op5dhrsmth already defined)
+(label op5contctflg already defined)
+(label op5dflmiss already defined)
+(label op5dmissadd already defined)
+(label op5dprobdup already defined)
+(label op5ddiffop already defined)
+(label op4proxy already defined)
+(label op4relatnshp already defined)
+(label op4drelatfl already defined)
+(label op4drelflro already defined)
+(label op4dgender already defined)
+(label op4prsninhh already defined)
+(label op4dage already defined)
+(label op4dagefl already defined)
+(label op4dageflro already defined)
+(label op4dgenderfl already defined)
+(label op4dgenderflro already defined)
+(label op4spouprtnr already defined)
+(label op4nwspouprt already defined)
+(label op4eduspo already defined)
+(label op4leveledu already defined)
+(label op4childinhh already defined)
+(label op4reasgone already defined)
+(label op4dspoudec already defined)
+(label op4ddeceased already defined)
+(label op4chnotinhh already defined)
+(label op4educhild already defined)
+(label op4martlstat already defined)
+(label op4numchldrn already defined)
+(label op4anychdu18 already defined)
+(label op4numchdu18 already defined)
+(label op4dchilddec already defined)
+(label op4dchldedit already defined)
+(label op4soclntwrk already defined)
+(label op4dsocwrkfl already defined)
+(label op4outhlp already defined)
+(label op4insdhlp already defined)
+(label op4bedhlp already defined)
+(label op4tkplhlp1 already defined)
+(label op4tkplhlp2 already defined)
+(label op4launhlp already defined)
+(label op4shophlp already defined)
+(label op4mealhlp already defined)
+(label op4bankhlp already defined)
+(label op4moneyhlp already defined)
+(label op4eathlp already defined)
+(label op4bathhlp already defined)
+(label op4toilhlp already defined)
+(label op4dreshlp already defined)
+(label op4medshlp already defined)
+(label op4dochlp already defined)
+(label op4dochlpmst already defined)
+(label op4insurhlp already defined)
+(label op4spcaredfr already defined)
+(label op4chhlpfin already defined)
+(label op4hlpchfin already defined)
+(label op4ishelper already defined)
+(label op4helpsched already defined)
+(label op4numdayswk already defined)
+(label op4numdaysmn already defined)
+(label op4numhrsday already defined)
+(label op4paidhelpr already defined)
+(label op4sppayshlp already defined)
+(label op4govpayhlp already defined)
+(label op4inspayhlp already defined)
+(label op4othpayhlp already defined)
+(label op4payunit already defined)
+(label op4hourlypay already defined)
+(label op4weeklypay already defined)
+(label op4monthlypy already defined)
+(label op4progmpaid already defined)
+(label op4dhrsmth already defined)
+(label op4contctflg already defined)
+(label op4dflmiss already defined)
+(label op4dmissadd already defined)
+(label op4dprobdup already defined)
+(label op4ddiffop already defined)
+(label op3proxy already defined)
+(label op3relatnshp already defined)
+(label op3drelatfl already defined)
+(label op3drelflro already defined)
+(label op3dgender already defined)
+(label op3prsninhh already defined)
+(label op3dage already defined)
+(label op3dagefl already defined)
+(label op3dageflro already defined)
+(label op3dgenderfl already defined)
+(label op3dgenderflro already defined)
+(label op3spouprtnr already defined)
+(label op3nwspouprt already defined)
+(label op3eduspo already defined)
+(label op3leveledu already defined)
+(label op3childinhh already defined)
+(label op3reasgone already defined)
+(label op3dspoudec already defined)
+(label op3ddeceased already defined)
+(label op3chnotinhh already defined)
+(label op3educhild already defined)
+(label op3martlstat already defined)
+(label op3numchldrn already defined)
+(label op3anychdu18 already defined)
+(label op3numchdu18 already defined)
+(label op3dchilddec already defined)
+(label op3dchldedit already defined)
+(label op3soclntwrk already defined)
+(label op3dsocwrkfl already defined)
+(label op3outhlp already defined)
+(label op3insdhlp already defined)
+(label op3bedhlp already defined)
+(label op3tkplhlp1 already defined)
+(label op3tkplhlp2 already defined)
+(label op3launhlp already defined)
+(label op3shophlp already defined)
+(label op3mealhlp already defined)
+(label op3bankhlp already defined)
+(label op3moneyhlp already defined)
+(label op3eathlp already defined)
+(label op3bathhlp already defined)
+(label op3toilhlp already defined)
+(label op3dreshlp already defined)
+(label op3medshlp already defined)
+(label op3dochlp already defined)
+(label op3dochlpmst already defined)
+(label op3insurhlp already defined)
+(label op3spcaredfr already defined)
+(label op3chhlpfin already defined)
+(label op3hlpchfin already defined)
+(label op3ishelper already defined)
+(label op3helpsched already defined)
+(label op3numdayswk already defined)
+(label op3numdaysmn already defined)
+(label op3numhrsday already defined)
+(label op3paidhelpr already defined)
+(label op3sppayshlp already defined)
+(label op3govpayhlp already defined)
+(label op3inspayhlp already defined)
+(label op3othpayhlp already defined)
+(label op3payunit already defined)
+(label op3hourlypay already defined)
+(label op3weeklypay already defined)
+(label op3monthlypy already defined)
+(label op3progmpaid already defined)
+(label op3dhrsmth already defined)
+(label op3contctflg already defined)
+(label op3dflmiss already defined)
+(label op3dmissadd already defined)
+(label op3dprobdup already defined)
+(label op3ddiffop already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label pa5dfavact already defined)
+(label fl5dneverdrv already defined)
+(label rl5dracehisp already defined)
+(label r5dgender already defined)
+(label _merge already defined)
+(label r6dresid already defined)
+(label r5dresid already defined)
+(label r4dresid already defined)
+(label r3dresid already defined)
+(label r2dresid already defined)
+(label r1dresid already defined)
+(label r5dcontnew already defined)
+(label op6proxy already defined)
+(label op6relatnshp already defined)
+(label op6drelatfl already defined)
+(label op6drelflro already defined)
+(label op6dgender already defined)
+(label op6prsninhh already defined)
+(label op6dage already defined)
+(label op6dagefl already defined)
+(label op6dageflro already defined)
+(label op6dgenderfl already defined)
+(label op6dgenderflro already defined)
+(label op6spouprtnr already defined)
+(label op6nwspouprt already defined)
+(label op6eduspo already defined)
+(label op6leveledu already defined)
+(label op6childinhh already defined)
+(label op6reasgone already defined)
+(label op6dspoudec already defined)
+(label op6ddeceased already defined)
+(label op6chnotinhh already defined)
+(label op6educhild already defined)
+(label op6martlstat already defined)
+(label op6numchldrn already defined)
+(label op6anychdu18 already defined)
+(label op6numchdu18 already defined)
+(label op6dchldedit already defined)
+(label op6soclntwrk already defined)
+(label op6dcatgryag already defined)
+(label op6dsocwrkfl already defined)
+(label op6outhlp already defined)
+(label op6insdhlp already defined)
+(label op6bedhlp already defined)
+(label op6tkplhlp1 already defined)
+(label op6tkplhlp2 already defined)
+(label op6launhlp already defined)
+(label op6shophlp already defined)
+(label op6mealhlp already defined)
+(label op6bankhlp already defined)
+(label op6moneyhlp already defined)
+(label op6eathlp already defined)
+(label op6bathhlp already defined)
+(label op6toilhlp already defined)
+(label op6dreshlp already defined)
+(label op6medshlp already defined)
+(label op6dochlp already defined)
+(label op6dochlpmst already defined)
+(label op6insurhlp already defined)
+(label op6spcaredfr already defined)
+(label op6chhlpfin already defined)
+(label op6hlpchfin already defined)
+(label op6ishelper already defined)
+(label op6helpsched already defined)
+(label op6numdayswk already defined)
+(label op6numdaysmn already defined)
+(label op6numhrsday already defined)
+(label op6paidhelpr already defined)
+(label op6sppayshlp already defined)
+(label op6govpayhlp already defined)
+(label op6inspayhlp already defined)
+(label op6othpayhlp already defined)
+(label op6payunit already defined)
+(label op6hourlypay already defined)
+(label op6weeklypay already defined)
+(label op6monthlypy already defined)
+(label op6progmpaid already defined)
+(label op6dhrsmth already defined)
+(label op6contctflg already defined)
+(label op6dflmiss already defined)
+(label op6dmissadd already defined)
+(label op6dprobdup already defined)
+(label op6ddiffop already defined)
+(label op5proxy already defined)
+(label op5relatnshp already defined)
+(label op5drelatfl already defined)
+(label op5drelflro already defined)
+(label op5dgender already defined)
+(label op5prsninhh already defined)
+(label op5dage already defined)
+(label op5dagefl already defined)
+(label op5dageflro already defined)
+(label op5dgenderfl already defined)
+(label op5dgenderflro already defined)
+(label op5spouprtnr already defined)
+(label op5nwspouprt already defined)
+(label op5eduspo already defined)
+(label op5leveledu already defined)
+(label op5childinhh already defined)
+(label op5reasgone already defined)
+(label op5dspoudec already defined)
+(label op5ddeceased already defined)
+(label op5chnotinhh already defined)
+(label op5educhild already defined)
+(label op5martlstat already defined)
+(label op5numchldrn already defined)
+(label op5anychdu18 already defined)
+(label op5numchdu18 already defined)
+(label op5dchldedit already defined)
+(label op5soclntwrk already defined)
+(label op5dsocwrkfl already defined)
+(label op5outhlp already defined)
+(label op5insdhlp already defined)
+(label op5bedhlp already defined)
+(label op5tkplhlp1 already defined)
+(label op5tkplhlp2 already defined)
+(label op5launhlp already defined)
+(label op5shophlp already defined)
+(label op5mealhlp already defined)
+(label op5bankhlp already defined)
+(label op5moneyhlp already defined)
+(label op5eathlp already defined)
+(label op5bathhlp already defined)
+(label op5toilhlp already defined)
+(label op5dreshlp already defined)
+(label op5medshlp already defined)
+(label op5dochlp already defined)
+(label op5dochlpmst already defined)
+(label op5insurhlp already defined)
+(label op5spcaredfr already defined)
+(label op5chhlpfin already defined)
+(label op5hlpchfin already defined)
+(label op5ishelper already defined)
+(label op5helpsched already defined)
+(label op5numdayswk already defined)
+(label op5numdaysmn already defined)
+(label op5numhrsday already defined)
+(label op5paidhelpr already defined)
+(label op5sppayshlp already defined)
+(label op5govpayhlp already defined)
+(label op5inspayhlp already defined)
+(label op5othpayhlp already defined)
+(label op5payunit already defined)
+(label op5hourlypay already defined)
+(label op5weeklypay already defined)
+(label op5monthlypy already defined)
+(label op5progmpaid already defined)
+(label op5dhrsmth already defined)
+(label op5contctflg already defined)
+(label op5dflmiss already defined)
+(label op5dmissadd already defined)
+(label op5dprobdup already defined)
+(label op5ddiffop already defined)
+(label op4proxy already defined)
+(label op4relatnshp already defined)
+(label op4drelatfl already defined)
+(label op4drelflro already defined)
+(label op4dgender already defined)
+(label op4prsninhh already defined)
+(label op4dage already defined)
+(label op4dagefl already defined)
+(label op4dageflro already defined)
+(label op4dgenderfl already defined)
+(label op4dgenderflro already defined)
+(label op4spouprtnr already defined)
+(label op4nwspouprt already defined)
+(label op4eduspo already defined)
+(label op4leveledu already defined)
+(label op4childinhh already defined)
+(label op4reasgone already defined)
+(label op4dspoudec already defined)
+(label op4ddeceased already defined)
+(label op4chnotinhh already defined)
+(label op4educhild already defined)
+(label op4martlstat already defined)
+(label op4numchldrn already defined)
+(label op4anychdu18 already defined)
+(label op4numchdu18 already defined)
+(label op4dchilddec already defined)
+(label op4dchldedit already defined)
+(label op4soclntwrk already defined)
+(label op4dsocwrkfl already defined)
+(label op4outhlp already defined)
+(label op4insdhlp already defined)
+(label op4bedhlp already defined)
+(label op4tkplhlp1 already defined)
+(label op4tkplhlp2 already defined)
+(label op4launhlp already defined)
+(label op4shophlp already defined)
+(label op4mealhlp already defined)
+(label op4bankhlp already defined)
+(label op4moneyhlp already defined)
+(label op4eathlp already defined)
+(label op4bathhlp already defined)
+(label op4toilhlp already defined)
+(label op4dreshlp already defined)
+(label op4medshlp already defined)
+(label op4dochlp already defined)
+(label op4dochlpmst already defined)
+(label op4insurhlp already defined)
+(label op4spcaredfr already defined)
+(label op4chhlpfin already defined)
+(label op4hlpchfin already defined)
+(label op4ishelper already defined)
+(label op4helpsched already defined)
+(label op4numdayswk already defined)
+(label op4numdaysmn already defined)
+(label op4numhrsday already defined)
+(label op4paidhelpr already defined)
+(label op4sppayshlp already defined)
+(label op4govpayhlp already defined)
+(label op4inspayhlp already defined)
+(label op4othpayhlp already defined)
+(label op4payunit already defined)
+(label op4hourlypay already defined)
+(label op4weeklypay already defined)
+(label op4monthlypy already defined)
+(label op4progmpaid already defined)
+(label op4dhrsmth already defined)
+(label op4contctflg already defined)
+(label op4dflmiss already defined)
+(label op4dmissadd already defined)
+(label op4dprobdup already defined)
+(label op4ddiffop already defined)
+(label op3proxy already defined)
+(label op3relatnshp already defined)
+(label op3drelatfl already defined)
+(label op3drelflro already defined)
+(label op3dgender already defined)
+(label op3prsninhh already defined)
+(label op3dage already defined)
+(label op3dagefl already defined)
+(label op3dageflro already defined)
+(label op3dgenderfl already defined)
+(label op3dgenderflro already defined)
+(label op3spouprtnr already defined)
+(label op3nwspouprt already defined)
+(label op3eduspo already defined)
+(label op3leveledu already defined)
+(label op3childinhh already defined)
+(label op3reasgone already defined)
+(label op3dspoudec already defined)
+(label op3ddeceased already defined)
+(label op3chnotinhh already defined)
+(label op3educhild already defined)
+(label op3martlstat already defined)
+(label op3numchldrn already defined)
+(label op3anychdu18 already defined)
+(label op3numchdu18 already defined)
+(label op3dchilddec already defined)
+(label op3dchldedit already defined)
+(label op3soclntwrk already defined)
+(label op3dsocwrkfl already defined)
+(label op3outhlp already defined)
+(label op3insdhlp already defined)
+(label op3bedhlp already defined)
+(label op3tkplhlp1 already defined)
+(label op3tkplhlp2 already defined)
+(label op3launhlp already defined)
+(label op3shophlp already defined)
+(label op3mealhlp already defined)
+(label op3bankhlp already defined)
+(label op3moneyhlp already defined)
+(label op3eathlp already defined)
+(label op3bathhlp already defined)
+(label op3toilhlp already defined)
+(label op3dreshlp already defined)
+(label op3medshlp already defined)
+(label op3dochlp already defined)
+(label op3dochlpmst already defined)
+(label op3insurhlp already defined)
+(label op3spcaredfr already defined)
+(label op3chhlpfin already defined)
+(label op3hlpchfin already defined)
+(label op3ishelper already defined)
+(label op3helpsched already defined)
+(label op3numdayswk already defined)
+(label op3numdaysmn already defined)
+(label op3numhrsday already defined)
+(label op3paidhelpr already defined)
+(label op3sppayshlp already defined)
+(label op3govpayhlp already defined)
+(label op3inspayhlp already defined)
+(label op3othpayhlp already defined)
+(label op3payunit already defined)
+(label op3hourlypay already defined)
+(label op3weeklypay already defined)
+(label op3monthlypy already defined)
+(label op3progmpaid already defined)
+(label op3dhrsmth already defined)
+(label op3contctflg already defined)
+(label op3dflmiss already defined)
+(label op3dmissadd already defined)
+(label op3dprobdup already defined)
+(label op3ddiffop already defined)
+(label op2proxy already defined)
+(label op2relatnshp already defined)
+(label op2drelatfl already defined)
+(label op2dgender already defined)
+(label op2prsninhh already defined)
+(label op2dage already defined)
+(label op2dagefl already defined)
+(label op2dgenderfl already defined)
+(label op2spouprtnr already defined)
+(label op2nwspouprt already defined)
+(label op2eduspo already defined)
+(label op2leveledu already defined)
+(label op2childinhh already defined)
+(label op2reasgone already defined)
+(label op2dspoudec already defined)
+(label op2ddeceased already defined)
+(label op2chnotinhh already defined)
+(label op2educhild already defined)
+(label op2martlstat already defined)
+(label op2numchldrn already defined)
+(label op2anychdu18 already defined)
+(label op2numchdu18 already defined)
+(label op2dchilddec already defined)
+(label op2soclntwrk already defined)
+(label op2dsocwrkfl already defined)
+(label op2outhlp already defined)
+(label op2insdhlp already defined)
+(label op2bedhlp already defined)
+(label op2tkplhlp1 already defined)
+(label op2tkplhlp2 already defined)
+(label op2launhlp already defined)
+(label op2shophlp already defined)
+(label op2mealhlp already defined)
+(label op2bankhlp already defined)
+(label op2moneyhlp already defined)
+(label op2eathlp already defined)
+(label op2bathhlp already defined)
+(label op2toilhlp already defined)
+(label op2dreshlp already defined)
+(label op2medshlp already defined)
+(label op2dochlp already defined)
+(label op2dochlpmst already defined)
+(label op2insurhlp already defined)
+(label op2spcaredfr already defined)
+(label op2chhlpfin already defined)
+(label op2hlpchfin already defined)
+(label op2ishelper already defined)
+(label op2helpsched already defined)
+(label op2numdayswk already defined)
+(label op2numdaysmn already defined)
+(label op2numhrsday already defined)
+(label op2paidhelpr already defined)
+(label op2sppayshlp already defined)
+(label op2govpayhlp already defined)
+(label op2inspayhlp already defined)
+(label op2othpayhlp already defined)
+(label op2payunit already defined)
+(label op2hourlypay already defined)
+(label op2weeklypay already defined)
+(label op2monthlypy already defined)
+(label op2progmpaid already defined)
+(label op2dhrsmth already defined)
+(label op2contctflg already defined)
+(label op2dflmiss already defined)
+(label op2dmissadd already defined)
+(label op2dprobdup already defined)
+(label op2ddiffop already defined)
+(label op1proxy already defined)
+(label op1relatnshp already defined)
+(label op1gender already defined)
+(label op1spouprtnr already defined)
+(label op1leveledu already defined)
+(label op1prsninhh already defined)
+(label op1childinhh already defined)
+(label op1dage already defined)
+(label op1chnotinhh already defined)
+(label op1martlstat already defined)
+(label op1numchldrn already defined)
+(label op1anychdu18 already defined)
+(label op1numchdu18 already defined)
+(label op1soclntwrk already defined)
+(label op1dcatgryag already defined)
+(label op1dsocwrkfl already defined)
+(label op1outhlp already defined)
+(label op1insdhlp already defined)
+(label op1bedhlp already defined)
+(label op1tkplhlp1 already defined)
+(label op1tkplhlp2 already defined)
+(label op1launhlp already defined)
+(label op1shophlp already defined)
+(label op1mealhlp already defined)
+(label op1bankhlp already defined)
+(label op1moneyhlp already defined)
+(label op1eathlp already defined)
+(label op1bathhlp already defined)
+(label op1toilhlp already defined)
+(label op1dreshlp already defined)
+(label op1medshlp already defined)
+(label op1dochlp already defined)
+(label op1dochlpmst already defined)
+(label op1insurhlp already defined)
+(label op1spcaredfr already defined)
+(label op1chhlpfin already defined)
+(label op1hlpchfin already defined)
+(label op1ishelper already defined)
+(label op1helpsched already defined)
+(label op1numdayswk already defined)
+(label op1numdaysmn already defined)
+(label op1numhrsday already defined)
+(label op1paidhelpr already defined)
+(label op1sppayshlp already defined)
+(label op1govpayhlp already defined)
+(label op1inspayhlp already defined)
+(label op1othpayhlp already defined)
+(label op1payunit already defined)
+(label op1hourlypay already defined)
+(label op1weeklypay already defined)
+(label op1monthlypy already defined)
+(label op1progmpaid already defined)
+(label op1dhrsmth already defined)
+(label op1contctflg already defined)
+(label op1dflmiss already defined)
+(label op1dmissadd already defined)
+(label op1dprobdup already defined)
+(label pa5dfavact already defined)
+(label fl5dneverdrv already defined)
+(label rl5dracehisp already defined)
+(label r5dgender already defined)
+(label _merge already defined)
+
+. 
+. save R1234_OPSPltd.dta, replace
+file R1234_OPSPltd.dta saved
+
+. ********************************************************************
+. 
+. tab wave, missing
+
+Survey wave |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |     38,097       12.81       12.81
+          2 |     37,944       12.76       25.57
+          3 |     35,745       12.02       37.60
+          4 |     33,016       11.10       48.70
+          5 |     52,285       17.59       66.29
+          6 |     51,174       17.21       83.50
+          7 |     49,065       16.50      100.00
+------------+-----------------------------------
+      Total |    297,326      100.00
+
+. 
+. ********************************************************************
+. //recode helper time variables to -1 (na) if not helper per flag variable
+. **Note, these OP variables are backfilled from wave to wave
+. gen opishelper_allw=.
+(297,326 missing values generated)
+
+. forvalues w=1/7{
+  2. tab ishelper wave if wave==`w', missing //helper flag variable
+  3. replace opishelper_allw=ishelper if wave==`w'
+  4. }
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         1 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    26,500 |    26,500 
+          1 Yes |    11,597 |    11,597 
+----------------+-----------+----------
+          Total |    38,097 |    38,097 
+
+(38,097 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         2 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    28,120 |    28,120 
+          1 Yes |     9,824 |     9,824 
+----------------+-----------+----------
+          Total |    37,944 |    37,944 
+
+(37,944 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         3 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    27,332 |    27,332 
+          1 Yes |     8,413 |     8,413 
+----------------+-----------+----------
+          Total |    35,745 |    35,745 
+
+(35,745 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         4 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    25,931 |    25,931 
+          1 Yes |     7,085 |     7,085 
+----------------+-----------+----------
+          Total |    33,016 |    33,016 
+
+(33,016 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         5 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    39,861 |    39,861 
+          1 Yes |    12,424 |    12,424 
+----------------+-----------+----------
+          Total |    52,285 |    52,285 
+
+(52,285 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         6 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    40,006 |    40,006 
+          1 Yes |    11,168 |    11,168 
+----------------+-----------+----------
+          Total |    51,174 |    51,174 
+
+(51,174 real changes made)
+
+                |   Survey
+ R1 BXHL1 HELPS |    wave
+             SP |         7 |     Total
+----------------+-----------+----------
+-1 Inapplicable |    39,533 |    39,533 
+          1 Yes |     9,532 |     9,532 
+----------------+-----------+----------
+          Total |    49,065 |    49,065 
+
+(49,065 real changes made)
+
+. tab opishelper_allw wave, missing
+
+opishelper |                      Survey wave
+     _allw |         1          2          3          4          5 |     Total
+-----------+-------------------------------------------------------+----------
+        -1 |    26,500     28,120     27,332     25,931     39,861 |   227,283 
+         1 |    11,597      9,824      8,413      7,085     12,424 |    70,043 
+-----------+-------------------------------------------------------+----------
+     Total |    38,097     37,944     35,745     33,016     52,285 |   297,326 
+
+
+opishelper |      Survey wave
+     _allw |         6          7 |     Total
+-----------+----------------------+----------
+        -1 |    40,006     39,533 |   227,283 
+         1 |    11,168      9,532 |    70,043 
+-----------+----------------------+----------
+     Total |    51,174     49,065 |   297,326 
+
+
+. 
+. forvalues w=1/7{
+  2.         foreach v in helpsched numdayswk numdaysmn numhrsday {
+  3.                 tab `v' if ishelper==-1 & wave==`w', missing
+  4.                 replace `v'=-1 if ishelper==-1 & wave==`w'
+  5.         }
+  6. }
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+          -8 DK |         12        0.05        0.05
+          -7 RF |          3        0.01        0.06
+-1 INAPPLICABLE |     26,481       99.93       99.98
+       2 VARIED |          4        0.02      100.00
+----------------+-----------------------------------
+          Total |     26,500      100.00
+(19 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     26,500      100.00      100.00
+----------------+-----------------------------------
+          Total |     26,500      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+          -8 DK |         14        0.05        0.05
+          -7 RF |          3        0.01        0.06
+-1 Inapplicable |     26,483       99.94      100.00
+----------------+-----------------------------------
+          Total |     26,500      100.00
+(17 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+          -8 DK |         14        0.05        0.05
+          -7 RF |          3        0.01        0.06
+-1 Inapplicable |     26,483       99.94      100.00
+----------------+-----------------------------------
+          Total |     26,500      100.00
+(17 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     28,120      100.00      100.00
+----------------+-----------------------------------
+          Total |     28,120      100.00
+(0 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     28,120      100.00      100.00
+----------------+-----------------------------------
+          Total |     28,120      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     28,120      100.00      100.00
+----------------+-----------------------------------
+          Total |     28,120      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     28,120      100.00      100.00
+----------------+-----------------------------------
+          Total |     28,120      100.00
+(0 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     27,329       99.99       99.99
+       2 VARIED |          3        0.01      100.00
+----------------+-----------------------------------
+          Total |     27,332      100.00
+(3 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     27,332      100.00      100.00
+----------------+-----------------------------------
+          Total |     27,332      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     27,332      100.00      100.00
+----------------+-----------------------------------
+          Total |     27,332      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     27,332      100.00      100.00
+----------------+-----------------------------------
+          Total |     27,332      100.00
+(0 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     25,931      100.00      100.00
+----------------+-----------------------------------
+          Total |     25,931      100.00
+(0 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     25,931      100.00      100.00
+----------------+-----------------------------------
+          Total |     25,931      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     25,931      100.00      100.00
+----------------+-----------------------------------
+          Total |     25,931      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     25,931      100.00      100.00
+----------------+-----------------------------------
+          Total |     25,931      100.00
+(0 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,861      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,861      100.00
+(0 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     40,006      100.00      100.00
+----------------+-----------------------------------
+          Total |     40,006      100.00
+(0 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     40,006      100.00      100.00
+----------------+-----------------------------------
+          Total |     40,006      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     40,006      100.00      100.00
+----------------+-----------------------------------
+          Total |     40,006      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     40,006      100.00      100.00
+----------------+-----------------------------------
+          Total |     40,006      100.00
+(0 real changes made)
+
+ R1 HL1 HELP IS |
+  REG SCHEDULED |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 INAPPLICABLE |     39,533      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,533      100.00
+(0 real changes made)
+
+R1 HL2 NUM DAYS |
+    HELP PER WK |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,533      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,533      100.00
+(0 real changes made)
+
+R1 HL3 NUM DAYS |
+   HELP PER MON |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,533      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,533      100.00
+(0 real changes made)
+
+ R1 HL4 NUM HRS |
+   HELP PER DAY |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+-1 Inapplicable |     39,533      100.00      100.00
+----------------+-----------------------------------
+          Total |     39,533      100.00
+(0 real changes made)
+
+. 
+end of do-file
+
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
+
+. capture drop op* w* r* mo* sc* ha* mc*
+
+. 
+end of do-file
+
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
+
+.  drop op* w* r* mo* sc* ha* mc*
+variable mc* not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. tab moneyhlp_op moneyhlp
+
+ R1 HA52A HELPS |      R1 HA51 ANYONE HLP W MONY MATTRS
+  SP WITH MONEY | -9 Missin      -8 DK      -7 RF  -1 Inappl |     Total
+----------------+--------------------------------------------+----------
+-1 Inapplicable |     2,752         13         18    203,217 |   290,568 
+          1 Yes |         0          0          0          0 |     6,758 
+----------------+--------------------------------------------+----------
+          Total |     2,752         13         18    203,217 |   297,326 
+
+
+                | R1 HA51 ANYONE HLP W
+ R1 HA52A HELPS |      MONY MATTRS
+  SP WITH MONEY |     1 YES       2 NO |     Total
+----------------+----------------------+----------
+-1 Inapplicable |    35,844     48,724 |   290,568 
+          1 Yes |     6,758          0 |     6,758 
+----------------+----------------------+----------
+          Total |    42,602     48,724 |   297,326 
+
+

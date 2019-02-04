@@ -4978,11 +4978,11 @@ global logs E:\nhats\nhats_code\NHATS data setup\logs\
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
 /*
 
-Created by: 
-Date Created: 
+Created by: --
+Date Created: --
 
 Updated by: MH
-Date Updated: 01/25/2019
+Date Updated: 02/01/2019
 
 Description: Inital dataset cleaning, renaming varaibles, merging variables from 
 sensitive dataset, and broad structuring.
@@ -4993,7 +4993,7 @@ sensitive dataset, and broad structuring.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_setup1_`date'
+local name NHATS_setup1`date'
 di "`name'"
 
 capture log close 
@@ -5005,7 +5005,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using `logs'`name'.smcl, text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 /*Combines rounds 1 and 2 sample person SP interview files,
@@ -5128,15 +5128,6 @@ forvalues w=2/7{
 append using round_`w'_ltd.dta
 }
 
-/*label values dfavact pa5dfavact
-
-foreach x of varlist _all {
-capture drop newvar
-gen newvar=substr(`x'
-}
-capture drop newvar
-gen 
-*/
 preserve
 
 forvalues w=1/7{
@@ -5185,16 +5176,42 @@ merge m:1 spid using "${r6s}NHATS_Round_6_SP_Sen_Dem_File_new.dta", ///
 merge m:1 spid using "${r7s}NHATS_Round_7_SP_Sen_Dem_File_new.dta", ///
 	keepusing(dintvwrage spageall ddeathage mthdied yrdied) nogen
 
+
+tempfile nhats
+save "`nhats'"
+
+
+//Going to tracker to rename variables.
+
+use "${r7raw}NHATS_Round_7_Tracker_File", clear
+
+
+keep spid yearsample ///
+w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt ///
+w4trfinwgt0 			 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt ///
+w3trfinwgt0 			 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+w2trfinwgt0 			 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt ///
+w1trfinwgt0 			 r1status r1spstat r1spstatdtmt r1spstatdtyr r1fqstatdt*
+
+forvalues w=1/7{
+
+rename (r`w'*  w`w'*) (*w`w')
+}
+
+reshape long trfinwgt0w tr2011wgt0w statusw spstatw spstatdtmtw spstatdtyrw fqstatdtmtw fqstatdtyrw, i(spid) j(wave)
+
+rename (*w) (*)
+
+tempfile tracker
+save "`tracker'"
+
+use "`nhats'", clear
 	
-////////CLEANED UNTIL HERE	
 //3B?
 //merge in tracker status information
-merge m:1 spid using "${r7raw}NHATS_Round_7_Tracker_File", ///
-	keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
-	 w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
-	w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
-		w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
-		r1fqstatdt*)
+merge 1:1 spid wave using "`tracker'"
 
 //merge in nsoc tracker information
 merge m:1 spid using "${r1s}NSOC_Round_1_SP_tracker_file", nogen
@@ -5203,7 +5220,7 @@ drop if _merge==2
 drop _merge	
 save round_1_to_7.dta, replace
 
-//10/17/2018--old version of stata
+//old version of stata
 forvalues w=1/7{
 clear all
 use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
@@ -5213,9 +5230,443 @@ saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dt
 *********************************************
 log close
 
-translate `name'.smcl `name'.pdf
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
 exit
 
+
+
+H="NHATS Data Cleaning Part 2 (1a_help_hours_imputation)"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/04/2019
+
+Description: This section uses the SP and OP data files and imputes
+hours of help provided to SP per methods in NHATS Technical Paper #7
+
+Variables from this dataset are then brought in to the SP Rounds dataset
+and also the NSOC caregiver dataset.
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 1a-help_hours_imputation-LOG`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}/`name'.smcl", text replace
+
+
+
+
+*********************************************
+
+cd "${work}"
+
+**User note: This section can be commented out after run one time to set up datasets
+********************************************************************
+//combine op and sp data files
+
+forvalues w=1/2{
+use "${r`w'raw}NHATS_Round_`w'_OP_File_v2.dta", clear
+sort spid opid 
+
+merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R`w'_OPSPlinked.dta, replace
+}
+
+forvalues w=3/7{
+use "${r`w'raw}NHATS_Round_`w'_OP_File.dta", clear
+sort spid opid 
+
+merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R`w'_OPSPlinked.dta, replace
+}
+
+
+//now create limited datasets for each wave with only needed variables
+forvalues w=1/7{
+	use R`w'_OPSPlinked.dta
+	
+		if inlist(`w',1,2,3,4){
+			keep spid opid * wave w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid ///
+		mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhelp ///
+		sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ///
+		ha`w'dbankreas mc`w'dmedsreas
+		}
+		
+		if inlist(`w',5,6,7){
+			keep spid opid * wave w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid ///
+		mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhelp ///
+		sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ///
+		ha`w'dbankreas mc`w'dmedsreas w`w'an2011wgt0 
+		}
+		
+	rename (w`w'* r`w'* mo`w'* ha`w'* mc`w'*) (*) 
+	rename (op`w'* sc`w'*) (*_op *_sc)
+	save R`w'_OPSPltd.dta, replace
+}
+
+
+
+********************************************************************
+//merge into single file for initial setup
+use R1_OPSPltd.dta, clear
+forvalues w=2/7{
+append using R`w'_OPSPltd.dta
+}
+
+
+save R1234_OPSPltd.dta, replace
+********************************************************************
+
+tab wave, missing
+
+********************************************************************
+//recode helper time variables to -1 (na) if not helper per flag variable
+**Note, these OP variables are backfilled from wave to wave
+gen opishelper_allw=.
+forvalues w=1/7{
+tab ishelper wave if wave==`w', missing //helper flag variable
+replace opishelper_allw=ishelper if wave==`w'
+}
+tab opishelper_allw wave, missing
+
+forvalues w=1/7{
+	foreach v in helpsched numdayswk numdaysmn numhrsday {
+		tab `v' if ishelper==-1 & wave==`w', missing
+		replace `v'=-1 if ishelper==-1 & wave==`w'
+	}
+}
+
+//generate indicator of help with any task that has monthly reference period
+gen month=.
+forvalues w=1/7{
+replace month=0 if wave==`w'
+replace month=1 if (outhlp_op==1 | insdhlp_op==1 | bedhlp_op==1 | tkplhlp1_op==1 | ///
+ tkplhlp2_op==1 | launhlp_op==1 | shophlp_op==1 | mealhlp_op==1 | bankhlp_op==1 | ///
+ eathlp_op==1 | bathhlp_op==1 | toilhlp_op==1 | dreshlp_op==1 | medshlp_op==1) & wave==`w'
+} 
+tab month wave, missing
+
+ //generate indicator of help with any task that has yearly reference period
+gen year=.
+forvalues w=1/7{
+replace year=0 if wave==`w'
+replace year=1 if (moneyhlp_op==1 | dochlp_op==1 | insurhlp_op==1) & wave==`w'
+tab year month if wave==`w', missing
+}
+
+
+//generate indicator of help in last year but not last month
+gen yearnotmonth=0
+replace yearnotmonth=1 if year==1 & month==0
+tab yearnotmonth wave, missing
+********************************************************************
+//pull variable for sits in with doctor
+gen op_doc_help=.
+forvalues i=1/7 {
+	replace op_doc_help=dochlp_op if wave==`i'
+}
+********************************************************************
+//generate SP received help with self care or mobility activity or 
+//household activity for health and functioning reasons
+gen disab=.
+forvalues w=1/7{
+replace disab=0 if wave==`w'
+//self care or mobility, assumed to be for health reasons
+replace disab=1 if (douthelp==2 | dinsdhelp==2 | dbedhelp==2 | ///
+deathelp==2 | dbathhelp==2 | dtoilhelp==2 | ddreshelp==2) & wave==`w'
+//household activity for health or functioning reasons or in residential care
+**note this is different from tech paper #7 because codes disab=1 if 1,3 or 4
+**not just if 3 or 4
+foreach v in dlaunreas dshopreas dmealreas dbankreas dmedsreas{
+replace disab=1 if inlist(`v',1,3,4) & wave==`w'
+}
+}
+tab disab wave, missing
+/////////////////////////////////////////////////////////////////////////////////HERE
+NEED TO GO THROUGH ALL VARS AND MAKE SURE USING RIGHT ONE LIKE _OP OR _SC. EVERYTHING ABOVE HAS BEEN CHECKED.
+NEED TO DROP THOSE OTHER VARS OP7.. SC4.. ...
+
+********************************************************************
+//flag variable for hours/month reported, valid
+tab op1dhrsmth wave, missing //derived hours/month from HL section
+gen op_ind_hrsmth=.
+forvalues w=1/7{
+replace op_ind_hrsmth=dhrsmth if wave==`w'
+}
+recode op_ind_hrsmth (1/750=1)
+
+la def hrsmth -13"-13:Deceased" -12"Zero days/wk" -11"-11:hours missing" ///
+ -10"-10:days missing" -9 "-9:days+hours mssing" -1"-1:NA" 1"1:Valid" 9999"9999:<1hr/day",replace
+la val op_ind_hrsmth hrsmth 
+tab op_ind_hrsmth wave, missing
+
+//generate variable indicating one day per month or one day per week
+gen justone=.
+forvalues w=1/7{
+replace justone=0 if wave==`w'
+replace justone=1 if (numdayswk==1 | numdaysmn==1) & wave==`w'
+}
+tab justone op_ind_hrsmth, missing
+
+//recode help flags to 0=(no or inapplicable) or 1=yes
+forvalues w=1/7{
+foreach v in outhlp insdhlp bedhlp tkplhlp1 tkplhlp2 launhlp shophlp mealhlp ///
+bankhlp eathlp bathhlp toilhlp dreshlp medshlp moneyhlp dochlp insurhlp{
+tab `v' if wave==`w', missing
+replace `v'=0 if `v'==-1 & wave==`w'
+}
+}
+
+//generate variable indicating help with only one activity
+gen numact=.
+foreach w=1/7{
+replace numact=outhlp + insdhlp + bedhlp + tkplhlp1 + tkplhlp2 + launhlp + ///
+shophlp + mealhlp + bankhlp + eathlp + bathhlp + toilhlp + dreshlp + medshlp ///
++ moneyhlp + dochlp + insurhlp if wave==`w'
+}
+
+tab numact wave, missing
+gen oneact=0 //note this =0 if help with no activities
+replace oneact=1 if numact==1
+tab oneact opishelper_allw, missing
+
+********************************************************************
+//generate variables indicating relationship is spouse, other rel, other nonrel
+gen spouse=.
+gen otherrel=.
+gen nonrel=.
+gen daughter=0
+gen son=0
+gen oth_fam=0
+
+label var otherrel "Non-spouse relative"
+label var oth_fam "Family member of SP, not spouse, son, or daughter"
+label var nonrel "Non-relative"
+
+forvalues w=1/7{
+replace spouse=0 if wave==`w'
+replace spouse=1 if relat==2 & wave==`w'
+replace otherrel=0 if wave==`w'
+replace otherrel=1 if ((relat>2 & relat<=29) | relat==91) & wave==`w'
+replace nonrel=0 if wave==`w'
+replace nonrel=1 if (relat>=30 & relat~=91) & wave==`w'
+replace daughter=1 if inlist(relat,3,5,7) & wave==`w'
+replace son=1 if inlist(relat,4,6,8) & wave==`w'
+replace oth_fam=1 if ((relat>8 & relat<=29) | relat==91) & wave==`w'
+
+tab relat spouse
+tab relat otherrel
+tab relat nonrel
+}
+
+tab spouse wave, missing
+tab otherrel wave, missing
+tab nonrel wave, missing
+
+********************************************************************
+//generate variables indicating help w/ adls & iadls
+local adl insd bed eat bath toil dres
+local iadl laun shop meal bank meds 
+local nonadl out money tkpl
+
+gen tkplhlp=.
+forvalues w=1/7{
+replace tkplhlp=tkplhlp1==1 | tkplhlp2==1 if wave==`w'
+}
+
+forvalues w=1/7 {
+foreach x of `adl' {
+	gen op_adl_`x'=0
+	replace op_adl_`x'=1 if `x'hlp==1 & wave==`w'
+}
+foreach x of `iadl' {
+	gen op_iadl_`x'=0
+	replace op_iadl_`x'=1 if `x'hlp==1 & wave==`w'
+}
+foreach x of local nonadl {
+	gen op_nonadl_`x'=0
+	replace op_nonadl_`x'=1 if `x'hlp==1 & wave==`w'
+}
+}
+
+********************************************************************
+//generate variables indicating help on a regular schedule
+gen regular=.
+forvalues w=1/7{
+replace regular=0 if wave==`w'
+replace regular=1 if helpsched==1 & wave==`w'
+}
+tab regular wave, missing
+
+la def hrsmth -13"-13:Deceased" -12"-12:Zero days/wk" -11"-11:hours missing" ///
+ -10"-10:days missing" -9 "-9:days+hours mssing" -1"-1:NA" 1"1:Valid" 9999"9999:<1hr/day",replace
+la val op_ind_hrsmth hrsmth 
+
+tab op_ind_hrsmth wave
+
+tab op_ind_hrsmth yearnotmonth if wave==1 & opishelper_allw==1
+tab op_ind_hrsmth yearnotmonth if wave==2 & opishelper_allw==1
+
+tab opishelper_allw
+
+//generate indicator of imputation category
+//1=impute, 2=recode to zero, 3=recode to small number hrs/day, 4=no imputation needed
+gen impute_cat=-1
+
+//wave=1
+	//1=impute
+	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-10) | ///
+	(op_ind_hrsmth==-9 & yearnotmonth==0) & op1ishelper==1 & wave==1
+	replace impute_cat=1 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
+	 & yearnotmonth==0 & op1ishelper==1 & wave==1
+	//2=recode to zero
+	replace impute_cat=2 if op_ind_hrsmth==-9 & yearnotmonth==1 & op1ishelper==1 & wave==1
+	replace impute_cat=2 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
+	& yearnotmonth==1 & op1ishelper==1 & wave==1
+	//3=set to small number
+	replace impute_cat=3 if op_ind_hrsmth==9999 & ///
+	(op1numdayswk~=1 & op1numdaysmn~=1) & op1ishelper==1 & wave==1
+	//4=imputation not necessary, complete info
+	replace impute_cat=4 if op_ind_hrsmth==1 & op1ishelper==1 & wave==1
+
+//if wave==2 | wave==3 | wave == 4
+	//1=impute, wave 2,3 criteria
+	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+	replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+	//2=recode to zero, wave 2, 3
+	replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+	//3=recode to small number
+	replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+	//4=imputation not necessary
+	replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+
+la def impute_cat -1"N/A, not helper" 1"Impute" 2"Recode to zero" ///
+3"Recode to small number" 4"No imputation needed"
+la val impute_cat impute_cat
+tab impute_cat wave, missing
+
+tab impute_cat op_ind_hrsmth if wave==1, missing
+tab impute_cat op_ind_hrsmth if wave==2, missing
+tab impute_cat op_ind_hrsmth if wave==3, missing
+tab impute_cat op_ind_hrsmth if wave==4, missing
+tab impute_cat op_ind_hrsmth if wave==5, missing
+tab impute_cat op_ind_hrsmth if wave==6, missing
+tab impute_cat op_ind_hrsmth if wave==7, missing
+
+********************************************************************
+//save separate datasets for r 1 2 & 3 so can run imputation with weighting
+foreach w in 1 2 3 4 5 6 7{
+preserve  
+keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
+ r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
+ daughter oth_fam 
+keep if wave==`w'
+save R`w'_for_hrs_impute.dta,replace
+restore
+}
+*/
+********************************************************************
+//implement matching, do separately for each wave
+foreach w in 1 2 3 4 5 6 7{
+use R`w'_for_hrs_impute.dta, clear
+
+svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
+
+//wave 1 imputation... need to check what is different if anything for wave 2
+gen op_hrsmth_i=0
+replace op_hrsmth_i=dhrsmth if impute_cat==4  //use actual value
+replace op_hrsmth_i=0 if impute_cat==2 //set to zero
+replace op_hrsmth_i=(.5*numdayswk*4.3) if impute_cat==3 & helpsched==1 //assign small hours
+replace op_hrsmth_i=(.5*numdaysmn) if impute_cat==3 & inlist(helpsched,2,-7,-8)  //assign small hours
+
+//impute where op_ind_hrsmth=-10, missing days per month
+gen op_numdays_i=0
+replace op_numdays_i=numdayswk*4.3 if inlist(impute_cat,3,4) & helpsched==1
+replace op_numdays_i=numdaysmn if inlist(impute_cat,3,4) & inlist(helpsched,2,-7,-8)
+
+gen ln_opnumdays_i=ln(op_numdays_i) if inlist(impute_cat,3,4)
+
+local adjvars spouse otherrel regular yearnotmonth oneact disab ///
+ outhlp insdhlp bedhlp tkplhlp1 tkplhlp2 launhlp ///
+ shophlp mealhlp bankhlp eathlp bathhlp toilhlp ///
+ dreshlp medshlp moneyhlp dochlp insurhlp
+
+svy: reg ln_opnumdays_i `adjvars' if inlist(impute_cat,3,4)
+predict ln_opnumdays_i2 if impute_cat==1 & op_ind_hrsmth==-10
+gen op_numdays_i2=exp(ln_opnumdays_i2) if impute_cat==1 & op_ind_hrsmth==-10
+replace op_hrsmth_i= op_numdays_i2*numhrsday if impute_cat==1 & ///
+ op_ind_hrsmth==-10 & numhrsday>=1
+replace op_hrsmth_i= op_numdays_i2*.5 if impute_cat==1 & ///
+ op_ind_hrsmth==-10 & numhrsday==0
+
+//impute where op_ind_hrsmth=-11, missing hours per day
+gen op_numhrsday_i=0
+replace op_numhrsday_i=.5 if impute_cat==3
+replace op_numhrsday_i=numhrsday if impute_cat==4
+gen ln_opnumhrsday_i=ln(op_numhrsday_i) if inlist(impute_cat,3,4)
+svy: reg ln_opnumhrsday_i `adjvars' if inlist(impute_cat,3,4)
+predict ln_opnumhrsday_i2 if impute_cat==1 & op_ind_hrsmth==-11
+gen op_numhrsday_i2=exp(ln_opnumhrsday_i2) if impute_cat==1 & op_ind_hrsmth==-11
+replace op_hrsmth_i=numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & helpsched==1
+replace op_hrsmth_i=numdaysmn*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(helpsched,2,-7,-8) & numdaysmn>=1
+replace op_hrsmth_i=numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(helpsched,2,-7,-8) & ///
+ numdaysmn<1 & numdayswk>=1 
+
+//impute where op_ind_hrsmth=-9, -12 or 9999, missing hours and days or <1hr/day
+gen ln_opdhrsmth_i=ln(op_hrsmth_i) if inlist(impute_cat,3,4)
+svy: reg ln_opdhrsmth_i `adjvars' if inlist(impute_cat,3,4)
+predict ln_opdhrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+gen op_hrsmth_i2=exp(ln_opdhrsmth_i2) if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+replace op_hrsmth_i=op_hrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
+replace op_hrsmth_i=-1 if ishelper~=1 
+
+//look at imputed hours per month by imputation category
+di "where op_ind_hrsmth==-12"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-12 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-11"
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-11 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-10"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-10 [pweight=w`w'anfinwgt0]
+di "where op_ind_hrsmth==-9"
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-9 [pweight=w`w'anfinwgt0] 
+di "where op_ind_hrsmth==9999"
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==9999 [pweight=w`w'anfinwgt0] 
+
+di "impute_cat==2"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==2 [pweight=w`w'anfinwgt0]
+di "impute_cat==3"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==3 [pweight=w`w'anfinwgt0]
+di "impute_cat==4"
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=w`w'anfinwgt0]
+
+save R`w'_hrs_imputed_added.dta,replace
+
+}
+
+********************************************************************
+log close
 
 
 H="Changelog"
@@ -5227,6 +5678,18 @@ H="Changelog"
 
 Updates:
 
+02/04/2019
+-----------
+Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 2. 
+Making small changes to make it long. 
+
+01/31/2019 MH
+------------
+Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 2
+
+01/30/2019 MH
+------------
+Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 1
 
 01/28/2019 EBL
 ------------
