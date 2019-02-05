@@ -13952,9 +13952,9 @@ note("6+ months of FFS Medicare prior to interview and 1+ SMI" \ ///
 }
 
 
-
+//2/5/19--also looking at stroke, despite tiny sample size
 local smi ind_smi_any smi_dem_ind smi_cancer_ind smi_renal_ind smi_copd_ind ///
-smi_diab_compl_ind
+smi_diab_compl_ind smi_cva_ind
 
 foreach smivar of local smi {
 
@@ -13967,7 +13967,7 @@ foreach smivar of local smi {
 
 	foreach w in 4 6 {
 			foreach x of local coutcomes {	
-				sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1 [aw=anfinwgt]
+				sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1 [aw=anfinwgt],d
 				mat tab[`r',`c']=r(mean)
 				mat tab[`r'+1,`c']=r(p50)
 				if "`w'"=="6" {
@@ -13979,7 +13979,7 @@ foreach smivar of local smi {
 				local r=`r'+2
 }
 			foreach x of local ioutcomes {
-				sum `x' if wave==`w'  & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1  [aw=anfinwgt]
+				sum `x' if wave==`w'  & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1  [aw=anfinwgt],d
 				mat tab[`r',`c']=r(mean)*100
 				if "`w'"=="6" {
 					svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1): tab `x' wave
@@ -14012,7 +14012,7 @@ foreach smivar of local smi {
 
 
 H="changelog"
-1/31/19-EBL-updated ALS SMI to include new neurodegenerative codes in ICD-9
+1/31/19-EBL-updated ALS SMI to include new neurodegenerative codes in ICD-9 and updated the table to include medians.
 
 1/29/19-EBL-updated ICD-9/10 tables to include months of follow-up
 
