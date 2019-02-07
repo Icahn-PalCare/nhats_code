@@ -1,7 +1,7 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
 H="****************************************************"
-/* 
+/*
 ********************HEADING******************** 
 
 Project Name: Katherine Advance Care Planning Matchy-Matchy
@@ -14,7 +14,7 @@ Funding Source:
 Created by: Mohammed 
 
 Primary Analyst: Mohammed 
-Secondary Analyst:
+Secondary Analyst: Evan
 
 Datasets Used: NHATS Round 2, HRS 2012 Data
 
@@ -27,57 +27,30 @@ Looking to match together ACP questions from both NHATS and HRS data.
 //STATA
 // Global Macros use $ symbol to be called. 
 //File paths for raw data
-/*
-global logs E:\nhats\nhats_code\NHATS data setup\logs\
-global r1raw E:\nhats\data\NHATS Public\round_1\
-global r2raw E:\nhats\data\NHATS Public\round_2\
-global r3raw E:\nhats\data\NHATS Public\round_3\
-global r4raw E:\nhats\data\NHATS Public\round_4\
-global r5raw E:\nhats\data\NHATS Public\round_5\
-global r6raw E:\nhats\data\NHATS Public\round_6\
-global r7raw E:\nhats\data\NHATS Public\round_7\
-global work E:\nhats\data\NHATS working data
-global r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-global r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-global r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
-global r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
-global r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
-global r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
-global r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
-global logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+global logs E:\nhats\data\projects\ACP\logs\
 
 
-//SAS 
-
-
-//Intermediate Data Path
-//libname intpath "E:\nhats\data\Projects\..."
-
-// Final Data Path
-//libname datapath "E:\nhats\data\Projects\..."
-
-//Log files path
-//libname logpath "E:\nhats\data\Projects\..."
 
 
 H="NHATS ACP"
 /*
 
 Created by: Mohammed 
-Date Created: 01/29/2019
+Date Created: 01/25/2019
 
 Updated by: MH
-Date Updated: 01/25/2019
+Date Updated: 02/06/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
 
 
 **************************************************
-
+*/
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_setup1_`date'
+local name NHATS_ACP_`date'
 di "`name'"
 
 capture log close 
@@ -89,7 +62,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using `logs'`name'.smcl, text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 /*Combines rounds 1 and 2 sample person SP interview files,
@@ -98,7 +71,7 @@ status l into a single file
 
 Data format is multiple observations per subject, one for each round
 */
-*/
+
 
 use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
 
@@ -182,10 +155,10 @@ sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed
 
 local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
 
-local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
+local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
 
 forvalues i=1/7{
-putexcel ``i''3="`lab`i''"
+putexcel ``i''3=("`lab`i''")
 }
 
 mat tab=J(`rn',5,.)
@@ -266,8 +239,11 @@ local r=`r'+1
 local t=`t'+1
 }
 
+sum n
+local z `r(N)'
 sum n if `q'==1 
 mat tab[`r', `c']=`r(N)'
+mat tab[`r'+1, `c']=(`r(N)'/`z')*100
 local c=`c'+1
 
 }
@@ -280,6 +256,8 @@ putexcel A`r'=("`lab'")
 local r=`r'+1
 }
 putexcel A`r'=("N")
+local r=`r'+1
+putexcel A`r'=("%")
 
 putexcel A1=("Table 1: NHATS Statistics by ACP Classification")
 
@@ -289,6 +267,7 @@ foreach x in no_acp formal_acp informal_acp acp {
 tab `x' if wave==2 , m
 }
 
+capture log close
 
 H="HRS "
 /*
@@ -297,17 +276,17 @@ Created by: Mohammed
 Date Created: 01/31/2019
 
 Updated by: MH
-Date Updated: 01/31/2019
+Date Updated: 02/06/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
 
 
 **************************************************
-
+*/
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_setup1_`date'
+local name HRS_ACP_`date'
 di "`name'"
 
 capture log close 
@@ -319,7 +298,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using `logs'`name'.smcl, text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 /*Combines rounds 1 and 2 sample person SP interview files,
@@ -328,7 +307,7 @@ status l into a single file
 
 Data format is multiple observations per subject, one for each round
 */
-*/
+
 
 clear all
 
@@ -451,7 +430,7 @@ lab var live_others "Live with others"
 lab var soc_visit0 "No social visits with neighbors"
 lab var srh_pf0 "Self Rates Health: Good+"
 lab var hosp_last_2yr0 "No hospitalization"
-lab var dem_hrs0 "Np SR Dementia"
+lab var dem_hrs0 "No SR Dementia"
 lab var cesd_tot_ge3_n0 "No Depression"
 lab var cesd_tot_ge3_n "Depression"
 lab var consc "Conscientiousness (non-missing q's)"
@@ -459,6 +438,8 @@ lab var neuro "Neuroticism (non-missing q's)"
 lab var imprelig1 "Importance of Religion: very important"
 lab var imprelig2 "Importance of Religion: somewhat important"
 lab var imprelig3 "Importance of Religion: not too "
+lab var dem_hrs "SR Dementia"
+
 
 gen ab=.
 replace ab=0 if informal==1
@@ -483,7 +464,9 @@ replace bd=1 if informal==1
 gen cd=.
 replace cd=0 if formal==1
 replace cd=1 if no_acp==1
+
 gen n=1 if acp!=.
+notes n: TS only indicated for people with ACP
 
 // table 1 --full sample
 
@@ -499,9 +482,9 @@ local lab7 Significant Subgroup Differences
 
 local demo1 age 
 
-local demo2 male female ed_less_hs ed_hs_plus ed_coll nw_lowest nw_midlow ///
-nw_midhigh nw_highest white black hisp_eth other_race h12wohous0 h12wohous
-
+local demo2 male female degree1 degree2 degree3 degree4 degree5 degree6 degree7 ///
+degree8 nw_lowest nw_midlow nw_midhigh nw_highest white black hisp_eth ///
+other_race h12wohous0 h12wohous
 
 local sn married marital_nev marital_wid marital_div marital_sep ///
 live_alone live_others
@@ -515,10 +498,10 @@ local psy imprelig1 imprelig2 imprelig3
 
 local psy1 consc neuro
 
-local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
 
 forvalues i=1/7{
-putexcel ``i''3="`lab`i''"
+putexcel ``i''3=("`lab`i''")
 }
 
 mat tab=J(`rn',5,.)
@@ -615,9 +598,11 @@ putexcel (G`t')=("``x'sig'")
 local r=`r'+1
 local t=`t'+1
 }
-
+sum n
+local z `r(N)'
 sum n if `q'==1 
 mat tab[`r', `c']=`r(N)'
+mat tab[`r'+1, `c']=(`r(N)'/`z')*100
 local c=`c'+1
 
 }
@@ -630,6 +615,8 @@ putexcel A`r'=("`lab'")
 local r=`r'+1
 }
 putexcel A`r'=("N")
+local r=`r'+1
+putexcel A`r'=("%")
 
 putexcel A1=("Table 1: HRS Statistics by ACP Classification Full")
 
@@ -652,9 +639,9 @@ local lab7 Significant Subgroup Differences
 
 local demo1 age 
 
-local demo2 male female ed_less_hs ed_hs_plus ed_coll nw_lowest nw_midlow ///
-nw_midhigh nw_highest white black hisp_eth other_race h12wohous0 h12wohous
-
+local demo2 male female degree1 degree2 degree3 degree4 degree5 degree6 degree7 ///
+degree8 nw_lowest nw_midlow nw_midhigh nw_highest white black hisp_eth ///
+other_race h12wohous0 h12wohous
 
 local sn married marital_nev marital_wid marital_div marital_sep ///
 live_alone live_others
@@ -668,10 +655,10 @@ local psy imprelig1 imprelig2 imprelig3
 
 local psy1 consc neuro
 
-local rn: word count 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
 
 forvalues i=1/7{
-putexcel ``i''3="`lab`i''"
+putexcel ``i''3=("`lab`i''")
 }
 
 mat tab=J(`rn',5,.)
@@ -769,10 +756,13 @@ local r=`r'+1
 local t=`t'+1
 }
 
+
+sum n
+local z `r(N)'
 sum n if `q'==1 
 mat tab[`r', `c']=`r(N)'
+mat tab[`r'+1, `c']=(`r(N)'/`z')*100
 local c=`c'+1
-
 }
 putexcel (B4)=mat(tab)
 
@@ -783,9 +773,12 @@ putexcel A`r'=("`lab'")
 local r=`r'+1
 }
 putexcel A`r'=("N")
+local r=`r'+1
+putexcel A`r'=("%")
 
 putexcel A1=("Table 1: HRS Statistics by ACP Classification Leave Behind only")
 
+capture log close
 
 H="Changelog"
 
@@ -795,6 +788,10 @@ H="Changelog"
 
 
 Updates:
+
+02/06/2019 MH
+------------
+Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 
 
 02/01/2019 MH
 ------------

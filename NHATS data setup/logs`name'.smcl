@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- opened on:   5 Feb 2019, 16:33:55
+ opened on:   6 Feb 2019, 10:32:06
 
 . 
 . 
@@ -17,7 +17,7 @@
 E:\nhats\data\NHATS working data
 
 . 
-. use round_1_to_7.dta, clear
+. use round_1_to_$w.dta, clear
 
 . *********************************************
 . tab wave, missing
@@ -68,7 +68,7 @@ Survey wave |      Freq.     Percent        Cum.
 (7,609 real changes made)
 
 . 
-. forvalues w=2/7{
+. forvalues w=2/$w{
   2.         replace ivw_type=1 if (spstat==20 & status!=62) & wave==`w'
   3.         replace ivw_type=2 if (spstat==20 & status==62) & wave==`w'
   4. }
@@ -146,7 +146,7 @@ R1 D RESIDENTIAL CARE |              spstat
 . gen sp_ivw_yes=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab status spstat if wave==`w', missing
   3.         replace sp_ivw_yes=1 if spstat==20 & wave==`w'
   4.         replace sp_ivw_yes=0 if inlist(spstat,11,12,24) & wave==`w'
@@ -279,25 +279,30 @@ conducted? |      Survey wave
 . 
 . gen lml_ivw_yes = 0
 
-. foreach w in 2/7{
+. forvalues w=2/$w{
   2.         replace lml_ivw_yes=1 if spstat==20 & status==62 & wave==`w'
   3. }
-(0 real changes made)
+(503 real changes made)
+(523 real changes made)
+(404 real changes made)
+(296 real changes made)
+(486 real changes made)
+(459 real changes made)
 
 . la var lml_ivw_yes "LWL interview? yes=1"
 
 . 
 . tab sp_ivw_yes lml_ivw_yes, missing
 
-        SP |    LWL
- interview | interview?
-conducted? |   yes=1
-     yes=1 |         0 |     Total
------------+-----------+----------
-         0 |     2,969 |     2,969 
-         1 |    44,809 |    44,809 
------------+-----------+----------
-     Total |    47,778 |    47,778 
+        SP |
+ interview |
+conducted? | LWL interview? yes=1
+     yes=1 |         0          1 |     Total
+-----------+----------------------+----------
+         0 |     2,969          0 |     2,969 
+         1 |    42,138      2,671 |    44,809 
+-----------+----------------------+----------
+     Total |    45,107      2,671 |    47,778 
 
 
 . tab lml_ivw_yes wave, missing
@@ -306,7 +311,8 @@ conducted? |   yes=1
 interview? |                      Survey wave
      yes=1 |         1          2          3          4          5 |     Total
 -----------+-------------------------------------------------------+----------
-         0 |     8,245      7,075      5,799      4,737      8,334 |    47,778 
+         0 |     8,245      6,572      5,276      4,333      8,038 |    45,107 
+         1 |         0        503        523        404        296 |     2,671 
 -----------+-------------------------------------------------------+----------
      Total |     8,245      7,075      5,799      4,737      8,334 |    47,778 
 
@@ -315,7 +321,8 @@ interview? |                      Survey wave
 interview? |      Survey wave
      yes=1 |         6          7 |     Total
 -----------+----------------------+----------
-         0 |     7,276      6,312 |    47,778 
+         0 |     6,790      5,853 |    45,107 
+         1 |       486        459 |     2,671 
 -----------+----------------------+----------
      Total |     7,276      6,312 |    47,778 
 
@@ -394,7 +401,7 @@ interview? |      Survey wave
 . gen proxy_ivw=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. replace proxy_ivw=1 if resptype==2
   3. replace proxy_ivw=0 if resptype==1
   4. }
@@ -496,7 +503,7 @@ interview? |      Survey wave
 . gen freq_go_out=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab outoft if wave==`w', missing
   3.         replace freq_go_out=outoft if wave==`w'
   4. }
@@ -658,20 +665,37 @@ Some days (2-4/week) |         0        962 |       962
                      |   conducted? yes=1
 How often go outside |         0          1 |     Total
 ---------------------+----------------------+----------
-                  -8 |         0         10 |        10 
-                  -7 |         0          2 |         2 
-           Every day |         0      3,833 |     3,833 
-Most days (5-6/week) |         0      1,047 |     1,047 
-Some days (2-4/week) |         0        830 |       830 
-              Rarely |         0        464 |       464 
-               Never |         0        246 |       246 
-                   . |       516        127 |       643 
+                  -8 |         0          2 |         2 
+                  -7 |         0          1 |         1 
+           Every day |         0      3,791 |     3,791 
+Most days (5-6/week) |         0      1,004 |     1,004 
+Some days (2-4/week) |         0        752 |       752 
+              Rarely |         0        376 |       376 
+               Never |         0        130 |       130 
+                   . |       516          0 |       516 
 ---------------------+----------------------+----------
-               Total |       516      6,559 |     7,075 
+               Total |       516      6,056 |     6,572 
 
 
 . tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==1, missing
-no observations
+
+                     |     SP
+                     | interview
+                     | conducted?
+                     |   yes=1
+How often go outside |         1 |     Total
+---------------------+-----------+----------
+                  -8 |         8 |         8 
+                  -7 |         1 |         1 
+           Every day |        42 |        42 
+Most days (5-6/week) |        43 |        43 
+Some days (2-4/week) |        78 |        78 
+              Rarely |        88 |        88 
+               Never |       116 |       116 
+                   . |       127 |       127 
+---------------------+-----------+----------
+               Total |       503 |       503 
+
 
 . tab freq_go_out sp_ivw_yes if wave==3 & lml_ivw_yes==0, missing
 
@@ -679,16 +703,16 @@ no observations
                      |   conducted? yes=1
 How often go outside |         0          1 |     Total
 ---------------------+----------------------+----------
-                  -8 |         0         19 |        19 
+                  -8 |         0          5 |         5 
                   -7 |         0          1 |         1 
-           Every day |         0      3,029 |     3,029 
-Most days (5-6/week) |         0        865 |       865 
-Some days (2-4/week) |         0        725 |       725 
-              Rarely |         0        449 |       449 
-               Never |         0        202 |       202 
-                   . |       392        117 |       509 
+           Every day |         0      2,991 |     2,991 
+Most days (5-6/week) |         0        826 |       826 
+Some days (2-4/week) |         0        638 |       638 
+              Rarely |         0        319 |       319 
+               Never |         0        104 |       104 
+                   . |       392          0 |       392 
 ---------------------+----------------------+----------
-               Total |       392      5,407 |     5,799 
+               Total |       392      4,884 |     5,276 
 
 
 . 
@@ -696,7 +720,36 @@ Some days (2-4/week) |         0        725 |       725
 . //MO questions not asked in lml interviews where persons were not alert(PD6)
 . //or not mobile(PD7) in last month so lml has more missingless
 . tab freq_go_out outoft if wave==2 & lml_ivw_yes==1, missing
-no observations
+
+                     |           R1 MO1 OFTEN GO OUTSIDE
+How often go outside |     -8 DK      -7 RF  -1 Inappl   1 EVERY  |     Total
+---------------------+--------------------------------------------+----------
+                  -8 |         8          0          0          0 |         8 
+                  -7 |         0          1          0          0 |         1 
+           Every day |         0          0          0         42 |        42 
+Most days (5-6/week) |         0          0          0          0 |        43 
+Some days (2-4/week) |         0          0          0          0 |        78 
+              Rarely |         0          0          0          0 |        88 
+               Never |         0          0          0          0 |       116 
+                   . |         0          0        127          0 |       127 
+---------------------+--------------------------------------------+----------
+               Total |         8          1        127         42 |       503 
+
+
+                     |           R1 MO1 OFTEN GO OUTSIDE
+How often go outside |  2 MOST D   3 SOME D   4 RARELY    5 NEVER |     Total
+---------------------+--------------------------------------------+----------
+                  -8 |         0          0          0          0 |         8 
+                  -7 |         0          0          0          0 |         1 
+           Every day |         0          0          0          0 |        42 
+Most days (5-6/week) |        43          0          0          0 |        43 
+Some days (2-4/week) |         0         78          0          0 |        78 
+              Rarely |         0          0         88          0 |        88 
+               Never |         0          0          0        116 |       116 
+                   . |         0          0          0          0 |       127 
+---------------------+--------------------------------------------+----------
+               Total |        43         78         88        116 |       503 
+
 
 . 
 . *********************************************
@@ -705,7 +758,7 @@ no observations
 . gen help_go_out=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab outhlp if wave==`w', missing
   3.         replace help_go_out=1 if outhlp==1 & wave==`w'
   4.         replace help_go_out=0 if outhlp==2 & wave==`w'
@@ -863,7 +916,7 @@ no observations
 . gen out_on_own=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab outslf help_go_out if wave==`w', missing
   3.         replace out_on_own=outslf if wave==`w'
   4. }
@@ -1155,7 +1208,7 @@ NA, reported no help |     6,456      5,432      4,733 |    35,689
 . //inapplicable if don't report using any device to help, so set to 0 here
 . gen hasdifficulty=0
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab outdif if wave==`w', missing
   3.         replace hasdifficulty=1 if inlist(outdif,2,3,4,5) & wave==`w'
   4.         replace hasdifficulty=0 if outdif==1 & wave==`w'
@@ -1550,7 +1603,7 @@ Independen |
 . gen age=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         replace age=dintvwrage if wave==`w'
   3.         sum age if wave==`w', detail
   4.         }       
@@ -1866,7 +1919,7 @@ High School/GED |         0 |     2,069
 . 
 . forvalues i = 1/5 {
   2.         gen imputed_inc`i'=.
-  3.         foreach w in 1 3 5 7{
+  3.         forvalues w=1 3 : $w{
   4.                 replace toincim`i'=. if inlist(toincim`i',-9,-1) & wave==`w
 > '
   5.                 sum toincim`i' if wave==`w',detail //imputed income variabl
@@ -2223,11 +2276,10 @@ High School/GED |         0 |     2,069
 
 . 
 . 
-. 
 . egen aveincome=rowmean(imputed_inc1-imputed_inc5)
 (29268 missing values generated)
 
-. forvalues w=1 3 : 7{
+. forvalues w=1 3 : $w{
   2.         replace aveincome=totinc if wave==`w' & totinc>=0 & ///
 >         !missing(totinc)
   3. }
@@ -2454,8 +2506,6 @@ Never Married |       305        259        227 |     1,380
 
 . 
 . 
-. 
-. 
 . *********************************************
 . *********************************************
 . //Insurance coverage
@@ -2465,7 +2515,7 @@ Never Married |       305        259        227 |     1,380
 . gen medicaid=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab cmedicaid if wave==`w' , missing
   3.         replace medicaid=1 if cmedicaid==1 & wave==`w'
   4.         replace medicaid=0 if cmedicaid==2 & wave==`w'
@@ -2635,7 +2685,7 @@ Never Married |       305        259        227 |     1,380
 . gen medigap=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab mgapmedsp if wave==`w' , missing
   3.         replace medigap=1 if mgapmedsp==1 & wave==`w'
   4.         replace medigap=0 if mgapmedsp==2 & wave==`w'
@@ -2795,7 +2845,7 @@ Never Married |       305        259        227 |     1,380
 . gen mc_partd=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab covmedcad if wave==`w' , missing
   3.         replace mc_partd=1 if covmedcad==1 & wave==`w'
   4.         replace mc_partd=0 if covmedcad==2 & wave==`w'
@@ -2955,7 +3005,7 @@ Never Married |       305        259        227 |     1,380
 . gen tricare=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab covtricar if wave==`w' , missing
   3.         replace tricare=1 if covtricar==1 & wave==`w'
   4.         replace tricare=0 if covtricar==2 & wave==`w'
@@ -3110,7 +3160,7 @@ Never Married |       305        259        227 |     1,380
 . gen private_ltc=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2.         tab nginsnurs if wave==`w' , missing
   3.         replace private_ltc=1 if nginsnurs==1 & wave==`w'
   4.         replace private_ltc=0 if nginsnurs==2 & wave==`w'
@@ -3271,7 +3321,7 @@ Never Married |       305        259        227 |     1,380
 
 . 
 . //if report nh insurance in prev wave, asked to verify still have it curr wave
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. tab nginslast if wave==`w' & nginsnurs==-1, missing
   3. replace private_ltc=1 if nginslast==1 & nginsnurs==-1 & wave==`w'
   4. replace private_ltc=0 if nginslast==2 & nginsnurs==-1 & wave==`w'
@@ -3488,7 +3538,7 @@ Never Married |       305        259        227 |     1,380
 
 . 
 . //housing type in each wave, however missing if same residence as prior wave
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. tab placedesc if wave==`w', missing
   3. }
 
@@ -3602,7 +3652,7 @@ Never Married |       305        259        227 |     1,380
       Total |      6,559      100.00
 
 . 
-. forvalues w=3/7{
+. forvalues w=3/$w{
   2. tab spadrsnew if wave==`w', missing
   3. gen w`w'_moved=1 if spadrsnew==2
   4. replace w`w'_moved=0 if spadrsnew==1 | spadrsnew==3
@@ -3708,7 +3758,7 @@ Never Married |       305        259        227 |     1,380
 . gen ht_new=.
 (47,778 missing values generated)
 
-. forvalues w=2/7{
+. forvalues w=2/$w{
   2. replace ht_new=placedesc if wave==`w'
   3. replace ht_new=. if placedesc==-1 & w`w'_moved==0
   4. }
@@ -3803,7 +3853,7 @@ ht_new:  (8391 real changes made)
 . gen residence=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. replace residence=resistrct if wave==`w'
   3. }
 (8,245 real changes made)
@@ -3875,7 +3925,7 @@ ht_new:  (8391 real changes made)
 
 . label values residence residlbl
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. tab residence if wave==`w', missing
   3. }
 
@@ -3943,7 +3993,7 @@ Mobile Home/Multi-Unit |      1,511       18.33       92.29
 . gen livearrang=.
 (47,778 missing values generated)
 
-. forvalues w=1/7{
+. forvalues w=1/$w{
   2. tab dlvngarrg if wave==`w' & ivw_type==1, missing
   3. replace livearrang=dlvngarrg if wave==`w'
   4. replace livearrang=1 if (dlvngarrg==-9 & dhshldnum==1)  & wave==`w'
@@ -4101,8 +4151,9 @@ With spouse/partner + |       689        604        480 |     3,822
 
 
 . 
-. save round_1_7_cleanv1.dta, replace
-file round_1_7_cleanv1.dta saved
+. save round_1_$w_cleanv1.dta, replace
+(note: file round_1_.dta not found)
+file round_1_.dta saved
 
 . local ivars age female race_cat education  income_cat otherlang maritalstat //
 > /
@@ -4110,8 +4161,8 @@ file round_1_7_cleanv1.dta saved
 > residence livearrang livealone
 
 . 
-. foreach w in `ivars'{
-  2. tab `w'
+. foreach v in `ivars'{
+  2. tab `v'
   3. }
 
      Age at |
@@ -4329,13 +4380,10 @@ Lives alone |      Freq.     Percent        Cum.
       Total |     42,138      100.00
 
 . 
-. 
-. 
-. 
 . *********************************************
 . log close
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- closed on:   5 Feb 2019, 16:34:05
+ closed on:   6 Feb 2019, 10:32:17
 --------------------------------------------------------------------------------

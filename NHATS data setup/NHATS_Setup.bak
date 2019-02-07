@@ -5672,6 +5672,589 @@ save R`w'_hrs_imputed_added.dta,replace
 log close
 
 
+H="NHATS Data Cleaning Part 3 (2_r12_cleaning_1_1)"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/01/2019
+
+Description: This section uses the SP and OP data files and imputes
+hours of help provided to SP per methods in NHATS Technical Paper #7
+
+Variables from this dataset are then brought in to the SP Rounds dataset
+and also the NSOC caregiver dataset.
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 2-r12_cleaning_1`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}`name'.smcl", text replace
+
+
+
+
+*********************************************
+
+global miss -9,-1
+
+cd "${work}"
+
+use round_1_to_7.dta, clear
+*********************************************
+tab wave, missing
+
+*********************************************
+//interview type, varies by wave, use tracker status variables
+
+tab spstat if wave==3
+tab status if wave==3
+
+gen ivw_type=3
+replace ivw_type=1 if spstat==20 & wave==1 
+
+forvalues w=2/7{
+	replace ivw_type=1 if (spstat==20 & status!=62) & wave==`w'
+	replace ivw_type=2 if (spstat==20 & status==62) & wave==`w'
+}
+
+la def ivw_type 1 "Alive, SP interview completed" 2"Died, proxy SP LML interview completed" ///
+	3"SP interview not completed"
+la val ivw_type ivw_type
+tab ivw_type wave, missing
+
+tab status spstat if wave==1, missing
+tab dresid spstat if wave==1, missing
+//so use ivw type=1 is the same thing for r1
+
+gen sp_ivw_yes=.
+forvalues w=1/7{
+	tab status spstat if wave==`w', missing
+	replace sp_ivw_yes=1 if spstat==20 & wave==`w'
+	replace sp_ivw_yes=0 if inlist(spstat,11,12,24) & wave==`w'
+}
+la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml interviews
+tab sp_ivw_yes wave, missing
+
+gen lml_ivw_yes = 0
+foreach w in 2/7{
+	replace lml_ivw_yes=1 if spstat==20 & status==62 & wave==`w'
+}
+la var lml_ivw_yes "LWL interview? yes=1"
+
+tab sp_ivw_yes lml_ivw_yes, missing
+tab lml_ivw_yes wave, missing
+
+tab outoft status if wave==2, missing
+tab outoft status if wave==3, missing
+
+//identify proxy SP interviews
+gen proxy_ivw=.
+forvalues w=1/7{
+replace proxy_ivw=1 if resptype==2
+replace proxy_ivw=0 if resptype==1
+}
+la var proxy_ivw "Interview via proxy"
+tab proxy_ivw wave, missing
+tab proxy_ivw wave if ivw_type==1, missing
+tab proxy_ivw wave if ivw_type==2, missing
+
+/*missing data convention per user guide
+For our purposes, code all as missing
+The following codes were used at the item level for missing data of different types:
+-7 = Refusal
+-8 = Don’t Know
+-1 = Inapplicable
+-9 = Not Ascertained*/
+
+
+*********************************************
+*********************************************
+//definitions of homebound
+*********************************************
+*********************************************
+//how often go out of the house?
+gen freq_go_out=.
+forvalues w=1/7{
+	tab outoft if wave==`w', missing
+	replace freq_go_out=outoft if wave==`w'
+}
+
+replace freq_go_out=. if inlist(freq_go_out,$miss)
+la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
+	3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
+la val 	freq_go_out freq_go_out
+la var freq_go_out "How often go outside"
+
+tab freq_go_out sp_ivw_yes, missing
+tab freq_go_out sp_ivw_yes if wave==1, missing
+tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==0, missing
+tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==1, missing
+tab freq_go_out sp_ivw_yes if wave==3 & lml_ivw_yes==0, missing
+
+
+//MO questions not asked in lml interviews where persons were not alert(PD6)
+//or not mobile(PD7) in last month so lml has more missingless
+tab freq_go_out outoft if wave==2 & lml_ivw_yes==1, missing
+
+*********************************************
+//Did anyone ever help you - asked if report going outside
+//left missing if report never go outside
+gen help_go_out=.
+forvalues w=1/7{
+	tab outhlp if wave==`w', missing
+	replace help_go_out=1 if outhlp==1 & wave==`w'
+	replace help_go_out=0 if outhlp==2 & wave==`w'
+	replace help_go_out=-7 if outhlp==-7 & wave==`w'
+	replace help_go_out=-8 if outhlp==-8 & wave==`w'
+}
+la var help_go_out "Anyone ever help you leave home?"
+tab help_go_out wave if sp_ivw_yes==1, missing
+
+*********************************************
+//go out of the house on own?
+//only asked if report having help when go outside (help_go_out==1)
+gen out_on_own=.
+forvalues w=1/7{
+	tab outslf help_go_out if wave==`w', missing
+	replace out_on_own=outslf if wave==`w'
+}
+replace out_on_own=. if inlist(out_on_own,$miss)
+replace out_on_own=5 if help_go_out==0
+replace out_on_own=6 if freq_go_out==5
+la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never" 5"NA, reported no help" ///
+6"NA, never left home"
+la val out_on_own out_on_own
+la var out_on_own "When left house, left by yourself?"
+tab out_on_own wave if sp_ivw_yes==1, missing
+
+*********************************************
+//needs help when go outside? gets help and also goes outside on own != never
+gen needshelp=0
+replace needshelp=1 if help_go_out==1 & out_on_own~=4
+la var needshelp "Leaves home but with help"
+tab needshelp wave, missing
+
+*********************************************
+//has difficulty? when you used your walker,cane,etc? how much difficulty
+//did you have leaving the house by yourself? 1=none, 2=a little, 3=some, 4=a lot
+//inapplicable if don't report using any device to help, so set to 0 here
+gen hasdifficulty=0
+forvalues w=1/7{
+	tab outdif if wave==`w', missing
+	replace hasdifficulty=1 if inlist(outdif,2,3,4,5) & wave==`w'
+	replace hasdifficulty=0 if outdif==1 & wave==`w'
+	replace hasdifficulty=-7 if outdif==-7 & wave==`w'
+	replace hasdifficulty=-8 if outdif==-8 & wave==`w'
+
+}
+la var hasdifficulty "Leaves home on own but has difficulty"
+tab hasdifficulty wave if sp_ivw_yes==1, missing
+*********************************************
+//needs help or has difficulty going outside?
+gen helpdiff=.
+replace helpdiff=0 if needshelp==0 & hasdifficulty==0
+replace helpdiff=1 if needshelp==1 | hasdifficulty==1
+la var helpdiff "Either needs help or has difficulty going outside"
+tab helpdiff wave if sp_ivw_yes==1, missing
+*********************************************
+//independent - go out some/most days but are independent
+gen independent=0
+replace independent=1 if help_go_out==0 & hasdifficulty==0
+la var independent "Independently leaves home"
+tab independent wave if sp_ivw_yes==1, missing
+
+tab independent helpdiff, missing //no overlap
+*********************************************
+/*homebound categories
+0 = never go out
+1 = rarely go out
+2 = go out but never by self
+3 = go out but need help/have difficulty
+4 = go out, independent - don't need help or have difficulty
+*/
+gen homebound_cat=.
+replace homebound_cat=1 if freq_go_out==4 | freq_go_out==5
+replace homebound_cat=2 if inlist(freq_go_out,3,2,1) & out_on_own==4
+replace homebound_cat=3 if inlist(freq_go_out,3,2,1) & helpdiff==1
+replace homebound_cat=4 if inlist(freq_go_out,3,2,1) & independent==1
+
+//from technical paper
+replace homebound_cat=3 if spid==10009011 & wave==1
+
+la var homebound_cat "Homebound status, categorical"
+la def hb 1 "Never/Rarely leaves home" 2 "Leaves home but never by self" ///
+3 "Leaves home but needs help/has difficulty" 4 "Independent, not homebound"
+la val homebound_cat hb
+tab homebound_cat wave if sp_ivw_yes==1, missing
+/*binary for never go out, since never/rarely together*/
+gen never_go_out=freq_go_out==5 if freq!=.
+label var never_go_out "Never leaves home"
+*********************************************
+/*subcategories for level 4 homeboud category
+independent but go out only rarely
+independent and go out frequently*/
+gen indeplow=0
+replace indeplow=1 if freq_go_out==3 & independent==1
+la var indeplow "Independent, go out rarely" 
+
+gen indephigh=0
+replace indephigh=1 if inlist(freq_go_out,2,1) & independent==1
+la var indephigh "Independent, go out often"
+
+tab indeplow wave if sp_ivw_yes==1, missing
+tab indephigh wave if sp_ivw_yes==1, missing
+
+*********************************************
+*********************************************
+//demographic information
+*********************************************
+*********************************************
+//age at interview, note this is missing for wave 7 b/c no wave 7 sensitive data yet
+gen age=.
+forvalues w=1/7{
+	replace age=dintvwrage if wave==`w'
+	sum age if wave==`w', detail
+	}	
+//for last month of life interviews, use age at death variable
+tab ivw_type if age==-1, missing
+replace age=ddeathage if ivw_type==2 & dintvwrage==-1 & wave==2
+sum age
+//some observations that died still have missing age, so set to missing
+tab ivw_type if inlist(age,-7,-8)
+replace age=. if inlist(age,-7,-8)
+
+la var age "Age at interview or death"
+sum age if ivw_type==1, detail
+sum age if ivw_type==2, detail
+sum age, detail
+
+//gender, only asked in round 1
+gen female=.
+replace female=1 if dgender==2 & wave==1
+replace female=0 if dgender==1 & wave==1
+replace female=1 if dgender==2 & wave==5
+replace female=0 if dgender==1 & wave==5
+
+la var female "Female"
+la def female 0"Male" 1"Female"
+la val female female
+tab female if wave==1, missing
+tab dracehisp, missing
+
+//race, ethnicity
+gen race_cat=dracehisp
+replace race_cat=-8 if inlist(dracehisp,5,6)
+label define race 1 "White Non-His" 2 "Black Non-His" 4 "Hispanic" ///
+	3 "Other (Am Indian/Asian/Nat. Hawaii)" -8 "DKRF"
+label values race_cat race
+la var race_cat "Race, categorical"
+tab race_cat if wave==1, missing
+
+replace race_cat = 1 if dracehisp==1 & wave==5
+replace race_cat = 2 if dracehisp==2 & wave==5
+replace race_cat = 3 if dracehisp==3 & wave==5
+replace race_cat = 4 if dracehisp==4 & wave==5
+replace race_cat = -8 if inlist(dracehisp,5,6) & wave==5 
+
+//education
+generate education=.
+foreach w in 1 5{
+replace education=1 if inlist(higstschl,1,2,3) & wave==`w'
+replace education=2 if higstschl==4 & wave==`w'
+replace education=3 if inlist(higstschl,5,6,7) & wave==`w'
+replace education=4 if inlist(higstschl,8,9) & wave==`w'
+}
+
+la var education "Education level, categorical"
+label define edulbl 1 "<High School" 2 "High School/GED" 3 "Some College" ///
+	4 ">=Bachelors" 5 "DKRF"
+label values education edulbl
+tab education higstschl if wave==1, missing
+
+gen educ_hs_ind=education>=2 if education>0 & education!=.
+
+//income, just wave 1, reported every other wave
+sum totinc if wave==1, detail //this is the actual reported income, only present 40% sample
+
+forvalues i = 1/5 {
+	gen imputed_inc`i'=.
+	foreach w in 1 3 5 7{
+		replace toincim`i'=. if inlist(toincim`i',-9,-1) & wave==`w'
+		sum toincim`i' if wave==`w',detail //imputed income variables
+		replace imputed_inc`i' = toincim`i' if wave==`w'
+}
+		label var imputed_inc`i' "Imputed Income `i'"
+}
+
+
+
+egen aveincome=rowmean(imputed_inc1-imputed_inc5)
+forvalues w=1 3 : 7{
+	replace aveincome=totinc if wave==`w' & totinc>=0 & ///
+	!missing(totinc)
+}
+
+sort spid wave
+by spid: carryforward aveincome, replace
+//use first income imputation to set income categorical variable
+gen income_cat=0 if aveincome<15000 & aveincome!=.
+replace income_cat=1 if aveincome>=15000 & aveincome<30000 & aveincome!=.
+replace income_cat=2 if aveincome>=30000 & aveincome<60000 & aveincome!=.
+replace income_cat=3 if aveincome>=60000 & aveincome!=.
+label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
+label values income_cat income_cat
+tab income_cat, missing
+
+//speak language other than english? Asked when new cohort
+gen otherlang=spkothlan 
+foreach w in 1 5{
+replace otherlang=0 if spkothlan==2 & wave==`w'
+replace otherlang = 1 if (condspanh == 1 | spkothlan==1) & wave==`w'
+replace otherlang = . if inlist(otherlang,-9,-1) & wave==`w'
+la var otherlang "Speak language other than English?"
+tab otherlang wave, missing
+}
+
+
+//fill in gender, race, education, income, etc. for wave 2 interviews
+sort spid wave
+by spid (wave): carryforward female race_cat education income_cat ///
+otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
+
+gen white=race_cat==1
+gen black=race_cat==2
+gen hisp=race_cat==4
+gen other_race=race_cat==3
+label var white "White Non-Hisp"
+label var black "Black Non-Hisp"
+label var hisp "Hispanic"
+label var other_race "Other race/ethnicity"
+//merge white & other for reportability
+gen whiteoth=white | other_race if !missing(white) & !missing(other_r)
+label var whiteoth "White Non-Hispanic or other"
+
+//marital status
+//wave 2,3, use derived variable which is populated if not asked b/c no change 
+gen maritalstat=martlstat if wave==1
+replace maritalstat=dmarstat
+replace maritalstat=-9 if inlist(maritalstat,$miss)
+
+
+
+la var maritalstat "Marital status"
+label define maritallbl 1 "Married" 2 "Live w/Part" 3 "Separated" ///
+	4 "Divorced" 5 "Widowed" 6 "Never Married" -7 "Refused" -8 "DK"
+la val maritalstat maritallbl
+tab maritalstat wave, missing
+
+
+
+
+*********************************************
+*********************************************
+//Insurance coverage
+*********************************************
+*********************************************
+//medicaid status
+gen medicaid=.
+forvalues w=1/7{
+	tab cmedicaid if wave==`w' , missing
+	replace medicaid=1 if cmedicaid==1 & wave==`w'
+	replace medicaid=0 if cmedicaid==2 & wave==`w'
+	replace medicaid=-7 if cmedicaid==-7 & wave==`w'
+	replace medicaid=-8 if cmedicaid==-8 & wave==`w'
+}
+la var medicaid "Medicaid"
+tab medicaid wave,missing
+tab medicaid if wave==1 & ivw_type==1,missing
+//medigap status
+gen medigap=.
+forvalues w=1/7{
+	tab mgapmedsp if wave==`w' , missing
+	replace medigap=1 if mgapmedsp==1 & wave==`w'
+	replace medigap=0 if mgapmedsp==2 & wave==`w'
+	replace medigap=-7 if mgapmedsp==-7 & wave==`w'
+	replace medigap=-8 if mgapmedsp==-8 & wave==`w'
+}
+la var medigap "Medigap"
+tab medigap wave, missing
+
+//medicare part d
+gen mc_partd=.
+forvalues w=1/7{
+	tab covmedcad if wave==`w' , missing
+	replace mc_partd=1 if covmedcad==1 & wave==`w'
+	replace mc_partd=0 if covmedcad==2 & wave==`w'
+	replace mc_partd=-7 if covmedcad==-7 & wave==`w'
+	replace mc_partd=-8 if covmedcad==-8 & wave==`w'
+}
+la var mc_partd "Medicare Part D"
+tab mc_partd wave,missing
+
+//tricare - va insurance
+gen tricare=.
+forvalues w=1/7{
+	tab covtricar if wave==`w' , missing
+	replace tricare=1 if covtricar==1 & wave==`w'
+	replace tricare=0 if covtricar==2 & wave==`w'
+	replace tricare=-7 if covtricar==-7 & wave==`w'
+	replace tricare=-8 if covtricar==-8 & wave==`w'
+}
+la var tricare "Tricare - veterans insurance"
+tab tricare wave,missing
+
+//long term care nursing home insurance, private
+gen private_ltc=.
+forvalues w=1/7{
+	tab nginsnurs if wave==`w' , missing
+	replace private_ltc=1 if nginsnurs==1 & wave==`w'
+	replace private_ltc=0 if nginsnurs==2 & wave==`w'
+	replace private_ltc=-7 if nginsnurs==-7 & wave==`w'
+	replace private_ltc=-8 if nginsnurs==-8 & wave==`w'
+}
+la var private_ltc "Private nursing home insurance"
+tab private_ltc wave,missing
+
+//if report nh insurance in prev wave, asked to verify still have it curr wave
+forvalues w=1/7{
+tab nginslast if wave==`w' & nginsnurs==-1, missing
+replace private_ltc=1 if nginslast==1 & nginsnurs==-1 & wave==`w'
+replace private_ltc=0 if nginslast==2 & nginsnurs==-1 & wave==`w'
+replace private_ltc=-7 if nginslast==-7 & nginsnurs==-1 & wave==`w'
+replace private_ltc=-8 if nginslast==-8 & nginsnurs==-1 & wave==`w'
+}
+tab private_ltc wave,missing
+
+*********************************************
+*********************************************
+//Residence information
+*********************************************
+*********************************************
+//residence physical structure variable only in wave 1
+tab resistrct if wave==1, missing
+tab resistrct placedesc if wave==1, missing
+//derived variable in waves 2, 3
+tab dresistrct if wave==2, missing
+//per user guide, need to fix this variable since incorrectly coded for 71 obs
+replace dresistrct = newstrct if inlist(spadrsnew,1,3) & inlist(newstrct,1,2,3,4,91)
+
+tab dresistrct if wave==3, missing
+
+//housing type in each wave, however missing if same residence as prior wave
+forvalues w=1/7{
+tab placedesc if wave==`w', missing
+}
+
+//if missing housing type in waves 2,3, backfill with wave 1 info
+//get indicators for moving in waves 2 or 3
+tab dadrscorr if wave==2, missing
+
+gen w2_moved=1 if dadrscorr==2 & wave==2
+replace w2_moved=0 if (dadrscorr==1 | dadrscorr==3) & wave==2
+tab w2_moved
+
+forvalues w=3/7{
+tab spadrsnew if wave==`w', missing
+gen w`w'_moved=1 if spadrsnew==2
+replace w`w'_moved=0 if spadrsnew==1 | spadrsnew==3
+tab w`w'_moved
+}
+
+gen ht_new=.
+forvalues w=2/7{
+replace ht_new=placedesc if wave==`w'
+replace ht_new=. if placedesc==-1 & w`w'_moved==0
+}
+
+tab ht_new wave, missing
+
+sort spid wave
+by spid (wave): carryforward ht_new, replace
+
+tab ht_new wave, missing
+
+//most residence information from wave 1
+//used derived variables wave 2,3
+gen residence=.
+forvalues w=1/7{
+replace residence=resistrct if wave==`w'
+}
+
+replace residence=3 if inlist(residence,4,91)
+
+tab residence wave
+
+//now overwrite with the new housing type description as done in orig code
+replace residence=1 if ht_new==1
+replace residence=2 if inlist(ht_new,2,3,4,91)
+replace residence=. if inlist(residence,-9,-1)
+tab residence wave, missing
+
+label define residlbl 1 "Private Res." 2 "Group Home/Facility" ///
+	3 "Mobile Home/Multi-Unit"
+label values residence residlbl
+forvalues w=1/7{
+tab residence if wave==`w', missing
+}
+
+
+***********************************************************
+//living arrangement, NHATS derived variable
+gen livearrang=.
+forvalues w=1/7{
+tab dlvngarrg if wave==`w' & ivw_type==1, missing
+replace livearrang=dlvngarrg if wave==`w'
+replace livearrang=1 if (dlvngarrg==-9 & dhshldnum==1)  & wave==`w'
+replace livearrang=-7 if dlvngarrg == -7 & wave == `w'
+replace livearrang=-8 if dlvngarrg == -8 & wave == `w'
+}
+replace livearrang=. if livearrang==-1 
+
+la var livearrang "Living arrangmeent, categorical"
+la def livearrang 1 "Alone" 2 "With spouse/partner" ///
+	3"With spouse/partner + others" 4 "With others"
+la val livearrang livearrang
+tab livearrang wave if ivw_type==1, missing
+
+//live alone?
+gen livealone=1 if livearrang==1
+replace livealone=0 if inlist(livearrang,2,3,4)
+la var livealone "Lives alone"
+tab livealone livearrang, missing
+
+save round_1_7_cleanv1.dta, replace
+local ivars age female race_cat education  income_cat otherlang maritalstat ///
+medicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_new ///
+residence livearrang livealone
+
+foreach w in `ivars'{
+tab `w'
+}
+
+
+
+
+*********************************************
+log close
+
+
 H="Changelog"
 
 
@@ -5681,7 +6264,12 @@ H="Changelog"
 
 Updates:
 
-02/04/2019
+
+02/05/2019 MH
+-----------
+Making structural changes to NHATS Data Cleaning Part 2 to make code run smoothly and faster.
+
+02/04/2019 MH
 -----------
 Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 2. 
 Making small changes to make it long. 
