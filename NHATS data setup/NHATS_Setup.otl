@@ -3896,6 +3896,13 @@ forvalues i=1/`vn' {
 gen cg_ivw_month=c1intmonth if c1intmonth>0
 gen cg_ivw_year=2011 if c1intmonth>0
 gen cg_ivw_date=mdy(cg_ivw_month,1,cg_ivw_year)
+format cg_ivw_date %td
+label var cg_ivw_date "NSOC interview date"
+gen n_days_sp_to_cg_ivw=c1dintdays
+label var n_days_sp_to_cg_ivw "Days between SP & CG interviews"
+label define n_days_sp_to_cg_ivw 1 "30 days or less" 2 "31-60 days" ///
+3 "61-90 days"  4 "91-120 days" 5 "121 days or more"
+label values n_days_sp_to_cg_ivw n_days_sp_to_cg_ivw
 gen cg_birth_year=chd1cgbrthyr if chd1cgbrthyr>0
 gen cg_birth_month=chd1cgbrthmt if chd1cgbrthmt>0
 gen cg_age=cg_ivw_year-chd1cgbrthyr if chd1cgbrthyr>0
@@ -3987,8 +3994,8 @@ use NSOC_Round_5_File.dta
 
 merge 1:1 spid opid using NSOC_Round_5_OP_Tracker_File.dta, gen(m1) keep(match master)
 merge 1:1 spid opid using NHATS_Round_5_OP_Sen_Dem_File.dta, gen(m8) keep(match master)
-merge 1:m spid opid using "E:\nhats\data\NHATS cleaned\op_round_1_5.dta", gen(m2) keep(match master)
-keep if wave==1
+gen wave=5
+merge 1:1 spid opid wave using "E:\nhats\data\NHATS cleaned\op_round_1_5.dta", gen(m2) keep(match master)
 merge m:1 spid using NSOC_Round_5_SP_Tracker_File.dta, gen(m3) keep(match master)
 tostring opid, replace
 merge 1:1 spid opid using "E:\nhats\data\NHATS Public\round_5\NHATS_Round_5_OP_File.dta", ///
@@ -4161,8 +4168,15 @@ forvalues i=1/`vn' {
 }
 
 gen cg_ivw_month=c5intmonth if c5intmonth>0
-gen cg_ivw_year=2011 if c5intmonth>0
+gen cg_ivw_year=2015 if c5intmonth>0
 gen cg_ivw_date=mdy(cg_ivw_month,1,cg_ivw_year)
+label var cg_ivw_date "NSOC interview date"
+format cg_ivw_date %td
+gen n_days_sp_to_cg_ivw=c5dintdays
+label var n_days_sp_to_cg_ivw "Days between SP & CG interviews"
+label define n_days_sp_to_cg_ivw 1 "30 days or less" 2 "31-60 days" ///
+3 "61-90 days"  4 "91-120 days" 5 "121 days or more"
+label values n_days_sp_to_cg_ivw n_days_sp_to_cg_ivw
 gen cg_birth_year=chd5cgbrthyr if chd5cgbrthyr>0
 gen cg_birth_month=chd5cgbrthmt if chd5cgbrthmt>0
 gen cg_age=cg_ivw_year-chd5cgbrthyr if chd5cgbrthyr>0
@@ -4255,8 +4269,9 @@ use NSOC_R7B_Crss_File.dta
 
 merge 1:1 spid opid using NSOC_R7B_Crss_OP_Tracker_File.dta, gen(m1) keep(match master)
 merge 1:1 spid opid using NHATS_Round_7_OP_Sen_Dem_File.dta, gen(m8) keep(match master)
-merge 1:m spid opid using "E:\nhats\data\NHATS cleaned\op_round_1_7.dta", gen(m2) keep(match master)
-keep if wave==1
+gen wave=7
+merge 1:1 spid opid wave using "E:\nhats\data\NHATS cleaned\op_round_1_7.dta", gen(m2) keep(match master)
+
 merge m:1 spid using NSOC_R7B_Crss_SP_Tracker_File.dta, gen(m3) keep(match master)
 tostring opid, replace
 merge 1:1 spid opid using "E:\nhats\data\NHATS Public\round_7\NHATS_Round_7_OP_File.dta", ///
@@ -4429,8 +4444,15 @@ forvalues i=1/`vn' {
 }
 
 gen cg_ivw_month=c7intmonth if c7intmonth>0
-gen cg_ivw_year=2011 if c7intmonth>0
+gen cg_ivw_year=2017 if c7intmonth>0
 gen cg_ivw_date=mdy(cg_ivw_month,1,cg_ivw_year)
+label var cg_ivw_date "NSOC interview date"
+format cg_ivw_date %td
+gen n_days_sp_to_cg_ivw=c7dintdays
+label var n_days_sp_to_cg_ivw "Days between SP & CG interviews"
+label define n_days_sp_to_cg_ivw 1 "30 days or less" 2 "31-60 days" ///
+3 "61-90 days"  4 "91-120 days" 5 "121 days or more"
+label values n_days_sp_to_cg_ivw n_days_sp_to_cg_ivw
 gen cg_birth_year=chd7cgbrthyr if chd7cgbrthyr>0
 gen cg_birth_month=chd7cgbrthmt if chd7cgbrthmt>0
 gen cg_age=cg_ivw_year-chd7cgbrthyr if chd7cgbrthyr>0
@@ -6260,6 +6282,10 @@ H="Changelog"
 
 Updates:
 
+02/06/2019 MH
+-----------
+Creating new macros for easier updates. 
+
 
 02/05/2019 MH
 -----------
@@ -6267,7 +6293,7 @@ Making structural changes to NHATS Data Cleaning Part 2 to make code run smoothl
 
 02/04/2019 MH
 -----------
-Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 2. 
+Revising code to compress and run more efficiently, structural changes wide to long. NHATS Data Cleaning Part 2 continued.  
 Making small changes to make it long. 
 
 01/31/2019 MH

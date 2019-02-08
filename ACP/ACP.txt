@@ -40,7 +40,7 @@ Created by: Mohammed
 Date Created: 01/25/2019
 
 Updated by: MH
-Date Updated: 02/06/2019
+Date Updated: 02/07/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
@@ -189,8 +189,9 @@ local t=`t'+1
 }
 
 foreach x in `demo2' `sn'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+sum `x' if  `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -223,8 +224,9 @@ local t=`t'+1
 }
 
 foreach x in `health' `psy'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+sum `x' if  `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -268,6 +270,7 @@ tab `x' if wave==2 , m
 }
 
 capture log close
+
 
 H="HRS "
 /*
@@ -413,6 +416,36 @@ egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d
 tab degree, gen(degree)
 tab imprelig, gen(imprelig)
 
+//education var
+gen educ1=0
+replace educ1=1 if degree1==1
+gen educ2=0
+replace educ2=1 if degree2==1 | degree3==1
+gen educ3=0
+replace educ3=1 if degree4==1 | degree8==1
+gen educ4=0 
+replace educ4=1 if degree5==1 | degree6==1 | degree7==1
+
+//fixing dementia
+gen dem=.
+replace dem=0 if alz_hrs==0 & dem_hrs==0
+replace dem=1 if alz_hrs==1 | dem_hrs==1
+
+gen dem0=.
+replace dem0=0 if dem==1
+replace dem0=1 if dem==0
+
+/*hispanic other
+gen hispoth=.
+replace hispoth=0 if inlist(race_cat,1,2)
+replace hispoth=1 if inlist(race_cat,3,4)
+*/
+lab var educ1 "<HS"
+lab var educ2 "HS/GED"
+lab var educ3 "Some College, 2yr degree"
+lab var educ4 "College degree, higher"
+lab var dem "SR Dementia (incl. Alz)"
+lab var dem0 "No SR Dementia (incl. Alz.)"
 lab var age "Age"
 lab var male "Male"
 lab var degree1 "None"
@@ -439,7 +472,7 @@ lab var imprelig1 "Importance of Religion: very important"
 lab var imprelig2 "Importance of Religion: somewhat important"
 lab var imprelig3 "Importance of Religion: not too "
 lab var dem_hrs "SR Dementia"
-
+//lab var hisp_oth "Hispanic, Other"
 
 gen ab=.
 replace ab=0 if informal==1
@@ -482,23 +515,26 @@ local lab7 Significant Subgroup Differences
 
 local demo1 age 
 
-local demo2 male female degree1 degree2 degree3 degree4 degree5 degree6 degree7 ///
-degree8 nw_lowest nw_midlow nw_midhigh nw_highest white black hisp_eth ///
-other_race h12wohous0 h12wohous
+local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
+nw_highest 
+
+local race white black hisp other_na_api_race 
+
+local demo3 h12wohous0 h12wohous
 
 local sn married marital_nev marital_wid marital_div marital_sep ///
 live_alone live_others
 
 local sn1 child 
 
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem_hrs0 ///
-dem_hrs cesd_tot_ge3_n0 cesd_tot_ge3_n  
+local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
+dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
 
 local psy imprelig1 imprelig2 imprelig3 
 
 local psy1 consc neuro
 
-local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+local rn: word count 1 1 `demo1' `demo2' `race' `demo3' `sn' `sn1' `health' `psy' `psy1' 
 
 forvalues i=1/7{
 putexcel ``i''3=("`lab`i''")
@@ -531,9 +567,47 @@ local r=`r'+1
 local t=`t'+1
 }
 
-foreach x in `demo2' `sn'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+foreach x in `demo2'{
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `race' {
+sum `x' if `q'==1
+if `r(mean)'*`r(N)'>=11 | `r(mean)'*`r(N)'==0{
+mat tab[`r',`c']=`r(mean)'*100
+}
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+
+}
+foreach x in `demo3' `sn'{
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -566,8 +640,9 @@ local t=`t'+1
 }
 
 foreach x in `health' `psy'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -609,7 +684,7 @@ local c=`c'+1
 putexcel (B4)=mat(tab)
 
 local r=4
-foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1'{
+foreach x in `demo1' `demo2' `race' `demo3' `sn' `sn1' `health' `psy' `psy1'{
 local lab: var label `x'
 putexcel A`r'=("`lab'")
 local r=`r'+1
@@ -639,23 +714,27 @@ local lab7 Significant Subgroup Differences
 
 local demo1 age 
 
-local demo2 male female degree1 degree2 degree3 degree4 degree5 degree6 degree7 ///
-degree8 nw_lowest nw_midlow nw_midhigh nw_highest white black hisp_eth ///
-other_race h12wohous0 h12wohous
+local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
+nw_highest 
+
+local race white black hisp other_na_api_race 
+
+local demo3 h12wohous0 h12wohous
 
 local sn married marital_nev marital_wid marital_div marital_sep ///
 live_alone live_others
 
 local sn1 child 
 
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem_hrs0 ///
-dem_hrs cesd_tot_ge3_n0 cesd_tot_ge3_n  
+local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
+dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
 
 local psy imprelig1 imprelig2 imprelig3 
 
 local psy1 consc neuro
 
-local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1' 
+
+local rn: word count 1 1 `demo1' `demo2' `race' `demo3' `sn' `sn1' `health' `psy' `psy1'
 
 forvalues i=1/7{
 putexcel ``i''3=("`lab`i''")
@@ -688,9 +767,47 @@ local r=`r'+1
 local t=`t'+1
 }
 
-foreach x in `demo2' `sn'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+foreach x in `demo2'{
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+}
+
+foreach x in `race' {
+sum `x' if `q'==1
+if `r(mean)'*`r(N)'>=11 | `r(mean)'*`r(N)'==0{
+mat tab[`r',`c']=`r(mean)'*100
+}
+
+local `x'sig
+foreach m in ab ac ad bc bd cd{
+anova `x' `m'
+
+if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
+}	
+putexcel (G`t')=("``x'sig'")
+
+
+local r=`r'+1
+local t=`t'+1
+
+}
+foreach x in `demo3' `sn'{
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -723,8 +840,9 @@ local t=`t'+1
 }
 
 foreach x in `health' `psy'{
-sum `x' if `x'==1 & `q'==1
-mat tab[`r',`c']=`r(N)'
+sum `x' if `q'==1
+mat tab[`r',`c']=`r(mean)'*100
+
 
 local `x'sig
 foreach m in ab ac ad bc bd cd{
@@ -767,7 +885,7 @@ local c=`c'+1
 putexcel (B4)=mat(tab)
 
 local r=4
-foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy' `psy1'{
+foreach x in `demo1' `demo2' `race' `demo3' `sn' `sn1' `health' `psy' `psy1'{
 local lab: var label `x'
 putexcel A`r'=("`lab'")
 local r=`r'+1
@@ -780,6 +898,7 @@ putexcel A1=("Table 1: HRS Statistics by ACP Classification Leave Behind only")
 
 capture log close
 
+
 H="Changelog"
 
 
@@ -789,6 +908,10 @@ H="Changelog"
 
 Updates:
 
+02/07/2019 MH
+------------
+Fixed variable and removed cell size restrictions. 
+ 
 02/06/2019 MH
 ------------
 Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 

@@ -2269,7 +2269,7 @@ run;
 H="************Stata***************"
 
 
-H="variable creation"
+H="variable creation: utilization variables"
 use "E:\nhats\data\Projects\traj util after disability\util_post_disability.dta", clear
 
 //generate total paid from individual amounts
@@ -2373,9 +2373,23 @@ duplicates drop
 save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util.dta", replace
 
 
-H="accounting for censoring bc of death"
+H="merging in other relevent stata files"
+*this starts with the disability_w_util file and builds a workingfile to be used for future analyses.
+
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util.dta"
+
+merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\discat spid.dta"
+
+drop _merge
+merge 1:1 spid  using "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta", keepusing(indhelpstop)
+
+save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+
+
+H="further variable cleaning"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+
 *make a value missing if person died at least half way through quarter
-use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util.dta", replace
 
 gen days_index_death= death_date-index_date if death_date!=.
 replace days_index_death=1 if days_index_death>-348 & days_index_death<0
@@ -2415,7 +2429,41 @@ replace c2_edqp6=. if days_index_death<510
 replace c2_edqp7=. if days_index_death<593
 replace c2_edqp8=. if days_index_death<684
 
+*now make a variable flagging people who died each quarter
+
+gen diedqp1=0
+replace diedqp1=1 if days_index_death<91 & days_index_death!=.
+
+gen diedqp2=0
+replace diedqp2=1 if days_index_death<183 & days_index_death!=.
+
+gen diedqp3=0
+replace diedqp3=1 if days_index_death<274 & days_index_death!=.
+
+gen diedqp4=0
+replace diedqp4=1 if days_index_death<365 & days_index_death!=.
+
+gen diedqp5=0
+replace diedqp5=1 if days_index_death<456 & days_index_death!=.
+
+gen diedqp6=0
+replace diedqp6=1 if days_index_death<548 & days_index_death!=.
+
+gen diedqp7=0
+replace diedqp7=1 if days_index_death<639 & days_index_death!=.
+
+gen diedqp8=0
+replace diedqp8=1 if days_index_death<730 & days_index_death!=.
+
+save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", replace
+
+H="****below this heading: analysis. okay to run more than once***"
+
+
 H="examining trends before/after disability"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+
+
 *total expenditures before and after disability
 
 sum expqn4 
@@ -2459,10 +2507,9 @@ tab c2_ipadmqp8
 
 
 H="examining trends by sc vs mob and whether help ended"
- use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util.dta"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
 
-merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\discat spid.dta"
-
+*trends of expenditures by whether sc or mob came first
 
 tab discat, sum(expqn4)
 tab discat, sum(expqn3) 
@@ -2477,8 +2524,7 @@ tab discat, sum(c2_expqp6)
 tab discat, sum(c2_expqp7) 
 tab discat, sum(c2_expqp8)
 
-drop _merge
-merge 1:1 spid  using "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta", keepusing(indhelpstop)
+*trends of expenditures by whether help ended
 
 tab indhelpstop, sum(expqn4)
 tab indhelpstop, sum(expqn3) 
@@ -2495,29 +2541,6 @@ tab indhelpstop, sum(c2_expqp8)
 
 
 *rates of death by quarter
-gen diedqp1=0
-replace diedqp1=1 if days_index_death<91 & days_index_death!=.
-
-gen diedqp2=0
-replace diedqp2=1 if days_index_death<183 & days_index_death!=.
-
-gen diedqp3=0
-replace diedqp3=1 if days_index_death<274 & days_index_death!=.
-
-gen diedqp4=0
-replace diedqp4=1 if days_index_death<365 & days_index_death!=.
-
-gen diedqp5=0
-replace diedqp5=1 if days_index_death<456 & days_index_death!=.
-
-gen diedqp6=0
-replace diedqp6=1 if days_index_death<548 & days_index_death!=.
-
-gen diedqp7=0
-replace diedqp7=1 if days_index_death<639 & days_index_death!=.
-
-gen diedqp8=0
-replace diedqp8=1 if days_index_death<730 & days_index_death!=.
 
 tab diedqp1
 tab diedqp2
