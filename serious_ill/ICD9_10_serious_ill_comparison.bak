@@ -7925,6 +7925,242 @@ foreach smivar of local smi {
 }
 
 
+H="Comparison tables, shareable"
+/*
+
+Created by: EBL
+Date Created: 2/11/19
+
+Updated by: 
+Date Updated: 
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name @INSERTNAME_`date'
+di "`name'"
+
+
+
+clear all 
+set more off
+capture log close
+
+local intpath "${intpath}"
+local datapath "${datapath}"
+local logpath "${logpath}"
+
+
+
+****************************************************
+
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+local date=subinstr("$S_DATE"," ","_",.)
+
+use serious_ill_nhats_sample, clear
+svyset varunit [pw=anfinwgt], strata(varstrat)
+
+local income
+forvalues i=1/4 {
+	local income `income' income`i'
+}
+
+local cvars1 age m2dec m2d
+local cvars2 
+local ivars1 ind_trunc_m2dec ind_trunc_m2d female white black hisp other_race married educ_hs_ind
+local ivars2 `income' proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent nhres 
+
+local comorbs 
+forvalues i=1/31 {
+	local comorbs `comorbs' comorb_`i'_0_6m
+}
+
+local comorbs `comorbs' comorb_ge3_0_6m
+
+local smi 
+foreach x of varlist smi*ind {
+	local smi `smi' `x'
+}
+
+
+local ioutcomes ind_hosp_adm_p6m mult_ip_adm_p6m ind_ed_op_p6m  ///
+ind_icu_p6m ind_hs_p6m died_6
+
+local coutcomes ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m
+ 
+
+gen n=1
+label var n "Population Estimate"
+
+
+
+local vars  `cvars1' `cvars2' `ivars1' `ivars2'
+
+local rnvars : word count `vars'
+local rndx : word count `comorbs' `smi'
+local rnout : word count `ioutcomes' `coutcomes'
+
+mat tab=J(`rnvars'+3,3,.)
+mat stars=J(`rnvars'+3,3,0)
+local r=1
+local c=1
+
+foreach w in 4 6 {
+	forvalues time=1/2 {
+		foreach x of local cvars`time' {	
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1 [aw=anfinwgt]
+			mat tab[`r',`c']=r(mean)
+			if "`w'"=="6" {
+				svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1): mean `x', over(wave)
+				test [`x']4=[`x']6
+				mat tab[`r',3]=r(p)
+				mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`time' {
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1 [aw=anfinwgt]
+			if (r(mean)*r(N)>=11 | r(mean)*r(N)==0) & ((1-r(mean))*r(N)>=11 | (1-r(mean))*r(N)==0) ///
+			mat tab[`r',`c']=r(mean)*100
+			if "`w'"=="6" {
+				svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1): tab `x' wave
+				mat tab[`r',3]=e(p_Pear)
+				mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+			local r=`r'+1
+}
+}
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1  [aw=anfinwgt]
+		mat tab[`r',`c']=r(N)
+		mat tab[`r'+1,`c']=r(sum_w)
+		local nume=r(sum_w)
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) [aw=anfinwgt]
+		mat tab[`r'+2,`c']=`nume'/r(sum_w)*100
+		local r=1
+		local c=`c'+1
+}
+
+mat rownames tab=`vars' N n
+frmttable using `logpath'\comparison_icd9_icd10_tables`date'_shareable.rtf, statmat(tab) title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+"Sample characteristics, NHATS 2014 & 2016") ctitles("" "2014" "2016" "P-value") ///
+annotate(stars) asymbol(*,**) replace varlabels ///
+note("6+ months of FFS Medicare prior to interview and 1+ SMI")
+
+
+
+local smi ind_smi_any `smi'
+
+foreach y in smi comorbs {
+local rn : word count ``y''
+mat tab=J(`rn'+2,3,.)
+mat stars=J(`rn'+2,3,0)
+local r=1
+local c=1
+
+foreach w in 4 6 {
+	foreach x in ``y'' {
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1 [aw=anfinwgt]
+			if (r(mean)*r(N)>=11 | r(mean)*r(N)==0) & ((1-r(mean))*r(N)>=11 | (1-r(mean))*r(N)==0) ///
+		mat tab[`r',`c']=r(mean)*100
+		if "`w'"=="6" {
+			svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1): tab `x' wave
+			mat tab[`r',3]=e(p_Pear)
+			mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & smi_count>=1  [aw=anfinwgt]
+		mat tab[`r',`c']=r(N)
+		mat tab[`r'+1,`c']=r(sum_w)
+		local r=1
+		local c=`c'+1
+}
+
+mat rownames tab=``y'' N n
+if "`y'"=="smi" local title "Serious Medical Illnesses"
+else local title "Elixhauser Comorbidities"
+
+frmttable using `logpath'\comparison_icd9_icd10_tables`date'_shareable.rtf, statmat(tab) title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+"`title'") ctitles("" "2014" "2016" "P-value") ///
+annotate(stars) asymbol(*,**) addtable varlabels ///
+note("6+ months of FFS Medicare prior to interview and 1+ SMI" \ ///
+"Elixhauser codes modified for renal and liver diseases, and dementia is added" \ ///
+"Additional neurodegenerative diseases included with ALS in ICD-10 only")
+
+
+
+}
+
+//2/5/19--also looking at stroke, despite tiny sample size
+local smi ind_smi_any smi_dem_ind smi_cancer_ind smi_renal_ind smi_copd_ind ///
+smi_diab_compl_ind smi_cva_ind
+
+foreach smivar of local smi {
+
+
+	local rncout : word count `coutcomes'
+	mat tab=J(`rnout'+`rncout'+2,3,.)
+	mat stars=J(`rnout'+`rncout'+2,3,0)
+	local r=1
+	local c=1
+
+	foreach w in 4 6 {
+			foreach x of local coutcomes {	
+				sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1 [aw=anfinwgt],d
+				mat tab[`r',`c']=r(mean)
+				mat tab[`r'+1,`c']=r(p50)
+				if "`w'"=="6" {
+					svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1): mean `x', over(wave)
+					test [`x']4=[`x']6
+					mat tab[`r',3]=r(p)
+					mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+}
+				local r=`r'+2
+}
+			foreach x of local ioutcomes {
+				sum `x' if wave==`w'  & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1  [aw=anfinwgt],d
+				if (r(mean)*r(N)>=11 | r(mean)*r(N)==0) & ((1-r(mean))*r(N)>=11 | (1-r(mean))*r(N)==0) ///
+				mat tab[`r',`c']=r(mean)*100
+				if "`w'"=="6" {
+					svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1): tab `x' wave
+					mat tab[`r',3]=e(p_Pear)
+					mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+				local r=`r'+1
+}
+			sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & `smivar'==1 [aw=anfinwgt]
+			mat tab[`r',`c']=r(N)
+			mat tab[`r'+1,`c']=r(sum_w)
+			local r=1
+			local c=`c'+1
+}
+
+
+	local rnames
+	foreach x in `coutcomes' {
+	local rnames `rnames' `x' Median
+}
+	mat rownames tab=`rnames' `ioutcomes' N n
+	frmttable using `logpath'\comparison_icd9_icd10_tables`date'_shareable.rtf, ///
+	statmat(tab) title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+	"Six-month outcomes, `smivar'=1") ctitles("" "2014" "2016" "P-value") ///
+	annotate(stars) asymbol(*,**) addtable varlabels ///
+	note("6+ months of FFS Medicare prior to interview and 1+ SMI" \ ///
+	"Less than 6 full months of follow-up for 42% of sample in 2016" \ ///
+	"Expenditures have been inflation adjusted to 2016 dollars")
+
+}
+
+
 H="Comparison tables, restricted to hospital admission"
 /*
 
@@ -8157,7 +8393,247 @@ foreach smivar of local smi {
 	"Expenditures have been inflation adjusted to 2016 dollars")
 
 }
+/*
+
+Created by: EBL
+Date Created: 2/7/19
+
+Updated by:
+Date Updated:
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name @INSERTNAME_`date'
+di "`name'"
+
+
+
+clear all 
+set more off
+capture log close
+
+local intpath "${intpath}"
+local datapath "${datapath}"
+local logpath "${logpath}"
+
+
+
+****************************************************
+
+
+cd `datapath'
+*log using `logpath'\table1_xwave.txt, text replace
+
+local date=subinstr("$S_DATE"," ","_",.)
+
+//use serious_ill_nhats_sample, clear
+use serious_ill_nhats_1_6_full_6m if !lml & sp_ivw==1, clear
+keep if inlist(wave,4,6)
+svyset varunit [pw=anfinwgt], strata(varstrat)
+
+local income
+forvalues i=1/4 {
+	local income `income' income`i'
+}
+
+local cvars1 age m2dec m2d
+local cvars2 
+local ivars1 ind_trunc_m2dec ind_trunc_m2d female white black hisp other_race married educ_hs_ind
+local ivars2 `income' proxy  ///
+medicaid medigap srh_fp adl_eat_help adl_bath_help adl_toil_help adl_dres_help ///
+adl_ins_help adl_bed_help adl_independent nhres ind_hosp_adm_6m
+
+local comorbs 
+forvalues i=1/31 {
+	local comorbs `comorbs' comorb_`i'_0_6m
+}
+
+local comorbs `comorbs' comorb_ge3_0_6m
+
+local smi 
+foreach x of varlist smi*ind {
+	local smi `smi' `x'
+}
+
+
+local ioutcomes ind_hosp_adm_p6m mult_ip_adm_p6m ind_ed_op_p6m  ///
+ind_icu_p6m ind_hs_p6m died_6
+
+local coutcomes ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m
+ 
+
+gen n=1
+gen n2=1
+label var n "Population Estimate"
+label var n2 "Percentage of total pop. w/ 6m FFS MC"
+
+
+local vars  `cvars1' `cvars2' `ivars1' `ivars2'
+
+local rnvars : word count `vars'
+local rndx : word count `comorbs' `smi'
+local rnout : word count `ioutcomes' `coutcomes'
+
+mat tab=J(`rnvars'+3,3,.)
+mat stars=J(`rnvars'+3,3,0)
+local r=1
+local c=1
+
+foreach w in 4 6 {
+	forvalues time=1/2 {
+		foreach x of local cvars`time' {	
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1 [aw=anfinwgt]
+			mat tab[`r',`c']=r(mean)
+			if "`w'"=="6" {
+				svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1): mean `x', over(wave)
+				test [`x']4=[`x']6
+				mat tab[`r',3]=r(p)
+				mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+}
+			local r=`r'+1
+}
+		foreach x of local ivars`time' {
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1 [aw=anfinwgt]
+			mat tab[`r',`c']=r(mean)*100
+			if "`w'"=="6" {
+				svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1): tab `x' wave
+				mat tab[`r',3]=e(p_Pear)
+				mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+			local r=`r'+1
+}
+}
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & ///
+		criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1  [aw=anfinwgt]
+		mat tab[`r',`c']=r(N)
+		mat tab[`r'+1,`c']=r(sum_w)
+		local nume=r(sum_w)
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) [aw=anfinwgt]
+		mat tab[`r'+2,`c']=`nume'/r(sum_w)*100
+		di `nume'/r(sum_w)*100
+		local r=1
+		local c=`c'+1
+}
+
+mat rownames tab=`vars' N n n2
+frmttable using `logpath'\comparison_icd9_icd10_tables`date'_w_adm.rtf, statmat(tab) ///
+title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+"Sample characteristics, NHATS 2014 & 2016") ctitles("" "2014" "2016" "P-value") ///
+annotate(stars) asymbol(*,**) replace varlabels ///
+note("6+ months of FFS Medicare prior to interview and 1+ SMI and hospital admission")
+
+
+
+local smi ind_smi_any `smi'
+
+foreach y in smi comorbs {
+local rn : word count ``y''
+mat tab=J(`rn'+2,3,.)
+mat stars=J(`rn'+2,3,0)
+local r=1
+local c=1
+
+foreach w in 4 6 {
+	foreach x in ``y'' {
+			sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1 [aw=anfinwgt]
+		mat tab[`r',`c']=r(mean)*100
+		if "`w'"=="6" {
+			svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1): tab `x' wave
+			mat tab[`r',3]=e(p_Pear)
+			mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+		local r=`r'+1
+}
+		sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & smi_count>=1  [aw=anfinwgt]
+		mat tab[`r',`c']=r(N)
+		mat tab[`r'+1,`c']=r(sum_w)
+		local r=1
+		local c=`c'+1
+}
+
+mat rownames tab=``y'' N n
+if "`y'"=="smi" local title "Serious Medical Illnesses"
+else local title "Elixhauser Comorbidities"
+
+frmttable using `logpath'\comparison_icd9_icd10_tables`date'_w_adm.rtf, statmat(tab) title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+"`title'") ctitles("" "2014" "2016" "P-value") ///
+annotate(stars) asymbol(*,**) addtable varlabels ///
+note("6+ months of FFS Medicare prior to interview and 1+ SMI and hospital admission" \ ///
+"Elixhauser codes modified for renal and liver diseases, and dementia is added" \ ///
+"Additional neurodegenerative diseases included with ALS in ICD-10 only")
+
+
+
+}
+
+//2/5/19--also looking at stroke, despite tiny sample size
+local smi ind_smi_any smi_dem_ind smi_cancer_ind smi_renal_ind smi_copd_ind ///
+smi_diab_compl_ind smi_cva_ind
+
+foreach smivar of local smi {
+
+
+	local rncout : word count `coutcomes'
+	mat tab=J(`rnout'+`rncout'+2,3,.)
+	mat stars=J(`rnout'+`rncout'+2,3,0)
+	local r=1
+	local c=1
+
+	foreach w in 4 6 {
+			foreach x of local coutcomes {	
+				sum `x' if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & `smivar'==1 [aw=anfinwgt],d
+				mat tab[`r',`c']=r(mean)
+				mat tab[`r'+1,`c']=r(p50)
+				if "`w'"=="6" {
+					svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & `smivar'==1): mean `x', over(wave)
+					test [`x']4=[`x']6
+					mat tab[`r',3]=r(p)
+					mat stars[`r',3]=(r(p)<.05)+(r(p)<.01)
+}
+				local r=`r'+2
+}
+			foreach x of local ioutcomes {
+				sum `x' if wave==`w'  & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & `smivar'==1  [aw=anfinwgt],d
+				mat tab[`r',`c']=r(mean)*100
+				if "`w'"=="6" {
+					svy, subpop(if cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & `smivar'==1): tab `x' wave
+					mat tab[`r',3]=e(p_Pear)
+					mat stars[`r',3]=(e(p_Pear)<.01)+(e(p_Pear)<.05)
+}
+				local r=`r'+1
+}
+			sum n if wave==`w' & cont_ffs_n_mos>=6 & !missing(cont_ffs_n_mos) & criteria_a==1 & ind_hosp_adm_6m==1 & `smivar'==1 [aw=anfinwgt]
+			mat tab[`r',`c']=r(N)
+			mat tab[`r'+1,`c']=r(sum_w)
+			local r=1
+			local c=`c'+1
+}
+
+
+	local rnames
+	foreach x in `coutcomes' {
+	local rnames `rnames' `x' Median
+}
+	mat rownames tab=`rnames' `ioutcomes' N n
+	frmttable using `logpath'\comparison_icd9_icd10_tables`date'_w_adm.rtf, ///
+	statmat(tab) title("Identifying Serious Illness in ICD-9 and ICD-10" \ ///
+	"Six-month outcomes, `smivar'=1") ctitles("" "2014" "2016" "P-value") ///
+	annotate(stars) asymbol(*,**) addtable varlabels ///
+	note("6+ months of FFS Medicare prior to interview and 1+ SMI and hospital admission" \ ///
+	"Less than 6 full months of follow-up for 42% of sample in 2016" \ ///
+	"Expenditures have been inflation adjusted to 2016 dollars")
+
+}
 
 
 H="changelog"
+2/11/19-EBL-added shareable Comparison tables header
+
+2/8/19-EBL-Added "Comparison tables, restricted to hospital admission"
+
 2/7/19-EBL-started project doc and added code to draw sample from raw data

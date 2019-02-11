@@ -83,7 +83,6 @@ data ip_check (keep = bene_id index_date index_month year wave ffs_6m);
 set iv_mb2;
 run;
 
-
 data inpatient;
 set claims.ip_06_16;
 run;
@@ -208,6 +207,29 @@ proc sort data=ip1 nodupkey; by bene_id index_date; run;
 proc freq data=ip1; tables ip_rehab; run;
 
 proc export data=ip1 outfile="E:\nhats\data\Projects\IAH\final_data\iah_rehab_flag.dta" replace; run;
+
+
+/***** Identifying any Home Health Claim +/- 90 days of interview ******/
+
+data homehealth;
+set claims.hh_09_16;
+run;
+
+proc sql;
+create table nhats_hh as select a.*, b.admit_date
+from ip_check a
+inner join homehealth b
+on a.bene_id=b.bene_id and -90<=a.index_date - b.admit_date<=90;
+quit;
+
+proc export data=nhats_hh outfile="E:\nhats\data\Projects\IAH\int_data\homehealth_visit.dta" dbms=stata replace; run;
+
+
+
+
+
+
+
 
 /********** Identifying house calls ************/
 
@@ -3199,6 +3221,25 @@ sdec(2) annotate(stars) asymbol(*,**) addtable
 
 
 H="***************************"
+
+
+H="HCC"
+use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\mbsf_06_16.dta" , clear
+
+gen hicno = bene_id
+
+gen dob = birth_date
+
+gen sex = sex_ident_cd
+replace sex = bene_sex_ident_cd if sex==""
+
+gen orec =  bene_entlmt_rsn_orig
+replace orec = entlmt_rsn_orig if orec==""
+
+
+keep hicno dob sex orec year
+
+saveold "E:\nhats\data\Projects\IAH\HCC\2018-Model-Software (1)\CMS-HCC software V2218.79.O1\hicno.dta", version(12) replace
 
 
 H="Changelog"
