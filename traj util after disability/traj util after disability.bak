@@ -191,6 +191,27 @@ keep discat spid
 
  save "E:\nhats\data\Projects\traj util after disability\discat spid.dta"
 
+H="making file for date of NSOC interview"
+ use "E:\nhats\data\NHATS cleaned\nsoc_round_1.dta" 
+ merge 1:1 spid opid using "E:\nhats\data\NHATS cleaned\nsoc_round_5.dta" 
+ drop _merge
+  merge 1:1 spid opid using "E:\nhats\data\NHATS cleaned\nsoc_round_7.dta" 
+  
+ *first delete repetitive dates, such as if more than one opid is interviewed in a wave 
+ sort spid cg_ivw_date
+by spid, sort: gen ncount=_n
+gen drop =0 
+by spid: replace drop=1 if cg_ivw_date==cg_ivw_date[_n-1]
+drop if drop==1
+
+*reshape wide. only need spid and date
+  keep spid cg_ivw_date
+  sort spid cg_ivw_date
+ by spid, sort: gen count=_n
+  reshape wide cg_ivw_date, j(count) i(spid)
+ 
+ save "E:\nhats\data\Projects\traj util after disability\nsoc date.dta"
+
 H="***************SAS here*************"
 
 

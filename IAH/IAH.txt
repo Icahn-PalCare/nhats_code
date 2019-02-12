@@ -3237,9 +3237,68 @@ gen orec =  bene_entlmt_rsn_orig
 replace orec = entlmt_rsn_orig if orec==""
 
 
-keep hicno dob sex orec year
+keep hicno dob sex orec year covstart
 
 saveold "E:\nhats\data\Projects\IAH\HCC\2018-Model-Software (1)\CMS-HCC software V2218.79.O1\hicno.dta", version(12) replace
+
+
+proc import datafile="E:\nhats\data\Projects\IAH\HCC\2018-Model-Software (1)\CMS-HCC software V2218.79.O1\hicno.dta" out=hicno dbms=stata replace; run;
+
+data hicno;
+set hicno;
+format dob date9.;
+run;
+
+proc sort data=hicno nodupkey; by descending year hicno; run;
+
+
+proc sql;
+create table hicno_ffs as select a.*, b.*
+from hcc.ffs_before a
+left join hicno b
+on a.bene_id = b.hicno;
+quit;
+
+
+data hicno_ffs;
+set hicno_ffs;
+start_year = year(covstart);
+newenroll = year - start_year;
+ltimcaid = 0;
+if indexc(buyin_bef, "A", "B", "C")>0 then ltimcaid = 1;
+run;
+
+data hicno_ffs;
+set hicno_ffs;
+nemcaid = 0;
+if newenroll<=1 and ltimcaid=1 then nemcaid = 1;
+run;
+
+proc freq data=hicno_ffs; tables newenroll nemcaid; run;
+
+data hicno_ffs;
+set hicno_ffs;
+hicno_id = hicno||(left(trim(year)));
+run;
+
+data hicno_hcc (keep = hicno_id sex dob ltimcaid nemcaid orec);
+set hicno_ffs;
+run;
+
+data hcc.hicno_hcc (rename=(hicno_id = hicno));
+set hicno_hcc;
+run;
+
+data diag_hcc;
+set hcc.dx_0_1yr;
+hicno = left(trim(bene_id))||left(trim(index_year));
+run;
+
+data hcc.diag_hcc (keep = hicno diag);
+set diag_hcc;
+run;
+
+proc sort data=hcc.diag_hcc nodup; by hicno; run;
 
 
 H="Changelog"

@@ -2404,7 +2404,11 @@ merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\discat s
 drop _merge
 merge 1:1 spid  using "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta", keepusing(indhelpstop)
 
-save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+drop _merge
+merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\nsoc date.dta"
+drop if _merge==2
+
+save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", replace
 
 
 H="further variable cleaning"
@@ -2475,6 +2479,37 @@ replace diedqp7=1 if days_index_death<639 & days_index_death!=.
 
 gen diedqp8=0
 replace diedqp8=1 if days_index_death<730 & days_index_death!=.
+
+
+*make a variable for the days from disability to nsoc interview (so negative means interviewed before disability)
+gen dis_nsoc_days1= cg_ivw_date1-index_date if cg_ivw_date1!=.
+gen dis_nsoc_days2= cg_ivw_date2-index_date if cg_ivw_date2!=.
+gen dis_nsoc_days3= cg_ivw_date3-index_date if cg_ivw_date3!=.
+gen dis_nsoc_days4= cg_ivw_date4-index_date if cg_ivw_date4!=.
+gen dis_nsoc_days5= cg_ivw_date5-index_date if cg_ivw_date5!=.
+gen dis_nsoc_days6= cg_ivw_date6-index_date if cg_ivw_date6!=.
+
+foreach var of varlist dis_nsoc_days1 dis_nsoc_days2 dis_nsoc_days3 dis_nsoc_days4 dis_nsoc_days5 dis_nsoc_days6 {
+replace `var'=. if `var'<-365
+replace `var'=. if `var'>730
+}
+
+gen dis_nsoc_mnths1= floor(dis_nsoc_days1/30)
+gen dis_nsoc_mnths2= floor(dis_nsoc_days2/30)
+gen dis_nsoc_mnths3= floor(dis_nsoc_days3/30)
+gen dis_nsoc_mnths4= floor(dis_nsoc_days4/30)
+gen dis_nsoc_mnths5= floor(dis_nsoc_days5/30)
+
+*variable for the days from disability to nsoc only for the nsoc closest to disability
+
+gen closest_dis_nsoc_days= dis_nsoc_days1
+replace closest_dis_nsoc_days= dis_nsoc_days2 if dis_nsoc_days2!=. & abs(dis_nsoc_days2)<abs(dis_nsoc_days1)
+replace closest_dis_nsoc_days= dis_nsoc_days3 if dis_nsoc_days3!=. & abs(dis_nsoc_days3)<abs(closest_dis_nsoc_days)
+replace closest_dis_nsoc_days= dis_nsoc_days4 if dis_nsoc_days4!=. & abs(dis_nsoc_days4)<abs(closest_dis_nsoc_days)
+replace closest_dis_nsoc_days= dis_nsoc_days5 if dis_nsoc_days5!=. & abs(dis_nsoc_days5)<abs(closest_dis_nsoc_days)
+
+gen closest_dis_nsoc_mnths= floor(closest_dis_nsoc_days/30)
+
 
 save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", replace
 
@@ -2601,7 +2636,22 @@ tab indhelpstop, sum(diedqp6)
 tab indhelpstop, sum(diedqp7) 
 tab indhelpstop, sum(diedqp8) 
 
+H="analysis of nsoc interviews"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+
+*allowing people multiple nsoc interviews
+tab dis_nsoc_mnths1
+tab dis_nsoc_mnths2
+tab dis_nsoc_mnths3
+tab dis_nsoc_mnths4
+tab dis_nsoc_mnths5
+
+*allowing person only the nsoc interview closest to disability
+tab closest_dis_nsoc_mnths
+
 H="changelog"
+2/11- CKA made a variable for date of NSOC interview. see heading "making file for date of NSOC interview." merged it- added to "merging on other relevent stata files" header. looked at this in sepatate header "analysis of nsoc interviews"
+
 2/4/19- CKA- look at trends of death after disability
 
 2/2/19- CKA- merge with variable discat describing whether mobility or sc disability came first to separately look at trends
