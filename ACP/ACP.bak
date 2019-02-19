@@ -40,7 +40,7 @@ Created by: Mohammed
 Date Created: 01/25/2019
 
 Updated by: MH
-Date Updated: 02/07/2019
+Date Updated: 02/15/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
@@ -83,9 +83,17 @@ gen n=1 if acp!=.
 gen male=0
 replace male=1 if female==0
 
-foreach x in education income_quart race_cat livearrang maritalstat imprelig {
+foreach x in education income_quart race_cat maritalstat imprelig {
 tab `x', gen(`x')
 }
+
+gen live_alone=.
+replace live_alone=0 if inrange(livearrang,2,4)
+replace live_alone=1 if livearrang==1
+
+gen live_other=.
+replace live_other=0 if livearrang==1
+replace live_other=1 if inrange(livearrang,2,4)
 
 foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
 gen `x'0=0 if `x'==1
@@ -101,6 +109,8 @@ label var sr_phq2_depressed0 "Not Depressed"
 label var sr_gad2_anxiety0 "No Anxiety"
 label var soc_iso0 "No one in social network"
 label var soc_iso ">=1 in social network"
+label var live_alone "Lives Alone"
+label var live_other "Lives w/Others"
 
 gen ab=.
 replace ab=0 if informal==1
@@ -146,7 +156,7 @@ income_quart2 income_quart3 income_quart4 race_cat1 race_cat2 race_cat3 race_cat
 ownhome0 ownhome
 
 local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
-livearrang1 livearrang2 livearrang3 livearrang4
+live_alone live_other
 
 local sn1 n_children 
 
@@ -279,7 +289,7 @@ Created by: Mohammed
 Date Created: 01/31/2019
 
 Updated by: MH
-Date Updated: 02/06/2019
+Date Updated: 02/15/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
@@ -375,14 +385,14 @@ format %td birth_date
 gen age= c_ivw_date-birth_date
 replace age=floor(age/365.25)
 
-gen male=0
+gen male=0 if !missing(female)
 replace male=1 if female==0
 
 gen live_alone=0
-replace live_alone=1 if hhm==0
+replace live_alone=1 if hhm==0 & nlb004!=1
 
 gen live_others=0
-replace live_others=1 if hhm>0
+replace live_others=1 if hhm>0 | nlb004==1
 
 gen cesd_tot_ge3_n=0
 replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
@@ -518,7 +528,7 @@ local demo1 age
 local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
 nw_highest 
 
-local race white black hisp other_na_api_race 
+local race white black hisp_eth other_na_api_race 
 
 local demo3 h12wohous0 h12wohous
 
@@ -717,7 +727,7 @@ local demo1 age
 local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
 nw_highest 
 
-local race white black hisp other_na_api_race 
+local race white black hisp_eth other_na_api_race 
 
 local demo3 h12wohous0 h12wohous
 
@@ -908,6 +918,14 @@ H="Changelog"
 
 Updates:
 
+02/15/2019 MH
+------------
+In HRS used hisp_eth instead of hisp. CHanged how livind arrangement variable defined in NHATS. 
+
+02/07/2019 MH
+------------
+Fixed variable and removed cell size restrictions. 
+ 
 02/06/2019 MH
 ------------
 Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 

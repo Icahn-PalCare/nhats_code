@@ -4965,38 +4965,17 @@ Simple Outline:
 // Global Macros use $ symbol to be called. 
 //File paths for raw data
 
-global logs E:\nhats\nhats_code\NHATS data setup\logs\
-global r1raw E:\nhats\data\NHATS Public\round_1\
-global r2raw E:\nhats\data\NHATS Public\round_2\
-global r3raw E:\nhats\data\NHATS Public\round_3\
-global r4raw E:\nhats\data\NHATS Public\round_4\
-global r5raw E:\nhats\data\NHATS Public\round_5\
-global r6raw E:\nhats\data\NHATS Public\round_6\
-global r7raw E:\nhats\data\NHATS Public\round_7\
-global work E:\nhats\data\NHATS working data\
-global r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
-global r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
-global r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
-global r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
-global r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
-global r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
-global r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
-global logs E:\nhats\nhats_code\NHATS data setup\logs\
-
 //NEED TO CHANGE WAVE NUMBER FOR EACH WAVE
 global w 7
 
-//SAS 
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
+global work E:\nhats\data\NHATS working data\
+global logs E:\nhats\nhats_code\NHATS data setup\logs\
 
-
-//Intermediate Data Path
-//libname intpath "E:\nhats\data\Projects\..."
-
-// Final Data Path
-//libname datapath "E:\nhats\data\Projects\..."
-
-//Log files path
-//libname logpath "E:\nhats\data\Projects\..."
+forvalues w=1/$w{
+global r`w'raw E:\nhats\data\NHATS Public\round_`w'\
+global r`w's E:\nhats\data\NHATS Sensitive\r`w'_sensitive\
+}
 
 
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
@@ -5705,12 +5684,7 @@ Date Created: --
 Updated by: MH
 Date Updated: 02/06/2019
 
-Description: This section uses the SP and OP data files and imputes
-hours of help provided to SP per methods in NHATS Technical Paper #7
-
-Variables from this dataset are then brought in to the SP Rounds dataset
-and also the NSOC caregiver dataset.
-
+Description: 
 
 
 **************************************************
@@ -6273,6 +6247,993 @@ tab `v'
 log close
 
 
+H="NHATS Data Cleaning Part 4 (3_r12_cleaning_2_1)"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/14/2019
+
+Description: 
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 3_nhats_cleaning`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}`name'.smcl", text replace
+
+
+
+cd "${work}"
+
+*********************************************
+
+use round_1_$w_cleanv1.dta
+
+*********************************************
+tab wave, missing
+
+*********************************************
+*********************************************
+//self reported health status/conditions
+*********************************************
+*********************************************
+gen srh=.
+forvalues w=1/$w{
+tab health if wave==`w', missing
+replace srh=health if wave==`w'
+}
+replace srh=. if inlist(srh,-9,-1)
+
+la var srh "Self reported health, categorical"
+la def srh 1 "Excellent" 2 "Very good" 3 "Good" 4 "Fair" 5 "Poor"
+la val srh srh
+tab srh if ivw_type==1, missing
+
+gen srh_fp=1 if srh==4 | srh==5
+replace srh_fp=0 if inlist(srh,1,2,3)
+replace srh_fp=-7 if srh == -7
+replace srh_fp=-8 if srh == -8
+la var srh_fp "Self reported health=fair/poor"
+tab srh_fp srh, missing
+
+*********************************************
+//Self-Report Disease
+*********************************************
+//Round 1 - ever told you had xx
+//Round 2 - since the last interview, new condition? 
+/*
+1 heart attack
+2 heart disease
+3 high blood pressure
+4 arthritis
+5 osteoporosis
+6 diabetes
+7 lung disease
+8 stroke
+9 dementia
+10 cancer
+create two sets of indicator variables for waves 2 and later
+sr_disease_ever = 1 if ever report having the disease (only this variable in wave 1)
+sr_disease_new = 1 if newly reported the disease this wave
+*/
+
+//heart attack / ami, asked both waves, for Wave 1 ask ever had, wave 2 ask in last year
+//same questions for stroke, cancer
+
+capture program drop disease
+program define disease 
+	args dis num
+	
+	gen sr_`dis'_raw=.
+	forvalues w=1/$w{
+		replace sr_`dis'_raw=1 if disescn`num'==1 & wave==`w'
+		replace sr_`dis'_raw=0 if disescn`num'==2 & wave==`w'
+		replace sr_`dis'_raw=-7 if disescn`num'==-7 & wave==`w'
+		replace sr_`dis'_raw=-8 if disescn`num'==-8 & wave==`w'
+	}
+	//create two new variables from this...
+	gen sr_`dis'_ever=sr_`dis'_raw
+	replace sr_`dis'_ever=. if inrange(wave, 2, $w) & sr_`dis'_raw==0 //set to missing if report no new wave
+	replace sr_`dis'_ever=-7 if sr_`dis'_raw == -7
+	replace sr_`dis'_ever=-8 if sr_`dis'_raw == -8
+
+	sort spid wave
+	by spid (wave): carryforward sr_`dis'_ever if ivw_type==1 , replace
+	
+	replace sr_`dis'_ever = sr_`dis'_raw if inrange(wave,2,$w) & sr_`dis'_ever == . & sr_`dis'_raw != .
+
+	gen sr_`dis'_new=sr_`dis'_raw if inrange(wave,2,$w)
+
+	end
+
+//now run programs for specific disease variables
+disease ami 1
+disease stroke 8
+disease cancer 10
+
+la var sr_ami_raw "Self report Heart Attack, Raw"
+la var sr_ami_ever "Ever Self report Heart Attack"
+la var sr_ami_new "Self report Heart Attack since prev year"
+la var sr_stroke_raw "Self report Stroke, Raw"
+la var sr_stroke_ever "Ever Self report Stroke"
+la var sr_stroke_new "Self report Stroke since prev year"
+la var sr_cancer_raw "Self report Cancer, Raw"
+la var sr_cancer_ever "Ever Self report Cancer"
+la var sr_cancer_new "Self report Cancer since prev year"
+
+//same question pattern, different variable name though, for hip fracture
+gen sr_hip_raw=.
+forvalues w=1/$w{
+	replace sr_hip_raw=1 if brokebon1==1 & wave==`w'
+	replace sr_hip_raw=0 if brokebon1==2 & wave==`w'
+	replace sr_hip_raw = -7 if brokebon1==-7 & wave==`w'
+	replace sr_hip_raw = -8 if brokebon1==-8 & wave==`w'
+}
+//create two new variables from this...
+gen sr_hip_ever=sr_hip_raw
+replace sr_hip_ever=. if (inrange(wave,2,$w)) & sr_hip_raw==0 //set to missing if report no new wave
+
+sort spid wave
+by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
+
+replace sr_hip_ever = sr_hip_raw if inrange(wave,2,$w) & sr_hip_ever == . & sr_hip_raw != .
+
+gen sr_hip_new=sr_hip_raw if inrange(wave,2,$w)
+la var sr_hip_raw "Self report Hip Fracture, Raw"
+la var sr_hip_ever "Ever Self report Hip Fracture (since age 50)"
+la var sr_hip_new "Self report Hip Fracture since prev year"
+
+foreach dis in ami stroke cancer hip{
+tab sr_`dis'_raw wave if ivw_type==1, missing
+tab sr_`dis'_ever wave if ivw_type==1, missing
+tab sr_`dis'_new wave if ivw_type==1, missing
+}
+
+**************************************************************************
+//Many diseases asked 1st wave, then only if report no, asked again 2nd wave
+//wave 2,3=7 if report yes in wave 1
+//use a program over several diseases since pattern is the same
+
+la def sr_prev_rept 0 "No" 1 "Yes" 7 "Previously reported"
+
+capture program drop prev_report
+program define prev_report
+	args dis num
+ 
+	gen sr_`dis'_raw=.
+		forvalues w=1/$w{
+			replace sr_`dis'_raw=1 if disescn`num'==1 & wave==`w'
+			replace sr_`dis'_raw=0 if disescn`num'==2 & wave==`w'
+			replace sr_`dis'_raw=7 if disescn`num'==7 & wave==`w'
+			replace sr_`dis'_raw=-7 if disescn`num'==-7 & wave==`w'
+			replace sr_`dis'_raw=-8 if disescn`num'==-8 & wave==`w'
+		}
+
+	la val sr_`dis'_raw sr_prev_rept
+	tab sr_`dis'_raw wave if ivw_type==1, missing
+
+	gen sr_`dis'_ever = 1 if inlist(sr_`dis'_raw,1,7) //if prev or curr report yes
+	replace sr_`dis'_ever = 0 if sr_`dis'_raw==0
+	replace sr_`dis'_ever = -7 if sr_`dis'_raw==-7
+	replace sr_`dis'_ever = -8 if sr_`dis'_raw==-8
+	tab sr_`dis'_ever sr_`dis'_raw, missing
+	tab sr_`dis'_ever wave if ivw_type==1, missing
+
+	gen sr_`dis'_new=sr_`dis'_raw if inrange(wave,2,$w)
+	replace sr_`dis'_new=0 if sr_`dis'_raw==7
+	tab sr_`dis'_new if inrange(wave,2,$w) & ivw_type==1, missing
+
+	end
+
+//now run programs for specific disease variables
+prev_report heart_dis 2
+prev_report htn 3
+prev_report ra 4
+prev_report osteoprs 5
+prev_report diabetes 6
+prev_report lung_dis 7
+prev_report dementia 9
+
+la var sr_heart_dis_ever "Self report Heart Disease"
+la var sr_heart_dis_new "Self report Heart Disease since prev year"
+la var sr_htn_ever "Self report high blood pressure"
+la var sr_htn_new "Self report high blood pressure since prev year"
+la var sr_ra_ever "Self report arthritis"
+la var sr_ra_new "Self report arthritis since prev year"
+la var sr_osteoprs_ever "Self report osteoporosis"
+la var sr_osteoprs_new "Self report osteoporosis since prev year"
+la var sr_diabetes_ever "Self report diabetes"
+la var sr_diabetes_new "Self report diabetes since prev year"
+la var sr_lung_dis_ever "Self report Lung Disease"
+la var sr_lung_dis_new "Self report Lung Disease since prev year"
+la var sr_dementia_ever "Self report Dementia"
+la var sr_dementia_new "Self report Dementia since prev year"
+
+*************************************************
+//Depression & Anxiety
+//Over the last month how often have you:
+//responses are 1=not at all, 2=several days, 3=more than half days, 4=nearly every day
+*************************************************
+gen sr_depr_pqq1=.
+gen sr_depr_pqq2=.
+gen sr_anx_gad1=.
+gen sr_anx_gad2=.
+
+forvalues w=1/$w{
+	//set up new variables for individual wave variables
+	foreach q in 1 2 3 4 {
+	gen temp_hc`w'deprsan`q'=. if inlist(depresan`q',-9,-8,-7,-1) & wave==`w'
+	replace temp_hc`w'deprsan`q'=depresan`q'-1 if inlist(depresan`q',1,2,3,4) & wave==`w'
+	replace temp_hc`w'deprsan`q'=0 if inlist(depresan`q',-8,-7) & wave==`w'
+	}
+	//now create clean depression, anxiety variables
+	replace sr_depr_pqq1=temp_hc`w'deprsan1 if wave==`w' //little interest or pleasure in doing things
+	replace sr_depr_pqq2=temp_hc`w'deprsan2 if wave==`w' //felt down/depressed/hopeless
+	replace sr_anx_gad1=temp_hc`w'deprsan3 if wave==`w' //felt nervous or anxious
+	replace sr_anx_gad2=temp_hc`w'deprsan4 if wave==`w' //unable to stop worrying
+	
+
+	foreach q in 1 2 3 4 {
+	drop temp_hc`w'deprsan`q'
+	}
+	
+}
+
+la def depr_anx 0"Not at all" 1"Several days" 2"More than half the days" ///
+3"Nearly every day"
+la val sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 depr_anx
+la var sr_depr_pqq1 "How often little interest in doing things?"
+la var sr_depr_pqq2 "How often felt down, depressed, hopeless?"
+la var sr_anx_gad1 "How often felt nervous or anxious?"
+la var sr_anx_gad2 "How often unable to stop worrying?"
+
+foreach v in sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2{
+	tab `v' wave if ivw_type==1,missing
+}
+
+//combined phq-2 score for depression, cutoff 3+=depressed
+gen sr_phq2_score=sr_depr_pqq1+sr_depr_pqq2
+gen sr_phq2_depressed=1 if sr_phq2_score>=3 & sr_phq2_score~=.
+replace sr_phq2_depressed=0 if sr_phq2_score<3 & sr_phq2_score~=.
+la var sr_phq2_score "PHQ-2 combined score 0-6 scale"
+la var sr_phq2_depressed "Depressed per PHQ-2, score=3+"
+tab sr_phq2_score sr_phq2_depressed if ivw_type==1, missing
+
+//combined gad-2 score for anxiety, cutoff 3+=anxiety
+gen sr_gad2_score=sr_anx_gad1+sr_anx_gad2
+gen sr_gad2_anxiety=1 if sr_gad2_score>=3 & sr_gad2_score~=.
+replace sr_gad2_anxiety=0 if sr_gad2_score<3 & sr_gad2_score~=.
+la var sr_gad2_score "GAD-2 combined score 0-6 scale"
+la var sr_gad2_anxiety "Anxiety per GAD-2, score=3+"
+tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
+tab sr_gad2_anxiety wave, missing
+
+*************************************************
+//Dementia, based on NHATS technical paper no. 5, expanded for 3 waves
+//separate variables for proxy vs self interviews
+*************************************************
+tab proxy_ivw ivw_type, missing
+
+//Initialize 3 category dementia variable
+//probable dementia, possible dementia, no dementia
+//probable = diagnosis reported or 2+ ad8 questions (proxy) or <1.5 SD below mean
+gen dem_3_cat=-1 if ivw_type!=1 //set to na if not SP interview
+replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
+
+//for proxy interviews, use ad8 score
+forvalues i = 1/8{
+gen pr_ad8_`i'=-1 //initialize to n/a
+replace pr_ad8_`i'=. if proxy_ivw==1 & dem_3_cat==. //set missing if proxy ivw w/o direct report dementia
+forvalues w=1/$w{
+	replace pr_ad8_`i'=1 if inlist(chgthink`i',1,3) & wave==`w' & dem_3_cat==. & proxy_ivw==1 //yes or dementia reported
+	replace pr_ad8_`i'=0 if inlist(chgthink`i',2,-8) & wave==`w' & dem_3_cat==. &  proxy_ivw==1 //no or don't know
+	}	
+tab pr_ad8_`i' wave, missing
+tab pr_ad8_`i' wave if proxy_ivw==1, missing
+}
+
+tab pr_ad8_3 chgthink3 if wave==1, missing
+tab chgthink1 dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
+
+tab pr_ad8_1 wave, missing
+tab pr_ad8_1 dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
+tab pr_ad8_1 sr_dementia_ever if wave==2 & proxy_ivw==1, missing // reported dementia directly
+
+gen pr_ad8_score=(pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8) if proxy_ivw==1 & dem_3_cat==.
+tab pr_ad8_score proxy_ivw, missing
+tab pr_ad8_score wave, missing
+
+gen dem_via_proxy=1 if pr_ad8_score>=2 & pr_ad8_score~=. //from ad8 score directly
+replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
+replace dem_via_proxy=1 if (dad8dem==1 | dad8dem==1) & proxy_ivw==1 //if previous interview ad8 indicated dementia
+replace dem_via_proxy=-1 if sr_dementia_ever==1
+tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
+
+//set 3 category dementia state variable
+//first xwave variable for proxy allowed sp to answer cg section
+/*2/14/19 Speaktosp already exists since removing prefixes. 
+gen speaktosp=.
+forvalues w=1/$w{
+	replace speaktosp=cg`w'speaktosp if wave==`w'
+}*/
+
+replace dem_3_cat=1 if dem_3_cat==. & dem_via_proxy==1 //if proxy ivw indicates dem
+replace dem_3_cat=3 if dem_3_cat==. & dem_via_proxy==0 & speaktosp==2  //proxy ind no dem
+tab dem_3_cat wave, missing
+*************************************************
+//for self interviews
+*************************************************
+//current date questions
+tab todaydat1 speaktosp if wave==1 & ivw_type==1, missing
+
+forvalues i = 1/4{
+	gen date_item`i'=.
+	forvalues w=1/$w{
+		replace date_item`i'=1 if todaydat`i'==1 & wave==`w' //yes
+		replace date_item`i'=0 if inlist(todaydat`i',2,-7) & wave==`w' //no, dont know, refused
+	}
+}
+//count date questions correct
+gen date_sum=date_item1+date_item2+date_item3+date_item4
+tab date_sum wave, missing
+
+//add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
+forvalues w=1/$w{
+	replace date_sum=-2 if date_sum==. & speaktosp==2 & wave==`w'
+	replace date_sum=-3 if (date_item1==. | date_item2==. | date_item3==. | ///
+		date_item4==. ) & speaktosp==1 & wave==`w'
+}
+tab date_sum wave, missing
+
+//new version date sum measure, without the extra categories
+gen date_sumr=date_sum
+replace date_sumr=. if date_sum==-2
+replace date_sumr=0 if date_sum==-3
+
+//president/vp items and count
+capture program drop president 
+program define president
+	args newv oldv
+	gen `newv'=.	
+	forvalues w=1/$w{
+		replace `newv'=1 if `oldv'==1  & wave==`w' //yes
+		replace `newv'=0 if inlist(`oldv',2,-7) & wave==`w' //no, refused
+	}
+	tab `newv' wave, missing
+end
+
+president preslast presidna1	
+president presfirst presidna3
+president vplast vpname1
+president vpfirst vpname3
+
+//count president questions correct
+gen presvp=preslast+presfirst+vplast+vpfirst
+tab presvp wave, missing
+
+//add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
+forvalues w=1/$w{
+	replace presvp=-2 if presvp==. & speaktosp==2 & wave==`w'
+	replace presvp=-3 if presvp==. & (preslast==. | presfirst==. | vplast==. | ///
+		vpfirst==. ) & speaktosp==1 & wave==`w'
+}
+tab presvp wave, missing
+
+//new version president sum measure, without the extra categories
+gen presvpr=presvp
+replace presvpr=. if presvp==-2
+replace presvpr=0 if presvp==-3
+
+//total orientation domain, date and president questions
+gen date_prvp=date_sumr+presvpr
+tab date_prvp, missing
+
+//executive function domain, clock drawing score
+gen clock_scorer=.
+forvalues w=1/$w{
+	replace clock_scorer=dclkdraw if wave==`w'
+	replace clock_scorer=. if inlist(dclkdraw,-2,-9) & wave==`w' //missing
+	replace clock_scorer=0 if inlist(dclkdraw,-3,-4,-7) & wave==`w' //refused,unable
+//assign mean values where missing response
+	replace clock_scorer=2 if dclkdraw==-9 & speaktosp==1 & wave==`w' //proxy
+	replace clock_scorer=3 if dclkdraw==-9 & speaktosp==-1 & wave==`w' //self
+	}
+tab clock_scorer wave, missing //left as -1 if inapplicable
+
+//memory domain, word recall, uses derived scores, not raw responses
+capture program drop recall
+program define recall
+	args newv oldv
+	gen `newv'=.
+	forvalues w=1/$w{
+		replace `newv'=`oldv' if wave==`w'
+		replace `newv'=. if inlist(`oldv',-2,-1) & wave==`w' //n/a or not asked
+		replace `newv'=0 if inlist(`oldv',-7,-3) & wave==`w' //refused or unable
+	}
+	tab `newv' wave, missing
+end
+
+recall irecall dwrdimmrc
+recall drecall dwrddlyrc
+
+gen wordrecall0_20=irecall+drecall
+
+//overall cognitive domain score, assigns cutoffs for each of the domain variables
+gen clock65=0 if clock_scorer>1 & clock_scorer<=5
+replace clock65=1 if inlist(clock_scorer,0,1)
+
+gen word65=0 if wordrecall0_20>3 & wordrecall0_20<=20
+replace word65=1 if inlist(wordrecall0_20,0,1,2,3)
+
+gen datena65=0 if date_prvp>3 & date_prvp<=8
+replace datena65=1 if inlist(date_prvp,0,1,2,3)
+
+gen domain65=clock65+word65+datena65
+tab domain65 wave, missing
+
+//now apply to dementia 3 category variable
+replace dem_3_cat=1 if dem_3_cat==. & inlist(speaktosp,1,-1) & inlist(domain65,2,3)
+replace dem_3_cat=2 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==1
+replace dem_3_cat=3 if dem_3_cat==. & inlist(speaktosp,1,-1) & domain65==0
+
+la def dem3 1"Probable dementia" 2"Possible dementia" 3"No dementia"
+la val dem_3_cat dem3
+la var dem_3_cat "Dementia likelihood, 3 categories"
+
+tab dem_3_cat wave, missing
+
+gen dem_2_cat=1 if inlist(dem_3_cat,1,2)
+replace dem_2_cat=0 if dem_3_cat==3
+la var dem_2_cat "Ind prob/possible dementia"
+tab dem_2_cat wave, missing
+*************************************************
+//rate memory
+gen memory=.
+forvalues w=1/$w{
+replace memory=ratememry if wave==`w' & proxy_ivw==0 //self interview
+replace memory=memrygood if wave==`w' & proxy_ivw==1 //proxy interview
+
+}
+replace memory=. if inlist(memory,-1)
+la var memory "Rate memory 1=Excell, 5=Poor"
+la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
+la val memory mem
+tab memory wave, missing
+
+*************************************************
+//total number self reported medical conditions, ever
+//note that depression and anxeity are from the specific interview questions
+//the others are all if the person has reported the condition in any interview wave
+egen sr_numconditions1=anycount(sr_ami_ever sr_stroke_ever sr_cancer_ever ///
+	sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
+	sr_diabetes_ever sr_lung_dis_ever sr_dementia_ever sr_phq2_depressed ///
+	sr_gad2_anxiety), values(1)
+replace sr_numconditions1=. if ivw_type!=1
+la var 	sr_numconditions1 "Count medical conditions"
+tab sr_numconditions1 wave, missing
+
+
+local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_cancer_new ///
+sr_hip_raw sr_hip_ever sr_hip_new sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever sr_htn_new sr_ra_raw ///
+sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_raw ///
+sr_lung_dis_ever sr_lung_dis_new sr_dementia_raw sr_dementia_ever sr_dementia_new
+foreach w in `ivars'{
+tab `w'
+}
+
+*************************************************
+save round_1_$w_cleanv2.dta, replace
+
+*************************************************
+log close
+
+
+H="NHATS Data Cleaning Part 5 (4_r12_cleaning_3_1)"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/14/2019
+
+Description: 
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 4_nhats_cleaning`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}`name'.smcl", text replace
+
+
+
+cd "${work}"
+
+*********************************************
+
+use round_1_$w_cleanv2.dta
+
+*********************************************
+//fall in the last month
+gen fall_last_month=.
+forvalues w=1/$w{
+	replace fall_last_month=1 if fllsinmth==1 & wave==`w'
+	replace fall_last_month=0 if fllsinmth==2 & wave==`w'
+	replace fall_last_month = -7 if fllsinmth==-7 & wave==`w'
+	replace fall_last_month = -8 if fllsinmth==-8 & wave==`w'
+}
+la var fall_last_month "Fall down in last month"
+tab fall_last_month wave, missing
+
+*********************************************
+//self care help, using the derived variables in the SC section
+//uses the "has help" variables (has difficulty, uses devices other options)
+//if don't know, refused, or not done, set to missing
+tab deathelp, missing
+rename eatslfdif eatdif
+rename eatslfoft eatoft
+capture program drop selfcare
+program define selfcare
+	args act
+	gen adl_`act'_diff=.
+	gen adl_`act'_help=.
+	gen adl_`act'_not_done=.
+	forvalues w=1/$w{
+		replace adl_`act'_help=1 if `act'hlp==1 & wave==`w' //yes
+		replace adl_`act'_help=0 if `act'hlp==2 & wave==`w' //no
+		replace adl_`act'_help=0 if `act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
+		replace adl_`act'_help=-7 if `act'hlp==-7 & wave==`w' //refused
+		replace adl_`act'_help=-8 if `act'hlp==-8 & wave==`w' //DK
+		replace adl_`act'_diff=`act'dif>1 if `act'dif>0 & wave==`w'
+		replace adl_`act'_not_done=`act'oft==4 if `act'oft>0 & wave==`w'
+}
+	tab adl_`act'_help wave, missing
+	tab adl_`act'_help wave if ivw_type==1, missing
+	*replace adl_`act'_diff=1 if adl_`act'_help==1
+	
+end	
+	
+selfcare eat
+selfcare bath
+selfcare toil
+selfcare dres
+
+la var adl_eat_help "Has help while eating"
+la var adl_bath_help "Has help while bathing"
+la var adl_toil_help "Has help while toileting"
+la var adl_dres_help "Has help while dressing"
+*********************************************
+//household activity help, using derived variables in the HA section
+//if did not do by self b/c of health
+//reason only or health and other reason, then new help var ==1
+tab dlaunsfdf dlaunreas if wave==1, missing
+tab dlaunsfdf dlaunreas if wave==2, missing
+
+capture program drop hhact
+program define hhact
+	args act
+	
+	gen iadl_`act'_help=.
+	gen iadl_`act'_diff=.
+	gen iadl_`act'_not_done=.
+	forvalues w=1/$w{
+		replace iadl_`act'_help=1 if inlist(d`act'sfdf,1,8) & ///
+			inlist(d`act'reas,1,3) & wave==`w'
+		replace iadl_`act'_help=0 if inlist(d`act'sfdf,2,3,6) & wave==`w' //did by self
+		replace iadl_`act'_help=0 if inlist(d`act'sfdf,1,8) & ///
+			inlist(d`act'reas,2,4) & wave==`w'		
+		replace iadl_`act'_help=-8 if inlist(d`act'sfdf,4,5,7) & wave==`w' //dkrf
+		replace iadl_`act'_help=-8 if inlist(d`act'sfdf,1,8) & ///
+			inlist(d`act'reas,-7,-8) & wave==`w'
+		replace iadl_`act'_diff=`act'dif>1 if `act'dif>0 & wave==`w'
+		replace iadl_`act'_not_done=`act'oft==5 if `act'oft>0 & wave==`w'
+	}	
+	tab iadl_`act'_help wave, missing
+	tab iadl_`act'_help wave if ivw_type==1, missing
+	*replace iadl_`act'_diff=1 if iadl_`act'_help==1
+	end
+	
+hhact laun
+hhact shop
+hhact meal
+hhact bank
+
+la var iadl_laun_help "Rec'd help doing laundry last month"
+la var iadl_shop_help "Rec'd help shopping last month"
+la var iadl_meal_help "Rec'd help preparing meals last month"
+la var iadl_bank_help "Rec'd help with banking last month"
+ 
+//taking medications, questions slightly different and in mc section
+//set to =0 if do not take medications
+tab dmedssfdf dmedsreas if wave==1, missing
+tab dmedssfdf dmedsreas if wave==2, missing
+
+gen iadl_meds_help=.
+gen iadl_meds_diff=.
+gen iadl_meds_not_done=.
+forvalues w=1/$w{
+	replace iadl_meds_help=1 if inlist(dmedssfdf,1,8) & ///
+		inlist(dmedsreas,1,3) & wave==`w'
+	//did by self or don't take medications
+	replace iadl_meds_help=0 if inlist(dmedssfdf,2,3,6,9) & wave==`w' 
+	replace iadl_meds_help=0 if inlist(dmedssfdf,1,8) & ///
+		inlist(dmedsreas,2,4) & wave==`w'		
+	replace iadl_meds_help=-8 if dmedssfdf == 7 & wave==`w' 
+	replace iadl_meds_help=-8 if inlist(dmedssfdf,1,8) & ///
+		inlist(dmedsreas,-7,-8) & wave==`w'
+	replace iadl_meds_dif=medsdif>1 if medsdif>0 & wave==`w'
+	replace iadl_meds_not_done=inlist(dmedssfdf,1,8) if wave==`w'
+}	
+
+la var iadl_meds_help "Rec'd help taking medications last month"
+tab iadl_meds_help wave, missing
+tab iadl_meds_help wave if ivw_type==1, missing
+replace iadl_meds_diff=1 if iadl_meds_help==1
+//other meds questions, for treatment burden
+gen ind_meds_diff=.
+gen ind_meds_mistake=.
+forvalues w=1/$w{
+replace ind_meds_diff=inlist(medsdif,2,3,4) if medsdif>0 & !missing(medsdif) & wave==`w'
+replace ind_meds_diff=0 if meds==2 & wave==`w'
+replace ind_meds_diff=0 if dmedsrea==2 & inlist(medstrk,2,3) & wave==`w'
+replace ind_meds_mistake=medsmis==1 if medsmis>0 & !missing(medsmis) & wave==`w'
+}
+label var ind_meds_diff "Any difficulty keeping track of meds"
+label var ind_meds_mistake "Any mistake taking meds"
+gen ind_meds_problem=ind_meds_diff==1 | ind_meds_mistake==1 if !missing(ind_meds_diff) ///
+| !missing(ind_meds_mistake)
+label var ind_meds_prob "SR difficulty keeping track of or mistake taking meds"
+*********************************************
+//has , sees regular doctor
+gen reg_doc_have = .
+forvalues w=1/$w{
+	replace reg_doc_have=1 if havregdoc==1 & wave==`w'
+	replace reg_doc_have=0 if havregdoc==2 & wave==`w'
+	replace reg_doc_have=-7 if havregdoc==-7 & wave==`w'
+	replace reg_doc_have=-8 if havregdoc==-8 & wave==`w'
+}
+la var reg_doc_have "Have regular doctor"
+tab reg_doc_have wave, missing
+tab reg_doc_have wave if ivw_type==1, missing
+
+gen reg_doc_seen = .
+forvalues w=1/$w{
+	replace reg_doc_seen=1 if regdoclyr==1 & wave==`w'
+	replace reg_doc_seen=0 if regdoclyr==2 & wave==`w'
+	replace reg_doc_seen=-7 if regdoclyr==-7 & wave==`w'
+	replace reg_doc_seen=-8 if regdoclyr==-8 & wave==`w'
+}
+la var reg_doc_seen "Seen regular doctor within last year"
+tab reg_doc_seen wave, missing
+tab reg_doc_seen wave if ivw_type==1, missing
+
+//home visit, missing if did not see regular doctor within the last year
+tab regdoclyr hwgtregd8 if wave==1, missing
+
+gen reg_doc_homevisit = .
+forvalues w=1/$w{
+	replace reg_doc_homevisit=1 if hwgtregd8==1 & wave==`w'
+	replace reg_doc_homevisit=0 if hwgtregd8==2 & wave==`w'
+	replace reg_doc_homevisit=-7 if hwgtregd8==-7 & wave==`w'
+	replace reg_doc_homevisit=-8 if hwgtregd8==-8 & wave==`w'
+	//replace reg_doc_homevisit=0 if mc`w'regdoclyr==2
+}
+la var reg_doc_homevisit "Was regular doctor visit a home visit?"
+tab reg_doc_homevisit wave, missing
+tab reg_doc_homevisit wave if ivw_type==1, missing
+
+//hospital stay last 12 months?
+tab hosptstay, missing
+
+gen sr_hosp_ind=.
+forvalues w=1/$w{
+	replace sr_hosp_ind=1 if hosptstay==1 & wave==`w'
+	replace sr_hosp_ind=0 if hosptstay==2 & wave==`w'
+	replace sr_hosp_ind=-7 if hosptstay==-7 & wave==`w'
+	replace sr_hosp_ind=-8 if hosptstay==-8 & wave==`w'
+}
+la var sr_hosp_ind "Hospital stay in the last year 1=yes"
+tab sr_hosp_ind wave, missing
+tab sr_hosp_ind wave if ivw_type==1, missing
+
+//number of separate hospital stays?
+tab hosovrnht hosptstay, missing //if ind=no above, raw variable is n/a
+gen sr_hosp_stays=.
+forvalues w=1/$w{
+	replace sr_hosp_stays=hosovrnht if hosovrnht>0 & wave==`w'
+}
+replace sr_hosp_stays=0 if sr_hosp_ind==0 //set to 0 if none reported in y/n ? above
+la var sr_hosp_stays "Number unique hospital stays last year"
+tab sr_hosp_stays wave, missing
+tab sr_hosp_stays wave if ivw_type==1, missing
+
+save round_1_$w_cleanv3.dta, replace
+
+local ivars fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help ///
+iadl_meal_help iadl_bank_help iadl_meds_help reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind sr_hosp_stays
+foreach w in `ivars'{
+tab `w' wave,missing
+}
+
+*********************************************
+log close
+
+
+H="NHATS Data Cleaning Part 6 (5_r12_add_helper)"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/11/2019
+
+Description: 
+
+Collapse helper information to the SP - wave level
+and merge into SP dataset
+
+variables created are:
+Total # helpers for the SP
+Total hours/month help provided for SP
+Indicators for relationship of primary helper (identified as helper 
+with the most hours)
+
+Uses imputed hours per code 1a_help_hours_imputation.do
+(see NHATS Technical Paper #7 for imputation methodology)
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 5_nhats_cleaning`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}`name'.smcl", text replace
+
+
+
+
+*********************************************
+
+cd "${work}"
+***************************************************************
+//get all 3 waves helper imputed hours into a single dataset
+
+use R1_hrs_imputed_added.dta
+
+local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
+ justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw paid ///
+ op_adl* op_iadl* op_nonadl* son daughter oth_fam rc_staff op_doc_help op_sn op_age
+
+forvalues w=2/$w{
+qui append using R`w'_hrs_imputed_added.dta
+ 
+}
+ 
+tab wave opishelper_allw, missing
+
+//  age categories
+egen op_age=rowmax(dage)
+label val op_age dage 
+replace op_age=. if inlist(op_age, -8, -7, -1, .) 
+
+
+
+//identify paid helpers and staff at residence (not helpers)
+gen paid=0
+gen rc_staff=0
+forvalues w=1/$w {
+	replace paid=1 if paidh==1 & ((relat>=30 & relat<=40)| ///
+	relat==92) & wave==`w'
+	foreach x of varlist hlp *hlp1 *hlp2 *hlpmst {
+		replace rc_staff=1 if relat==37 & `x'==1 & wave==`w'
+}
+}
+
+gen op_sn=0 
+forvalues w=1/$w {
+	replace op_sn=socl==1 if wave==`w'
+}
+label var op_sn "OP in SP's social network"
+
+keep `keepvars'
+
+replace opishelper_allw=0 if opishelper_allw==-1
+replace op_hrsmth_i=. if op_hrsmth_i==-1
+***************************************************************
+//identify primary helper, person with the most hours / month using imputed hours
+sort spid wave opid spouse
+
+gen primary_cg=0
+egen max_hrs_helped=max(op_hrsmth_i) if opishelper_allw==1, by(spid wave)
+replace primary_cg=1 if op_hrsmth_i==max_hrs_helped & opishelper_allw==1
+tab primary_cg wave, missing
+
+//check that each sp has 1 primary cg identified, doesn't matter!
+egen num_primary_cg=total(primary_cg), by(spid wave)
+tab num_primary_cg wave, missing
+
+//assign relationship to primary helper
+//if same number of hours for two different helpers, then assign to spouse first
+gen prim_helper_cat=1 if primary_cg==1 & spouse==1
+replace prim_helper_cat=2 if primary_cg==1 & otherrel==1 & prim_helper_cat==.
+replace prim_helper_cat=3 if prim_helper_cat==.
+la def helpcat 1"Spouse" 2"Other relative" 3"Other, not relative"
+la val prim_helper_cat helpcat
+tab prim_helper_cat wave, missing
+
+//get categorical relationship
+gen op_relationship_cat=6
+local i=1
+foreach x in spouse daughter son oth_fam paid {
+	replace op_relationship_cat=`i' if `x'==1
+	local i=`i'+1
+}
+label define op_relationship_cat 1 "Spouse/Partner" 2 "Daughter (incl. step-/-in-law)" ///
+3 "Son (incl. step-/-in-law)" 4 "Other family" 5 "Paid CG" 6 "Unpaid non-family CG"
+label values op_relationship_cat op_relationship_cat
+
+//get total number hours/month help received and number of helpers per spid/wave
+egen tot_hrsmonth_help_i=total(op_hrsmth_i), by(spid wave)
+egen n_helpers=count(op_hrsmth_i), by(spid wave)
+gen tot_hrswk_help_i=tot_hrsmonth_help_i/(52/12)
+//family caregivers
+gen op_family=op_relationship_cat<=4 if opishelper==1
+label var op_family "OP is family helper"
+egen n_family_helpers=total(op_family),by(spid wave)
+label var n_family_helpers "Number family helpers"
+gen ind_family_helper=n_family_helpers>0
+label var ind_family_helper "Indicatory any family helpers"
+//paid caregivers
+egen n_paid_helpers=total(paid), by(spid wave)
+gen ind_paid_helper=n_paid_helpers>0 
+label var n_paid_helpers "Number paid helpers"
+label var ind_paid_helper "Indicator any paid helpers"
+egen ind_rc_staff=max(rc_staff), by(spid wave)
+label var ind_rc_staff "Indicator Facility Staff in OP file"
+gen num_helpers_cat=0
+replace num_helpers_cat=1 if n_helpers>0 & n_helpers<.
+replace num_helpers_cat=2 if n_helpers>3 & n_helpers<.
+replace num_helpers_cat=3 if n_helpers>=7 & n_helpers<.
+label define num_helpers_cat 0 "No helpers" 1 "1-3 helpers" 2 "4-6 helpers" ///
+3 "7+ helpers"
+label values num_helpers_cat num_helpers_cat
+
+gen phrs=op_hrsmth_i if paid==1
+egen tot_hrsmonth_paid_i=total(phrs), by(spid wave)
+gen tot_hrswk_paid_i=tot_hrsmonth_paid_i/(52/12)
+label var tot_hrsmonth_paid_i "Hours/month help recived, paid helpers, imputed"
+label var tot_hrswk_paid_i "Hours/week help received, paid helpers, imputed"
+gen op_hrswk_i=op_hrsmth_i/(52/12)
+label var op_hrswk_i "OP hours/week help SP"
+
+la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+sum tot_hrsmonth_help_i, detail
+la var tot_hrswk_help_i "Hours / week help received, all helpers, imputed"
+
+la var n_helpers "Number helpers reported by SP"
+tab n_helpers wave, missing
+la var prim_helper_cat "Primary helper relationship, missing if no helper"
+tab prim_helper_cat wave, missing
+
+la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+sum tot_hrsmonth_help_i, detail
+la var tot_hrswk_help_i "Hours / week help received, all helpers, imputed"
+
+la var n_helpers "Number helpers reported by SP"
+tab n_helpers wave, missing
+la var prim_helper_cat "Primary helper relationship, missing if no helper"
+tab prim_helper_cat wave, missing
+
+
+//number in social network
+by spid wave, sort: egen n_sn=total(op_sn)
+replace n_sn=0 if missing(n_sn)
+label var n_sn "Number in social network"
+
+//save as op file before dropping down to one obs per spid
+saveold "E:/nhats/data/NHATS cleaned/op_round_1_$w.dta", replace version(12)
+
+//keep the entry for the primary caregiver only, this will then be the 
+//information merged into the SP dataset
+keep if primary_cg==1
+
+//sort and keep only first primary cg, again preference given if spouse
+gsort spid wave -spouse otherrel opid
+duplicates drop spid wave, force
+
+//now one obs per sp - wave
+
+sum tot_hrsmonth_help_i, detail
+tab n_helpers wave, missing
+tab prim_helper_cat wave, missing
+***************************************************************
+//merge this helper data with the main SP dataset
+save helper_by_sp.dta, replace
+
+use round_1_$w_cleanv3, clear
+
+merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers n_fam ind_fam ///
+ tot_hrsmonth_* prim_helper_cat ind_pa n_pai tot_hrswk* num_helpers_cat ind_rc_*)
+
+drop _merge 
+
+foreach x in n_helpers ind_pa n_paid num_helpers_cat{
+replace `x'=0 if `x'==.
+}
+
+gen ind_no_helpers=.
+replace ind_no_helpers=1 if n_helpers==0
+replace ind_no_helpers=0 if n_helpers>0
+la var ind_no_helpers "Indicator no Helpers reported"
+tab ind_no_helpers wave, missing
+
+la var tot_hrsmonth_help_i "Hours / month help received, all helpers, imputed"
+sum tot_hrsmonth_help_i, detail
+la var tot_hrswk_help_i "Hours / week help received, all helpers, imputed"
+
+la var n_helpers "Number helpers reported by SP"
+tab n_helpers wave, missing
+la var prim_helper_cat "Primary helper relationship, missing if no helper"
+tab prim_helper_cat wave, missing
+
+rename opid prim_helper_opid
+destring prim_helper_opid, replace
+la var prim_helper_opid "Primary helper OPID"
+
+***************************************************************
+//save the dataset with helper information added
+
+save round_1_$w_clean_helper_added.dta, replace
+
+saveold round_1_$w_clean_helper_added_old.dta, replace
+
+***************************************************************
+log close
+
+
 H="Changelog"
 
 
@@ -6281,6 +7242,11 @@ H="Changelog"
 
 
 Updates:
+
+02/14/2019 MH
+----------
+Updated Part 4, 5, 6 NHATS. Changed raw variables to remove prefixes, this keeps the long format of the data. 
+
 
 02/06/2019 MH
 -----------

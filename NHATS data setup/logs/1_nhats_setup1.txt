@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:   1 Feb 2019, 16:51:31
+ opened on:  15 Feb 2019, 10:43:12
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -231,26 +231,21 @@ file round_7_1.dta saved
 . if `w'!=1 local pd pd* 
   4. 
 . //keep selected variables only
-. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat
->   ///
+. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
 >         mo* r`w'd2intvrage hh`w'martlstat ///
->         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtr
-> icar ///
+>         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
 >         hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
->         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'
-> dorigwksc ///
+>         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
 >         r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* cs*
   5. 
 . if `w'==1 {     
-  6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspan
-> h el`w'higstschl ///
+  6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
 > ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
   7. }
   8. 
 . if `w'==2 {     
   9. keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
->         re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livng
-> will
+>         re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
  10. }
  11. 
 . if `w'==3 {     
@@ -262,8 +257,7 @@ file round_7_1.dta saved
 >         re4dcensdiv ip4nginslast
  16. }
  17. if `w'==5 {     
- 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspan
-> h el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
+ 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
  19. }       
  20. if `w'==6 {     
@@ -286,8 +280,7 @@ file round_6_ltd.dta saved
 file round_7_ltd.dta saved
 
 . 
-. //check sensitive data files, keep only some variables, merge with ltd dataset
-> s
+. //check sensitive data files, keep only some variables, merge with ltd datasets
 . foreach w in 1 2 3 4 5 6 7{
   2.         use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
   3.         sort spid 
@@ -363,8 +356,7 @@ file round_7_ltd.dta saved
 . 
 . //merge in sensitive data, use r1 as basis, added in cancer vars
 . merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
->         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dsp
-> ousage ///
+>         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
 >         rl1primarace rl1hisplatno hc1cancerty*) 
 
     Result                           # of obs.
@@ -487,15 +479,11 @@ file round_7_ltd.dta saved
 . //3B?
 . //merge in tracker status information
 . merge m:1 spid using "`r7raw'NHATS_Round_7_Tracker_File", ///
->         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spst
-> atdtmt r7spstatdtyr r7fqstatdtmt ///
->          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr 
-> r6fqstatdtmt ///
->         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r
-> 5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdt
-> mt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
->                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqst
-> atdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+>         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+>          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+>         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3s
+> tatus r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+>                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
@@ -508,84 +496,55 @@ file round_7_ltd.dta saved
     -----------------------------------------
 
 . 
-end of do-file
-
-. keep if _merge==3
-(7,103 observations deleted)
-
-. codebook spid
-
---------------------------------------------------------------------------------
-spid                                                     NHATS SAMPLED PERSON ID
---------------------------------------------------------------------------------
-
-                  type:  numeric (double)
-
-                 range:  [10000003,20007119]          units:  1
-         unique values:  12,427                   missing .:  0/47,778
-
-                  mean:   1.2e+07
-              std. dev:   4.2e+06
-
-           percentiles:        10%       25%       50%       75%       90%
-                           1.0e+07   1.0e+07   1.0e+07   1.0e+07   2.0e+07
-
-. use "${r1s}NSOC_Round_1_SP_tracker_file"
-no; data in memory would be lost
-r(4);
-
-. use "${r1s}NSOC_Round_1_SP_tracker_file", clear
-
-. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
-
 . //merge in nsoc tracker information
-. merge m:1 spid using "${r1s}NSOC_Round_1_SP_tracker_file", nogen
-(label fl1dnsoccomp already defined)
-(label fl1dcgadonly already defined)
-(label fl1dcgphncnt already defined)
-(label fl1dnsoccnt already defined)
-(label fl1dnsoc already defined)
+. merge m:1 spid using "`r1s'NSOC_Round_1_SP_tracker_file", nogen
 
     Result                           # of obs.
     -----------------------------------------
-    not matched                             0
-    matched                             8,245  
+    not matched                        17,969
+        from master                    17,969  
+        from using                          0  
+
+    matched                            36,912  
     -----------------------------------------
 
 . //drop obs that are in tracker file but not sp file
 . drop if _merge==2
-_merge not found
-r(111);
+(7,103 observations deleted)
 
-end of do-file
+. drop _merge     
 
-r(111);
-
-. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
-
-. /*
-> 
-> Created by: --
-> Date Created: --
-> 
-> Updated by: MH
-> Date Updated: 01/25/2019
-> 
-> Description: Inital dataset cleaning, renaming varaibles, merging variables fr
-> om 
-> sensitive dataset, and broad structuring.
-> 
-> 
-> 
-> **************************************************
-> */
-. 
-. local date = subinstr("$S_DATE"," ","_",.) 
-
-. local name NHATS_setup1_`date'
-
-. di "`name'"
-NHATS_setup1__1_Feb_2019
+. save round_1_to_7.dta, replace
+file round_1_to_7.dta saved
 
 . 
-. capture log close 
+. //10/17/2018--old version of stata
+. forvalues w=1/7{
+  2. clear all
+  3. use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
+  4. saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
+  5. }
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode and thus may not display well in Stata 13.
+file E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_4\NHATS_Round_4_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_5\NHATS_Round_5_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_6\NHATS_Round_6_SP_File_stata12.dta saved
+(saving in Stata 12 format, which can be read by Stata 11 or 12)
+file E:\nhats\data\NHATS Public\round_7\NHATS_Round_7_SP_File_stata12.dta saved
+
+. 
+. *********************************************
+. log close
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
+  log type:  text
+ closed on:  15 Feb 2019, 10:44:32
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

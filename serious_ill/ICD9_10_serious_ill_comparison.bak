@@ -7336,7 +7336,8 @@ label smi_esrd_ind="Indicator of ESRD 6m, Elix and claims DN file";
 /*chf, use dx list for Elixhauser, but as primary DX from a hospitalization only*/
 if chf_pri_dx=1  then smi_chf_ind=1;
 if chf_pri_dx=0  then smi_chf_ind=0;
-label smi_chf_ind="Indicator of CHF 6m, Primary dx from IP claim";
+if chf_icd10=1 and oxygen=1 then smi_chf_ind=1;
+label smi_chf_ind="Indicator of CHF 6m, Primary dx from IP claim or O2 and ICD-10 claim";
 
 /*COPD indicator meets following criteria:
 1. COPD from Elix (any dx field) and Oxygen use from DME claims or
@@ -8632,6 +8633,8 @@ foreach smivar of local smi {
 
 
 H="changelog"
+2/13/19-EBL-added home oxygen to CHF definition for ICD-10 in "var clean and check criteria" header
+
 2/11/19-EBL-added shareable Comparison tables header
 
 2/8/19-EBL-Added "Comparison tables, restricted to hospital admission"

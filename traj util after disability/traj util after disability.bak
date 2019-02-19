@@ -212,6 +212,148 @@ drop if drop==1
  
  save "E:\nhats\data\Projects\traj util after disability\nsoc date.dta"
 
+H="making data file for wellbeing before and after"
+
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" 
+
+*examine variables of interest
+*1) wellbeing
+*often cheerful
+tab oftcheer
+replace oftcheer=. if oftcheer==5
+recode oftcheer (0/2=0 "never to some days") (3/4=1 "most or every day"), gen (cheerbi)
+
+*often bored
+tab oftbored
+replace oftbored=. if oftbored==5
+recode oftbored (0/2=0 "never to some days") (3/4=1 "most or every day"), gen (boredbi)
+
+*often full of life
+tab oftfol
+replace oftfol=. if oftfol==5
+recode oftfol (0/2=0 "never to some days") (3/4=1 "most or every day"), gen (folbi)
+
+*often upset
+tab oftupset
+replace oftupset=. if oftupset==5
+recode oftupset (0/2=0 "never to some days") (3/4=1 "most or every day"), gen (upsetbi)
+
+*life has meaning and purpose
+tab lifemean, nolab
+replace lifemean=. if lifemean==4
+recode lifemean (1/2=0 "little or not agree")(3=1 "agree a lot"), gen(meanpurpbi)
+
+*i feel confident and good about myself
+tab confident, nolab
+replace confident=. if confident==4
+recode confident (1/2=0 "little or not agree")(3=1 "agree a lot"), gen(confidentbi)
+
+*i gave up trying to improve my life a long time ago
+tab giveup
+replace giveup=. if giveup==4
+recode giveup (1/2=0 "little or not agree")(3=1 "agree a lot"), gen(giveupbi)
+
+* i like my living situation very much
+tab livingsit
+replace livingsit=. if livingsit==4
+recode livingsit (1/2=0 "little or not agree")(3=1 "agree a lot"), gen(livingsitbi)
+
+*2) financial wellbeing
+tab mealskip
+replace mealskip=. if mealskip==2
+
+tab nopayhous
+replace nopayhous=. if nopayhous==2
+
+tab nopayutil
+replace nopayutil=. if nopayutil==2
+
+tab nopaymed
+replace nopaymed=. if nopaymed==2
+
+
+*3) adls and iadls
+*list of all of them: adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help iadl_meal_help iadl_bank_help iadl_meds_help adl_ins_help adl_bed_help
+sort spid wave
+foreach var of varlist 	oftcheer cheerbi oftbored boredbi oftfol folbi oftupset upsetbi lifemean meanpurpbi confident confidentbi ///
+						giveup giveupbi livingsit livingsitbi mealskip nopayhous nopayutil nopaymed ///
+						adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help iadl_meal_help ///
+						iadl_bank_help iadl_meds_help adl_ins_help adl_bed_help {
+						
+						gen `var'_n=.
+						sort spid wave
+						by spid: replace `var'_n= `var'[_n-1]
+						}
+						
+*make a variable for prior year interview date
+sort spid wave
+by spid: gen ivw_date_n= ivw_date[_n-1]
+
+keep spid wave ivw_date ivw_date_n oftcheer cheerbi oftbored boredbi oftfol folbi oftupset upsetbi lifemean meanpurpbi confident confidentbi ///
+						giveup giveupbi livingsit livingsitbi mealskip nopayhous nopayutil nopaymed ///
+						adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help iadl_meal_help ///
+						iadl_bank_help iadl_meds_help adl_ins_help adl_bed_help ///
+						oftcheer_n cheerbi_n oftbored_n boredbi_n oftfol_n folbi_n oftupset_n upsetbi_n lifemean_n meanpurpbi_n confident_n confidentbi_n ///
+						giveup_n giveupbi_n livingsit_n livingsitbi_n mealskip_n nopayhous_n nopayutil_n nopaymed_n ///
+						adl_eat_help_n adl_bath_help_n adl_toil_help_n adl_dres_help_n iadl_laun_help_n iadl_shop_help_n iadl_meal_help_n ///
+						iadl_bank_help_n iadl_meds_help_n adl_ins_help_n adl_bed_help_n
+save "E:\nhats\data\Projects\traj util after disability\wellbeing before after.dta"
+
+H="making a data file for mood before and after"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" 
+
+tab ind_pain
+tab sr_depr_pqq2
+tab sr_phq2_depressed
+tab sr_anx_gad1
+tab sr_gad2_anxiety
+
+sort spid wave
+foreach var of varlist ind_pain sr_depr_pqq2 sr_phq2_depressed sr_anx_gad1 sr_gad2_anxiety {
+	gen `var'_n=.
+	sort spid wave
+	by spid: replace `var'_n= `var'[_n-1]
+	}
+	
+	keep spid wave ind_pain sr_depr_pqq2 sr_phq2_depressed sr_anx_gad1 sr_gad2_anxiety ind_pain_n sr_depr_pqq2_n sr_phq2_depressed_n sr_anx_gad1_n sr_gad2_anxiety_n 
+	save "E:\nhats\data\Projects\traj util after disability\mood before after.dta"
+
+H="separate look at claims- making file and brief look"
+use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\ip_06_16.dta" 
+keep bene_id admit_date prncpal_dgns_cd prncpal_dgns_vrsn_cd admtg_dgns_cd admtg_dgns_vrsn_cd
+merge m:1 bene_id using "E:\nhats\data\20180625 NHATS CMS Data\merged stata\xwalk_2016.dta" 
+keep if _merge==3
+
+*merge in with datafile looking at date of disability
+drop _merge
+merge m:1 spid using  "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", keepusing (index_date)
+keep if _merge==3
+
+*make a variable for days between admit date and index date
+gen days_dis_adm= admit_date-index_date
+keep if days_dis_adm>-31 & days_dis_adm<60
+*947 unique values
+
+icd9 clean prncpal_dgns_cd
+icd9 check prncpal_dgns_cd, gen(prob)
+drop if prob==3
+drop if prob==4
+drop if prob==5
+drop if prob==10
+icd9 clean prncpal_dgns_cd
+
+icd9 generate pd= prncpal_dgns_cd, description
+sort spid 
+list spid pd
+
+*if multiple obs per person, just keep first
+by spid: gen count=_n
+keep if count==1
+tab pd, sort
+tab prncpal_dgns_cd, sort
+
+ save "E:\nhats\data\Projects\traj util after disability\inpatient diagnoses and start of disability.dta"
+
 H="***************SAS here*************"
 
 
@@ -2404,7 +2546,33 @@ merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\discat s
 drop _merge
 merge 1:1 spid  using "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta", keepusing(indhelpstop)
 
-save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+drop _merge
+merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\nsoc date.dta"
+drop if _merge==2
+
+*merge in date of disability to extract the survey wave
+
+drop _merge
+merge 1:1 spid using "E:\nhats\data\Projects\traj util after disability\date of first disability v12.dta", keepusing(ds2datehelp dm2datehelp ds3datehelp dm3datehelp ds4datehelp dm4datehelp ds5datehelp dm5datehelp ds6datehelp dm6datehelp ds7datehelp dm7datehelp)
+
+gen wave=.
+	foreach n of numlist 2/6 {
+	replace wave=`n' if dm`n'datehelp==index_date
+	replace wave=`n' if wave==. & ds`n'datehelp==index_date
+	}
+
+drop _merge
+merge 1:1 spid wave using "E:\nhats\data\Projects\traj util after disability\wellbeing before after.dta"
+drop if _merge==2
+
+
+drop _merge
+merge 1:1 spid wave using "E:\nhats\data\Projects\traj util after disability\mood before after.dta"
+drop if _merge==2
+
+
+save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", replace
+
 
 
 H="further variable cleaning"
@@ -2475,6 +2643,49 @@ replace diedqp7=1 if days_index_death<639 & days_index_death!=.
 
 gen diedqp8=0
 replace diedqp8=1 if days_index_death<730 & days_index_death!=.
+
+
+*make a variable for the days from disability to nsoc interview (so negative means interviewed before disability)
+gen dis_nsoc_days1= cg_ivw_date1-index_date if cg_ivw_date1!=.
+gen dis_nsoc_days2= cg_ivw_date2-index_date if cg_ivw_date2!=.
+gen dis_nsoc_days3= cg_ivw_date3-index_date if cg_ivw_date3!=.
+gen dis_nsoc_days4= cg_ivw_date4-index_date if cg_ivw_date4!=.
+gen dis_nsoc_days5= cg_ivw_date5-index_date if cg_ivw_date5!=.
+gen dis_nsoc_days6= cg_ivw_date6-index_date if cg_ivw_date6!=.
+
+foreach var of varlist dis_nsoc_days1 dis_nsoc_days2 dis_nsoc_days3 dis_nsoc_days4 dis_nsoc_days5 dis_nsoc_days6 {
+replace `var'=. if `var'<-365
+replace `var'=. if `var'>730
+}
+
+gen dis_nsoc_mnths1= floor(dis_nsoc_days1/30)
+gen dis_nsoc_mnths2= floor(dis_nsoc_days2/30)
+gen dis_nsoc_mnths3= floor(dis_nsoc_days3/30)
+gen dis_nsoc_mnths4= floor(dis_nsoc_days4/30)
+gen dis_nsoc_mnths5= floor(dis_nsoc_days5/30)
+
+*variable for the days from disability to nsoc only for the nsoc closest to disability
+
+gen closest_dis_nsoc_days= dis_nsoc_days1
+replace closest_dis_nsoc_days= dis_nsoc_days2 if dis_nsoc_days2!=. & abs(dis_nsoc_days2)<abs(dis_nsoc_days1)
+replace closest_dis_nsoc_days= dis_nsoc_days3 if dis_nsoc_days3!=. & abs(dis_nsoc_days3)<abs(closest_dis_nsoc_days)
+replace closest_dis_nsoc_days= dis_nsoc_days4 if dis_nsoc_days4!=. & abs(dis_nsoc_days4)<abs(closest_dis_nsoc_days)
+replace closest_dis_nsoc_days= dis_nsoc_days5 if dis_nsoc_days5!=. & abs(dis_nsoc_days5)<abs(closest_dis_nsoc_days)
+
+gen closest_dis_nsoc_mnths= floor(closest_dis_nsoc_days/30)
+
+
+*make a variable for the months between index date and interview date and last year's interview date
+drop index_ivw_mnths
+gen index_ivw_mnths= round((ivw_date-index_date)/30)
+gen index_ivw_mnths_n= round((index_date-ivw_date_n)/30)
+*6 obs are negative 1, likely from rounding: make them zero
+replace index_ivw_mnths_n=0 if index_ivw_mnths_n==-1
+
+*make a variable for count of adls as well as binary adl vs no adl (so can examine over time)
+egen ADLcount= rowtotal (adl_eat_help adl_bath_help adl_toil_help adl_dres_help adl_ins_help adl_bed_help)
+recode ADLcount (0=0)(1/max=1), gen(ADLbi)
+
 
 save "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta", replace
 
@@ -2601,7 +2812,91 @@ tab indhelpstop, sum(diedqp6)
 tab indhelpstop, sum(diedqp7) 
 tab indhelpstop, sum(diedqp8) 
 
+H="analysis of nsoc interviews"
+use "E:\nhats\data\Projects\traj util after disability\util_post_disability_w_util_workingfile.dta"
+
+*allowing people multiple nsoc interviews
+tab dis_nsoc_mnths1
+tab dis_nsoc_mnths2
+tab dis_nsoc_mnths3
+tab dis_nsoc_mnths4
+tab dis_nsoc_mnths5
+
+*allowing person only the nsoc interview closest to disability
+tab closest_dis_nsoc_mnths
+
+H="rates of wellbeing before and after disability"
+*examine rates of wellbeing by month before and after disability
+				
+tab index_ivw_mnths_n cheerbi_n, row
+tab index_ivw_mnths cheerbi, row
+
+tab index_ivw_mnths_n boredbi_n, row
+tab index_ivw_mnths boredbi, row
+
+tab index_ivw_mnths_n folbi_n, row
+tab index_ivw_mnths folbi, row
+
+tab index_ivw_mnths_n upsetbi_n, row
+tab index_ivw_mnths upsetbi, row
+
+tab index_ivw_mnths_n meanpurpbi_n, row
+tab index_ivw_mnths meanpurpbi, row
+
+tab index_ivw_mnths_n confidentbi_n, row
+tab index_ivw_mnths confidentbi, row
+
+tab index_ivw_mnths_n giveupbi_n, row
+tab index_ivw_mnths giveupbi, row
+
+tab index_ivw_mnths_n livingsitbi_n, row
+tab index_ivw_mnths livingsitbi, row
+
+tab index_ivw_mnths_n mealskip_n, row
+tab index_ivw_mnths mealskip, row
+
+tab index_ivw_mnths_n nopaymed_n, row
+tab index_ivw_mnths nopaymed, row
+
+
+tab index_ivw_mnths_n ind_pain_n, row
+tab index_ivw_mnths ind_pain, row
+
+tab index_ivw_mnths_n sr_phq2_depressed_n, row
+tab index_ivw_mnths sr_phq2_depressed, row
+
+tab index_ivw_mnths_n sr_gad2_anxiety_n, row
+tab index_ivw_mnths sr_gad2_anxiety, row
+
+
+H="rates of adl impairments before and after onset help"
+tab index_ivw_mnths_n adl_eat_help_n, row
+tab index_ivw_mnths adl_eat_help, row
+
+tab index_ivw_mnths_n adl_bath_help_n, row
+tab index_ivw_mnths adl_bath_help, row
+
+tab index_ivw_mnths_n adl_toil_help_n, row
+tab index_ivw_mnths adl_toil_help, row
+
+tab index_ivw_mnths_n adl_dres_help_n, row
+tab index_ivw_mnths adl_dres_help, row
+
+tab index_ivw_mnths_n adl_ins_help_n, row
+tab index_ivw_mnths adl_ins_help, row
+
+tab index_ivw_mnths_n adl_bed_help_n, row
+tab index_ivw_mnths adl_bed_help, row
+
+
+tab index_ivw_mnths ADLbi, row
+tabstat  ADLcount if ADLbi==1, by(index_ivw_mnths) stat (mean sd)
+
 H="changelog"
+2/17 CKA- made data for wellbeing and mood before and after disablity "making file for wellbeing before and after" "making a data file for mood before and after". merged into data under "merging on other relevent stata files" header, located at it in "rates of wellbeing before and after disability" (this includes mood, financial, depression, pain, anxiety).
+
+2/11- CKA made a variable for date of NSOC interview. see heading "making file for date of NSOC interview." merged it- added to "merging on other relevent stata files" header. looked at this in sepatate header "analysis of nsoc interviews"
+
 2/4/19- CKA- look at trends of death after disability
 
 2/2/19- CKA- merge with variable discat describing whether mobility or sc disability came first to separately look at trends
