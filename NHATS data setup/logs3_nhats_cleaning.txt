@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs3_nhats_cleaning.txt
   log type:  text
- opened on:  28 Jan 2019, 09:10:46
+ opened on:  20 Feb 2019, 12:02:17
 
 . 
 . local work "E:\nhats\data\NHATS working data\"
@@ -255,19 +255,18 @@ health=fai |                            Self reported health, categorical
   8.         }
   9.         //create two new variables from this...
 .         gen sr_`dis'_ever=sr_`dis'_raw
- 10.         replace sr_`dis'_ever=. if (wave==2 | wave==3| wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_raw==0 //set to missing i
-> f report no new wave
+ 10.         replace sr_`dis'_ever=. if (wave==2 | wave==3| wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_raw==0 //set to missing if report no new wave
  11.         replace sr_`dis'_ever=-7 if sr_`dis'_raw == -7
  12.         replace sr_`dis'_ever=-8 if sr_`dis'_raw == -8
  13. 
 .         sort spid wave
  14.         by spid (wave): carryforward sr_`dis'_ever if ivw_type==1 , replace
- 15.         
-.         replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_ever == . & sr
-> _`dis'_raw != .
- 16. 
-.         gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7
+ 15.         notes drop sr_`dis'_ever
+ 16.         
+.         replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_ever == . & sr_`dis'_raw != .
  17. 
+.         gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7
+ 18. 
 .         end
 
 . 
@@ -307,6 +306,7 @@ health=fai |                            Self reported health, categorical
 (0 real changes made)
 (0 real changes made)
 sr_ami_ever:  (24599 real changes made)
+  (1 note dropped)
 (8,514 real changes made)
 (13,249 missing values generated)
 
@@ -345,6 +345,7 @@ sr_ami_ever:  (24599 real changes made)
 (0 real changes made)
 (0 real changes made)
 sr_stroke_ever:  (24243 real changes made)
+  (1 note dropped)
 (8,972 real changes made)
 (13,249 missing values generated)
 
@@ -383,6 +384,7 @@ sr_stroke_ever:  (24243 real changes made)
 (0 real changes made)
 (0 real changes made)
 sr_cancer_ever:  (24273 real changes made)
+  (1 note dropped)
 (7,422 real changes made)
 (13,249 missing values generated)
 
@@ -449,8 +451,7 @@ sr_cancer_ever:  (24273 real changes made)
 . gen sr_hip_ever=sr_hip_raw
 (5,640 missing values generated)
 
-. replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_raw==0 //set to missing if report no ne
-> w wave
+. replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_raw==0 //set to missing if report no new wave
 (33,919 real changes made, 33,919 to missing)
 
 . 
@@ -459,7 +460,9 @@ sr_cancer_ever:  (24273 real changes made)
 . by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
 sr_hip_ever:  (24362 real changes made)
 
-. 
+. notes drop sr_hip_ever
+  (1 note dropped)
+
 . replace sr_hip_ever = sr_hip_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_ever == . & sr_hip_raw != .
 (9,557 real changes made)
 
@@ -2871,11 +2874,9 @@ conditions |         1          2          3          4          5          6   
 
 . 
 . 
-. local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_c
-> ancer_new ///
+. local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_cancer_new ///
 > sr_hip_raw sr_hip_ever sr_hip_new sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever sr_htn_new sr_ra_raw ///
-> sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_ra
-> w ///
+> sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_raw ///
 > sr_lung_dis_ever sr_lung_dis_new sr_dementia_raw sr_dementia_ever sr_dementia_new
 
 . foreach w in `ivars'{
@@ -3287,5 +3288,5 @@ file round_1_7_cleanv2.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs3_nhats_cleaning.txt
   log type:  text
- closed on:  28 Jan 2019, 09:11:14
----------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  20 Feb 2019, 12:02:39
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

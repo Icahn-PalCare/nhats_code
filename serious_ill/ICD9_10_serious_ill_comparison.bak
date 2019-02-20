@@ -30,7 +30,7 @@ Simple Outline:  Compare Serious Illness identification using ICD-9 and ICD-10. 
 global intpath "E:\nhats\data\Projects\serious_ill\icd910\int_data"
 
 // Final Data Path
-global datapath "E:\nhats\data\Projects\serious_ill\icd910\final_data..."
+global datapath "E:\nhats\data\Projects\serious_ill\icd910\final_data"
 
 //Log files path
 global logpath "E:\nhats\data\Projects\serious_ill\logs"
@@ -7690,6 +7690,246 @@ restore
 
 
 
+H="Codebook"
+capture log close
+clear all
+set more off
+version 15
+
+
+//filepath globals should be set in the first NoteTab header, or you can change these below
+local logpath $logpath
+local datapath $datapath
+local outpath $outpath
+
+//date
+local date = subinstr("$S_DATE"," ","_",.)
+
+
+cd "`logpath'"
+
+log using "`logpath'\data_dictionary`date'.txt", text replace //slightly easier than saving as SCML and then PDF
+
+// load dataset here
+
+
+//set filename 
+local filename serious_ill_nhats_sample
+
+
+
+// specify excel data dictionary file/filepath here
+local wkbk `logpath'\data_dictionary`date'.xlsx  // put excel data dictionary file/filepath here
+
+
+assert "`filename'"!=""
+use "`datapath'/`filename'", clear
+
+drop spid bene_id *smi* comorb* adl*
+
+if "`wkbk'" == "" {
+display as text "Warning: Excel file specification not found"
+} 
+else {
+display "Excel File: `wkbk'"
+}
+
+// generates variables that will contain the information
+local dispvars varname varlabel vallabelname vallabel note_1 note_2 note_3 note_4 note_5 type format ///
+mean sd min p25 p50 p75 max distinct_values n_observations n_missing 
+
+
+
+
+foreach x of local dispvars {
+	gen `x'=""
+}
+
+//gets word count so don't include them in the final output
+local excl_count : word count `dispvars'
+order `dispvars'
+
+label variable varname			"Variable Name"
+label variable varlabel			"Variable Label"
+label variable vallabelname		"Value Label Name"
+label variable vallabel			"Value Labels"
+
+/*these can be anything, but I think this may address what we need: raw vars, plain language, and code location
+  all must be included in prior code, shouldn't be done within this template*/
+label variable note_1			"Raw variables used in creation" 
+label variable note_2 			"Plain English of what the variable is"
+label variable note_3			"Location of code where variable was created" 
+label variable note_4 			"Dates of creation, alteration"
+label variable note_5			"Reference"
+label variable type				"Type (String, Numeric or Date)"
+label variable format			"Stata Display Format"
+label variable mean 			"Mean Value for numeric variables"			
+label variable sd 				"Std. Dev. for numeric variables"			
+label variable min				"Minimum Value for numeric variables"
+label variable p25				"25th percentile for numeric variables"
+label variable p50				"Median Value for numeric variables"
+label variable p75				"75th percentile for numeric variables"
+label variable max				"Maximum Value for numeric variables"
+label variable n_observations 	"Total number of observations"
+label variable distinct_values	"Number of distinct values"
+label variable n_missing		"Number missing"
+
+local i = 1
+
+
+
+foreach v of var * {
+
+
+
+	
+if "`: var label `v''" == "" {
+
+label variable `v' "No label"              // overwrites varlabel local if label is too long or not desired for output
+
+}
+
+
+replace varname			= "`v'" in `i'
+replace varlabel		= "`: var label `v''" in `i'
+replace vallabelname	= "`: val label `v''" in `i'
+replace format			= "`: format `v''" in `i'
+replace note_1			= "`: char `v'[note1]'" in `i'
+replace note_2			= "`: char `v'[note2]'" in `i'
+replace note_3			= "`: char `v'[note3]'" in `i'
+replace note_4			= "`: char `v'[note4]'" in `i'
+replace note_5			= "`: char `v'[note5]'" in `i'
+local vallabeltest = "`: val label `v''" in `i'
+if "`vallabeltest'" != "" {
+
+local val_label ""
+
+levelsof `v', local(levels)
+foreach l of local levels {
+local lab :label (`v') `l'
+local val_label "`val_label' `l',  `lab'|"
+
+}
+
+replace vallabel = "`val_label'" in `i'
+
+}
+
+
+
+
+ds `v' , has(type string)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "String" in `i'
+
+} 
+
+ds `v' , has(type numeric)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "Numeric" in `i'
+
+}
+
+ds `v' , has(varl *date* *Date*)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "Date" in `i'
+
+}
+
+
+if inlist("`: format `v''" , "%dM_d,_CY", "%tCMonth_dd,_CCYY_HH:MM", "%tm", "%td", "%tmmcY") {
+
+replace type = "Date" in `i'
+
+} 
+
+
+sum `v' , d
+foreach x in mean sd min p25 p50 p75 max {
+	local `x' : di %-12.5gc `r(`x')'
+	replace `x' = "``x''" in `i'
+}
+
+*gen n=1
+*sum n if missing(`v')
+*replace n_missing="`r(N)'" in `i'
+*drop n
+
+// section creates fills in idicator var based off of start of var label 
+// 		- project specific and would need to add indicator variable generate statement and
+//		add var to keep statement 
+// local varlabel : var label `v'
+// display "`varlabel'"
+
+// if (strpos("`: var label `v''", "RCAP") == 1) {
+//             replace redcap = "yes" in `i'
+//         }
+// 	else {
+// 	replace redcap = "no" in `i'
+// 	}
+
+*levelsof `v' , clean	
+*local countlevel : word count `r(levels)'
+
+inspect `v'
+
+replace distinct_values = "`r(N_unique)'" in `i'
+replace n_missing = "`r(N_undoc)'" in `i'	
+	
+	
+
+
+local ++ i
+}
+
+
+// remove min/ max of numeric identifiers here
+replace min = "" if varname == "study_id"  
+replace max = "" if varname == "study_id"
+
+// removes min/max of date variables, were numeric, considering taking the time 
+// to replace them with the display format, currently time is not available
+
+replace min = "" if type == "Date"
+replace max = "" if type == "Date"
+
+// for string vars, distinct values not as important (also would need to be calculated differently)
+
+replace distinct_values = "" if type != "Numeric"
+
+
+drop if varname == ""
+
+
+
+keep `dispvars'
+keep if _n>`excl_count'
+if "`wkbk'" == "" {
+display as text "Excel file specification Required"
+exit
+} 
+else {
+display "Excel File: `wkbk'"
+}
+assert "`wkbk'" != ""  // redundant check
+
+
+//1/4/19--ebl--put in quotes, since My Documents filepath (where I dumped it) has spaces
+export excel using "`wkbk'" , firstrow(varlabels) replace 
+
+
+log close
+exit
+
+
+
+
 H="**********************************"
 
 
@@ -8633,6 +8873,8 @@ foreach smivar of local smi {
 
 
 H="changelog"
+2/14/19-EBL-added codebook code (not yet notes)
+
 2/13/19-EBL-added home oxygen to CHF definition for ICD-10 in "var clean and check criteria" header
 
 2/11/19-EBL-added shareable Comparison tables header

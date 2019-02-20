@@ -7480,8 +7480,8 @@ H="dataset cleaning and sample derivation"
 Created by: EBL
 Date Created: 2/7/19
 
-Updated by:
-Date Updated:
+Updated by: EBL
+Date Updated: 2/20/19
 
 
 **************************************************
@@ -7510,7 +7510,11 @@ local logpath "${logpath}"
 cd `datapath'
 log using `logpath'\sample_derivation.txt, text replace
 
+
 use `intpath'\serious_ill_int_dataset1.dta, clear
+//2/20/19-EBL-merge with final clean dataset because the notes are dropped in SAS
+merge 1:1 spid wave using  "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta", ///
+keep(match) nogen
 
 *****************************************
 //variable cleaning and construction
@@ -7708,6 +7712,14 @@ local date = subinstr("$S_DATE"," ","_",.)
 
 cd "`logpath'"
 
+// load dataset here
+
+//date
+local date = subinstr("$S_DATE"," ","_",.)
+
+
+cd "`logpath'"
+
 log using "`logpath'\data_dictionary`date'.txt", text replace //slightly easier than saving as SCML and then PDF
 
 // load dataset here
@@ -7719,13 +7731,12 @@ local filename serious_ill_nhats_sample
 
 
 // specify excel data dictionary file/filepath here
-local wkbk `logpath'\data_dictionary`date'.xlsx  // put excel data dictionary file/filepath here
+local wkbk `logpath'\icd_9_10_data_dictionary`date'.xlsx  // put excel data dictionary file/filepath here
 
 
 assert "`filename'"!=""
 use "`datapath'/`filename'", clear
 
-drop spid bene_id *smi* comorb* adl*
 
 if "`wkbk'" == "" {
 display as text "Warning: Excel file specification not found"
@@ -7735,8 +7746,8 @@ display "Excel File: `wkbk'"
 }
 
 // generates variables that will contain the information
-local dispvars varname varlabel vallabelname vallabel note_1 note_2 note_3 note_4 type format ///
-mean sd min p25 p50 p75 max distinct_values n_missing 
+local dispvars varname varlabel vallabelname vallabel note_1 note_2 note_3 note_4 note_5 type format ///
+mean sd min p25 p50 p75 max distinct_values n_observations n_missing 
 
 
 
@@ -7760,6 +7771,7 @@ label variable note_1			"Raw variables used in creation"
 label variable note_2 			"Plain English of what the variable is"
 label variable note_3			"Location of code where variable was created" 
 label variable note_4 			"Dates of creation, alteration"
+label variable note_5			"Reference"
 label variable type				"Type (String, Numeric or Date)"
 label variable format			"Stata Display Format"
 label variable mean 			"Mean Value for numeric variables"			
@@ -7769,6 +7781,7 @@ label variable p25				"25th percentile for numeric variables"
 label variable p50				"Median Value for numeric variables"
 label variable p75				"75th percentile for numeric variables"
 label variable max				"Maximum Value for numeric variables"
+label variable n_observations 	"Total number of observations"
 label variable distinct_values	"Number of distinct values"
 label variable n_missing		"Number missing"
 
@@ -7796,6 +7809,7 @@ replace note_1			= "`: char `v'[note1]'" in `i'
 replace note_2			= "`: char `v'[note2]'" in `i'
 replace note_3			= "`: char `v'[note3]'" in `i'
 replace note_4			= "`: char `v'[note4]'" in `i'
+replace note_5			= "`: char `v'[note5]'" in `i'
 local vallabeltest = "`: val label `v''" in `i'
 if "`vallabeltest'" != "" {
 
@@ -7856,6 +7870,8 @@ foreach x in mean sd min p25 p50 p75 max {
 gen n=1
 sum n if missing(`v')
 replace n_missing="`r(N)'" in `i'
+sum n
+replace n_observations="`r(N)'" in `i'
 drop n
 
 // section creates fills in idicator var based off of start of var label 
@@ -7871,11 +7887,12 @@ drop n
 // 	replace redcap = "no" in `i'
 // 	}
 
-levelsof `v' , clean	
-local countlevel : word count `r(levels)'
+*levelsof `v' , clean	
+*local countlevel : word count `r(levels)'
 
-replace distinct_values = "`countlevel'" in `i'
-	
+egen tag`v'=tag(`v')
+count if tag`v'
+replace distinct_values = "`r(N)'" in `i'
 	
 	
 

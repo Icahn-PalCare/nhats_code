@@ -1028,6 +1028,7 @@ foreach w in 1 3 5 7{
 
 sort spid wave
 by spid: carryforward aveincome, replace
+notes drop aveincome
 //use first income imputation to set income categorical variable
 gen income_cat=0 if aveincome<15000 & aveincome!=.
 replace income_cat=1 if aveincome>=15000 & aveincome<30000 & aveincome!=.
@@ -1055,6 +1056,8 @@ replace otherlang=. if inlist(rl5spkothlan,-9,-1)
 sort spid wave
 by spid (wave): carryforward female race_cat education income_cat ///
 otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
+notes drop female race_cat education income_cat ///
+otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5
 
 gen white=race_cat==1
 gen black=race_cat==2
@@ -1221,7 +1224,7 @@ tab ht_new wave, missing
 
 sort spid wave
 by spid (wave): carryforward ht_new, replace
-
+notes drop ht_new
 tab ht_new wave, missing
 
 //most residence information from wave 1
@@ -1382,6 +1385,7 @@ program define disease
 
 	sort spid wave
 	by spid (wave): carryforward sr_`dis'_ever if ivw_type==1 , replace
+	notes drop sr_`dis'_ever
 	
 	replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_ever == . & sr_`dis'_raw != .
 
@@ -1418,7 +1422,7 @@ replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave
 
 sort spid wave
 by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
-
+notes drop sr_hip_ever
 replace sr_hip_ever = sr_hip_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_ever == . & sr_hip_raw != .
 
 gen sr_hip_new=sr_hip_raw if wave==2 | wave==3 | wave == 4 | wave==5 | wave==6 | wave==7
@@ -2332,6 +2336,7 @@ foreach w in 1 5{
 label var serarmfor "Served in Armed Forces"
 sort spid wave
 by spid: carryforward serarmfor, replace
+notes drop serarmfor
 
 //Add in 4/6/18
 egen dresslf=rowmax(sc*dresslf)
@@ -2770,7 +2775,7 @@ label var marital_div "Divorced"
 label var marital_wid "Widowed"
 label var marital_nev "Never married"
 notes married : hh1martlstat
-notes married : 
+notes married : "_"
 notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header for intermediate var and step-7 for final
 
 //lives with spouse
@@ -2849,6 +2854,7 @@ forvalues i=1(4)5 {
 
 sort spid wave
 by spid: carryforward smoke*, replace
+notes drop smoke*
 gen smokesnow=.
 by spid, sort: egen numcigsever=max(sd1numcigday)
 gen numcigsnow=.
@@ -2975,7 +2981,7 @@ foreach w in 1 2 3 4 5 6 7{
 *replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
 notes adl_ins_help : mo*insdhlp
-notes adl_ins_help :
+notes adl_ins_help : "_"
 notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
 
@@ -2998,7 +3004,7 @@ foreach w in 1 2 3 4 5 6 7{
 label var adl_bed_help "Received help getting out of bed"
 *replace adl_bed_diff=1 if adl_bed_help==1
 notes adl_bed_help : mo*bedhlp
-notes adl_bed_help :
+notes adl_bed_help : "_"
 notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
 
@@ -3050,7 +3056,7 @@ label var adl_index "Index of help w/ ADLs"
 
 foreach x in independent impair index {
 	notes adl_`x' : sc*eathlp sc*bathhlp sc*toilhlp sc*dreshlp
-	notes adl_`x' : 
+	notes adl_`x' : "_"
 	notes adl_`x' : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 }
 
@@ -3409,6 +3415,7 @@ svyset varunit [pw=anfinwgt], strat(varstrat)
 sort spid wave
 by spid: carryforward educ*, replace
 label var educ_hs_ind "Education: HS+"
+notes drop educ*
 
 //10/25/18--add in payer and other variables from Jenny's homebound project
 preserve
@@ -3698,40 +3705,32 @@ label var an2011wgt "Updated 2011 Analytic Weight for Rds 5+"
 notes anfinwgt : r*anfinwgt0
 notes anfinwgt : Analytic final weight, post-stratified to most recent sample frame as in the technical paper
 notes anfinwgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
-notes anfinwgt : 
+notes anfinwgt : "_"
 notes anfinwgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
 
-notes anfin2011wgt : r*anfin2011wgt0
-notes anfin2011wgt : Analytic final weight, post-stratified to most 2011 sample frame as in the technical paper
-notes anfin2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
-notes anfin2011wgt : 
-notes anfin2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+notes an2011wgt : r*an2011wgt0
+notes an2011wgt : Analytic final weight, post-stratified to most 2011 sample frame as in the technical paper
+notes an2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes an2011wgt : "_"
+notes an2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
 
 notes old_anfinwgt : r*anfinwgt0
 notes old_anfinwgt : Original analytic weight
 notes old_anfinwgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
-notes old_anfinwgt : 
+notes old_anfinwgt : "_"
 notes old_anfinwgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
 
-notes old_anfin2011wgt : r*anfin2011wgt0
-notes old_anfin2011wgt : Original analytic weight for 2011 sample frame
-notes old_anfin2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
-notes old_anfin2011wgt : 
-notes old_anfin2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+notes old_an2011wgt : r*an2011wgt0
+notes old_an2011wgt : Original analytic weight for 2011 sample frame
+notes old_an2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes old_an2011wgt : "_"
+notes old_an2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
 
-saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
-
-gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
-
-foreach x in 12 24 {
-	gen nhats_died_`x'=time2d<=`x' if !lml
-	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
-}
 
 /*Add notes for raw variables or variables that were created in earlier headers*/
 notes varstrat : r*varstrat
 notes varunit : r*varunit
-notes wave : 
+notes wave : "_"
 notes wave : Wave assigned to round number
 notes wave : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-1 header
 notes proxy_ivw : is*resptype
@@ -3741,7 +3740,7 @@ notes age : r*dintvwrage r*ddeathage
 notes age : Age at interview if living or death if LML
 notes age : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
 notes female : r*dgender
-notes female : 
+notes female : "_"
 notes female : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
 notes educ_hs_ind : el*higstschl
 notes educ_hs_ind : Completed HS+ (includes GED)
@@ -3759,10 +3758,10 @@ notes other_race : rl*dracehisp
 notes other_race : Any non-White, non-Black, non-Hispanic race
 notes other_race : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-1 header
 notes medicaid : ip*cmedicaid
-notes medicaid :
+notes medicaid : "_"
 notes medicaid : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
 notes medigap : ip*mgapmedsp
-notes medigap :
+notes medigap : "_"
 notes medigap : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
 notes srh_fp : hc*health
 notes srh_fp : SR health is poor or fair (as opposed to good, v. good, or excellent)
@@ -3779,6 +3778,16 @@ notes adl_toil_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step
 notes adl_dres_help : sc*dreshelp
 notes adl_dres_help : Help dresing in the last month
 notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
+
+gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
+
+foreach x in 12 24 {
+	gen nhats_died_`x'=time2d<=`x' if !lml
+	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
+}
+
+
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
@@ -3809,6 +3818,256 @@ local i=`i'+1
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_sensitive_variables.txt", text replace
 describe `senslabs', fullnames
 log close
+
+
+H="Codebook for SP dataset"
+capture log close
+clear all
+set more off
+version 15
+
+
+//filepath globals should be set in the first NoteTab header, or you can change these below
+local logpath $logpath
+local datapath $datapath
+local outpath $outpath
+
+//date
+local date = subinstr("$S_DATE"," ","_",.)
+
+
+cd "`logpath'"
+
+// load dataset here
+
+
+local datapath "E:\nhats\data\NHATS cleaned"
+//date
+local date = subinstr("$S_DATE"," ","_",.)
+
+
+cd "`logpath'"
+
+log using "`logpath'\data_dictionary`date'.txt", text replace //slightly easier than saving as SCML and then PDF
+
+// load dataset here
+
+
+//set filename 
+local filename sp_round_1_7.dta
+
+
+
+// specify excel data dictionary file/filepath here
+local wkbk `logpath'\sp_round_1_7_data_dictionary`date'.xlsx  // put excel data dictionary file/filepath here
+
+
+assert "`filename'"!=""
+use "`datapath'/`filename'", clear
+
+
+if "`wkbk'" == "" {
+display as text "Warning: Excel file specification not found"
+} 
+else {
+display "Excel File: `wkbk'"
+}
+
+// generates variables that will contain the information
+local dispvars varname varlabel vallabelname vallabel note_1 note_2 note_3 note_4 note_5 type format ///
+mean sd min p25 p50 p75 max distinct_values n_observations n_missing 
+
+
+
+
+foreach x of local dispvars {
+	gen `x'=""
+}
+
+//gets word count so don't include them in the final output
+local excl_count : word count `dispvars'
+order `dispvars'
+
+label variable varname			"Variable Name"
+label variable varlabel			"Variable Label"
+label variable vallabelname		"Value Label Name"
+label variable vallabel			"Value Labels"
+
+/*these can be anything, but I think this may address what we need: raw vars, plain language, and code location
+  all must be included in prior code, shouldn't be done within this template*/
+label variable note_1			"Raw variables used in creation" 
+label variable note_2 			"Plain English of what the variable is"
+label variable note_3			"Location of code where variable was created" 
+label variable note_4 			"Dates of creation, alteration"
+label variable note_5			"Reference"
+label variable type				"Type (String, Numeric or Date)"
+label variable format			"Stata Display Format"
+label variable mean 			"Mean Value for numeric variables"			
+label variable sd 				"Std. Dev. for numeric variables"			
+label variable min				"Minimum Value for numeric variables"
+label variable p25				"25th percentile for numeric variables"
+label variable p50				"Median Value for numeric variables"
+label variable p75				"75th percentile for numeric variables"
+label variable max				"Maximum Value for numeric variables"
+label variable n_observations 	"Total number of observations"
+label variable distinct_values	"Number of distinct values"
+label variable n_missing		"Number missing"
+
+local i = 1
+
+
+
+foreach v of var * {
+
+
+
+	
+if "`: var label `v''" == "" {
+
+label variable `v' "No label"              // overwrites varlabel local if label is too long or not desired for output
+
+}
+
+
+replace varname			= "`v'" in `i'
+replace varlabel		= "`: var label `v''" in `i'
+replace vallabelname	= "`: val label `v''" in `i'
+replace format			= "`: format `v''" in `i'
+replace note_1			= "`: char `v'[note1]'" in `i'
+replace note_2			= "`: char `v'[note2]'" in `i'
+replace note_3			= "`: char `v'[note3]'" in `i'
+replace note_4			= "`: char `v'[note4]'" in `i'
+replace note_5			= "`: char `v'[note5]'" in `i'
+local vallabeltest = "`: val label `v''" in `i'
+if "`vallabeltest'" != "" {
+
+local val_label ""
+
+levelsof `v', local(levels)
+foreach l of local levels {
+local lab :label (`v') `l'
+local val_label "`val_label' `l',  `lab'|"
+
+}
+
+replace vallabel = "`val_label'" in `i'
+
+}
+
+
+
+
+ds `v' , has(type string)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "String" in `i'
+
+} 
+
+ds `v' , has(type numeric)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "Numeric" in `i'
+
+}
+
+ds `v' , has(varl *date* *Date*)
+
+if "`r(varlist)'" == "`v'" {
+
+replace type = "Date" in `i'
+
+}
+
+
+if inlist("`: format `v''" , "%dM_d,_CY", "%tCMonth_dd,_CCYY_HH:MM", "%tm", "%td", "%tmmcY") {
+
+replace type = "Date" in `i'
+
+} 
+
+
+sum `v' , d
+foreach x in mean sd min p25 p50 p75 max {
+	local `x' : di %-12.5gc `r(`x')'
+	replace `x' = "``x''" in `i'
+}
+
+gen n=1
+sum n if missing(`v')
+replace n_missing="`r(N)'" in `i'
+sum n
+replace n_observations="`r(N)'" in `i'
+drop n
+
+// section creates fills in idicator var based off of start of var label 
+// 		- project specific and would need to add indicator variable generate statement and
+//		add var to keep statement 
+// local varlabel : var label `v'
+// display "`varlabel'"
+
+// if (strpos("`: var label `v''", "RCAP") == 1) {
+//             replace redcap = "yes" in `i'
+//         }
+// 	else {
+// 	replace redcap = "no" in `i'
+// 	}
+
+*levelsof `v' , clean	
+*local countlevel : word count `r(levels)'
+
+egen tag`v'=tag(`v')
+count if tag`v'
+replace distinct_values = "`r(N)'" in `i'
+	
+	
+
+
+local ++ i
+}
+
+
+// remove min/ max of numeric identifiers here
+replace min = "" if varname == "study_id"  
+replace max = "" if varname == "study_id"
+
+// removes min/max of date variables, were numeric, considering taking the time 
+// to replace them with the display format, currently time is not available
+
+replace min = "" if type == "Date"
+replace max = "" if type == "Date"
+
+// for string vars, distinct values not as important (also would need to be calculated differently)
+
+replace distinct_values = "" if type != "Numeric"
+
+
+drop if varname == ""
+
+
+
+keep `dispvars'
+keep if _n>`excl_count'
+if "`wkbk'" == "" {
+display as text "Excel file specification Required"
+exit
+} 
+else {
+display "Excel File: `wkbk'"
+}
+assert "`wkbk'" != ""  // redundant check
+
+
+//1/4/19--ebl--put in quotes, since My Documents filepath (where I dumped it) has spaces
+export excel using "`wkbk'" , firstrow(varlabels) replace 
+
+
+log close
+exit
+
+
 
 
 H="NSOC Setup stata"
@@ -7342,6 +7601,12 @@ H="Changelog"
 
 
 Updates:
+
+
+02/20/2019 EBL
+----------
+Updated Parts 3,4, and 7 for notes and added the Codebook for SP dataset header.
+
 
 02/14/2019 MH
 ----------
