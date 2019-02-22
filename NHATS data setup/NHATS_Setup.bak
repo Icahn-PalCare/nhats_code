@@ -3726,14 +3726,6 @@ notes old_an2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step
 notes old_an2011wgt : "_"
 notes old_an2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
 
-saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
-
-gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
-
-foreach x in 12 24 {
-	gen nhats_died_`x'=time2d<=`x' if !lml
-	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
-}
 
 /*Add notes for raw variables or variables that were created in earlier headers*/
 notes varstrat : r*varstrat
@@ -3786,6 +3778,16 @@ notes adl_toil_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step
 notes adl_dres_help : sc*dreshelp
 notes adl_dres_help : Help dresing in the last month
 notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
+
+gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
+
+foreach x in 12 24 {
+	gen nhats_died_`x'=time2d<=`x' if !lml
+	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
+}
+
+
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
@@ -7591,6 +7593,1613 @@ saveold round_1_$w_clean_helper_added_old.dta, replace
 log close
 
 
+H="NHATS Data Cleaning Part 7--Variable Construction"
+/*
+
+Created by: --
+Date Created: --
+
+Updated by: MH
+Date Updated: 02/20/2019
+
+Description: This section uses the SP and OP data files and imputes
+hours of help provided to SP per methods in NHATS Technical Paper #7
+
+
+Collapse helper information to the SP - wave level
+and merge into SP dataset
+
+variables created are:
+Total # helpers for the SP
+Total hours/month help provided for SP
+Indicators for relationship of primary helper (identified as helper 
+with the most hours)
+
+Uses imputed hours per code 1a_help_hours_imputation.do
+(see NHATS Technical Paper #7 for imputation methodology)
+
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name 6_nhats_cleaning`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}`name'.smcl", text replace
+
+
+
+*********************************************
+
+//Does not need to change, unless get new metro file. 
+
+//7/13/17--add in metro/nonmetro var
+use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
+forvalues w=1/6 {
+gen metro_ind`w'=r`w'd==1 if inrange(r`w'd,1,2)
+}
+reshape long metro_ind, i(spid) j(wave)
+label var metro_ind "Lives in metropolitan area"
+note metro_ind: From metro non-metro file, r(wave)dmetnomet raw variable. 
+
+label define metro_ind  0 "Non-Metro" 1 "Metro" 
+label values metro_ind metro_ind
+
+tempfile metro
+save `metro'
+
+cd "${work}"
+
+use round_1_$w_clean_helper_added.dta
+merge 1:1 spid wave using `metro', keep(match master) nogen
+
+
+//1/28/2019-Advance Care Planning based off of Ornstein instructions
+
+gen no_acp=0
+replace no_acp=1 if inlist(eoltalk, 2, -8, -7) & inlist(poweratty, 2, -7, -8) & inlist(livngwill, 2, -7, -8)
+replace no_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
+note no_acp: Only in Rd2. no_acp=1 if eoltalk=2,-7,-8 & poweratty=2,-7,-8 & livingwill=2,-7,-8. 
+note no_acp: No Advance Care Planning based off of talk about EOL care, legal arrangements, and living will all being no. 
+note no_acp: Located in NHATS Setup, under Part 7.
+note no_acp: Created: 1/28/19-MH 
+
+gen formal_acp=0
+replace formal_acp=1 if inlist(eoltalk, 2, -8, -7) & (poweratty==1 | livngwill==1)
+replace formal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
+note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 | livingwill=1)
+note formal_acp: Formal Advance Care Planning based off of not talking about EOL care and either having ///
+having legal arrangements or having a living will.
+note formal_acp: Located in NHATS Setup, under Part 7.
+note formal_acp: Created: 1/28/19-MH 
+
+gen informal_acp=0
+replace informal_acp=1 if eoltalk==1 & inlist(poweratty, 2, -7, -8) & inlist(livngwill, 2, -7, -8)
+replace informal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
+note informal_acp: Only in Rd2. informal_acp=1 if eoltalk=1 & poweratty=2,-7,-8 & livingwill=2,-7,-8
+note informal_acp: Informal Advance Care Planning based off of talking about EOL care and not having ///
+having legal arrangements and not having a living will.
+note informal_acp: Located in NHATS Setup, under Part 7.
+note informal_acp: Created: 1/28/19-MH 
+
+gen acp=0
+replace acp=1 if eoltalk==1 & (poweratty==1 | livngwill==1)
+replace acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .)
+note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 | livingwill=1)
+note formal_acp: Formal Advance Care Planning based off of not talking about EOL care and either having ///
+having legal arrangements or having a living will.
+note formal_acp: Located in NHATS Setup, under Part 7.
+note formal_acp: Created: 1/28/19-MH
+
+
+label var no_acp "No Advance care planning, 1=yes"
+label var formal_acp "Formal Advance care planning, 1=yes"
+label var informal_acp "Informal Advance care planning, 1=yes"
+label var acp "Advance care planning (Formal & Informal), 1=yes"
+label define acp  0 "No" 1 "Yes" 
+foreach x in no_acp formal_acp informal_acp acp {
+label values `x' acp
+}
+
+
+foreach x in no_acp formal_acp informal_acp acp {
+tab `x' if wave==2 , m
+}
+
+// 8/10/2018 Add in 2011 weight for rd 5,6 
+rename an2011wgt0 an2011wgt 
+label var an2011wgt "2011 weights"
+
+rename trfinwgt0 trfinwgt
+rename tr2011wgt0 tr2011wgt
+
+//Add in 7/3/18
+
+foreach w in 1 5{
+	replace serarmfor=1 if serarmfor==1 & wave==`w'
+	replace serarmfor=0 if serarmfor==2 & wave==`w'
+	replace serarmfor=-7 if serarmfor==-7 & wave==`w'
+	replace serarmfor=-8 if serarmfor==-8 & wave==`w'
+}
+label var serarmfor "Served in Armed Forces"
+sort spid wave
+by spid: carryforward serarmfor, replace
+notes drop serarmfor
+
+//Add in 4/6/18
+label var dresslf "Often you Dress Yourself"
+
+label var dresdif "Difficulty when using Special Items by Self"
+
+label var ntlvrmslp "Often had to Stay in Bed"
+
+label var eatdev "Ever use Adapted Utensils"
+
+
+////// 4/2/2018--Adding in income quartile
+sort wave
+forvalues w=1/$w {
+xtile income_quart`w'=aveincome [aw=anfinwgt0] if wave==`w', nq(4) 
+}
+egen income_quart=rowmax(income_quart*)
+
+forvalues w=1/$w{
+drop income_quart`w'
+}
+
+label var income_quart "Quartile of Income"
+label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
+label values income_quart income_quart
+
+///// 3/26/18 --Adding in Hospice and place died variables.
+
+label var placedied "Place of Death"
+replace placedied=. if inlist(placedied,-1,-8)
+replace placedied=6 if placedied==91
+
+replace hospice2=. if inlist(hospice2,-1,-8) 
+
+rename hospcelml hospicelml
+foreach x in hospice1 hospicelml {
+replace `x'=. if inlist(`x',-1,-8)
+replace `x'=0 if `x'==2
+} 
+ 
+label var hospice1 "Hopsice at Nursing Home"
+label var hospice2 "Hospice Other Place"
+label var hospicelml "Hospice Care in Last Month"
+ 
+ 
+///// 3/14/18 --Adding in Frailty underlying series
+
+//activities done twice (grip test, walk test..)
+
+forvalues i=1/2{
+capture drop gripsc`i'
+rename grp`i'rdng gripsc`i'
+rename wlkc`i'secs walksec`i'
+rename wlk`i'hndr walkhndr`i'
+
+replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
+replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
+replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
+}
+
+label var gripsc1 "GRP1 Display Reading"
+label var gripsc2 "GRP2 Display Reading"
+label var walksec1 "Secs Hld Walking Course1"
+label var walksec2 "Secs Hld Walking Course2"
+label var walkhndr1 "Hnrds Hld Walking Course1"
+label var walkhndr2 "Hnrds Hld Walking Course2"
+/*
+forvalues i=1/2{
+capture drop walk`i'
+if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
+if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
+replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
+}
+rename walk1 walksec
+rename walk2 walkhnrds
+label var walk1 "Secs Hld Walking Course)
+*/
+
+foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
+capture drop `x'
+gen `x'=.
+replace `x'=d`x' if  inlist( d`x', 0, 1, 2, 3, 4)
+}
+
+label var origwksc "Original Walk Score"
+label var nhatswksc "NHATS Walk Score"
+label var nhatsgrav "NHATS Avg. Grip Score"
+label var nhatsgrb "NHATS Best Grip Score"
+
+
+local a lst10pnds trytolose 
+local b evrgowalk vigoractv
+
+foreach x in `a' `b'{
+capture drop `x'
+gen `x'=.
+}
+
+
+foreach x in `a'{
+replace `x'=0 if inlist(`x', 2, -8, -7) 
+replace `x'=1 if `x'==1
+}
+foreach y in `b'{
+replace `y'=0 if inlist(`y', 2, -8, -7) 
+replace `y'=1 if `y'==1
+}
+
+
+label var lst10pnds "Lost 10 Pounds in Last Yr."
+label var trytolose "Were You Trying to Lose Weight"
+label var evrgowalk "Ever Go Walking for Exercise"
+label var vigoractv "Ever Vigorous Activities"
+
+
+capture drop unwgtloss lowphysact
+gen unwgtloss=. 
+gen lowphysact=.
+replace unwgtloss=0 if lst10pnds==0 | trytolose==1
+replace unwgtloss=1 if lst10pnds==1 & trytolose==0
+replace lowphysact=0 if evrgowalk==1 | vigoractv==1
+replace lowphysact=1 if evrgowalk==0 & vigoractv==0
+
+label var unwgtloss "Unintentional Weight Loss"
+label var lowphysact "Low Physical Activity"
+
+capture drop lowenrgy
+replace lowenergy=. if inlist(lowenergy, -9, -8, -7, -1)
+replace lowenergy=0 if lowenergy==2
+label var lowenergy "Low Energy in Last Month"
+
+
+///// 3/7/18 --Adding in Well-Being questions 
+/// Inapplicable is people who have no interview, had a proxy, or died. turned to missing. 
+
+foreach j in 1 2 4 {
+	forvalues i=1/4 {
+		capture drop wbq`j'`i'
+		gen wbq`j'`i'=.
+	}
+}
+drop wbq44
+
+forvalues i=1/4 {
+replace wbq1`i'=1 if offelche`i'==4 
+replace wbq1`i'=2 if offelche`i'==3 
+replace wbq1`i'=3 if offelche`i'==2
+replace wbq1`i'=4 if offelche`i'==1 
+replace wbq1`i'=0 if offelche`i'==5 
+replace wbq1`i'=5 if (offelche`i'==-7 | offelche`i'==-8) 
+}
+
+
+label var wbq11 "Often you Feel Cheerful"
+rename wbq11 oftcheer 
+label define oftcheer 0 "Never" 1 "Rarely (Once a Week or Less)" 2 "Some Days(2-4 Days a Week)" ///
+3 "Most Days(5-6 Days a Week)" 4 "Every Day (7 Days a Week)" 5 "RF/DK"
+label values oftcheer oftcheer
+label var wbq12 "Often you Feel Bored"
+rename wbq12 oftbored
+label values oftbored oftcheer
+label var wbq13 "Often you Feel Full of Life"
+rename wbq13 oftfol
+label values oftfol oftcheer
+label var wbq14 "Often you Feel Upset"
+rename wbq14 oftupset
+label values oftupset oftcheer
+
+
+
+forvalues i=1/4 {
+replace wbq2`i'=1 if truestme`i'==3 
+replace wbq2`i'=2 if truestme`i'==2 
+replace wbq2`i'=3 if truestme`i'==1
+replace wbq2`i'=4 if (truestme`i'==-7 | truestme`i'==-8) 
+}
+
+
+label var wbq21 "Life has Meaning Purpose"
+rename wbq21 lifemean 
+label define lifemean 1 "Agree Not at All" 2 "Agree a Little" 3 "Agree A Lot" 4 "RF/DK"
+label values lifemean lifemean
+label var wbq22 "Feels Confident"
+rename wbq22 confident
+label values confident lifemean
+label var wbq23 "Gave up Improving Life"
+rename wbq23 giveup
+label values giveup lifemean
+label var wbq24 "Likes Living Situation"
+rename wbq24 livingsit
+label values livingsit lifemean
+
+
+forvalues i=1/3 {
+replace wbq4`i'=1 if agrwstmt`i'==3 
+replace wbq4`i'=2 if agrwstmt`i'==2 
+replace wbq4`i'=3 if agrwstmt`i'==1 
+replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8) 
+}
+
+
+label var wbq41 "Self Determination"
+rename wbq41 selfdeter 
+label values selfdeter lifemean
+label var wbq42 "Want-Finds Way to Do"
+rename wbq42 findway
+label values findway lifemean
+label var wbq43 "Easily Adjust to Change"
+rename wbq43 adjchg
+label values adjchg lifemean
+	
+
+capture drop agefeel
+egen agefeel= rowmax(ageyofeel) 
+replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
+label var agefeel "Age you Feel Most Times"
+
+
+///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
+//missing if in NH-FQ, dead, in NH-FQ R1 & R2
+
+local ew mealskip1 nopayhous nopayutil nopaymed
+
+foreach x in `ew'{
+replace `x'=0 if `x'==2 
+replace `x'=1 if `x'==1
+replace `x'=2 if `x'==-7 |`x'==-8
+}
+
+
+label var mealskip1 "No Money, Meals Skipped"
+label var nopayhous "No Money for Housing"
+label var nopayutil "No Money for Utilities"
+label var nopaymed "No Money for Medical"
+
+label define mealskip 0 "No" 1 "Yes" 2 "RF/DK"
+foreach x in `ew' {
+label values `ew' mealskip
+}
+rename mealskip1 mealskip
+
+capture drop mealskipnum
+gen mealskipnum=.
+
+
+replace mealskipnum=0 if mealskip2==-1 & mealskip==2
+replace mealskipnum=1 if mealskip2==4
+replace mealskipnum=2 if mealskip2==3
+replace mealskipnum=3 if mealskip2==2
+replace mealskipnum=4 if mealskip2==1
+replace mealskipnum=5 if mealskip2==-7 | mealskip2==-8
+
+
+label var mealskipnum "How Often Meals Skipped"
+label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)" ///
+3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
+label values mealskipnum mealskipnum1
+
+
+///// 12/5/17 --Adding in Cancer 
+
+// recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
+
+// From sensitive data
+recode cancerty1 cancerty2 cancerty3 cancerty4 cancerty5 ///
+cancerty6 cancerty7 cancerty8 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had)
+
+foreach x of varlist sr*canc*d {
+	local lab : var label `x'
+	label var `x' "Sensitive: `lab'"
+}
+//keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+//sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had
+
+
+//recoding all refuse, dk, na, as missing
+qui destring *, replace
+foreach x of varlist * {
+	replace `x'=. if inlist(`x',-1,-7,-8,-9)
+}
+
+
+//how do you get to the doctor?
+gen howgetdoc=.
+forvalues i=1/9 {
+replace howgetdoc=`i' if hwgtregd`i'==1 
+}
+
+label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" ///
+4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" ///
+8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
+label values howgetdoc howgetdoc
+
+
+//note 11/14/17--add importance of activities
+gen ind_imp_visit=.
+gen ind_imp_relig=.
+gen ind_imp_club=.
+gen ind_imp_goout=.
+
+replace ind_imp_visit=inlist(impvstfam,1,2) 
+replace ind_imp_relig=inlist(imprelser,1,2) 
+replace ind_imp_club=inlist(imparclub,1,2) 
+replace ind_imp_goout=inlist(impouteny,1,2) 
+
+label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
+label var ind_imp_relig "Very/somewhat important to attend religious services"
+label var ind_imp_club "Very/somewhat important to participate in clubs, classes, etc."
+label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
+
+foreach x in out insd bed {
+	gen device_`x'=.
+	label var device_`x' "Uses any assistive device for mobility `x'"
+}
+label var device_out "Uses any assistive device for mobility outside"
+label var device_ins "Uses any assistive device for mobility inside"
+label var device_bed "Uses any assistive device to get out of bed"
+
+foreach x in eat bath toil dres {
+	gen device_`x'=.
+	label var device_`x' "Uses assistive device for `x'ing"
+}
+
+
+foreach x in out insd bed {
+	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+}
+
+foreach x in eat bath toil dres {
+	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+}
+replace device_bath=0 if dbathdevi==9 
+
+
+gen device_any=0
+foreach x in out ins bed eat bath toil dres {
+	replace device_any=1 if device_`x'==1
+}
+label var device_any "Uses any assistive device for ADLs"
+
+rename drives dtdrives //a drive flag exists in nhats
+//making our own drive variable
+gen drives=.
+replace drives=oftedrive>0 & oftedrive<5 
+
+label var drives "Drives"
+
+gen avoids=.
+
+replace avoids=0 if oftedrive>0 & oftedrive!=5
+local avoids avoidriv1 avoidriv2 avoidriv4
+
+foreach x of varlist `avoids' {
+	replace avoids=1 if `x'==1
+	replace `x'=. if `x'<0
+}
+}
+label var avoids "Avoids driving alone/at night/in weather*"
+
+gen miss=0
+gen ind_transp_disadv=.
+
+
+replace ind_transp_disadv=0 if (oftedrive==. | inlist(oftedrive,5,6)
+local probs trkpfrvis trprrelsr trprkpfgr trprgoout
+foreach x in `probs' {
+replace ind_transp_disadv=1 if `x'==1
+gen `x'2=`x'==1 if `x'>=0 & !missing(`x') 
+replace `x'=`x'2
+drop `x'2
+replace miss=miss+1 if missing(`x') 
+}
+///////////////////////////////////////////////////////////////////////////here
+replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
+replace ind_transp_disadv=. if miss==4
+label var ind_transp_disadv "Any transportation disadvantage"
+drop miss
+
+local lab1 Walked
+local lab2 Got ride
+local lab3 Van or shuttle provided by place of residence
+local lab4 Van or shuttle for seniors
+local lab5 Public transportation
+local lab6 Taxi
+local lab7 Other
+local l=1
+
+forvalues i=1/7 {
+gen get_places`i'=.
+}
+forvalues w=1/7 {
+replace dt`w'getoplcs3=0 if !missing(dt`w'getoplcs7) & missing(dt`w'getoplcs3)
+forvalues x=1/7  {
+	replace get_places`x'=dt`w'getoplcs`x'==1 if wave==`w'
+	replace get_places`x'=. if (inlist(dt`w'getoplcs7,-1,.) | dt`w'getoplcs`x'==.) & wave==`w'
+	label var get_places`x' "Get places: `lab`x''"
+	local l=`l'+1
+}
+}
+//marital status-3 vars: married, married_or_partnered
+
+gen married=maritalstat==1 if maritalstat!=. //married
+gen marital_sep=maritalstat==3 if !mi(maritalstat)
+gen marital_div=maritalstat==4 if !mi(maritalstat)
+gen marital_wid=maritalstat==5 if !mi(maritalstat)
+gen marital_nev=maritalstat==6 if !mi(maritalstat)
+gen marriedpartnered=married
+replace marriedpartnered=1 if maritalstat==2 //living with a partner
+gen marital_sd=marital_sep
+replace marital_sd=1 if marital_div==1
+
+label var married "Married"
+label var marriedpartnered "Married or Live w/ Partner"
+label var marital_sep "Separated"
+label var marital_div "Divorced"
+label var marital_wid "Widowed"
+label var marital_nev "Never married"
+notes married : hh1martlstat
+notes married : "_"
+notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header for intermediate var and step-7 for final
+
+//lives with spouse
+gen resspouse=.
+forvalues i=1/7 {
+	replace resspouse=hh`i'livwthspo==1 if wave==`i' & hh`i'livwthspo>0
+	replace resspouse=0 if marriedpart==0
+}
+label var resspouse "Lives with Spouse/Partner"
+
+//household members
+gen hhm=.
+forvalues i=1/7 {
+	replace hhm=hh`i'dhshldnum if hh`i'dhshldnum>0 & wave==`i'
+}
+label var hhm "Number of household members"
+
+//age categorical
+
+sort spid wave
+by spid: replace age=age[_n-1]+1 if missing(age)
+label var age "Sensitive: age"
+
+gen agecat = .
+forvalues i=1/7 {
+replace agecat= r`i'd2intvrage if wave==`i'
+}
+replace agecat=. if agecat==-1
+label values agecat r1d2intvrage
+label var agecat "Age, 5 yr categories"
+
+//activities past month
+
+gen attrelig=. //attend services
+gen imprelig=. //importance of religious services
+gen visitfrfam=. //visit fr. fam.
+gen impvisit=. //importance of visiting friends & fam
+gen attclub=. //participate in club, organized activity, class, etc.
+gen impclub=. //importance of such activities
+gen vigact=. //vigorous activities
+
+forvalues i=1/7 {
+	replace attrelig=pa`i'attrelser==1 if pa`i'attrelser>0 & wave==`i'
+	replace imprelig=pa`i'imprelser if pa`i'imprelser>0 & wave==`i' 
+	replace visitfrfam=pa`i'vistfrfam==1 if pa`i'vistfrfam>0 & wave==`i'
+	replace impvisit=pa`i'impvstfam if pa`i'impvstfam>0 & wave==`i'
+	replace attclub=pa`i'clbmtgrac==1 if pa`i'clbmtgrac>0 & wave==`i'
+	replace impclub=pa`i'imparclub if pa`i'imparclub>0 & wave==`i'
+	replace vigact=pa`i'vigoractv==1 if pa`i'vigoractv>0 & wave==`i'
+}
+
+gen religvimp=imprelig==1 if imprelig!=. //very important binary
+
+label var attrelig "Past mo. Attend religious services"
+label var imprelig "Importance of religious services"
+label var religvimp "Religious services very important, yes/no"
+label var visitfrfam "Past mo. visit friends or family"
+label var impvisit "Importance of visiting friends/family"
+label var attclub "Past mo. participate in clubs/classes/organized activities"
+label var impclub "Importance of club/class/etc. participation"
+label var vigact "Past mo. engage in vigorous activity"
+
+label values imprelig pa1imprelser
+label values impvisit pa1impvstfam
+label values impclub pa1imparclub
+
+//smokin'
+gen smokedever=. 
+gen smoke_start_age=.
+gen smoke_stop_age=.
+forvalues i=1(4)5 {
+	replace smokedever=sd`i'smokedreg==1 if wave==`i' & sd`i'smokedreg>0
+	replace smoke_start_age=sd`i'agesrtsmk if wave==`i' & sd`i'agesrtsmk>0
+	replace smoke_stop_age=sd`i'agelstsmk if wave==`i' & sd`i'agelstsmk>0
+}
+
+sort spid wave
+by spid: carryforward smoke*, replace
+notes drop smoke*
+gen smokesnow=.
+by spid, sort: egen numcigsever=max(sd1numcigday)
+gen numcigsnow=.
+
+
+forvalues i=1/7 {
+	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
+	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
+}
+replace smokedever=1 if smokesnow==1
+replace smokesnow=0 if smokedever==0
+replace numcigsnow=0 if smokesnow==0
+
+label var smokedever "Ever smoked"
+label var smokesnow "Smokes now"
+label var numcigsever "Number of cigarettes/day when smoked"
+label var numcigsnow "Number of cigarettes/day currently"
+label var smoke_start_age "Age started smoking"
+label var smoke_stop_age "Age stopped smoking"
+
+//pain
+gen ind_pain=.
+forvalues i=1/7 {
+	replace ind_pain=ss`i'painb==1 if inrange(ss`i'painb,0,2) & wave==`i'
+}
+label var ind_pain "Bothered by pain"
+
+//weight
+
+gen wgt_curr=.
+gen height_ft=.
+gen height_in=.
+
+forvalues i=1/7 {
+	replace wgt_curr=hw`i'currweigh if hw`i'currweigh>0 & wave==`i'
+	replace height_ft=hw`i'howtallft if hw`i'howtallft>0 & wave==`i'
+	replace height_in=hw`i'howtallin if hw`i'howtallin>0 & wave==`i'
+}
+
+label var wgt_curr "Current weight, lbs."
+label var height_ft "Current height, feet"
+label var height_in "Current height, inches"
+
+gen bmi=(wgt_curr/((height_ft*12+height_in)^2))*703
+
+label var bmi "Current BMI"
+
+//get the per round weight, cluster, and strata vars (and why is moved created like that?)
+gen moved=.
+rename w1varunit varunit
+rename w1varstrat varstrat
+rename w1anfinwgt0 anfinwgt
+
+forvalues i=2/7 {
+	replace moved=w`i'_moved if wave==`i'
+	foreach x in anfinwgt varstrat varunit {
+		replace `x'=w`i'`x' if wave==`i'
+}
+drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
+}
+label var moved "Moved since last ivw"
+
+******************************************
+/*these are taken from Rebecca's code*/
+
+gen community_dwelling = 0
+forvalues w=1/7 {
+	replace community_dwelling=1 if inlist(r`w'dresid,1,2)
+}
+replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | ///
+r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+gen SP_completed = 0
+replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
+
+gen nhres=r1dresid==4 if r1dresid!=.
+gen rcfres=inlist(r1dresid,2,3) if r1dresid!=.
+gen res_care=r1dresid>1 if r1dresid!=.
+gen sp_status=1 
+gen deceased=0
+gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
+label var prob_dem "Indicator probable dementia"
+forvalues i=2/7 {
+	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
+	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
+	replace rcfres=inlist(r`i'dresid,2,3,7) if wave==`i'
+	replace deceased=inlist(r`i'status,62,86) if wave>=`i'
+}
+
+note nhres : r*dresid
+notes nhres : Resid=4,5,8
+notes nhres : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+
+replace sp_status=2 if res_care==1
+replace sp_status=3 if nhres==1
+replace sp_status=4 if deceased==1
+label var sp_status "Residential status"
+label var nhres "Nursing Home Resident"
+label var rcfres "Residential Care, excl. NH"
+label var res_care "Residential Care, incl. NH"
+label define sp_status 1 "Non-res care community" 2 "Res-care not NH" 3 "NH resident" ///
+4 "Deceased"
+label values sp_status sp_status
+
+//these ADL variables were missing previously
+gen adl_ins_help = .
+gen adl_ins_diff=.
+gen adl_ins_not_done=.
+
+foreach w in 1 2 3 4 5 6 7{
+	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
+	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==1 & wave==`w'
+	replace adl_ins_diff=1 if mo`w'insddif>1 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
+	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
+	replace adl_ins_not_done=inlist(mo`w'dinsdsfdf,1,8) if wave==`w'
+}
+
+*replace adl_ins_dif=1 if adl_ins_help==1
+label var adl_ins_help "Received help getting around inside"
+notes adl_ins_help : mo*insdhlp
+notes adl_ins_help : "_"
+notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+
+gen adl_bed_help = .
+gen adl_bed_diff=.
+gen adl_bed_not_done=.
+foreach w in 1 2 3 4 5 6 7{
+	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
+	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==1 & wave==`w'
+	replace adl_bed_diff=1 if mo`w'beddif>1 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_diff=-7 if mo`w'beddif==-7 & wave==`w'
+	replace adl_bed_diff=-8 if mo`w'beddif==-8 & wave==`w'
+	replace adl_bed_not_done=inlist(mo`w'dbedsfdf,1,8) if wave==`w'
+}
+label var adl_bed_help "Received help getting out of bed"
+*replace adl_bed_diff=1 if adl_bed_help==1
+notes adl_bed_help : mo*bedhlp
+notes adl_bed_help : "_"
+notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+
+//construct date of ivw--use 1st of month for all, because only have mo & yr
+
+gen ivw_day=1
+label define ivw_day 1 "Not provided" 
+label values ivw_day ivw_day
+gen ivw_month=.
+gen ivw_year=.
+forvalues i=1/7 {
+	replace ivw_month=r`i'spstatdtmt if wave==`i'
+	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
+	replace ivw_year=r`i'spstatdtyr if wave==`i'
+	replace ivw_year=201`i' if wave==`i' & r`i'spstatdtyr==.
+}
+replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
+replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
+
+/// Changes to Dressing and Eating
+/*These changes were made because the help variables were not capturing everyone 
+who may have been impaired for the ADL*/ 
+//changes made 5/20/18
+forvalues w=1/7 {
+	replace adl_dres_help=1 if sc`w'dresoft==5
+	replace adl_eat_help=1 if sc`w'eatdev==7
+	replace adl_ins_help=1 if fl`w'ntlvrmslp==1
+}
+
+gen adl_index=0
+foreach i in eat bath toil dres bed ins {
+replace adl_index=adl_index+adl_`i'_help if adl_`i'_help>0
+}
+*gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_help+adl_bed_help
+replace adl_index=. if adl_index<0
+gen adl_independent=adl_index==0 if adl_index!=.
+gen adl_impair=adl_index>0 if adl_index!=.
+gen iadl_index=iadl_laun_help+iadl_shop_help+iadl_bank_help+iadl_meal_help+iadl_meds_help
+replace iadl_index=. if iadl_index<0
+gen iadl_independent=iadl_index==0 if iadl_index!=.
+gen iadl_impair=iadl_index>0 if iadl_index!=.
+foreach x in adl iadl {
+	egen `x'_diff_index=rowtotal(`x'*diff)
+	gen `x'_diff_ind=`x'_diff_index>=1 if !missing(`x'_diff_index)
+}
+label var adl_independent "Independent in ADLs"
+label var adl_impair "Help with 1+ ADL"
+label var adl_index "Index of help w/ ADLs"
+
+foreach x in independent impair index {
+	notes adl_`x' : sc*eathlp sc*bathhlp sc*toilhlp sc*dreshlp
+	notes adl_`x' : "_"
+	notes adl_`x' : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+}
+
+
+label var iadl_independent "Independent in IADLs"
+label var iadl_impair "Help with 1+ IADL"
+label var iadl_index "Index of help w/ IADLs"
+
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
+
+//addition of variables from Eric's homebound code
+gen meals_wheels=.
+gen noone_talk=.
+gen restrnt_takeout=.
+
+forvalues i=1/7 {
+replace meals_wheels=ha`i'dmealwhl if wave==`i'
+replace noone_talk=fl`i'noonetalk if wave==`i'
+replace restrnt_takeout=ha`i'dmealtkot if wave==`i'
+foreach x in meals_wheels noone_talk restrnt_takeout {
+replace `x'=0 if `x'==.
+}
+}
+
+label var meals_wheels "Meals on wheels"
+label var noone_talk "SP has no one to talk to"
+label var restrnt_takeout "Received help with restaurant/takeout"
+//pull in date of death, constructed from claims and nhats
+merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", nogen
+
+gen died_12=mofd(death_date)-mofd(ivw_date)<=12
+gen died_24=mofd(death_date)-mofd(ivw_date)<=24
+//note-the following has been superseded by the death date using claims
+/*
+
+//use status to get death
+gen died_12=.
+gen died_24=.
+forvalues i=1/3 {
+replace died_12=inlist(r`=`i'+1'status,62,86) if wave==`i' & r`=`i'+1'status!=79
+}
+forvalues i=1/2 {
+replace died_24=inlist(r`=`i'+2'status,62,86) if wave==`i' & !inlist(r`=`i'+2'status,79,.)
+}
+replace died_24=1 if died_12==1
+
+foreach i in 12 24 {
+label var died_`i' "SP died w/in `i' months, per future wave status"
+}*/
+
+//update 8/2/17--pulled in nhats dod to share off server
+
+//look at death month & year. don't have, so set date to last of month
+gen dd=.
+replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+gen nhats_death_day=. 
+forvalues i=2/7 {
+	foreach j in mth yr {
+		replace pd`i'`j'died=. if pd`i'`j'<0
+}
+	replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+	replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
+	replace nhats_death_day=28 if inlist(pd`i'm,2)
+	replace dd=mdy(pd`i'mthdied,nhats_death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
+}
+
+by spid, sort: egen nhats_death_date=max(dd)
+label var nhats_death_date "Sensitive: SP death date, from NHATS (day imputed)"
+format nhats_death_date %td
+gen nhats_death_month=month(nhats_death_date)
+gen nhats_death_year=year(nhats_death_date)
+foreach x in month year {
+label var nhats_death_`x' "Sensitive: SP death `x', from NHATS"
+}
+
+drop dd
+
+gen eligible_nsoc=fl1dnsoc==1
+gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
+gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
+gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
+label var eligible  "Sensitive: Eligible for NSOC interview, wave 1 tracker"
+label var complete  "Sensitive: Completed Interview"
+label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Interview"
+label var total_caregiver_elig "Sensitive: Total Caregivers Eligible for NSOC"
+rename r*status round*status
+
+//adverse consequences of unmet need
+
+gen adverse=0
+forvalues i=1/7 {
+	foreach x of varlist ha`i'*out sc`i'*out {
+		replace adverse=1 if `x'==1 & wave==`i'
+}
+}
+label var adverse "Any adverse consequence of unmet need (excluding mobility)"
+
+local ha laun shop meal bank
+local sc eat bath toil dres
+local mo out insd bed
+
+forvalues i=1/7{
+	foreach x in `ha'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if ha`i'`x'wout==1 & wave==`i'
+		
+	}
+}
+	
+forvalues i=1/7{
+	foreach x in `sc'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if sc`i'`x'wout==1 & wave==`i'
+	}
+}
+
+forvalues i=1/7{
+	foreach x in `mo'{
+		capture gen adverse_`x'=0
+		replace adverse_`x'=1 if mo`i'`x'wout==1 & wave==`i'
+	}
+}
+
+label var adverse_laun "Ever go w/o clean laundry"
+label var adverse_shop "Ever go w/o groceries/personal items"
+label var adverse_meal "Ever go w/o hot meal"
+label var adverse_bank "Ever go w/o handling bills and banking matters" 
+label var adverse_eat "Ever go w/o eating"
+label var adverse_bath "Ever go w/o showering/bath/washup"
+label var adverse_toil "Ever go w/o using toilet"
+label var adverse_dres "Ever go w/o getting dressed"
+label var adverse_out "Ever go w/o going outside; stayed inside"
+label var adverse_insd "Ever go w/o moving inside b/c unmet need" 
+label var adverse_bed "Ever go w/o leaving bed"
+
+//limited favorite activity
+capture drop lim_fav
+gen lim_fav=.
+
+forvalues i=1/5 { 
+	replace lim_fav=pa`i'helmfvact==1 if pa`i'helmfvact>=0 & wave==`i'
+}
+label var lim_fav "Last month ever kept from favorite activity by health/function"
+
+
+capture drop lim_fav_yr
+////NEW limited favorite activity
+gen lim_fav_yr=.
+forvalues w=6/7 {
+	replace lim_fav_yr=pa`w'fvactlimyr==1 if pa`w'fvactlimyr>=0 & wave==`w'
+}
+
+label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
+
+
+//social cohesion
+gen cohesion_knowwell=.
+gen cohesion_willing=.
+gen cohesion_peop=.
+
+forvalues i=1/7 {
+	foreach x in know will peop {
+		replace cohesion_`x'=cm`i'`x' if !missing(cm`i'`x') & wave==`i'
+}
+}
+gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
+if !missing(cohesion_k) | !missing(cohesion_w) | !missing(cohesion_p)
+
+label var cohesion_knowwell "People know each other well in the community"
+label var cohesion_w "People are willing to help each other in the commmunity"
+label var cohesion_p "People can be trusted in the community"
+label define cohesion_ 1 "Agree a lot" 2 "Agree a little" 3 "Do not agree"
+label values cohesion_* cohesion_
+label var cohesion "High community cohesion (Highest on all 3 statements)"
+
+gen home_disorder_insd=.
+gen home_disorder_outsd=.
+gen home_disorder_area=.
+gen home_disorder_clutter=.
+
+forvalues i=1/7 {
+	foreach x of varlist ir`i'condihom* ir`i'condhome* ir`i'areacond* ir`i'clutter* {
+		replace `x'=. if `x'==7
+		qui sum `x'
+		if r(max)==2 replace `x'=`x'==1 if !missing(`x')
+		if inlist(r(max),3,4) replace `x'=`x'>1 if !missing(`x')
+}
+
+	egen insd=rowtotal(ir`i'condihom*)
+	egen outsd=rowtotal(ir`i'condhome*)
+	egen area=rowtotal(ir`i'areacond*)
+	egen clutter=rowtotal(ir`i'clutter*)
+	foreach x in insd outsd area clutter {
+		replace home_disorder_`x'=`x'>=1 if wave==`i' & !missing(`x')
+		drop `x'
+}
+}
+
+label var home_disorder_insd "Disorder in home (peelng paint, pests, brkn furniture or floorbrds, trippng hazards)"
+label var home_disorder_outsd "Disorder outside (brkn windows, foundation, bricks/siding, roof, steps)"
+label var home_disorder_clutter "Disorder in home (clutter in interview or other rooms)"
+label var home_disorder_area "Disorder in immed area (litter/glass/graffiti/vacant houses/stores/foreclosures)"	
+
+//economic well-being
+foreach x of varlist ew* {
+	replace `x'=. if `x'<0
+}
+
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	gen `x'=.
+}
+
+forvalues i=1/7 {
+gen creditdebt`i'=inlist(ew`i'pycredbal,2,3) | !missing(ew`i'crecardeb) if ///
+ !missing(ew`i'pycredbal) | !missing(ew`i'crecardeb)
+gen medcreditdebt`i'=ew`i'credcdmed==1 if !missing(ew`i'credcdmed)
+gen medbillsovertime`i'=ew`i'medpaovtm==1 if !missing(ew`i'medpaovtm)
+gen medpaynotcash`i'=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | ///
+!missing(medcreditdebt)
+
+gen finhlpfam`i'=ew`i'finhlpfam==1 if !missing(ew`i'finhlpfam)
+gen fingftfam`i'= ew`i'fingftfam==1 if !missing(ew`i'finhlpfam)
+gen govtasst`i'=ew`i'progneed1==1 | ew`i'progneed2==1 | ew`i'progneed3==1 if !missing(ew`i'progneed1) ///
+| !missing(ew`i'progneed2) | !missing(ew`i'progneed3)
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	replace `x'=`x'`i' if wave==`i'
+	drop `x'`i'
+}
+}
+replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | !missing(medcreditdebt)
+
+label var creditdebt "Has credit card debt or does not pay off in full monthly"
+label var medpaynotcash "Has medical credit card debt or pays bills over time"
+label var govtasst "Receives foodstamps or other food or gas/energy assistance"
+
+//home ownership
+
+local homevars ownhome rent mortgagepaidoff paysmortgage mortpaymt ///
+timeinmort owedonmort homevalue rentpaid section8
+
+foreach x of local homevars {
+	gen `x'=.
+}
+
+label var ownhome "SP owns home"
+label var rent "SP rents"
+label var mortgagepaidoff "Mortgage is paid off"
+label var mortpaymt "Mortgage payment"
+label define mortpaymt 1 "<$250" 2 "$250-499" 3 "$500-999" 4 "$1000+"
+label values mortpaymt mortpaymt
+label var timeinmort "Time left in mortgage"
+label define timeinmort 1 "5 years" 2 "10 years" 3 "Longer than 10 years"
+label values timeinmort timeinmort
+label var owedonmort "Amount left on mortgage"
+label define owedonmort 1 "<$50,000" 2 "$50,000-99,999.99" 3 "$100,000+"
+label values owedonmort owedonmort
+label var homevalue "Home value"
+label define homevalue 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K" ///
+6 "300-500K" 7 "500-750K" 8 "$750K+"
+label values homevalue homevalue
+
+forvalues i=1/7 {
+tab hp`i'ownrentot 
+replace ownhome=hp`i'ownrentot==1 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+replace rent=hp`i'ownrentot==2 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+tab hp`i'mrtpadoff 
+replace mortgagepaidoff=hp`i'mrtpadoff==1 if !missing(hp`i'mrtpadoff)
+replace paysmortgage=hp`i'mrtpadoff==2 if !missing(hp`i'mrtpadoff)
+tab hp`i'mortpaymt 
+replace mortpaymt= hp`i'mortpaymt if wave==`i'
+qui replace mortpaymt=1 if wave==`i' & hp`i'mthlymort<250
+qui replace mortpaymt=2 if wave==`i' & hp`i'mthlymort>=250 & hp`i'mthlymort<=499
+qui replace mortpaymt=3 if wave==`i' & hp`i'mthlymort>=500 & hp`i'mthlymort<1000
+qui replace mortpaymt=4 if wave==`i' & hp`i'mthlymort>=1000 & !missing(hp`i'mthlymort)
+tab hp`i'whnpayoff 
+replace timeinmort=hp`i'whnpayoff if wave==`i'
+tab hp`i'amoutowed 
+replace owedonmort=hp`i'amoutowed if wave==`i'
+qui replace owedonmort=1 if wave==`i' & hp`i'amtstlowe<50000 
+qui replace owedonmort=2 if wave==`i' & hp`i'amtstlowe>=50000 & hp`i'amtstlowe<=100000
+qui replace owedonmort=3 if wave==`i' & hp`i'amtstlowe>=100000 & !missing(hp`i'amtstlowe)
+tab hp`i'homvalamt 
+replace homevalue= hp`i'homvalamt if wave==`i'
+qui replace homevalue=1 if wave==`i' & hp`i'homevalue<50000 & hp`i'homevalue>=0
+qui replace homevalue=2 if wave==`i' & hp`i'homevalue>=50000 & hp`i'homevalue<75000
+qui replace homevalue=3 if wave==`i' & hp`i'homevalue>=75000 & hp`i'homevalue<100000
+qui replace homevalue=4 if wave==`i' & hp`i'homevalue>=100000 & hp`i'homevalue<200000
+qui replace homevalue=5 if wave==`i' & hp`i'homevalue>=200000 & hp`i'homevalue<300000
+qui replace homevalue=6 if wave==`i' & hp`i'homevalue>=300000 & hp`i'homevalue<500000
+qui replace homevalue=7 if wave==`i' & hp`i'homevalue>=500000 & hp`i'homevalue<750000
+qui replace homevalue=8 if wave==`i' & hp`i'homevalue>=750000 & !missing(hp`i'homevalue)
+
+tab hp`i'rentamou 
+replace rentpaid =hp`i'rentamou if wave==`i'
+qui replace rentpaid=1 if wave==`i' & hp`i'rentamt<250 & hp`i'rentamt>=0
+qui replace rentpaid=2 if wave==`i' & hp`i'rentamt>=250 & hp`i'rentamt<=499
+qui replace rentpaid=3 if wave==`i' & hp`i'rentamt>=500 & hp`i'rentamt<1000
+qui replace rentpaid=4 if wave==`i' & hp`i'rentamt>=1000 & !missing(hp`i'rentamt)
+qui replace rentpaid=4 if inlist(rentpaid,5,6)
+replace mortpaymt=4 if inlist(mortpaymt,5,6)
+tab hp1sec8pubsn
+replace section8=hp`i'sec8pubsn==1 if wave==`i' & (!missing(hp`i'sec8pubsn) |ownhome==1 | rent==1)
+}
+
+label var rentpaid "Amount rent paid"
+label define rentpaid 1 "<$250" 2 "250-499" 3 "500-999" 4 "$1000+"
+label values rentpaid rentpaid
+label var section8 "Indicator lives in Section 8 housing"
+label var medcreditdebt "Has Medical credit card debt"
+label var medbillsovertime "Pays Medical bills over time"
+label var finhlpfam "Received financial help/gifts from family"
+label var fingftfam "Provided financial help/gifts to family"
+label var paysmortgage "Pays a mortgage"
+gen n_social_network=.
+forvalues i=1/7 {
+	replace n_social_network=sn`i'dnumsn if sn`i'dnumsn>=0 & wave==`i'
+}
+label var n_social_network "Number in social network"
+
+gen division=.
+forvalues w=1/7 {
+	replace division=re`w'dcensdiv if re`w'dcensdiv>0 & wave==`w'
+}
+gen region=division 
+recode region (1 2=1) (3 4=2) (5/7=3) (8 9=4)
+
+la define region 1 "Northeast" 2 "Midwest" 3 "South" 4 "West"
+label values region region
+
+capture gen northeast=0
+capture gen midwest=0
+capture gen south=0
+capture gen west=0
+
+replace northeast=1 if region==1
+replace midwest=1 if region==2
+replace south=1 if region==3
+replace west=1 if region==4
+
+//and now drop all raw variables
+forvalues i=1/7 {
+	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
+	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
+	 cm`i'* sn`i'* hp`i'* ew`i'* ir`i'* dt`i'* wb`i'* wa`i'* gr`i'* ho`i'* cs`i'* 
+}
+
+drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5* ia7*
+
+rename round*status r*status
+
+svyset varunit [pw=anfinwgt], strat(varstrat)
+
+sort spid wave
+by spid: carryforward educ*, replace
+label var educ_hs_ind "Education: HS+"
+notes drop educ*
+
+//10/25/18--add in payer and other variables from Jenny's homebound project
+preserve
+
+//note--as of now, doesn't include round 7
+forvalues wave=1/7 {
+use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_SP_File.dta", clear
+keep spid cs`wave'dnumchild ho`wave'entrst hh`wave'dhshldnum mo* sc* ha* mc* 
+gen wave=`wave'
+rename cs`wave' n_children
+label var n_ch "Number of living children"
+rename ho`wave' stairs_ind
+label var stairs "Stairs to enter home"
+gen livesalone_ind=hh`wave'dhshldnum==1 if hh`wave'dhshldnum>=0
+label var livesal "Lives alone (only one in household)"
+foreach x in n sta live {
+replace `x'=. if `x'<0
+}
+
+local kidvars n_children stairs_ind livesalone_ind
+gen ind_kids=n_children>=1 if !missing(n_children)
+rename (mo`wave'* sc`wave'* ha`wave'* mc`wave'*) (* * * *)
+rename (eatslfdif toiloft bathoft) (eatdif toilslf bathslf)
+
+foreach x in eat toil insd bed dres bath {
+	gen `x'_jenny=inlist(`x'slf,3,4) | inlist(`x'dif,3,4) | `x'wout==1
+}
+egen adlcount=rowtotal(eat_j toil_j insd_j bed_j dres_j bath_j)
+
+//for iadls, reason don't do alone b/c health/function or reported difficulty or went w/o
+gen medswout=0
+foreach x in laun meds shop meal bank {
+	drop `x'
+	gen `x'_jenny=inlist(d`x'reas,1,3) | inlist(`x'dif,3,4) | `x'wout==1
+}
+drop medswout
+egen iadlcount=rowtotal(laun_j meds_j shop_j meal_j bank_j)
+label var eat_j "Some/lot difficulty eating by self, or rarely/never, or had to go w/o"
+label var toil_j "Some/lot difficulty toileting by self, or rarely/never, or had to go w/o"
+label var insd_j "Some/lot difficulty moving inside by self, or rarely/never, or had to go w/o"
+label var bed_j "Some/lot difficulty getting out of bed by self, or rarely/never, or had to go w/o"
+label var dres_j "Some/lot difficulty dressing by self, or rarely/never, or had to go w/o"
+label var bath_j "Some/lot difficulty bathing by self, or rarely/never, or had to go w/o"
+label var laun_j "Some/lot of difficulty with laundry by self, or not by self b/c health, or had to go w/o"
+label var meds_j "Some/lot of difficulty with meds by self, or not by self b/c health, or had to go w/o"
+label var shop_j "Some/lot of difficulty with shopping by self, or not by self b/c health, or had to go w/o"
+label var meal_j "Some/lot of difficulty with hot meals by self, or not by self b/c health, or had to go w/o"
+label var bank_j "Some/lot of difficulty with banking by self, or not by self b/c health, or had to go w/o"
+
+gen device_mobility=inlist(insdwalk,1,2) | inlist(outwalk,1,2) | inlist(insdwl,1,2) ///
+| inlist(outwl,1,2) | inlist(insdsct,1,2) | inlist(outsct,1,2) 
+
+label var device_mobility "Uses a walker, wheelchair, or scooter inside or outside"
+
+keep spid wave *_jenny device_mobility `kidvars' ind_kids adlcount iadlcount
+
+tempfile kids`wave'
+save `kids`wave''
+
+use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_OP_File.dta", clear
+describe op`wave'*pay*
+tab op`wave'*payshlp
+tab op`wave'progmpaid
+
+rename op`wave'sppays op`wave'sppayhlp
+foreach x in sp gov ins oth {
+gen paid_by_`x'=op`wave'`x'payhlp==1 if op`wave'`x'payhlp>0 | op`wave'`x'payhlp<-1
+local lab : var label op`wave'`x'payhlp
+label var paid_by_`x' "`lab'"
+}
+gen paid_by_unk=(paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==0 | ///
+((paid_by_sp+paid_by_oth+paid_by_gov+paid_by_ins)==-4 & op`wave'paid==1)
+label var paid_by_unk "Unknown payer"
+
+
+levelsof op`wave'progmpaid, local(levels)
+foreach l of local levels {
+if `l'>0 {
+gen paid_by_gov_cat_`l'=op`wave'progmpaid==`l' if op`wave'progmpaid!=-1
+local lab : label op`wave'progmpaid `l'
+label var paid_by_gov_cat_`l' "`lab'"
+}
+}
+gen paid_by_gov_cat_unknown=op`wave'progmpaid<-1 if op`wave'progmpaid!=-1
+label var paid_by_gov_cat_unk "Unknown gov't payer (Missing,RF,DK)"
+gen op_insur_help=op`wave'insurhlp==1 
+gen op_out_help=op`wave'outhlp==1
+gen op_money_help=op`wave'moneyhlp==1
+gen op_places_help=op`wave'tkplhlp1==1 | op`wave'tkplhlp2==1
+label var op_insur_help "Help with insurance decisions"
+keep spid opid paid* op_*
+tempfile paid
+save `paid'
+gen wave=`wave'
+merge 1:m spid opid wave using "E:\nhats\data\NHATS Cleaned\op_round_1_7", ///
+keep(match master) gen(opmer)
+merge 1:1 spid opid using `paid', keep(match master) gen(paidm)
+foreach x of varlist paid_by* {
+replace `x'=0 if paid==0
+}
+drop if n_helpers>=1 & opishelp==0
+
+foreach x in sp gov ins unk oth {
+by spid, sort: egen any_paid_by_`x'=max(paid_by_`x')
+local lab :var label paid_by_`x'
+label var any_paid_by_`x' "`lab'"
+}
+rename paid_by_gov_cat_91 paid_by_gov_cat_oth
+foreach x of varlist paid_by_gov_cat* {
+by spid, sort: egen any_`x'=max(`x')
+local lab :var label `x'
+label var any_`x' "`lab'"
+}
+
+
+by spid: egen any_paid_by_medicare=max(paid_by_gov_cat_2)
+label var any_paid_by_medicare "Helper paid by Medicare"
+by spid: egen any_paid_by_medicaid=max(paid_by_gov_cat_1)
+label var any_paid_by_medicaid "Helper paid by Medicaid"
+by spid: egen any_paid_by_state=max(paid_by_gov_cat_3)
+label var any_paid_by_state "Helper paid by state program"
+gen ind_gt20hrs_wk_inf=tot_hrswk_help_i>20 if !missing(tot_hrswk_help_i)
+replace ind_gt20hrs_wk_inf=0 if tot_hrswk_help_i-tot_hrswk_paid_i<20
+gen ind_gt20hrs_wk_paid=tot_hrswk_paid_i>20 if !missing(tot_hrswk_paid_i)
+label var ind_gt20hrs_wk_i "Unpaid help: >20 hrs wk"
+label var ind_gt20hrs_wk_p "Paid help: >20 hrs wk"
+gen ind_inf=n_helpers>=1 if !missing(n_helpers)
+replace ind_inf=0 if n_paid==n_helpers
+label var ind_inf "Any family/unpaid help"
+local pvars ind_inf ind_gt20hrs_wk_inf ind_paid ind_gt20hrs_wk_paid ///
+any_paid_by_sp any_paid_by_gov ///
+any_paid_by_medicaid any_paid_by_medicare any_paid_by_state 
+replace any_paid_by_unk=1 if (any_paid_by_sp+any_paid_by_ins+any_paid_by_oth ///
++any_paid_by_gov==0) & ind_paid==1
+local paidvars any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_oth ///
+any_paid_by_unk any_paid_by_medicaid any_paid_by_medicare ///
+any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_unk 
+keep spid any_paid* ind_gt* wave
+
+duplicates drop 
+tempfile paid`wave'
+save `paid`wave''
+
+use "E:\nhats\data\NHATS Cleaned\op_round_1_7" if wave==`wave' & opishelp==1, clear
+tokenize spouse daughter son otherfamily paid otherinformal
+drop spouse daughter son paid
+forvalues i=1/6 {
+	gen ``i''=op_relat==`i'
+	by spid: egen ``i''_help_ind=max(``i'')
+	label var ``i''_help "Has ``i'' helper"
+	gen ``i''hrs=op_hrswk_i if ``i''==1
+	by spid: egen tot_``i''hrs=total(``i''hrs) if ``i''_help_ind==1
+	label var tot_``i''hrs "Hours of help/week from ``i'' sources"
+	local ihelp `ihelp' ``i''_help_ind
+	local chelp `chelp' tot_``i''hrs
+}
+label var otherfamily_he "Has other family helper"
+label var otherinformal "Has non-family unpaid helper"
+label var tot_otherf "Hours of help/week from other family sources"
+label var tot_otheri "Hours of help/week from other unpaid sources"
+keep spid `chelp' `ihelp' wave
+duplicates drop
+
+tempfile hours`wave'
+save `hours`wave''
+}
+
+foreach x in hours paid kids {
+	di "`x'"
+	use ``x'1', clear
+	forvalues i=2/6 {
+		di "`i'"
+		append using ``x'`i''
+}
+	di "`x'"
+	tempfile `x'
+	save ``x''
+}
+
+restore
+
+merge 1:1 spid wave using `kids', keep(match master) gen(kidm)
+merge 1:1 spid wave using `hours', keep(match master) gen(hrm)
+merge 1:1 spid wave using `paid', keep(match master) gen(paidm)
+
+label var aveincome "Income"
+label var residence "Type of residence"
+drop sr*raw ht_new pr_ad8* dem_via_proxy speaktosp date_item* date_sum* ///
+preslast presfirst vp* presvp* date_prvp clock_scorer irecall drecall ///
+wordrecall *65 kidm hrm paidm SP_completed deceased va*ser* el5 rl*
+
+foreach x in eat bath toil dres {
+	label var adl_`x'_diff "Has difficulty while `x'ing last month"
+	label var adl_`x'_not "Did not `x' by self in last month"
+}
+
+foreach x in laun shop meal bank meds {
+	label var iadl_`x'_diff "Has difficulty while `x'ing last month"
+	label var iadl_`x'_not "Did not `x' in last month"
+}
+label var iadl_meds_diff "Difficulty taking meds last month"
+label var iadl_meds_not "Didn't take meds or not by self in last month"	
+label var adl_ins_diff "Difficulty moving around inside by self in last month"
+label var adl_ins_no "Didn't move around inside by self in last month"
+label var adl_bed_dif "Difficulty getting out of bed by self in last month"
+label var adl_bed_no "Didn't get out of bed by self in last month"
+label var num_helpers_cat "Categorical number of helpers"
+label var ivw_type "Type of interview"
+label var income_cat "Categorical income"
+label var trfinwgt "Tracker weight"
+label var tr2011wgt "Tracker weight (2011 cohort)"
+label var howgetdoc "Mode of transport to regular doctor"
+label var ivw_day "Day of interview (Assigned to 1 for all)"
+label var ivw_month "Month of interview"
+label var ivw_year "Year of interview"
+label var ivw_date "Date of interview (1st of the month assigned)"
+label var community_dwelling "Community dwelling"
+label var marital_sd "Separated or divorced"
+label var iadl_diff_index "Count of IADL difficulties reported (missing coded as zero)"
+label var iadl_diff_ind "Indicator of any IADL difficulty reported (missing coded as zero)"
+label var adl_diff_index "Count of IADL difficulties reported (missing coded as zero)"
+label var adl_diff_ind "Indicator of any IADL difficulty reported (missing coded as zero)"
+label var nhats_death_day "Sensitive: Day of death from NHATS (Assigned to last day of month)"
+label var nhats_death_month "Sensitive: Month of death from NHATS"
+label var nhats_death_year "Sensitive: Year of death from NHATS"
+label var division "Census division"
+label var region "Region"
+label var ind_kids "Indicator any living children"
+
+rename adlcount adlcount_jenny 
+label var adlcount_j "ADL count: some/lot of difficulty or adverse consequence of unmet need"
+rename iadlcount iadlcount_jenny 
+label var iadlcount_j "IADL count: some/lot of difficulty or adverse consequence of unmet need"
+
+// 11/8/18 Making National Estimates using 2011 population (using original weights) Rds 1-4
+rename anfinwgt old_anfinwgt
+gen anfinwgt=old_anfinwgt
+replace anfinw=old_anfinwgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*2169060/2173979 if inrange(age,80,84) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*1194880/1224397 if inrange(age,85,89) & female==0 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*524540/463619 if inrange(age,90,150) & female==0 & inrange(wave,1,4)
+
+replace anfinw=old_anfinwgt*6124980/5250466 if inrange(age,65,69) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*4781940/4843444 if inrange(age,70,74) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3886940/3878674 if inrange(age,75,79) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*3249940/3215654 if inrange(age,80,84) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*2230480/2257969 if inrange(age,85,89) & female==1 & inrange(wave,1,4)
+replace anfinw=old_anfinwgt*1382160/1329677 if inrange(age,90,150) & female==1 & inrange(wave,1,4)
+
+// Making National Estimates using 2015 population (using original weights) Rds 5-7
+replace anfinw=old_anfinwgt*6855860/5671878 if inrange(age,65,69) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*4941100/5071147 if inrange(age,70,74) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*3367300/3524465 if inrange(age,75,79) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*2257880/2208455 if inrange(age,80,84) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*1307620/1358952 if inrange(age,85,89) & female==0 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*648680/624319 if inrange(age,90,150) & female==0 & inrange(wave,5,7)
+
+replace anfinw=old_anfinwgt*7601440/6226214 if inrange(age,65,69) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*5695060/6077509 if inrange(age,70,74) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*4182460/4196832 if inrange(age,75,79) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*3165560/3137807 if inrange(age,80,84) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*2253980/2157300 if inrange(age,85,89) & female==1 & inrange(wave,5,7)
+replace anfinw=old_anfinwgt*1577880/1534438 if inrange(age,90,150) & female==1 & inrange(wave,5,7)
+
+// Making National Estimates using 2011 Population (2011 Weights) for Rds 5-7
+rename an2011wgt old_an2011wgt
+gen an2011wgt=old_an2011wgt
+replace an2011wgt=old_an2011wgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,5,7) 
+replace an2011wgt=old_an2011wgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*2169060/2173979 if inrange(age,80,84) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*1194880/1224397 if inrange(age,85,89) & female==0 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*524540/463619 if inrange(age,90,150) & female==0 & inrange(wave,5,7)
+
+replace an2011wgt=old_an2011wgt*6124980/5250466 if inrange(age,65,69) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*4781940/4843444 if inrange(age,70,74) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3886940/3878674 if inrange(age,75,79) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*3249940/3215654 if inrange(age,80,84) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*2230480/2257969 if inrange(age,85,89) & female==1 & inrange(wave,5,7)
+replace an2011wgt=old_an2011wgt*1382160/1329677 if inrange(age,90,150) & female==1 & inrange(wave,5,7)
+
+label var anfinwgt "Updated Analytic Weights"
+label var an2011wgt "Updated 2011 Analytic Weight for Rds 5+"
+
+notes anfinwgt : r*anfinwgt0
+notes anfinwgt : Analytic final weight, post-stratified to most recent sample frame as in the technical paper
+notes anfinwgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes anfinwgt : "_"
+notes anfinwgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+
+notes an2011wgt : r*an2011wgt0
+notes an2011wgt : Analytic final weight, post-stratified to most 2011 sample frame as in the technical paper
+notes an2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes an2011wgt : "_"
+notes an2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+
+notes old_anfinwgt : r*anfinwgt0
+notes old_anfinwgt : Original analytic weight
+notes old_anfinwgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes old_anfinwgt : "_"
+notes old_anfinwgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+
+notes old_an2011wgt : r*an2011wgt0
+notes old_an2011wgt : Original analytic weight for 2011 sample frame
+notes old_an2011wgt : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-7 header
+notes old_an2011wgt : "_"
+notes old_an2011wgt : Freedman, VA and BC Spillman. Making National Estimates... NHATS Technical Paper#17. 
+
+
+/*Add notes for raw variables or variables that were created in earlier headers*/
+notes varstrat : r*varstrat
+notes varunit : r*varunit
+notes wave : "_"
+notes wave : Wave assigned to round number
+notes wave : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-1 header
+notes proxy_ivw : is*resptype
+notes proxy_ivw : Is the interview a proxy? 1=yes
+notes proxy_ivw : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes age : r*dintvwrage r*ddeathage
+notes age : Age at interview if living or death if LML
+notes age : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes female : r*dgender
+notes female : "_"
+notes female : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes educ_hs_ind : el*higstschl
+notes educ_hs_ind : Completed HS+ (includes GED)
+notes educ_hs_ind : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes white : rl*dracehisp
+notes white : Non-Hispanic White
+notes white : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes black : rl*dracehisp
+notes black : Non-Hispanic Black
+notes black : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes hisp : rl*dracehisp
+notes hisp : Any Hispanic
+notes hisp : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes other_race : rl*dracehisp
+notes other_race : Any non-White, non-Black, non-Hispanic race
+notes other_race : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-1 header
+notes medicaid : ip*cmedicaid
+notes medicaid : "_"
+notes medicaid : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes medigap : ip*mgapmedsp
+notes medigap : "_"
+notes medigap : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
+notes srh_fp : hc*health
+notes srh_fp : SR health is poor or fair (as opposed to good, v. good, or excellent)
+notes srh_fp : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-4 header
+notes adl_eat_help : sc*eathelp
+notes adl_eat_help : Help eating in the last month
+notes adl_eat_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+notes adl_bath_help : sc*bathhelp
+notes adl_bath_help : Help bathing in the last month
+notes adl_bath_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+notes adl_toil_help : sc*toilhelp
+notes adl_toil_help : Help toiling in the last month
+notes adl_toil_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+notes adl_dres_help : sc*dreshelp
+notes adl_dres_help : Help dresing in the last month
+notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
+
+gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
+
+foreach x in 12 24 {
+	gen nhats_died_`x'=time2d<=`x' if !lml
+	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
+}
+
+
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
+describe , fullnames
+log close
+
+drop death_* died_12 died_24
+
+drop time2d 
+
+saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta", replace version(12)
+
+
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_pub_sens_only_variable_list.txt", text replace
+describe , fullnames
+log close
+
+local senslabs
+local i=1
+foreach x of varlist * {
+di `i'
+local lab : var label `x'
+tokenize "`lab'"
+if "`1'"=="Sensitive:" {
+local senslabs `senslabs' `x'
+local i=`i'+1
+}
+}
+
+log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_sensitive_variables.txt", text replace
+describe `senslabs', fullnames
+log close
+
+
 H="Changelog"
 
 
@@ -7599,6 +9208,12 @@ H="Changelog"
 
 
 Updates:
+
+
+02/20/2019 EBL
+----------
+Updated Parts 3,4, and 7 for notes and added the Codebook for SP dataset header.
+
 
 02/14/2019 MH
 ----------

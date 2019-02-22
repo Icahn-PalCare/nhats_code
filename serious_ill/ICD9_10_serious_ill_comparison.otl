@@ -7481,7 +7481,7 @@ Created by: EBL
 Date Created: 2/7/19
 
 Updated by: EBL
-Date Updated: 2/20/19
+Date Updated: 2/22/19
 
 
 **************************************************
@@ -7552,26 +7552,56 @@ gen criteria_all=1
 gen criteria_none=criteria_a==0
 
 foreach time in 6 12 {
-	gen tot_paid_by_mc_`time'm=0
+	gen tot_paid_by_mc_`time'm=0 
 	foreach x in ip snf hh hs pb op dm {
 		replace tot_paid_by_mc_`time'm=tot_paid_by_mc_`time'm+`x'_paid_by_mc_`time'm
 }
+	notes tot_paid_by_mc_`time'm : clm_pmt_amt from all claims. clm_pass_thru_per_diem_amt ///
+	 from IP claims. 
+	notes tot_paid_by_mc_`time'm : Total Medicare expenditures excluding Part D
+	notes tot_paid_by_mc_`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	get spending and dataset cleaning headers
+	
+	
+
 	gen mult_ip_adm_p`time'm=n_ip_admit_p`time'm>1 if !missing(n_ip_admit_p`time'm)
+	notes mult_ip_adm_p`time'm : admit_date from IP file
+	notes mult_ip_adm_p`time'm : Multiple hospital admissions within `time' months post interview
+	notes mult_ip_adm_p`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	other outcomes from claims and dataset cleaning headers
 	foreach x of varlist *_op_* *icu_* {
 		replace `x'=0 if missing(`x')
 }
 
 	gen n_ed_vis_p`time'm=n_ed_op_visits_p`time'm+n_ed_ip_p`time'm
+	notes n_ed_vis_p`time'm : admit_date and rev_center from OP and IP files
+	notes n_ed_vis_p`time'm : Number of ED visits, whether leading to admission or not
+	notes n_ed_vis_p`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	other outcomes and dataset cleaning headers
 	gen ind_ed_vis_p`time'm=n_ed_vis_p`time'm>0 if !missing(n_ed_vis_p`time'm)
 	gen mult_ed_vis_p`time'm=n_ed_vis_p`time'm>1 if !missing(n_ed_vis_p`time'm)
 	gen ind_icu_p`time'm=icu_days_p`time'm>0 if !missing(icu_days_p`time'm)
+	notes ind_icu_p`time'm : admit_date and rev_center from IP file
+	notes ind_icu_p`time'm : Any ICU visit within `time' months post interview
+	notes ind_icu_p`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	other outcomes and dataset cleaning headers	
 	gen ind_hs_p`time'm=hs_paid_by_mc_`time'm!=0 if !missing(hs_paid_by_mc_`time'm)
+	notes ind_hs_p`time'm : admit_date disch_date from HS file
+	notes ind_hs_p`time'm : Any hospice use within `time' months post interview
+	notes ind_hs_p`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	other outcomes and dataset cleaning headers	
 }
 
 drop /*smi_neuro*/ smi_nh smi_ge3
 drop smi_count
 egen smi_count=rowtotal(smi_*ind)
 replace smi_count=0 if missing(smi_count)
+notes smi_count : various claims and survey-variables
+notes smi_count : Count of SMIs (SMCs in current parlance)
+notes smi_count : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison
+notes smi_count : Kelley, et al. (Identifying Serious Illness, 2015, HSR), ///
+Kelley, Bollens-Lund. (Serious Illness: the Denominator Problem, 2018, JPM)
+
 replace criteria_a=1 if smi_count>=1
 rename smi_esrd* smi_renal*
 
@@ -7579,6 +7609,11 @@ rename smi_esrd* smi_renal*
 svyset varunit [pw=anfinwgt], strata(varstrat)
 
 gen died_6=died_12==1 & mofd(death_date)<=mofd(ivw_date)+6
+notes died_6 : r`i'spstatdtmt, r`i'spstatdtyr, previously configured death date ///
+from various death date variables from NHATS and CMS data
+notes died_6 : Death within 6 months of interview
+notes died_6 : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+dataset cleaning header
 
 gen m2d=(death_date -ivw_date)/30.4
 replace m2d=0 if m2d<0
@@ -7586,11 +7621,31 @@ gen m2dec=12-ivw_month+1
 replace m2dec=6 if wave==4
 replace m2d=m2dec if m2dec<m2d
 
+notes m2d : previously configured death dates and interview dates
+notes m2d : Months of follow up (death or calendar)
+notes m2d :  E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+dataset cleaning header
+
+notes m2dec : previously configured interview dates
+notes m2dec : Months of follow up (calendar only)
+notes m2dec :  E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+dataset cleaning header
+
 foreach x in m2d m2dec {
 	replace `x'=6 if `x'>6
 	gen ind_trunc_`x'=`x'<6
 }
 replace ind_trunc_m2d=1 if died_6==1
+
+notes ind_trunc_m2d : previously configured death dates and interview dates
+notes ind_trunc_m2d : Less than 6 months of follow up (death or calendar)
+notes ind_trunc_m2d :  E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+dataset cleaning header
+
+notes ind_trunc_m2dec : previously configured interview dates
+notes ind_trunc_m2dec : Less than 6 months of follow up (calendar only)
+notes ind_trunc_m2dec :  E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+dataset cleaning header
 
 
 label var m2d "Mean months follow-up, truncated for calendar or death"
@@ -7607,7 +7662,14 @@ forvalues i=1/4 {
 	local lab : label income_quart `i'
 	label var income`i' "Income Quartile: `lab'"
 	local income `income' income`i'
+	notes income`i' : aveincome
+	notes income`i' : Income quartile indicator.  Note that income only asked at ///
+	odd-numbered waves, so carried-forward from wave 3 for our 2014 cohort and 5 ///
+	for the 2016 cohort
+	notes income`i' : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	dataset cleaning header
 }
+
 
 
 drop comorb_all_0_6m
@@ -7617,6 +7679,19 @@ label var comorb_all "Count of Elix comorbidities (includes dementia)"
 
 gen comorb_ge3_0_6m=comorb_all>=3 if !missing(comorb_all)
 label var comorb_ge3 "3+ Elixhauser comorbidities"
+
+notes comorb_all_0_6m : icd_dgns_cd* from all Medicare files
+notes comorb_all_0_6m : Elixhauser comorbidity count (codes modified from ///
+original Elixhauser for SMI projects)
+notes comorb_all_0_6m : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison
+notes comorb_all_0_6m : Elixhauser, et al. 1998. Comorbidity Measures for Use with Administrative Data. ///
+Medical Care 36(1):8-27
+
+notes comorb_ge3_0_6m : icd_dgns_cd* from all Medicare files
+notes comorb_ge3_0_6m : Elixhauser comorbidity count is >=3
+notes comorb_ge3_0_6m :  E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison
+notes comorb_ge3_0_6m : Elixhauser, et al. 1998. Comorbidity Measures for Use with Administrative Data. ///
+Medical Care 36(1):8-27
 
 label var ip_paid_by_mc_6m "IP expenditures 6m post"
 label var op_paid_by_mc_6m "OP expenditures 6m post"
@@ -7638,6 +7713,13 @@ label var died_6 "Died w/in 6m"
 
 gen ind_smi_any=smi_count>=1
 label var ind_smi_any "Any SMI"
+
+
+notes ind_smi_any : various claims and survey-variables
+notes ind_smi_any : At least one SMI (SMC in current parlance)
+notes ind_smi_any : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison
+notes ind_smi_any : Kelley, et al. (Identifying Serious Illness, 2015, HSR), ///
+Kelley, Bollens-Lund. (Serious Illness: the Denominator Problem, 2018, JPM)
 
 
 *****************************************
@@ -8885,6 +8967,8 @@ foreach smivar of local smi {
 
 
 H="changelog"
+2/22/19-EBL-notes added for NHATS survey variables
+
 2/14/19-EBL-added codebook code (not yet notes)
 
 2/13/19-EBL-added home oxygen to CHF definition for ICD-10 in "var clean and check criteria" header

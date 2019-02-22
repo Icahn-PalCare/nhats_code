@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- opened on:  15 Feb 2019, 11:12:45
+ opened on:  21 Feb 2019, 15:02:42
 
 . 
 . 
@@ -74,37 +74,7 @@ E:\nhats\data\NHATS working data
 . 
 . //1/28/2019-Advance Care Planning based off of Ornstein instructions
 . 
-end of do-file
-
-. tab eoltalk
-
-   R2 EP1 TALK END OF |
-            LIFE CARE |      Freq.     Percent        Cum.
-----------------------+-----------------------------------
-           -9 Missing |        190        2.69        2.69
-                -8 DK |         15        0.21        2.90
-                -7 RF |          7        0.10        3.00
-      -1 Inapplicable |      4,870       68.83       71.83
-                1 YES |      1,156       16.34       88.17
-                 2 NO |        837       11.83      100.00
-----------------------+-----------------------------------
-                Total |      7,075      100.00
-
-. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
-
-. 
 . gen no_acp=0
-
-. replace no_acp=1 if inlist(ep2eoltalk, 2, -8, -7) & inlist(ep2poweratty, 2, -7
-> , -8) & inlist(ep2livngwill, 2, -7, -8)
-ep2eoltalk not found
-r(111);
-
-end of do-file
-
-r(111);
-
-. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
 
 . replace no_acp=1 if inlist(eoltalk, 2, -8, -7) & inlist(poweratty, 2, -7, -8) 
 > & inlist(livngwill, 2, -7, -8)
@@ -117,16 +87,2058 @@ r(111);
 . note no_acp: Only in Rd2. no_acp=1 if eoltalk=2,-7,-8 & poweratty=2,-7,-8 & li
 > vingwill=2,-7,-8. 
 
+. note no_acp: No Advance Care Planning based off of talk about EOL care, legal 
+> arrangements, and living will all being no. 
+
+. note no_acp: Located in NHATS Setup, under Part 7.
+
+. note no_acp: Created: 1/28/19-MH 
+
+. 
+. gen formal_acp=0
+
+. replace formal_acp=1 if inlist(eoltalk, 2, -8, -7) & (poweratty==1 | livngwill
+> ==1)
+(279 real changes made)
+
+. replace formal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9,
+>  .) | inlist(livngwill, -1, -9, .) 
+(45,763 real changes made, 45,763 to missing)
+
+. note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 |
+>  livingwill=1)
+
+. note formal_acp: Formal Advance Care Planning based off of not talking about E
+> OL care and either having ///
+> having legal arrangements or having a living will.
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 1/28/19-MH 
+
+. 
+. gen informal_acp=0
+
+. replace informal_acp=1 if eoltalk==1 & inlist(poweratty, 2, -7, -8) & inlist(l
+> ivngwill, 2, -7, -8)
+(243 real changes made)
+
+. replace informal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -
+> 9, .) | inlist(livngwill, -1, -9, .) 
+(45,763 real changes made, 45,763 to missing)
+
+. note informal_acp: Only in Rd2. informal_acp=1 if eoltalk=1 & poweratty=2,-7,-
+> 8 & livingwill=2,-7,-8
+
+. note informal_acp: Informal Advance Care Planning based off of talking about E
+> OL care and not having ///
+> having legal arrangements and not having a living will.
+
+. note informal_acp: Located in NHATS Setup, under Part 7.
+
+. note informal_acp: Created: 1/28/19-MH 
+
+. 
+. gen acp=0
+
+. replace acp=1 if eoltalk==1 & (poweratty==1 | livngwill==1)
+(913 real changes made)
+
+. replace acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | i
+> nlist(livngwill, -1, -9, .)
+(45,763 real changes made, 45,763 to missing)
+
+. note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 |
+>  livingwill=1)
+
+. note formal_acp: Formal Advance Care Planning based off of not talking about E
+> OL care and either having ///
+> having legal arrangements or having a living will.
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 1/28/19-MH
+
+. 
+. 
+. label var no_acp "No Advance care planning, 1=yes"
+
+. label var formal_acp "Formal Advance care planning, 1=yes"
+
+. label var informal_acp "Informal Advance care planning, 1=yes"
+
+. label var acp "Advance care planning (Formal & Informal), 1=yes"
+
+. label define acp  0 "No" 1 "Yes" 
+
+. foreach x in no_acp formal_acp informal_acp acp {
+  2. label values `x' acp
+  3. }
+
+. 
+. 
+. foreach x in no_acp formal_acp informal_acp acp {
+  2. tab `x' if wave==2 , m
+  3. }
+
+ No Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,435       20.28       20.28
+        Yes |        580        8.20       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+     Formal |
+    Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,736       24.54       24.54
+        Yes |        279        3.94       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+   Informal |
+    Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,772       25.05       25.05
+        Yes |        243        3.43       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+    Advance |
+       care |
+   planning |
+  (Formal & |
+ Informal), |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,102       15.58       15.58
+        Yes |        913       12.90       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+. 
+. // 8/10/2018 Add in 2011 weight for rd 5,6 
+. rename an2011wgt0 an2011wgt 
+
+. label var an2011wgt "2011 weights"
+
+. 
+. rename trfinwgt0 trfinwgt
+
+. rename tr2011wgt0 tr2011wgt
+
+. 
+. //Add in 7/3/18
+. 
+. foreach w in 1 5{
+  2.         replace serarmfor=1 if serarmfor==1 & wave==`w'
+  3.         replace serarmfor=0 if serarmfor==2 & wave==`w'
+  4.         replace serarmfor=-7 if serarmfor==-7 & wave==`w'
+  5.         replace serarmfor=-8 if serarmfor==-8 & wave==`w'
+  6. }
+(0 real changes made)
+(5,740 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(5,661 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. label var serarmfor "Served in Armed Forces"
+
+. sort spid wave
+
+. by spid: carryforward serarmfor, replace
+serarmfor:  (31199 real changes made)
+
+. notes drop serarmfor
+  (1 note dropped)
+
+. 
+. //Add in 4/6/18
+. label var dresslf "Often you Dress Yourself"
+
+. 
+. label var dresdif "Difficulty when using Special Items by Self"
+
+. 
+. label var ntlvrmslp "Often had to Stay in Bed"
+
+. 
+. label var eatdev "Ever use Adapted Utensils"
+
+. 
+. 
+. ////// 4/2/2018--Adding in income quartile
+> sort wave
+
+. forvalues w=1/$w {
+  2. xtile income_quart`w'=aveincome [aw=anfinwgt0] if wave==`w', nq(4) 
+  3. }
+
+. egen income_quart=rowmax(income_quart*)
+(3517 missing values generated)
+
+. 
+. forvalues w=1/$w{
+  2. drop income_quart`w'
+  3. }
+
+. 
+. label var income_quart "Quartile of Income"
+
+. label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
+
+. label values income_quart income_quart
+
+. 
+. ///// 3/26/18 --Adding in Hospice and place died variables.
+> 
+. label var placedied "Place of Death"
+
+. replace placedied=. if inlist(placedied,-1,-8)
+(36,872 real changes made, 36,872 to missing)
+
+. replace placedied=6 if placedied==91
+(85 real changes made)
+
+. 
+. replace hospice2=. if inlist(hospice2,-1,-8) 
+(39,325 real changes made, 39,325 to missing)
+
+. 
+. rename hospcelml hospicelml
+
+. foreach x in hospice1 hospicelml {
+  2. replace `x'=. if inlist(`x',-1,-8)
+  3. replace `x'=0 if `x'==2
+  4. } 
+(38,761 real changes made, 38,761 to missing)
+(569 real changes made)
+(30,754 real changes made, 30,754 to missing)
+(972 real changes made)
+
+.  
+. label var hospice1 "Hopsice at Nursing Home"
+
+. label var hospice2 "Hospice Other Place"
+
+. label var hospicelml "Hospice Care in Last Month"
+
+.  
+.  
+. ///// 3/14/18 --Adding in Frailty underlying series
+> 
+. //activities done twice (grip test, walk test..)
+. 
+. forvalues i=1/2{
+  2. capture drop gripsc`i'
+  3. rename grp`i'rdng gripsc`i'
+  4. rename wlkc`i'secs walksec`i'
+  5. rename wlk`i'hndr walkhndr`i'
+  6. 
+. replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
+  7. replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
+  8. replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
+  9. }
+(12,833 real changes made, 12,833 to missing)
+(12,985 real changes made, 12,985 to missing)
+(13,083 real changes made, 13,083 to missing)
+(12,915 real changes made, 12,915 to missing)
+(13,044 real changes made, 13,044 to missing)
+(13,142 real changes made, 13,142 to missing)
+
+. 
+. label var gripsc1 "GRP1 Display Reading"
+
+. label var gripsc2 "GRP2 Display Reading"
+
+. label var walksec1 "Secs Hld Walking Course1"
+
+. label var walksec2 "Secs Hld Walking Course2"
+
+. label var walkhndr1 "Hnrds Hld Walking Course1"
+
+. label var walkhndr2 "Hnrds Hld Walking Course2"
+
+. /*
+> forvalues i=1/2{
+> capture drop walk`i'
+> if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
+> if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
+> replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
+> }
+> rename walk1 walksec
+> rename walk2 walkhnrds
+> label var walk1 "Secs Hld Walking Course)
+> */
+. 
+. foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
+  2. capture drop `x'
+  3. gen `x'=.
+  4. replace `x'=d`x' if  inlist( d`x', 0, 1, 2, 3, 4)
+  5. }
+(47,778 missing values generated)
+(39,737 real changes made)
+(47,778 missing values generated)
+(39,737 real changes made)
+(47,778 missing values generated)
+(39,619 real changes made)
+(47,778 missing values generated)
+(39,619 real changes made)
+
+. 
+. label var origwksc "Original Walk Score"
+
+. label var nhatswksc "NHATS Walk Score"
+
+. label var nhatsgrav "NHATS Avg. Grip Score"
+
+. label var nhatsgrb "NHATS Best Grip Score"
+
+. 
+. 
+. local a lst10pnds trytolose 
+
+. local b evrgowalk vigoractv
+
+. 
+. foreach x in `a' `b'{
+  2. capture drop `x'
+  3. gen `x'=.
+  4. }
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+
+. 
+. 
+. foreach x in `a'{
+  2. replace `x'=0 if inlist(`x', 2, -8, -7) 
+  3. replace `x'=1 if `x'==1
+  4. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. foreach y in `b'{
+  2. replace `y'=0 if inlist(`y', 2, -8, -7) 
+  3. replace `y'=1 if `y'==1
+  4. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. 
+. 
+. label var lst10pnds "Lost 10 Pounds in Last Yr."
+
+. label var trytolose "Were You Trying to Lose Weight"
+
+. label var evrgowalk "Ever Go Walking for Exercise"
+
+. label var vigoractv "Ever Vigorous Activities"
+
+. 
+. 
+. capture drop unwgtloss lowphysact
+
+. gen unwgtloss=. 
+(47,778 missing values generated)
+
+. gen lowphysact=.
+(47,778 missing values generated)
+
+. replace unwgtloss=0 if lst10pnds==0 | trytolose==1
+(0 real changes made)
+
+. replace unwgtloss=1 if lst10pnds==1 & trytolose==0
+(0 real changes made)
+
+. replace lowphysact=0 if evrgowalk==1 | vigoractv==1
+(0 real changes made)
+
+. replace lowphysact=1 if evrgowalk==0 & vigoractv==0
+(0 real changes made)
+
+. 
+. label var unwgtloss "Unintentional Weight Loss"
+
+. label var lowphysact "Low Physical Activity"
+
+. 
+. capture drop lowenrgy
+
+. replace lowenergy=. if inlist(lowenergy, -9, -8, -7, -1)
+(5,770 real changes made, 5,770 to missing)
+
+. replace lowenergy=0 if lowenergy==2
+(22,075 real changes made)
+
+. label var lowenergy "Low Energy in Last Month"
+
+. 
+. 
+. ///// 3/7/18 --Adding in Well-Being questions 
+> /// Inapplicable is people who have no interview, had a proxy, or died. turned
+>  to missing. 
+> 
+. foreach j in 1 2 4 {
+  2.         forvalues i=1/4 {
+  3.                 capture drop wbq`j'`i'
+  4.                 gen wbq`j'`i'=.
+  5.         }
+  6. }
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+
+. drop wbq44
+
+. 
+. forvalues i=1/4 {
+  2. replace wbq1`i'=1 if offelche`i'==4 
+  3. replace wbq1`i'=2 if offelche`i'==3 
+  4. replace wbq1`i'=3 if offelche`i'==2
+  5. replace wbq1`i'=4 if offelche`i'==1 
+  6. replace wbq1`i'=0 if offelche`i'==5 
+  7. replace wbq1`i'=5 if (offelche`i'==-7 | offelche`i'==-8) 
+  8. }
+(1,135 real changes made)
+(6,454 real changes made)
+(19,247 real changes made)
+(11,415 real changes made)
+(376 real changes made)
+(584 real changes made)
+(11,928 real changes made)
+(9,406 real changes made)
+(1,729 real changes made)
+(1,302 real changes made)
+(14,266 real changes made)
+(580 real changes made)
+(2,829 real changes made)
+(8,411 real changes made)
+(14,695 real changes made)
+(11,393 real changes made)
+(1,211 real changes made)
+(672 real changes made)
+(18,763 real changes made)
+(9,615 real changes made)
+(1,193 real changes made)
+(710 real changes made)
+(8,342 real changes made)
+(588 real changes made)
+
+. 
+. 
+. label var wbq11 "Often you Feel Cheerful"
+
+. rename wbq11 oftcheer 
+
+. label define oftcheer 0 "Never" 1 "Rarely (Once a Week or Less)" 2 "Some Days(
+> 2-4 Days a Week)" ///
+> 3 "Most Days(5-6 Days a Week)" 4 "Every Day (7 Days a Week)" 5 "RF/DK"
+
+. label values oftcheer oftcheer
+
+. label var wbq12 "Often you Feel Bored"
+
+. rename wbq12 oftbored
+
+. label values oftbored oftcheer
+
+. label var wbq13 "Often you Feel Full of Life"
+
+. rename wbq13 oftfol
+
+. label values oftfol oftcheer
+
+. label var wbq14 "Often you Feel Upset"
+
+. rename wbq14 oftupset
+
+. label values oftupset oftcheer
+
+. 
+. 
+. 
+. forvalues i=1/4 {
+  2. replace wbq2`i'=1 if truestme`i'==3 
+  3. replace wbq2`i'=2 if truestme`i'==2 
+  4. replace wbq2`i'=3 if truestme`i'==1
+  5. replace wbq2`i'=4 if (truestme`i'==-7 | truestme`i'==-8) 
+  6. }
+(893 real changes made)
+(5,980 real changes made)
+(31,558 real changes made)
+(780 real changes made)
+(648 real changes made)
+(5,649 real changes made)
+(32,273 real changes made)
+(641 real changes made)
+(27,259 real changes made)
+(6,731 real changes made)
+(4,340 real changes made)
+(881 real changes made)
+(1,497 real changes made)
+(5,502 real changes made)
+(31,570 real changes made)
+(642 real changes made)
+
+. 
+. 
+. label var wbq21 "Life has Meaning Purpose"
+
+. rename wbq21 lifemean 
+
+. label define lifemean 1 "Agree Not at All" 2 "Agree a Little" 3 "Agree A Lot" 
+> 4 "RF/DK"
+
+. label values lifemean lifemean
+
+. label var wbq22 "Feels Confident"
+
+. rename wbq22 confident
+
+. label values confident lifemean
+
+. label var wbq23 "Gave up Improving Life"
+
+. rename wbq23 giveup
+
+. label values giveup lifemean
+
+. label var wbq24 "Likes Living Situation"
+
+. rename wbq24 livingsit
+
+. label values livingsit lifemean
+
+. 
+. 
+. forvalues i=1/3 {
+  2. replace wbq4`i'=1 if agrwstmt`i'==3 
+  3. replace wbq4`i'=2 if agrwstmt`i'==2 
+  4. replace wbq4`i'=3 if agrwstmt`i'==1 
+  5. replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8) 
+  6. }
+(26,335 real changes made)
+(7,963 real changes made)
+(4,109 real changes made)
+(804 real changes made)
+(562 real changes made)
+(3,679 real changes made)
+(34,316 real changes made)
+(654 real changes made)
+(4,523 real changes made)
+(13,508 real changes made)
+(20,398 real changes made)
+(782 real changes made)
+
+. 
+. 
+. label var wbq41 "Self Determination"
+
+. rename wbq41 selfdeter 
+
+. label values selfdeter lifemean
+
+. label var wbq42 "Want-Finds Way to Do"
+
+. rename wbq42 findway
+
+. label values findway lifemean
+
+. label var wbq43 "Easily Adjust to Change"
+
+. rename wbq43 adjchg
+
+. label values adjchg lifemean
+
+.         
+. 
+. capture drop agefeel
+
+. egen agefeel= rowmax(ageyofeel) 
+
+. replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
+(10,818 real changes made, 10,818 to missing)
+
+. label var agefeel "Age you Feel Most Times"
+
+. 
+. 
+. ///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
+> //missing if in NH-FQ, dead, in NH-FQ R1 & R2
+. 
+. local ew mealskip1 nopayhous nopayutil nopaymed
+
+. 
+. foreach x in `ew'{
+  2. replace `x'=0 if `x'==2 
+  3. replace `x'=1 if `x'==1
+  4. replace `x'=2 if `x'==-7 |`x'==-8
+  5. }
+(33,504 real changes made)
+(0 real changes made)
+(684 real changes made)
+(32,972 real changes made)
+(0 real changes made)
+(813 real changes made)
+(32,548 real changes made)
+(0 real changes made)
+(767 real changes made)
+(32,508 real changes made)
+(0 real changes made)
+(774 real changes made)
+
+. 
+. 
+. label var mealskip1 "No Money, Meals Skipped"
+
+. label var nopayhous "No Money for Housing"
+
+. label var nopayutil "No Money for Utilities"
+
+. label var nopaymed "No Money for Medical"
+
+. 
+. label define mealskip 0 "No" 1 "Yes" 2 "RF/DK"
+
+. foreach x in `ew' {
+  2. label values `ew' mealskip
+  3. }
+
+. rename mealskip1 mealskip
+
+. 
+. capture drop mealskipnum
+
+. gen mealskipnum=.
+(47,778 missing values generated)
+
+. 
+. 
+. replace mealskipnum=0 if mealskip2==-1 & mealskip==2
+(684 real changes made)
+
+. replace mealskipnum=1 if mealskip2==4
+(188 real changes made)
+
+. replace mealskipnum=2 if mealskip2==3
+(79 real changes made)
+
+. replace mealskipnum=3 if mealskip2==2
+(26 real changes made)
+
+. replace mealskipnum=4 if mealskip2==1
+(40 real changes made)
+
+. replace mealskipnum=5 if mealskip2==-7 | mealskip2==-8
+(8 real changes made)
+
+. 
+. 
+. label var mealskipnum "How Often Meals Skipped"
+
+. label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half
+> )" ///
+> 3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
+
+. label values mealskipnum mealskipnum1
+
+. 
+. 
+. ///// 12/5/17 --Adding in Cancer 
+> 
+. // recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
+. 
+. // From sensitive data
+. recode cancerty1 cancerty2 cancerty3 cancerty4 cancerty5 ///
+> cancerty6 cancerty7 cancerty8 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had sr_b
+> reastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+> sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer
+> _had)
+(33345 differences between cancerty1 and sr_skincancer_had)
+(7840 differences between cancerty2 and sr_breastcancer_had)
+(7810 differences between cancerty3 and sr_prostatecancer_had)
+(8178 differences between cancerty4 and sr_bladdercancer_had)
+(8096 differences between cancerty5 and sr_crvovrnutrncancer_had)
+(8078 differences between cancerty6 and sr_coloncancer_had)
+(8197 differences between cancerty7 and sr_kidneycancer_had)
+(7940 differences between cancerty8 and sr_othercancer_had)
+
+. 
+. foreach x of varlist sr*canc*d {
+  2.         local lab : var label `x'
+  3.         label var `x' "Sensitive: `lab'"
+  4. }
+
+. //keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+. //sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercanc
+> er_had
+. 
+. 
+. //recoding all refuse, dk, na, as missing
+. qui destring *, replace
+
+. foreach x of varlist * {
+  2.         replace `x'=. if inlist(`x',-1,-7,-8,-9)
+  3. }
+(0 real changes made)
+(0 real changes made)
+(2,969 real changes made, 2,969 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(42,177 real changes made, 42,177 to missing)
+(0 real changes made)
+(2,671 real changes made, 2,671 to missing)
+(42,182 real changes made, 42,182 to missing)
+(42,259 real changes made, 42,259 to missing)
+(42,182 real changes made, 42,182 to missing)
+(34,518 real changes made, 34,518 to missing)
+(636 real changes made, 636 to missing)
+(1 real change made, 1 to missing)
+(5,640 real changes made, 5,640 to missing)
+(12,732 real changes made, 12,732 to missing)
+(5,673 real changes made, 5,673 to missing)
+(5,699 real changes made, 5,699 to missing)
+(5,718 real changes made, 5,718 to missing)
+(5,683 real changes made, 5,683 to missing)
+(5,685 real changes made, 5,685 to missing)
+(5,772 real changes made, 5,772 to missing)
+(5,664 real changes made, 5,664 to missing)
+(5,671 real changes made, 5,671 to missing)
+(5,701 real changes made, 5,701 to missing)
+(5,675 real changes made, 5,675 to missing)
+(5,680 real changes made, 5,680 to missing)
+(30,793 real changes made, 30,793 to missing)
+(15,940 real changes made, 15,940 to missing)
+(5,656 real changes made, 5,656 to missing)
+(5,673 real changes made, 5,673 to missing)
+(5,038 real changes made, 5,038 to missing)
+(5,782 real changes made, 5,782 to missing)
+(37,711 real changes made, 37,711 to missing)
+(5,026 real changes made, 5,026 to missing)
+(15,360 real changes made, 15,360 to missing)
+(14,933 real changes made, 14,933 to missing)
+(5,027 real changes made, 5,027 to missing)
+(16,415 real changes made, 16,415 to missing)
+(15,921 real changes made, 15,921 to missing)
+(5,037 real changes made, 5,037 to missing)
+(12,312 real changes made, 12,312 to missing)
+(12,541 real changes made, 12,541 to missing)
+(5,031 real changes made, 5,031 to missing)
+(16,068 real changes made, 16,068 to missing)
+(15,564 real changes made, 15,564 to missing)
+(5,037 real changes made, 5,037 to missing)
+(15,144 real changes made, 15,144 to missing)
+(14,803 real changes made, 14,803 to missing)
+(5,668 real changes made, 5,668 to missing)
+(5,707 real changes made, 5,707 to missing)
+(34,745 real changes made, 34,745 to missing)
+(10,681 real changes made, 10,681 to missing)
+(33,720 real changes made, 33,720 to missing)
+(5,939 real changes made, 5,939 to missing)
+(5,860 real changes made, 5,860 to missing)
+(5,841 real changes made, 5,841 to missing)
+(5,910 real changes made, 5,910 to missing)
+(5,943 real changes made, 5,943 to missing)
+(5,957 real changes made, 5,957 to missing)
+(5,790 real changes made, 5,790 to missing)
+(37,656 real changes made, 37,656 to missing)
+(44,080 real changes made, 44,080 to missing)
+(3,888 real changes made, 3,888 to missing)
+(42,366 real changes made, 42,366 to missing)
+(35,214 real changes made, 35,214 to missing)
+(43,990 real changes made, 43,990 to missing)
+(10,788 real changes made, 10,788 to missing)
+(42,070 real changes made, 42,070 to missing)
+(4,475 real changes made, 4,475 to missing)
+(41,977 real changes made, 41,977 to missing)
+(27,637 real changes made, 27,637 to missing)
+(27,612 real changes made, 27,612 to missing)
+(47,287 real changes made, 47,287 to missing)
+(45,078 real changes made, 45,078 to missing)
+(5,629 real changes made, 5,629 to missing)
+(27,333 real changes made, 27,333 to missing)
+(5,671 real changes made, 5,671 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(662 real changes made, 662 to missing)
+(14,698 real changes made, 14,698 to missing)
+(16,105 real changes made, 16,105 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(8,193 real changes made, 8,193 to missing)
+(45,363 real changes made, 45,363 to missing)
+(5,679 real changes made, 5,679 to missing)
+(41,246 real changes made, 41,246 to missing)
+(5,691 real changes made, 5,691 to missing)
+(45,728 real changes made, 45,728 to missing)
+(45,761 real changes made, 45,761 to missing)
+(45,252 real changes made, 45,252 to missing)
+(45,257 real changes made, 45,257 to missing)
+(13,091 real changes made, 13,091 to missing)
+(30,153 real changes made, 30,153 to missing)
+(30,155 real changes made, 30,155 to missing)
+(30,166 real changes made, 30,166 to missing)
+(46,422 real changes made, 46,422 to missing)
+(5,659 real changes made, 5,659 to missing)
+(5,669 real changes made, 5,669 to missing)
+(5,998 real changes made, 5,998 to missing)
+(5,999 real changes made, 5,999 to missing)
+(5,720 real changes made, 5,720 to missing)
+(5,689 real changes made, 5,689 to missing)
+(8,659 real changes made, 8,659 to missing)
+(45,591 real changes made, 45,591 to missing)
+(46,943 real changes made, 46,943 to missing)
+(6,549 real changes made, 6,549 to missing)
+(2,926 real changes made, 2,926 to missing)
+(24,788 real changes made, 24,788 to missing)
+(28,340 real changes made, 28,340 to missing)
+(32,235 real changes made, 32,235 to missing)
+(37,811 real changes made, 37,811 to missing)
+(6,538 real changes made, 6,538 to missing)
+(7,037 real changes made, 7,037 to missing)
+(7,798 real changes made, 7,798 to missing)
+(38,117 real changes made, 38,117 to missing)
+(39,653 real changes made, 39,653 to missing)
+(42,829 real changes made, 42,829 to missing)
+(44,624 real changes made, 44,624 to missing)
+(46,688 real changes made, 46,688 to missing)
+(47,020 real changes made, 47,020 to missing)
+(5,684 real changes made, 5,684 to missing)
+(5,788 real changes made, 5,788 to missing)
+(5,967 real changes made, 5,967 to missing)
+(41,938 real changes made, 41,938 to missing)
+(5,847 real changes made, 5,847 to missing)
+(6,279 real changes made, 6,279 to missing)
+(44,423 real changes made, 44,423 to missing)
+(6,030 real changes made, 6,030 to missing)
+(5,994 real changes made, 5,994 to missing)
+(6,095 real changes made, 6,095 to missing)
+(5,665 real changes made, 5,665 to missing)
+(5,669 real changes made, 5,669 to missing)
+(5,695 real changes made, 5,695 to missing)
+(24,737 real changes made, 24,737 to missing)
+(5,826 real changes made, 5,826 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(16,720 real changes made, 16,720 to missing)
+(5,674 real changes made, 5,674 to missing)
+(38,827 real changes made, 38,827 to missing)
+(5,699 real changes made, 5,699 to missing)
+(34,515 real changes made, 34,515 to missing)
+(5,679 real changes made, 5,679 to missing)
+(31,818 real changes made, 31,818 to missing)
+(0 real changes made)
+(27,883 real changes made, 27,883 to missing)
+(5,707 real changes made, 5,707 to missing)
+(32,974 real changes made, 32,974 to missing)
+(6,245 real changes made, 6,245 to missing)
+(29,629 real changes made, 29,629 to missing)
+(6,358 real changes made, 6,358 to missing)
+(32,786 real changes made, 32,786 to missing)
+(5,945 real changes made, 5,945 to missing)
+(32,319 real changes made, 32,319 to missing)
+(6,152 real changes made, 6,152 to missing)
+(21,518 real changes made, 21,518 to missing)
+(6,212 real changes made, 6,212 to missing)
+(37,102 real changes made, 37,102 to missing)
+(5,935 real changes made, 5,935 to missing)
+(34,974 real changes made, 34,974 to missing)
+(42,572 real changes made, 42,572 to missing)
+(47,625 real changes made, 47,625 to missing)
+(45,475 real changes made, 45,475 to missing)
+(45,474 real changes made, 45,474 to missing)
+(45,489 real changes made, 45,489 to missing)
+(45,476 real changes made, 45,476 to missing)
+(45,491 real changes made, 45,491 to missing)
+(45,485 real changes made, 45,485 to missing)
+(45,496 real changes made, 45,496 to missing)
+(45,474 real changes made, 45,474 to missing)
+(44,885 real changes made, 44,885 to missing)
+(44,868 real changes made, 44,868 to missing)
+(44,867 real changes made, 44,867 to missing)
+(44,897 real changes made, 44,897 to missing)
+(44,851 real changes made, 44,851 to missing)
+(46,395 real changes made, 46,395 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(46,210 real changes made, 46,210 to missing)
+(8,607 real changes made, 8,607 to missing)
+(24,080 real changes made, 24,080 to missing)
+(8,600 real changes made, 8,600 to missing)
+(7,217 real changes made, 7,217 to missing)
+(7,216 real changes made, 7,216 to missing)
+(7,217 real changes made, 7,217 to missing)
+(7,215 real changes made, 7,215 to missing)
+(7,209 real changes made, 7,209 to missing)
+(7,810 real changes made, 7,810 to missing)
+(5,655 real changes made, 5,655 to missing)
+(8,303 real changes made, 8,303 to missing)
+(9,854 real changes made, 9,854 to missing)
+(12,239 real changes made, 12,239 to missing)
+(17,295 real changes made, 17,295 to missing)
+(25,333 real changes made, 25,333 to missing)
+(34,713 real changes made, 34,713 to missing)
+(42,074 real changes made, 42,074 to missing)
+(45,953 real changes made, 45,953 to missing)
+(47,380 real changes made, 47,380 to missing)
+(21,106 real changes made, 21,106 to missing)
+(6,186 real changes made, 6,186 to missing)
+(39,062 real changes made, 39,062 to missing)
+(39,235 real changes made, 39,235 to missing)
+(8,963 real changes made, 8,963 to missing)
+(41,789 real changes made, 41,789 to missing)
+(7,810 real changes made, 7,810 to missing)
+(7,810 real changes made, 7,810 to missing)
+(7,810 real changes made, 7,810 to missing)
+(7,810 real changes made, 7,810 to missing)
+(6,689 real changes made, 6,689 to missing)
+(6,688 real changes made, 6,688 to missing)
+(7,810 real changes made, 7,810 to missing)
+(7,834 real changes made, 7,834 to missing)
+(7,834 real changes made, 7,834 to missing)
+(7,834 real changes made, 7,834 to missing)
+(7,834 real changes made, 7,834 to missing)
+(7,837 real changes made, 7,837 to missing)
+(7,837 real changes made, 7,837 to missing)
+(7,837 real changes made, 7,837 to missing)
+(7,837 real changes made, 7,837 to missing)
+(8,303 real changes made, 8,303 to missing)
+(17,017 real changes made, 17,017 to missing)
+(21,278 real changes made, 21,278 to missing)
+(27,758 real changes made, 27,758 to missing)
+(35,499 real changes made, 35,499 to missing)
+(41,933 real changes made, 41,933 to missing)
+(45,566 real changes made, 45,566 to missing)
+(47,108 real changes made, 47,108 to missing)
+(47,600 real changes made, 47,600 to missing)
+(47,738 real changes made, 47,738 to missing)
+(6,283 real changes made, 6,283 to missing)
+(34,984 real changes made, 34,984 to missing)
+(39,164 real changes made, 39,164 to missing)
+(14,113 real changes made, 14,113 to missing)
+(40,745 real changes made, 40,745 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(8,445 real changes made, 8,445 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(9,591 real changes made, 9,591 to missing)
+(3,359 real changes made, 3,359 to missing)
+(38,664 real changes made, 38,664 to missing)
+(40,942 real changes made, 40,942 to missing)
+(44,516 real changes made, 44,516 to missing)
+(46,770 real changes made, 46,770 to missing)
+(4,993 real changes made, 4,993 to missing)
+(41,773 real changes made, 41,773 to missing)
+(9,893 real changes made, 9,893 to missing)
+(6,540 real changes made, 6,540 to missing)
+(37,257 real changes made, 37,257 to missing)
+(41,285 real changes made, 41,285 to missing)
+(46,325 real changes made, 46,325 to missing)
+(38,513 real changes made, 38,513 to missing)
+(40,575 real changes made, 40,575 to missing)
+(44,659 real changes made, 44,659 to missing)
+(47,021 real changes made, 47,021 to missing)
+(5,822 real changes made, 5,822 to missing)
+(3,699 real changes made, 3,699 to missing)
+(43,855 real changes made, 43,855 to missing)
+(6,986 real changes made, 6,986 to missing)
+(5,831 real changes made, 5,831 to missing)
+(38,560 real changes made, 38,560 to missing)
+(34,845 real changes made, 34,845 to missing)
+(3,400 real changes made, 3,400 to missing)
+(44,797 real changes made, 44,797 to missing)
+(6,807 real changes made, 6,807 to missing)
+(38,280 real changes made, 38,280 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(3,288 real changes made, 3,288 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(3,288 real changes made, 3,288 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(3,288 real changes made, 3,288 to missing)
+(46,154 real changes made, 46,154 to missing)
+(47,425 real changes made, 47,425 to missing)
+(15,028 real changes made, 15,028 to missing)
+(13,153 real changes made, 13,153 to missing)
+(16,197 real changes made, 16,197 to missing)
+(16,197 real changes made, 16,197 to missing)
+(16,307 real changes made, 16,307 to missing)
+(15,187 real changes made, 15,187 to missing)
+(16,140 real changes made, 16,140 to missing)
+(19,212 real changes made, 19,212 to missing)
+(19,202 real changes made, 19,202 to missing)
+(19,205 real changes made, 19,205 to missing)
+(19,205 real changes made, 19,205 to missing)
+(6,026 real changes made, 6,026 to missing)
+(6,036 real changes made, 6,036 to missing)
+(41,040 real changes made, 41,040 to missing)
+(6,028 real changes made, 6,028 to missing)
+(6,016 real changes made, 6,016 to missing)
+(6,016 real changes made, 6,016 to missing)
+(6,013 real changes made, 6,013 to missing)
+(25,564 real changes made, 25,564 to missing)
+(19,187 real changes made, 19,187 to missing)
+(17,825 real changes made, 17,825 to missing)
+(5,654 real changes made, 5,654 to missing)
+(43,825 real changes made, 43,825 to missing)
+(19,425 real changes made, 19,425 to missing)
+(19,425 real changes made, 19,425 to missing)
+(19,425 real changes made, 19,425 to missing)
+(19,425 real changes made, 19,425 to missing)
+(19,425 real changes made, 19,425 to missing)
+(19,425 real changes made, 19,425 to missing)
+(27,649 real changes made, 27,649 to missing)
+(22,428 real changes made, 22,428 to missing)
+(19,428 real changes made, 19,428 to missing)
+(38,417 real changes made, 38,417 to missing)
+(5,656 real changes made, 5,656 to missing)
+(38,694 real changes made, 38,694 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,403 real changes made, 14,403 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,308 real changes made, 14,308 to missing)
+(14,331 real changes made, 14,331 to missing)
+(21,881 real changes made, 21,881 to missing)
+(24,153 real changes made, 24,153 to missing)
+(14,315 real changes made, 14,315 to missing)
+(35,325 real changes made, 35,325 to missing)
+(5,659 real changes made, 5,659 to missing)
+(36,414 real changes made, 36,414 to missing)
+(5,972 real changes made, 5,972 to missing)
+(17,836 real changes made, 17,836 to missing)
+(23,131 real changes made, 23,131 to missing)
+(20,063 real changes made, 20,063 to missing)
+(16,826 real changes made, 16,826 to missing)
+(36,805 real changes made, 36,805 to missing)
+(5,738 real changes made, 5,738 to missing)
+(43,611 real changes made, 43,611 to missing)
+(29,384 real changes made, 29,384 to missing)
+(21,018 real changes made, 21,018 to missing)
+(15,925 real changes made, 15,925 to missing)
+(38,860 real changes made, 38,860 to missing)
+(6,112 real changes made, 6,112 to missing)
+(34,038 real changes made, 34,038 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(47,177 real changes made, 47,177 to missing)
+(44,159 real changes made, 44,159 to missing)
+(3,134 real changes made, 3,134 to missing)
+(47,435 real changes made, 47,435 to missing)
+(3,268 real changes made, 3,268 to missing)
+(45,178 real changes made, 45,178 to missing)
+(6,082 real changes made, 6,082 to missing)
+(43,949 real changes made, 43,949 to missing)
+(3,188 real changes made, 3,188 to missing)
+(3,188 real changes made, 3,188 to missing)
+(3,188 real changes made, 3,188 to missing)
+(42,469 real changes made, 42,469 to missing)
+(27,745 real changes made, 27,745 to missing)
+(31,237 real changes made, 31,237 to missing)
+(3,223 real changes made, 3,223 to missing)
+(42,752 real changes made, 42,752 to missing)
+(8,619 real changes made, 8,619 to missing)
+(5,745 real changes made, 5,745 to missing)
+(39,279 real changes made, 39,279 to missing)
+(3,240 real changes made, 3,240 to missing)
+(3,190 real changes made, 3,190 to missing)
+(35,395 real changes made, 35,395 to missing)
+(29,795 real changes made, 29,795 to missing)
+(3,182 real changes made, 3,182 to missing)
+(45,742 real changes made, 45,742 to missing)
+(6,658 real changes made, 6,658 to missing)
+(43,149 real changes made, 43,149 to missing)
+(3,095 real changes made, 3,095 to missing)
+(3,565 real changes made, 3,565 to missing)
+(3,555 real changes made, 3,555 to missing)
+(41,885 real changes made, 41,885 to missing)
+(7,564 real changes made, 7,564 to missing)
+(5,900 real changes made, 5,900 to missing)
+(38,158 real changes made, 38,158 to missing)
+(3,017 real changes made, 3,017 to missing)
+(3,017 real changes made, 3,017 to missing)
+(5,640 real changes made, 5,640 to missing)
+(3,421 real changes made, 3,421 to missing)
+(3,017 real changes made, 3,017 to missing)
+(5,640 real changes made, 5,640 to missing)
+(3,017 real changes made, 3,017 to missing)
+(3,017 real changes made, 3,017 to missing)
+(5,646 real changes made, 5,646 to missing)
+(3,017 real changes made, 3,017 to missing)
+(3,017 real changes made, 3,017 to missing)
+(5,640 real changes made, 5,640 to missing)
+(13,735 real changes made, 13,735 to missing)
+(42,953 real changes made, 42,953 to missing)
+(42,517 real changes made, 42,517 to missing)
+(5,687 real changes made, 5,687 to missing)
+(8,961 real changes made, 8,961 to missing)
+(46,834 real changes made, 46,834 to missing)
+(14,699 real changes made, 14,699 to missing)
+(14,699 real changes made, 14,699 to missing)
+(14,699 real changes made, 14,699 to missing)
+(14,699 real changes made, 14,699 to missing)
+(21,252 real changes made, 21,252 to missing)
+(21,252 real changes made, 21,252 to missing)
+(21,252 real changes made, 21,252 to missing)
+(14,712 real changes made, 14,712 to missing)
+(39,831 real changes made, 39,831 to missing)
+(16,237 real changes made, 16,237 to missing)
+(14,818 real changes made, 14,818 to missing)
+(39,296 real changes made, 39,296 to missing)
+(5,700 real changes made, 5,700 to missing)
+(5,754 real changes made, 5,754 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,412 real changes made, 8,412 to missing)
+(8,411 real changes made, 8,411 to missing)
+(8,411 real changes made, 8,411 to missing)
+(8,457 real changes made, 8,457 to missing)
+(31,217 real changes made, 31,217 to missing)
+(31,216 real changes made, 31,216 to missing)
+(31,219 real changes made, 31,219 to missing)
+(31,188 real changes made, 31,188 to missing)
+(6,046 real changes made, 6,046 to missing)
+(43,309 real changes made, 43,309 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,685 real changes made, 5,685 to missing)
+(5,705 real changes made, 5,705 to missing)
+(34,281 real changes made, 34,281 to missing)
+(5,812 real changes made, 5,812 to missing)
+(5,704 real changes made, 5,704 to missing)
+(5,726 real changes made, 5,726 to missing)
+(34,296 real changes made, 34,296 to missing)
+(5,827 real changes made, 5,827 to missing)
+(5,688 real changes made, 5,688 to missing)
+(5,712 real changes made, 5,712 to missing)
+(34,277 real changes made, 34,277 to missing)
+(5,783 real changes made, 5,783 to missing)
+(5,684 real changes made, 5,684 to missing)
+(5,712 real changes made, 5,712 to missing)
+(34,275 real changes made, 34,275 to missing)
+(5,769 real changes made, 5,769 to missing)
+(5,672 real changes made, 5,672 to missing)
+(5,696 real changes made, 5,696 to missing)
+(5,675 real changes made, 5,675 to missing)
+(5,704 real changes made, 5,704 to missing)
+(5,679 real changes made, 5,679 to missing)
+(5,312 real changes made, 5,312 to missing)
+(1,400 real changes made, 1,400 to missing)
+(5,043 real changes made, 5,043 to missing)
+(26,904 real changes made, 26,904 to missing)
+(40,280 real changes made, 40,280 to missing)
+(10,952 real changes made, 10,952 to missing)
+(11,805 real changes made, 11,805 to missing)
+(44,785 real changes made, 44,785 to missing)
+(9,033 real changes made, 9,033 to missing)
+(47,713 real changes made, 47,713 to missing)
+(41,777 real changes made, 41,777 to missing)
+(40,726 real changes made, 40,726 to missing)
+(45,485 real changes made, 45,485 to missing)
+(45,780 real changes made, 45,780 to missing)
+(43,224 real changes made, 43,224 to missing)
+(5,640 real changes made, 5,640 to missing)
+(5,640 real changes made, 5,640 to missing)
+(11,210 real changes made, 11,210 to missing)
+(13,039 real changes made, 13,039 to missing)
+(10,414 real changes made, 10,414 to missing)
+(0 real changes made)
+(0 real changes made)
+(45,435 real changes made, 45,435 to missing)
+(45,435 real changes made, 45,435 to missing)
+(45,435 real changes made, 45,435 to missing)
+(45,435 real changes made, 45,435 to missing)
+(45,410 real changes made, 45,410 to missing)
+(45,427 real changes made, 45,427 to missing)
+(13,131 real changes made, 13,131 to missing)
+(12,872 real changes made, 12,872 to missing)
+(0 real changes made)
+(0 real changes made)
+(47,620 real changes made, 47,620 to missing)
+(47,620 real changes made, 47,620 to missing)
+(47,620 real changes made, 47,620 to missing)
+(47,620 real changes made, 47,620 to missing)
+(47,617 real changes made, 47,617 to missing)
+(12,694 real changes made, 12,694 to missing)
+(47,663 real changes made, 47,663 to missing)
+(11,268 real changes made, 11,268 to missing)
+(0 real changes made)
+(46,351 real changes made, 46,351 to missing)
+(46,352 real changes made, 46,352 to missing)
+(46,352 real changes made, 46,352 to missing)
+(46,352 real changes made, 46,352 to missing)
+(46,342 real changes made, 46,342 to missing)
+(12,876 real changes made, 12,876 to missing)
+(47,645 real changes made, 47,645 to missing)
+(12,741 real changes made, 12,741 to missing)
+(0 real changes made)
+(47,582 real changes made, 47,582 to missing)
+(47,581 real changes made, 47,581 to missing)
+(47,582 real changes made, 47,582 to missing)
+(47,582 real changes made, 47,582 to missing)
+(47,559 real changes made, 47,559 to missing)
+(8,041 real changes made, 8,041 to missing)
+(8,159 real changes made, 8,159 to missing)
+(8,159 real changes made, 8,159 to missing)
+(8,041 real changes made, 8,041 to missing)
+(6,637 real changes made, 6,637 to missing)
+(5,470 real changes made, 5,470 to missing)
+(6,288 real changes made, 6,288 to missing)
+(6,467 real changes made, 6,467 to missing)
+(5,483 real changes made, 5,483 to missing)
+(5,511 real changes made, 5,511 to missing)
+(5,274 real changes made, 5,274 to missing)
+(5,021 real changes made, 5,021 to missing)
+(5,628 real changes made, 5,628 to missing)
+(0 real changes made)
+(4,133 real changes made, 4,133 to missing)
+(9,151 real changes made, 9,151 to missing)
+(9,147 real changes made, 9,147 to missing)
+(9,239 real changes made, 9,239 to missing)
+(9,155 real changes made, 9,155 to missing)
+(9,347 real changes made, 9,347 to missing)
+(9,208 real changes made, 9,208 to missing)
+(9,448 real changes made, 9,448 to missing)
+(9,209 real changes made, 9,209 to missing)
+(10,818 real changes made, 10,818 to missing)
+(9,371 real changes made, 9,371 to missing)
+(9,221 real changes made, 9,221 to missing)
+(9,349 real changes made, 9,349 to missing)
+(8,279 real changes made, 8,279 to missing)
+(7,654 real changes made, 7,654 to missing)
+(7,167 real changes made, 7,167 to missing)
+(6,723 real changes made, 6,723 to missing)
+(14,891 real changes made, 14,891 to missing)
+(7,957 real changes made, 7,957 to missing)
+(19,345 real changes made, 19,345 to missing)
+(40,604 real changes made, 40,604 to missing)
+(47,439 real changes made, 47,439 to missing)
+(40,125 real changes made, 40,125 to missing)
+(41,355 real changes made, 41,355 to missing)
+(46,948 real changes made, 46,948 to missing)
+(24,066 real changes made, 24,066 to missing)
+(45,050 real changes made, 45,050 to missing)
+(43,902 real changes made, 43,902 to missing)
+(40,196 real changes made, 40,196 to missing)
+(47,465 real changes made, 47,465 to missing)
+(43,241 real changes made, 43,241 to missing)
+(4,014 real changes made, 4,014 to missing)
+(4,014 real changes made, 4,014 to missing)
+(4,014 real changes made, 4,014 to missing)
+(4,191 real changes made, 4,191 to missing)
+(4,231 real changes made, 4,231 to missing)
+(4,231 real changes made, 4,231 to missing)
+(4,231 real changes made, 4,231 to missing)
+(4,015 real changes made, 4,015 to missing)
+(4,015 real changes made, 4,015 to missing)
+(4,015 real changes made, 4,015 to missing)
+(4,219 real changes made, 4,219 to missing)
+(4,219 real changes made, 4,219 to missing)
+(4,219 real changes made, 4,219 to missing)
+(4,759 real changes made, 4,759 to missing)
+(4,759 real changes made, 4,759 to missing)
+(4,759 real changes made, 4,759 to missing)
+(4,603 real changes made, 4,603 to missing)
+(4,603 real changes made, 4,603 to missing)
+(4,603 real changes made, 4,603 to missing)
+(4,603 real changes made, 4,603 to missing)
+(4,700 real changes made, 4,700 to missing)
+(4,700 real changes made, 4,700 to missing)
+(4,700 real changes made, 4,700 to missing)
+(4,700 real changes made, 4,700 to missing)
+(4,268 real changes made, 4,268 to missing)
+(4,268 real changes made, 4,268 to missing)
+(4,268 real changes made, 4,268 to missing)
+(4,268 real changes made, 4,268 to missing)
+(4,562 real changes made, 4,562 to missing)
+(4,562 real changes made, 4,562 to missing)
+(4,562 real changes made, 4,562 to missing)
+(4,562 real changes made, 4,562 to missing)
+(4,823 real changes made, 4,823 to missing)
+(3,611 real changes made, 3,611 to missing)
+(3,611 real changes made, 3,611 to missing)
+(3,611 real changes made, 3,611 to missing)
+(4,187 real changes made, 4,187 to missing)
+(4,187 real changes made, 4,187 to missing)
+(4,187 real changes made, 4,187 to missing)
+(4,187 real changes made, 4,187 to missing)
+(13,178 real changes made, 13,178 to missing)
+(14,040 real changes made, 14,040 to missing)
+(16,321 real changes made, 16,321 to missing)
+(9,019 real changes made, 9,019 to missing)
+(16,010 real changes made, 16,010 to missing)
+(14,915 real changes made, 14,915 to missing)
+(16,394 real changes made, 16,394 to missing)
+(16,514 real changes made, 16,514 to missing)
+(16,531 real changes made, 16,531 to missing)
+(16,572 real changes made, 16,572 to missing)
+(15,850 real changes made, 15,850 to missing)
+(16,519 real changes made, 16,519 to missing)
+(16,421 real changes made, 16,421 to missing)
+(16,565 real changes made, 16,565 to missing)
+(16,575 real changes made, 16,575 to missing)
+(16,575 real changes made, 16,575 to missing)
+(16,579 real changes made, 16,579 to missing)
+(15,923 real changes made, 15,923 to missing)
+(16,533 real changes made, 16,533 to missing)
+(16,378 real changes made, 16,378 to missing)
+(16,544 real changes made, 16,544 to missing)
+(15,713 real changes made, 15,713 to missing)
+(15,974 real changes made, 15,974 to missing)
+(16,492 real changes made, 16,492 to missing)
+(12,509 real changes made, 12,509 to missing)
+(16,235 real changes made, 16,235 to missing)
+(15,414 real changes made, 15,414 to missing)
+(16,405 real changes made, 16,405 to missing)
+(15,652 real changes made, 15,652 to missing)
+(15,796 real changes made, 15,796 to missing)
+(16,318 real changes made, 16,318 to missing)
+(14,885 real changes made, 14,885 to missing)
+(16,038 real changes made, 16,038 to missing)
+(16,103 real changes made, 16,103 to missing)
+(16,409 real changes made, 16,409 to missing)
+(15,444 real changes made, 15,444 to missing)
+(15,525 real changes made, 15,525 to missing)
+(16,499 real changes made, 16,499 to missing)
+(14,240 real changes made, 14,240 to missing)
+(16,415 real changes made, 16,415 to missing)
+(15,903 real changes made, 15,903 to missing)
+(16,527 real changes made, 16,527 to missing)
+(15,497 real changes made, 15,497 to missing)
+(15,621 real changes made, 15,621 to missing)
+(16,462 real changes made, 16,462 to missing)
+(14,478 real changes made, 14,478 to missing)
+(16,273 real changes made, 16,273 to missing)
+(15,943 real changes made, 15,943 to missing)
+(16,502 real changes made, 16,502 to missing)
+(15,322 real changes made, 15,322 to missing)
+(15,562 real changes made, 15,562 to missing)
+(16,230 real changes made, 16,230 to missing)
+(16,555 real changes made, 16,555 to missing)
+(15,271 real changes made, 15,271 to missing)
+(16,228 real changes made, 16,228 to missing)
+(16,536 real changes made, 16,536 to missing)
+(16,348 real changes made, 16,348 to missing)
+(16,510 real changes made, 16,510 to missing)
+(16,571 real changes made, 16,571 to missing)
+(12,694 real changes made, 12,694 to missing)
+(13,277 real changes made, 13,277 to missing)
+(16,397 real changes made, 16,397 to missing)
+(16,063 real changes made, 16,063 to missing)
+(11,242 real changes made, 11,242 to missing)
+(16,368 real changes made, 16,368 to missing)
+(15,902 real changes made, 15,902 to missing)
+(16,254 real changes made, 16,254 to missing)
+(16,566 real changes made, 16,566 to missing)
+(16,524 real changes made, 16,524 to missing)
+(13,258 real changes made, 13,258 to missing)
+(13,774 real changes made, 13,774 to missing)
+(15,554 real changes made, 15,554 to missing)
+(12,297 real changes made, 12,297 to missing)
+(15,147 real changes made, 15,147 to missing)
+(16,323 real changes made, 16,323 to missing)
+(16,512 real changes made, 16,512 to missing)
+(15,584 real changes made, 15,584 to missing)
+(15,680 real changes made, 15,680 to missing)
+(16,445 real changes made, 16,445 to missing)
+(15,683 real changes made, 15,683 to missing)
+(16,399 real changes made, 16,399 to missing)
+(16,419 real changes made, 16,419 to missing)
+(16,547 real changes made, 16,547 to missing)
+(15,599 real changes made, 15,599 to missing)
+(15,672 real changes made, 15,672 to missing)
+(16,482 real changes made, 16,482 to missing)
+(15,592 real changes made, 15,592 to missing)
+(16,482 real changes made, 16,482 to missing)
+(16,412 real changes made, 16,412 to missing)
+(16,556 real changes made, 16,556 to missing)
+(13,696 real changes made, 13,696 to missing)
+(6,677 real changes made, 6,677 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(26,597 real changes made, 26,597 to missing)
+(18,199 real changes made, 18,199 to missing)
+(20,963 real changes made, 20,963 to missing)
+(20,965 real changes made, 20,965 to missing)
+(20,961 real changes made, 20,961 to missing)
+(20,962 real changes made, 20,962 to missing)
+(20,961 real changes made, 20,961 to missing)
+(26,132 real changes made, 26,132 to missing)
+(17,769 real changes made, 17,769 to missing)
+(20,439 real changes made, 20,439 to missing)
+(20,437 real changes made, 20,437 to missing)
+(20,440 real changes made, 20,440 to missing)
+(20,438 real changes made, 20,438 to missing)
+(20,441 real changes made, 20,441 to missing)
+(7,319 real changes made, 7,319 to missing)
+(40,450 real changes made, 40,450 to missing)
+(39,707 real changes made, 39,707 to missing)
+(46,315 real changes made, 46,315 to missing)
+(7,098 real changes made, 7,098 to missing)
+(44,308 real changes made, 44,308 to missing)
+(7,087 real changes made, 7,087 to missing)
+(44,473 real changes made, 44,473 to missing)
+(44,473 real changes made, 44,473 to missing)
+(44,625 real changes made, 44,625 to missing)
+(7,352 real changes made, 7,352 to missing)
+(34,200 real changes made, 34,200 to missing)
+(34,200 real changes made, 34,200 to missing)
+(34,200 real changes made, 34,200 to missing)
+(34,503 real changes made, 34,503 to missing)
+(6,980 real changes made, 6,980 to missing)
+(6,954 real changes made, 6,954 to missing)
+(7,015 real changes made, 7,015 to missing)
+(3,623 real changes made, 3,623 to missing)
+(3,623 real changes made, 3,623 to missing)
+(44,977 real changes made, 44,977 to missing)
+(6,324 real changes made, 6,324 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(39,061 real changes made, 39,061 to missing)
+(6,324 real changes made, 6,324 to missing)
+(45,951 real changes made, 45,951 to missing)
+(45,951 real changes made, 45,951 to missing)
+(45,951 real changes made, 45,951 to missing)
+(45,951 real changes made, 45,951 to missing)
+(6,324 real changes made, 6,324 to missing)
+(39,050 real changes made, 39,050 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(8,877 real changes made, 8,877 to missing)
+(5,368 real changes made, 5,368 to missing)
+(5,368 real changes made, 5,368 to missing)
+(5,368 real changes made, 5,368 to missing)
+(647 real changes made, 647 to missing)
+(5,368 real changes made, 5,368 to missing)
+(5,368 real changes made, 5,368 to missing)
+(5,368 real changes made, 5,368 to missing)
+(5,369 real changes made, 5,369 to missing)
+(5,368 real changes made, 5,368 to missing)
+(7,425 real changes made, 7,425 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(34,518 real changes made, 34,518 to missing)
+(39,421 real changes made, 39,421 to missing)
+(6,320 real changes made, 6,320 to missing)
+(5,004 real changes made, 5,004 to missing)
+(33,037 real changes made, 33,037 to missing)
+(516 real changes made, 516 to missing)
+(4,734 real changes made, 4,734 to missing)
+(33,424 real changes made, 33,424 to missing)
+(0 real changes made)
+(38,725 real changes made, 38,725 to missing)
+(38,829 real changes made, 38,829 to missing)
+(0 real changes made)
+(0 real changes made)
+(37,819 real changes made, 37,819 to missing)
+(38,862 real changes made, 38,862 to missing)
+(39,211 real changes made, 39,211 to missing)
+(39,239 real changes made, 39,239 to missing)
+(39,107 real changes made, 39,107 to missing)
+(39,499 real changes made, 39,499 to missing)
+(37,768 real changes made, 37,768 to missing)
+(36,898 real changes made, 36,898 to missing)
+(37,024 real changes made, 37,024 to missing)
+(36,862 real changes made, 36,862 to missing)
+(39,410 real changes made, 39,410 to missing)
+(39,019 real changes made, 39,019 to missing)
+(8,975 real changes made, 8,975 to missing)
+(25,610 real changes made, 25,610 to missing)
+(17,548 real changes made, 17,548 to missing)
+(23,125 real changes made, 23,125 to missing)
+(5,016 real changes made, 5,016 to missing)
+(35,509 real changes made, 35,509 to missing)
+(35,561 real changes made, 35,561 to missing)
+(34,743 real changes made, 34,743 to missing)
+(34,747 real changes made, 34,747 to missing)
+(37,525 real changes made, 37,525 to missing)
+(37,524 real changes made, 37,524 to missing)
+(38,762 real changes made, 38,762 to missing)
+(39,457 real changes made, 39,457 to missing)
+(39,231 real changes made, 39,231 to missing)
+(38,886 real changes made, 38,886 to missing)
+(6,282 real changes made, 6,282 to missing)
+(6,769 real changes made, 6,769 to missing)
+(11,289 real changes made, 11,289 to missing)
+(37,129 real changes made, 37,129 to missing)
+(6,945 real changes made, 6,945 to missing)
+(5,716 real changes made, 5,716 to missing)
+(33,297 real changes made, 33,297 to missing)
+(5,004 real changes made, 5,004 to missing)
+(39,200 real changes made, 39,200 to missing)
+(5,004 real changes made, 5,004 to missing)
+(5,004 real changes made, 5,004 to missing)
+(5,004 real changes made, 5,004 to missing)
+(5,082 real changes made, 5,082 to missing)
+(5,104 real changes made, 5,104 to missing)
+(5,111 real changes made, 5,111 to missing)
+(2,885 real changes made, 2,885 to missing)
+(38,565 real changes made, 38,565 to missing)
+(38,565 real changes made, 38,565 to missing)
+(38,565 real changes made, 38,565 to missing)
+(38,565 real changes made, 38,565 to missing)
+(38,565 real changes made, 38,565 to missing)
+(38,565 real changes made, 38,565 to missing)
+(7,694 real changes made, 7,694 to missing)
+(1,250 real changes made, 1,250 to missing)
+(4,727 real changes made, 4,727 to missing)
+(2 real changes made, 2 to missing)
+(4,186 real changes made, 4,186 to missing)
+(1,212 real changes made, 1,212 to missing)
+(1,212 real changes made, 1,212 to missing)
+(1,212 real changes made, 1,212 to missing)
+(26,621 real changes made, 26,621 to missing)
+(4,152 real changes made, 4,152 to missing)
+(6,784 real changes made, 6,784 to missing)
+(7,783 real changes made, 7,783 to missing)
+(4,319 real changes made, 4,319 to missing)
+(4,809 real changes made, 4,809 to missing)
+(7,675 real changes made, 7,675 to missing)
+(7,740 real changes made, 7,740 to missing)
+(0 real changes made)
+(766 real changes made, 766 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(6,290 real changes made, 6,290 to missing)
+(4,513 real changes made, 4,513 to missing)
+(4,514 real changes made, 4,514 to missing)
+(4,476 real changes made, 4,476 to missing)
+(8,072 real changes made, 8,072 to missing)
+(725 real changes made, 725 to missing)
+(34,744 real changes made, 34,744 to missing)
+(34,768 real changes made, 34,768 to missing)
+(34,744 real changes made, 34,744 to missing)
+(22,163 real changes made, 22,163 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(2,969 real changes made, 2,969 to missing)
+(2,969 real changes made, 2,969 to missing)
+(42,166 real changes made, 42,166 to missing)
+(0 real changes made)
+(0 real changes made)
+(7,256 real changes made, 7,256 to missing)
+(26,820 real changes made, 26,820 to missing)
+(26,820 real changes made, 26,820 to missing)
+(26,820 real changes made, 26,820 to missing)
+(26,820 real changes made, 26,820 to missing)
+(26,820 real changes made, 26,820 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(71 real changes made, 71 to missing)
+(81 real changes made, 81 to missing)
+(3 real changes made, 3 to missing)
+(0 real changes made)
+(43 real changes made, 43 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(734 real changes made, 734 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(599 real changes made, 599 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(5,016 real changes made, 5,016 to missing)
+(1,527 real changes made, 1,527 to missing)
+(2,014 real changes made, 2,014 to missing)
+(2,639 real changes made, 2,639 to missing)
+(1,083 real changes made, 1,083 to missing)
+(3,241 real changes made, 3,241 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(7,060 real changes made, 7,060 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(33 real changes made, 33 to missing)
+(33 real changes made, 33 to missing)
+(59 real changes made, 59 to missing)
+(123 real changes made, 123 to missing)
+(51 real changes made, 51 to missing)
+(61 real changes made, 61 to missing)
+(125 real changes made, 125 to missing)
+(53 real changes made, 53 to missing)
+(40 real changes made, 40 to missing)
+(95 real changes made, 95 to missing)
+(37 real changes made, 37 to missing)
+(16 real changes made, 16 to missing)
+(37 real changes made, 37 to missing)
+(12 real changes made, 12 to missing)
+(78 real changes made, 78 to missing)
+(78 real changes made, 78 to missing)
+(62 real changes made, 62 to missing)
+(43 real changes made, 43 to missing)
+(43 real changes made, 43 to missing)
+(33 real changes made, 33 to missing)
+(45 real changes made, 45 to missing)
+(45 real changes made, 45 to missing)
+(29 real changes made, 29 to missing)
+(132 real changes made, 132 to missing)
+(132 real changes made, 132 to missing)
+(105 real changes made, 105 to missing)
+(24 real changes made, 24 to missing)
+(24 real changes made, 24 to missing)
+(21 real changes made, 21 to missing)
+(31 real changes made, 31 to missing)
+(31 real changes made, 31 to missing)
+(26 real changes made, 26 to missing)
+(35 real changes made, 35 to missing)
+(35 real changes made, 35 to missing)
+(29 real changes made, 29 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(5,640 real changes made, 5,640 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(46,571 real changes made, 46,571 to missing)
+(0 real changes made)
+(3,316 real changes made, 3,316 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(5,126 real changes made, 5,126 to missing)
+(9 real changes made, 9 to missing)
+(9 real changes made, 9 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(113 real changes made, 113 to missing)
+(0 real changes made)
+(28 real changes made, 28 to missing)
+(0 real changes made)
+(98 real changes made, 98 to missing)
+(0 real changes made)
+(0 real changes made)
+(35 real changes made, 35 to missing)
+(0 real changes made)
+(0 real changes made)
+(165 real changes made, 165 to missing)
+(0 real changes made)
+(0 real changes made)
+(42 real changes made, 42 to missing)
+(0 real changes made)
+(28 real changes made, 28 to missing)
+(0 real changes made)
+(0 real changes made)
+(42 real changes made, 42 to missing)
+(0 real changes made)
+(0 real changes made)
+(32 real changes made, 32 to missing)
+(0 real changes made)
+(0 real changes made)
+(122 real changes made, 122 to missing)
+(0 real changes made)
+(0 real changes made)
+(19 real changes made, 19 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(60 real changes made, 60 to missing)
+(114 real changes made, 114 to missing)
+(18 real changes made, 18 to missing)
+(142 real changes made, 142 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(7,783 real changes made, 7,783 to missing)
+(8,953 real changes made, 8,953 to missing)
+(11,505 real changes made, 11,505 to missing)
+(14,691 real changes made, 14,691 to missing)
+(9,248 real changes made, 9,248 to missing)
+(12,214 real changes made, 12,214 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. 
+. 
+. //how do you get to the doctor?
+. gen howgetdoc=.
+(47,778 missing values generated)
+
+. forvalues i=1/9 {
+  2. replace howgetdoc=`i' if hwgtregd`i'==1 
+  3. }
+(24,378 real changes made)
+(13,393 real changes made)
+(550 real changes made)
+(1,187 real changes made)
+(909 real changes made)
+(412 real changes made)
+(598 real changes made)
+(773 real changes made)
+(300 real changes made)
+
+. 
+. label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place live
+> s" ///
+> 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" /
+> //
+> 8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
+
+. label values howgetdoc howgetdoc
+
+. 
+. 
+. //note 11/14/17--add importance of activities
+. gen ind_imp_visit=.
+(47,778 missing values generated)
+
+. gen ind_imp_relig=.
+(47,778 missing values generated)
+
+. gen ind_imp_club=.
+(47,778 missing values generated)
+
+. gen ind_imp_goout=.
+(47,778 missing values generated)
+
+. 
+. replace ind_imp_visit=inlist(impvstfam,1,2) 
+(47,778 real changes made)
+
+. replace ind_imp_relig=inlist(imprelser,1,2) 
+(47,778 real changes made)
+
+. replace ind_imp_club=inlist(imparclub,1,2) 
+(47,778 real changes made)
+
+. replace ind_imp_goout=inlist(impouteny,1,2) 
+(47,778 real changes made)
+
+. 
+. label var ind_imp_visit "Very/somewhat important to visit in person with frien
+> ds/family"
+
+. label var ind_imp_relig "Very/somewhat important to attend religious services"
+
+. label var ind_imp_club "Very/somewhat important to participate in clubs, class
+> es, etc."
+
+. label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
+
+. 
+. foreach x in out insd bed {
+  2.         gen device_`x'=.
+  3.         label var device_`x' "Uses any assistive device for mobility `x'"
+  4. }
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+
+. label var device_out "Uses any assistive device for mobility outside"
+
+. label var device_ins "Uses any assistive device for mobility inside"
+
+. label var device_bed "Uses any assistive device to get out of bed"
+
+. 
+. foreach x in eat bath toil dres {
+  2.         gen device_`x'=.
+  3.         label var device_`x' "Uses assistive device for `x'ing"
+  4. }
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+
+. 
+. 
+. foreach x in out insd bed {
+  2.         replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+  3. }
+(41,262 real changes made)
+(41,867 real changes made)
+(42,072 real changes made)
+
+. 
+. foreach x in eat bath toil dres {
+  2.         replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+  3. }
+(44,491 real changes made)
+(26,812 real changes made)
+(44,371 real changes made)
+(44,213 real changes made)
+
+. replace device_bath=0 if dbathdevi==9 
+(17,217 real changes made)
+
+. 
+. 
+. gen device_any=0
+
+. foreach x in out ins bed eat bath toil dres {
+  2.         replace device_any=1 if device_`x'==1
+  3. }
+(12,341 real changes made)
+(1,015 real changes made)
+(59 real changes made)
+(264 real changes made)
+(10,992 real changes made)
+(6,735 real changes made)
+(126 real changes made)
+
+. label var device_any "Uses any assistive device for ADLs"
+
+. 
+. rename drives dtdrives //a drive flag exists in nhats
+
+. //making our own drive variable
+. gen drives=.
+(47,778 missing values generated)
+
+. replace drives=oftedrive>0 & oftedrive<5 
+(47,778 real changes made)
+
+. 
+. label var drives "Drives"
+
 . 
 end of do-file
 
-. note no_Acp
-variable no_Acp not found
+. tab oftedrive
+
+  R1 DT1 HOW OFTEN DRIVE PLACES |      Freq.     Percent        Cum.
+--------------------------------+-----------------------------------
+    1 EVERY DAY (7 DAYS A WEEK) |     12,560       38.35       38.35
+  2 MOST DAYS (5-6 DAYS A WEEK) |      8,927       27.26       65.61
+  3 SOME DAYS (2-4 DAYS A WEEK) |      5,474       16.71       82.32
+ 4 RARELY (ONCE A WEEK OR LESS) |      1,630        4.98       87.30
+                        5 NEVER |      4,159       12.70      100.00
+--------------------------------+-----------------------------------
+                          Total |     32,750      100.00
+
+. tab drive
+drive ambiguous abbreviation
 r(111);
 
-. note no_acp
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
 
-no_acp:
-  1.  Only in Rd2. no_acp=1 if eoltalk=2,-7,-8 & poweratty=2,-7,-8 &
-      livingwill=2,-7,-8.
+. gen drives=.
+variable drives already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD264314_000000.tmp"
+
+. 
+. rename drives dtdrives //a drive flag exists in nhats
+variable dtdrives already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. tab drives
+
+     Drives |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     19,187       40.16       40.16
+          1 |     28,591       59.84      100.00
+------------+-----------------------------------
+      Total |     47,778      100.00
 
