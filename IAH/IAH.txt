@@ -3497,8 +3497,21 @@ foreach l of local levels {
 	local homebound `homebound' hb`l'
 }
 
+//2/27/19-ebl-get follow up info for Katherine
+preserve
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave<=5 & sp_ivw==1 & lml==0 ///
+& nhres==0, clear
+by spid, sort: egen last_wave=max(wave)
+keep spid last_wave
+duplicates drop
+tempfile t1
+save `t1'
+
+restore
+merge 1:1 spid using `t1', keep(match) nogen
+gen followup_waves=last_wave-wave
 local cvars1 age  income_quart_1 income_quart_2 income_quart_3 ///
-income_quart_4
+income_quart_4 followup_waves
 local ivars1 female white black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
 homebound medicaid metro_ind northeast midwest south west `homebound'
 local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever ///
@@ -3596,7 +3609,8 @@ foreach l of local levels {
 
 
 
-frmttable using "E:\nhats\data\projects\IAH\logs\HBMC_homebound_rescare_tables.rtf", statmat(tab) title("Homebound and Assisted Living, Column percentages") ///
+frmttable using "E:\nhats\data\projects\IAH\logs\HBMC_homebound_rescare_tables.rtf", statmat(tab) ///
+title("Homebound and Assisted Living, Column percentages") ///
 ctitles("" "Assisted living" "No Assisted living" "P-value") ///
 sdec(2) annotate(stars) asymbol(*,**) addtable ///
 rtitles("Never/Rarely leaves home"\ "Nevere by self"\ "Needs help/has difficulty"\ "Independent" )
@@ -3637,6 +3651,429 @@ ctitles("" "Never/Rarely leaves home" "Never by self" "Needs help/has difficulty
 rtitles("Assisted living" \"No Assisted living") ///
 sdec(2) annotate(stars) asymbol(*,**) addtable
 
+
+
+H="Housecalls table with homebound as any but fully independent"
+//2/27/19-ebl-get follow up info for Katherine
+
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave<=5 & sp_ivw==1 & lml==0 ///
+& nhres==0, clear
+by spid, sort: egen last_wave=max(wave)
+keep spid last_wave
+by spid: gen years_at_risk=_N
+duplicates drop
+tempfile t1
+save `t1'
+
+use "E:\nhats\data\Projects\IAH\final_data\housecalls.dta", clear 
+merge 1:1 spid using `t1', nogen keep(match)
+
+gen followup_time=last_wave-wave
+label var followup_time "# Follow up waves, mean"
+label var years_at_risk "Total years at risk, mean"
+
+local cvars1 age income_quart_1 income_quart_2 income_quart_3 income_quart_4 ///
+followup_time years_at_risk // score_community
+local ivars1 income_cat_1 income_cat_2 income_cat_3 income_cat_4 female white  ///
+black hisp married livealone rcfres educ_hs_ind reg_doc_have reg_doc_seen ///
+homebound medicaid metro_ind northeast midwest south west
+local ivars2 iah_adl iah_chronic iah_nonelect iah_pacute iah_all sr_ami_ever sr_stroke_ever ///
+sr_cancer_ever sr_hip_ever sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever ///
+sr_diabetes_ever sr_dementia_ever prob_dem pos_dem
+local ivars3 adl_eat_diff adl_eat_help adl_bath_diff adl_bath_help adl_toil_diff ///
+adl_toil_help adl_dres_diff adl_dres_help adl_ins_help adl_ins_diff adl_bed_help ///
+adl_bed_diff ind_hosp_adm_p12m ind_ed_adm_p12m ind_icu_p12m died_12 housecalls_90 mc_hh
+local cvars2 tot_paid_by_mc_12m housecalls_count
+
+local full `cvars1' `ivars1' `ivars2' `ivars3' `cvars2'
+
+local rd: word count `full' 1
+
+mat tab1 = J(`rd',2,.)
+mat stars = J(`rd',1,0)
+
+local r = 1
+local c = 1
+
+foreach x of local cvars1 {
+
+sum `x' if housecalls_90==1
+mat tab1[`r',`c'] = r(mean)
+
+ttest `x', by(housecalls_90)
+mat stars[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0
+mat tab1[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+foreach x of local ivars1 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if housecalls_90==1
+mat tab1[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab1[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars2 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+sum `x' if housecalls_90==1
+mat tab1[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab1[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars3 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+
+sum `x' if housecalls_90==1
+mat tab1[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab1[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+ 
+foreach x of local cvars2 {
+
+sum `x' if housecalls_90==1
+mat tab1[`r',`c'] = r(mean)
+
+ttest `x', by(housecalls_90)
+mat stars[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0
+mat tab1[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+sum age if housecalls_90==1
+mat tab1[`r',1] = r(N)
+
+sum age if housecalls_90==0
+mat tab1[`r',2] = r(N)
+
+
+mat rownames tab1= `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' N
+
+frmttable using "E:\nhats\projects\IAH\table1_housecalls.doc", replace statmat(tab1) ///
+varlabels title("Table 1: Housecalls Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS") ///
+ctitles("" "Housecalls" "No Housecalls") sdec(2) annotate(stars) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
+
+mat tab2 = J(`rd',2,.)
+mat stars2 = J(`rd',1,0)
+
+local r = 1
+local c = 1
+
+foreach x of local cvars1 {
+
+sum `x' if homebound==1
+mat tab2[`r',`c'] = r(mean)
+
+ttest `x', by(homebound)
+mat stars2[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if homebound==0
+mat tab2[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+foreach x of local ivars1 {
+
+sum `x' if homebound==1
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+sum `x' if homebound==1
+mat tab2[`r',`c'] = r(mean)*100
+
+tab `x' homebound, chi2
+mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if homebound==0 
+mat tab2[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars2 {
+
+sum `x' if homebound==1
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+sum `x' if homebound==1
+mat tab2[`r',`c'] = r(mean)*100
+
+tab `x' homebound, chi2
+mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if homebound==0 
+mat tab2[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars3 {
+
+sum `x' if homebound==1
+local b = r(mean)*r(N)
+
+sum `x' if homebound==0 
+local d = r(mean)*r(N)
+
+sum `x' if homebound==1
+mat tab2[`r',`c'] = r(mean)*100
+
+tab `x' homebound, chi2
+mat stars2[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if homebound==0 
+mat tab2[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+ 
+foreach x of local cvars2 {
+
+sum `x' if homebound==1
+mat tab2[`r',`c'] = r(mean)
+
+ttest `x', by(homebound)
+mat stars2[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if homebound==0
+mat tab2[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+sum age if homebound==1
+mat tab2[`r',1] = r(N)
+
+sum age if homebound==0
+mat tab2[`r',2] = r(N)
+
+
+
+mat rownames tab2= `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' N
+
+frmttable using "E:\nhats\projects\IAH\table1_housecalls.doc", addtable statmat(tab2) ///
+varlabels title("Table 2: Housecalls Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS") ///
+ctitles("" "Homebound" "Not Homebound") sdec(2) annotate(stars2) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
+
+
+preserve
+keep if homebound_cat<=3
+
+mat tab3 = J(`rd',2,.)
+mat stars3 = J(`rd',1,0)
+
+local r = 1
+local c = 1
+
+foreach x of local cvars1 {
+
+sum `x' if housecalls_90==1
+mat tab3[`r',`c'] = r(mean)
+
+ttest `x', by(housecalls_90)
+mat stars3[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0
+mat tab3[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+foreach x of local ivars1 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+sum `x' if housecalls_90==1
+mat tab3[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab3[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars2 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+sum `x' if housecalls_90==1
+mat tab3[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab3[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+
+foreach x of local ivars3 {
+
+sum `x' if housecalls_90==1
+local b = r(mean)*r(N)
+
+sum `x' if housecalls_90==0 
+local d = r(mean)*r(N)
+
+sum `x' if housecalls_90==1
+mat tab3[`r',`c'] = r(mean)*100
+
+tab `x' housecalls_90, chi2
+mat stars3[`r',`c'] = (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0 
+mat tab3[`r',`c'] = r(mean)*100
+
+local --c
+local ++r
+
+}
+ 
+foreach x of local cvars2 {
+
+sum `x' if housecalls_90==1
+mat tab3[`r',`c'] = r(mean)
+
+ttest `x', by(housecalls_90)
+mat stars3[`r',`c']= (r(p)<.01) + (r(p)<.05)
+
+local ++c
+
+sum `x' if housecalls_90==0
+mat tab3[`r',`c'] = r(mean)
+
+local --c
+local ++r
+}
+
+sum age if housecalls_90==1
+mat tab3[`r',1] = r(N)
+
+sum age if housecalls_90==0
+mat tab3[`r',2] = r(N)
+
+
+
+mat rownames tab3= `cvars1' `ivars1' `ivars2' `ivars3' `cvars2' N
+
+frmttable using "E:\nhats\projects\IAH\table1_housecalls.doc", addtable statmat(tab3) ///
+varlabels title("Table 3: Housecalls Unique persons per NHATS Waves 1-5 Community Dwelling + 6m FFS (Restricted to Partially or Fully Homebound)") ///
+ctitles("" "Housecalls" "No HouseCalls") sdec(2) annotate(stars3) asymbol(*,**) ///
+note("These are unique people, and only survey data from their most recent NHATS interview was used. Housecalls are +/- 90 days of ivw date. *p<0.05, **p<0.01")
 
 
 H="***************************"
