@@ -1,6 +1,6 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
-H="****************************************************"
+H="First Heading: Macros"
 /*
 ********************HEADING******************** 
 
@@ -289,7 +289,7 @@ Created by: Mohammed
 Date Created: 01/31/2019
 
 Updated by: MH
-Date Updated: 02/15/2019
+Date Updated: 02/28/2019
 
 Description: Inital exploration, data cleaning, table creation.
 
@@ -378,7 +378,13 @@ merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen
 
 merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
 
+rename hhid HHID 
+rename pn PN
+merge 1:1 HHID PN using "E:\data\hrs_tracking_2016\TRK2016TR_R.dta", keepusing(NLIVARR) keep(matched) nogen
 
+rename NLIVARR, l
+rename HHID,l
+rename PN,l
 
 format %td birth_date
 
@@ -389,10 +395,10 @@ gen male=0 if !missing(female)
 replace male=1 if female==0
 
 gen live_alone=0
-replace live_alone=1 if hhm==0 & nlb004!=1
+replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
 
 gen live_others=0
-replace live_others=1 if hhm>0 | nlb004==1
+replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
 
 gen cesd_tot_ge3_n=0
 replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
@@ -445,6 +451,7 @@ gen dem0=.
 replace dem0=0 if dem==1
 replace dem0=1 if dem==0
 
+
 /*hispanic other
 gen hispoth=.
 replace hispoth=0 if inlist(race_cat,1,2)
@@ -467,9 +474,9 @@ lab var degree6 "Masters"
 lab var degree7 "Professional"
 lab var degree8 "Unknown, some college"
 lab var h12wohous0 "Does not own home"
-lab var h12wohous "Own's home"
-lab var live_alone "Live's alone"
-lab var live_others "Live with others"
+lab var h12wohous "Owns home"
+lab var live_alone "Lives alone"
+lab var live_others "Lives with others"
 lab var soc_visit0 "No social visits with neighbors"
 lab var srh_pf0 "Self Rates Health: Good+"
 lab var hosp_last_2yr0 "No hospitalization"
@@ -917,6 +924,10 @@ H="Changelog"
 
 
 Updates:
+
+02/28/2019 MH
+------------
+In HRS file added in 2016 Tracker file. 
 
 02/15/2019 MH
 ------------

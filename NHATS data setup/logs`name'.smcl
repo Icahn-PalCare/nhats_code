@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- opened on:  27 Feb 2019, 16:23:43
+ opened on:   1 Mar 2019, 16:27:13
 
 . 
 . 
@@ -418,8 +418,8 @@ serarmfor:  (31199 real changes made)
 
 . 
 . foreach x in `a' `b'{
-  2. capture drop `x'
-  3. gen `x'=.
+  2. capture drop `x'_n
+  3. gen `x'_n=.
   4. }
 (47,778 missing values generated)
 (47,778 missing values generated)
@@ -429,23 +429,29 @@ serarmfor:  (31199 real changes made)
 . 
 . 
 . foreach x in `a'{
-  2. replace `x'=0 if inlist(`x', 2, -8, -7) 
-  3. replace `x'=1 if `x'==1
-  4. }
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
+  2. replace `x'_n=0 if inlist(`x', 2, -8, -7) 
+  3. replace `x'_n=1 if `x'==1
+  4. drop `x'
+  5. rename `x'_n `x' 
+  6. }
+(30,860 real changes made)
+(11,278 real changes made)
+(7,067 real changes made)
+(4,211 real changes made)
 
+. 
 . foreach y in `b'{
-  2. replace `y'=0 if inlist(`y', 2, -8, -7) 
-  3. replace `y'=1 if `y'==1
-  4. }
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
+  2. replace `y'_n=0 if inlist(`y', 2, -8, -7) 
+  3. replace `y'_n=1 if `y'==1
+  4. drop `y'
+  5. rename `y'_n `y' 
+  6. }
+(17,803 real changes made)
+(24,335 real changes made)
+(27,428 real changes made)
+(14,710 real changes made)
 
+. 
 . 
 . 
 . label var lst10pnds "Lost 10 Pounds in Last Yr."
@@ -467,16 +473,16 @@ serarmfor:  (31199 real changes made)
 (47,778 missing values generated)
 
 . replace unwgtloss=0 if lst10pnds==0 | trytolose==1
-(0 real changes made)
+(35,071 real changes made)
 
 . replace unwgtloss=1 if lst10pnds==1 & trytolose==0
-(0 real changes made)
+(7,067 real changes made)
 
 . replace lowphysact=0 if evrgowalk==1 | vigoractv==1
-(0 real changes made)
+(27,868 real changes made)
 
 . replace lowphysact=1 if evrgowalk==0 & vigoractv==0
-(0 real changes made)
+(14,270 real changes made)
 
 . 
 . label var unwgtloss "Unintentional Weight Loss"
@@ -701,22 +707,71 @@ serarmfor:  (31199 real changes made)
 
 . 
 . foreach x in `ew'{
-  2. replace `x'=0 if `x'==2 
-  3. replace `x'=1 if `x'==1
-  4. replace `x'=2 if `x'==-7 |`x'==-8
-  5. }
+  2. tab `x'
+  3. replace `x'=0 if `x'==2 
+  4. replace `x'=1 if `x'==1
+  5. replace `x'=. if inlist(`x', -9,-8,-7,-1)
+  6. }
+
+R2 EW16 SKIP MEALS NO |
+                MONEY |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |      1,039        2.63        2.63
+                -8 DK |        574        1.45        4.08
+                -7 RF |        110        0.28        4.36
+      -1 Inapplicable |      3,965       10.03       14.39
+                1 YES |        341        0.86       15.25
+                 2 NO |     33,504       84.75      100.00
+----------------------+-----------------------------------
+                Total |     39,533      100.00
 (33,504 real changes made)
 (0 real changes made)
-(684 real changes made)
+(5,688 real changes made, 5,688 to missing)
+
+ R2 EW18 NO MONEY FOR |
+              HOUSING |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |      1,039        2.63        2.63
+                -8 DK |        624        1.58        4.21
+                -7 RF |        189        0.48        4.68
+      -1 Inapplicable |      3,965       10.03       14.71
+                1 YES |        744        1.88       16.60
+                 2 NO |     32,972       83.40      100.00
+----------------------+-----------------------------------
+                Total |     39,533      100.00
 (32,972 real changes made)
 (0 real changes made)
-(813 real changes made)
+(5,817 real changes made, 5,817 to missing)
+
+ R2 EW18 NO MONEY FOR |
+            UTILITIES |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |      1,039        2.63        2.63
+                -8 DK |        621        1.57        4.20
+                -7 RF |        146        0.37        4.57
+      -1 Inapplicable |      3,965       10.03       14.60
+                1 YES |      1,214        3.07       17.67
+                 2 NO |     32,548       82.33      100.00
+----------------------+-----------------------------------
+                Total |     39,533      100.00
 (32,548 real changes made)
 (0 real changes made)
-(767 real changes made)
+(5,771 real changes made, 5,771 to missing)
+
+ R2 EW18 NO MONEY FOR |
+              MEDICAL |      Freq.     Percent        Cum.
+----------------------+-----------------------------------
+           -9 Missing |      1,039        2.63        2.63
+                -8 DK |        629        1.59        4.22
+                -7 RF |        145        0.37        4.59
+      -1 Inapplicable |      3,965       10.03       14.62
+                1 YES |      1,247        3.15       17.77
+                 2 NO |     32,508       82.23      100.00
+----------------------+-----------------------------------
+                Total |     39,533      100.00
 (32,508 real changes made)
 (0 real changes made)
-(774 real changes made)
+(5,778 real changes made, 5,778 to missing)
 
 . 
 . 
@@ -729,7 +784,7 @@ serarmfor:  (31199 real changes made)
 . label var nopaymed "No Money for Medical"
 
 . 
-. label define mealskip 0 "No" 1 "Yes" 2 "RF/DK"
+. label define mealskip 0 "No" 1 "Yes" 
 
 . foreach x in `ew' {
   2. label values `ew' mealskip
@@ -738,15 +793,13 @@ serarmfor:  (31199 real changes made)
 . rename mealskip1 mealskip
 
 . 
-. capture drop mealskipnum
-
 . gen mealskipnum=.
 (47,778 missing values generated)
 
 . 
 . 
-. replace mealskipnum=0 if mealskip2==-1 & mealskip==2
-(684 real changes made)
+. replace mealskipnum=0 if mealskip2==-1 & mealskip==0
+(33,504 real changes made)
 
 . replace mealskipnum=1 if mealskip2==4
 (188 real changes made)
@@ -759,9 +812,6 @@ serarmfor:  (31199 real changes made)
 
 . replace mealskipnum=4 if mealskip2==1
 (40 real changes made)
-
-. replace mealskipnum=5 if mealskip2==-7 | mealskip2==-8
-(8 real changes made)
 
 . 
 . 
@@ -1663,11 +1713,11 @@ serarmfor:  (31199 real changes made)
 (6,945 real changes made, 6,945 to missing)
 (5,716 real changes made, 5,716 to missing)
 (33,297 real changes made, 33,297 to missing)
-(5,004 real changes made, 5,004 to missing)
+(0 real changes made)
 (39,200 real changes made, 39,200 to missing)
-(5,004 real changes made, 5,004 to missing)
-(5,004 real changes made, 5,004 to missing)
-(5,004 real changes made, 5,004 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
 (5,082 real changes made, 5,082 to missing)
 (5,104 real changes made, 5,104 to missing)
 (5,111 real changes made, 5,111 to missing)
@@ -1716,14 +1766,48 @@ serarmfor:  (31199 real changes made)
 (34,744 real changes made, 34,744 to missing)
 (22,163 real changes made, 22,163 to missing)
 (0 real changes made)
+(14,306 real changes made, 14,306 to missing)
+(15,926 real changes made, 15,926 to missing)
+(17,311 real changes made, 17,311 to missing)
+(17,311 real changes made, 17,311 to missing)
+(44,137 real changes made, 44,137 to missing)
+(10,728 real changes made, 10,728 to missing)
+(12,214 real changes made, 12,214 to missing)
+(14,047 real changes made, 14,047 to missing)
+(14,047 real changes made, 14,047 to missing)
+(43,606 real changes made, 43,606 to missing)
+(8,524 real changes made, 8,524 to missing)
+(9,248 real changes made, 9,248 to missing)
+(11,381 real changes made, 11,381 to missing)
+(11,381 real changes made, 11,381 to missing)
+(43,280 real changes made, 43,280 to missing)
+(16,157 real changes made, 16,157 to missing)
+(17,774 real changes made, 17,774 to missing)
+(19,575 real changes made, 19,575 to missing)
+(19,575 real changes made, 19,575 to missing)
+(43,957 real changes made, 43,957 to missing)
+(0 real changes made)
+(13,040 real changes made, 13,040 to missing)
+(14,588 real changes made, 14,588 to missing)
+(16,695 real changes made, 16,695 to missing)
+(16,695 real changes made, 16,695 to missing)
+(43,739 real changes made, 43,739 to missing)
+(0 real changes made)
+(10,866 real changes made, 10,866 to missing)
+(12,036 real changes made, 12,036 to missing)
+(14,421 real changes made, 14,421 to missing)
+(14,421 real changes made, 14,421 to missing)
+(43,549 real changes made, 43,549 to missing)
+(0 real changes made)
+(10,866 real changes made, 10,866 to missing)
+(10,866 real changes made, 10,866 to missing)
+(13,284 real changes made, 13,284 to missing)
+(13,284 real changes made, 13,284 to missing)
+(43,721 real changes made, 43,721 to missing)
+(43,721 real changes made, 43,721 to missing)
 (0 real changes made)
 (0 real changes made)
-(2,969 real changes made, 2,969 to missing)
-(2,969 real changes made, 2,969 to missing)
-(42,166 real changes made, 42,166 to missing)
 (0 real changes made)
-(0 real changes made)
-(7,256 real changes made, 7,256 to missing)
 (26,820 real changes made, 26,820 to missing)
 (26,820 real changes made, 26,820 to missing)
 (26,820 real changes made, 26,820 to missing)
@@ -1762,19 +1846,14 @@ serarmfor:  (31199 real changes made)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
-(5,016 real changes made, 5,016 to missing)
+(5,661 real changes made, 5,661 to missing)
 (1,527 real changes made, 1,527 to missing)
 (2,014 real changes made, 2,014 to missing)
 (2,639 real changes made, 2,639 to missing)
 (1,083 real changes made, 1,083 to missing)
 (3,241 real changes made, 3,241 to missing)
 (0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(0 real changes made)
-(7,060 real changes made, 7,060 to missing)
+(7,185 real changes made, 7,185 to missing)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
@@ -2225,31 +2304,31 @@ serarmfor:  (31199 real changes made)
 . //marital status-3 vars: married, married_or_partnered
 . 
 . gen married=maritalstat==1 if maritalstat!=. //married
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . gen marital_sep=maritalstat==3 if !mi(maritalstat)
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . gen marital_div=maritalstat==4 if !mi(maritalstat)
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . gen marital_wid=maritalstat==5 if !mi(maritalstat)
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . gen marital_nev=maritalstat==6 if !mi(maritalstat)
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . gen marriedpartnered=married
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . replace marriedpartnered=1 if maritalstat==2 //living with a partner
-(671 real changes made)
+(822 real changes made)
 
 . gen marital_sd=marital_sep
-(13,261 missing values generated)
+(5,661 missing values generated)
 
 . replace marital_sd=1 if marital_div==1
-(3,903 real changes made)
+(4,699 real changes made)
 
 . 
 . label var married "Married"
@@ -2342,8 +2421,8 @@ serarmfor:  (31199 real changes made)
 . gen impclub=. //importance of such activities
 (47,778 missing values generated)
 
-. gen vigact=. //vigorous activities
-(47,778 missing values generated)
+. gen vigact=vigoractv //vigorous activities
+(5,640 missing values generated)
 
 . 
 . 
@@ -2365,9 +2444,7 @@ serarmfor:  (31199 real changes made)
 . replace impclub=imparclub if imparclub>0 
 (41,995 real changes made)
 
-. replace vigact=vigoractv==1 if vigoractv>0 
-(47,778 real changes made)
-
+. //replace vigact=vigoractv==1 if vigoractv>0 
 . 
 . 
 . gen religvimp=imprelig==1 if imprelig!=. //very important binary
@@ -2522,9 +2599,7 @@ smoke_stop_age:  (13794 real changes made)
 . 
 . //get the per round weight, cluster, and strata vars (and why is moved created
 >  like that?)
-. gen moved=.
-(47,778 missing values generated)
-
+. //gen moved=.
 . rename varunit varunit 
   (all newnames==oldnames)
 
@@ -2534,19 +2609,832 @@ smoke_stop_age:  (13794 real changes made)
 . rename anfinwgt0 anfinwgt 
 
 . 
-. //look at moved anfinwgt varstrat varunit here 2/27/19
-. forvalues i=2/7 {
-  2.         replace moved=w`i'_moved if wave==`i'
-  3.         foreach x in anfinwgt varstrat varunit {
-  4.                 replace `x'=w`i'`x' if wave==`i'
-  5. }
-  6. drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
-  7. }
+. /*
+> forvalues i=2/7 {
+>         replace moved=w`i'_moved if wave==`i'
+>         foreach x in anfinwgt varstrat varunit {
+>                 replace `x'=w`i'`x' if wave==`i'
+> }
+> drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
+> }
+> */
+. label var moved "Moved since last ivw"
+
+. 
+. ******************************************
+. /*these are taken from Rebecca's code*/
+. 
+. gen community_dwelling = 0
+
+. gen SP_completed = 0
+
+. forvalues w=1/$w {
+  2. replace community_dwelling=1 if inlist(dresid,1,2) & wave==`w'
+  3. replace SP_completed=1 if (inlist(dresid,1,2) & wave==1) | (inlist(dresid,1
+> ,2,4) & wave==`w')
+  4. }
+(7,609 real changes made)
+(8,077 real changes made)
+(5,992 real changes made)
+(6,056 real changes made)
+(4,803 real changes made)
+(4,884 real changes made)
+(3,941 real changes made)
+(4,037 real changes made)
+(7,499 real changes made)
+(7,576 real changes made)
+(6,309 real changes made)
+(6,410 real changes made)
+(5,454 real changes made)
+(5,566 real changes made)
+
+. 
+. gen nhres=dresid==4 if dresid!=. & wave==1
+(39,533 missing values generated)
+
+. gen rcfres=inlist(dresid,2,3) if dresid!=. & wave==1
+(39,533 missing values generated)
+
+. gen res_care=dresid>1 if dresid!=. & wave==1
+(39,533 missing values generated)
+
+. gen sp_status=1 
+
+. gen deceased=0
+
+. gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
+(5,660 missing values generated)
+
+. label var prob_dem "Indicator probable dementia"
+
+. 
+. forvalues w=2/7 {       
+  2. replace nhres=inlist(dresid,4,5,8) if wave==`w'
+  3. replace res_care=inlist(dresid,2,3,4,5,7,8) if wave==`w'
+  4. replace rcfres=inlist(dresid,2,3,7) if wave==`w'
+  5. replace deceased=inlist(r`w'status,62,86) if wave>=`w'
+  6. }
+(7,075 real changes made)
+(7,075 real changes made)
+(7,075 real changes made)
+(503 real changes made)
+(5,799 real changes made)
+(5,799 real changes made)
+(5,799 real changes made)
+(523 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(404 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(296 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(486 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(459 real changes made)
+
+. 
+. note nhres : r*dresid
+
+. notes nhres : Resid=4,5,8
+
+. notes nhres : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+. 
+. 
+. replace sp_status=2 if res_care==1
+(5,953 real changes made)
+
+. replace sp_status=3 if nhres==1
+(2,532 real changes made)
+
+. replace sp_status=4 if deceased==1
+(2,671 real changes made)
+
+. label var sp_status "Residential status"
+
+. label var nhres "Nursing Home Resident"
+
+. label var rcfres "Residential Care, excl. NH"
+
+. label var res_care "Residential Care, incl. NH"
+
+. label define sp_status 1 "Non-res care community" 2 "Res-care not NH" 3 "NH re
+> sident" ///
+> 4 "Deceased"
+
+. label values sp_status sp_status
+
+. 
+. //these ADL variables were missing previously
+. gen adl_ins_help = .
+(47,778 missing values generated)
+
+. gen adl_ins_diff=.
+(47,778 missing values generated)
+
+. gen adl_ins_not_done=.
+(47,778 missing values generated)
+
+. 
+. replace adl_ins_help=1 if insdhlp==1 
+(5,334 real changes made)
+
+. replace adl_ins_help=0 if insdhlp==2 
+(38,745 real changes made)
+
+. replace adl_ins_help=0 if insdhlp==-1 & sp_ivw==1 
+(0 real changes made)
+
+. replace adl_ins_help=-7 if insdhlp==-7 
+(0 real changes made)
+
+. replace adl_ins_help=-8 if insdhlp==-8 
+(0 real changes made)
+
+. replace adl_ins_diff=0 if insddif==1 
+(33,656 real changes made)
+
+. replace adl_ins_diff=1 if insddif>1 
+(14,122 real changes made)
+
+. replace adl_ins_diff=0 if insddif==-1 & sp_ivw==1 
+(0 real changes made)
+
+. replace adl_ins_diff=-7 if insddif==-7 
+(0 real changes made)
+
+. replace adl_ins_diff=-8 if insddif==-8 
+(0 real changes made)
+
+. replace adl_ins_not_done=inlist(dinsdsfdf,1,8) 
+(47,778 real changes made)
+
+. 
+. 
+. *replace adl_ins_dif=1 if adl_ins_help==1
+. label var adl_ins_help "Received help getting around inside"
+
+. notes adl_ins_help : mo*insdhlp
+
+. notes adl_ins_help : "_"
+
+. notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 
+> header
+
+. 
+. 
+. gen adl_bed_help = .
+(47,778 missing values generated)
+
+. gen adl_bed_diff=.
+(47,778 missing values generated)
+
+. gen adl_bed_not_done=.
+(47,778 missing values generated)
+
+. 
+. replace adl_bed_help=1 if bedhlp==1 
+(4,585 real changes made)
+
+. replace adl_bed_help=0 if bedhlp==2 
+(39,793 real changes made)
+
+. replace adl_bed_help=0 if bedhlp==-1 & sp_ivw==1 
+(0 real changes made)
+
+. replace adl_bed_help=-7 if bedhlp==-7 
+(0 real changes made)
+
+. replace adl_bed_help=-8 if bedhlp==-8 
+(0 real changes made)
+
+. replace adl_bed_diff=0 if beddif==1 
+(32,871 real changes made)
+
+. replace adl_bed_diff=1 if beddif>1 
+(14,907 real changes made)
+
+. replace adl_bed_diff=0 if beddif==-1 & sp_ivw==1 
+(0 real changes made)
+
+. replace adl_bed_diff=-7 if beddif==-7 
+(0 real changes made)
+
+. replace adl_bed_diff=-8 if beddif==-8 
+(0 real changes made)
+
+. replace adl_bed_not_done=inlist(dbedsfdf,1,8) 
+(47,778 real changes made)
+
+. 
+. label var adl_bed_help "Received help getting out of bed"
+
+. *replace adl_bed_diff=1 if adl_bed_help==1
+. notes adl_bed_help : mo*bedhlp
+
+. notes adl_bed_help : "_"
+
+. notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 
+> header
+
+. 
+. 
+. //construct date of ivw--use 1st of month for all, because only have mo & yr
+. 
+. gen ivw_day=1
+
+. label define ivw_day 1 "Not provided" 
+
+. label values ivw_day ivw_day
+
+. gen ivw_month=.
+(47,778 missing values generated)
+
+. gen ivw_year=.
+(47,778 missing values generated)
+
+. forvalues w=1/$w {
+  2.         replace ivw_month=r`w'spstatdtmt if wave==`w'
+  3.         replace ivw_month=r`w'fqstatdtmt if wave==`w' & r`w'spstatdtmt==.
+  4.         replace ivw_year=r`w'spstatdtyr if wave==`w'
+  5.         replace ivw_year=201`w' if wave==`w' & r`w'spstatdtyr==.
+  6. }
+(7,609 real changes made)
+(636 real changes made)
+(7,609 real changes made)
+(636 real changes made)
 (6,559 real changes made)
-w2anfinwgt not found
-r(111);
+(516 real changes made)
+(6,559 real changes made)
+(516 real changes made)
+(5,407 real changes made)
+(392 real changes made)
+(5,407 real changes made)
+(392 real changes made)
+(4,441 real changes made)
+(296 real changes made)
+(4,441 real changes made)
+(296 real changes made)
+(7,872 real changes made)
+(462 real changes made)
+(7,872 real changes made)
+(462 real changes made)
+(6,896 real changes made)
+(380 real changes made)
+(6,896 real changes made)
+(380 real changes made)
+(6,025 real changes made)
+(287 real changes made)
+(6,025 real changes made)
+(287 real changes made)
 
+. 
+. replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
+(0 real changes made)
+
+. replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
+(0 real changes made)
+
+. 
+. /// Changes to Dressing and Eating
+> /*These changes were made because the help variables were not capturing everyo
+> ne 
+> who may have been impaired for the ADL*/ 
+. //changes made 5/20/18
+. 
+.         replace adl_dres_help=1 if dresoft==5
+(418 real changes made)
+
+.         replace adl_eat_help=1 if eatdev==7
+(153 real changes made)
+
+.         replace adl_ins_help=1 if ntlvrmslp==1
+(353 real changes made)
+
+. 
+. 
+. gen adl_index=0
+
+. foreach i in eat bath toil dres bed ins {
+  2. replace adl_index=adl_index+adl_`i'_help if adl_`i'_help>0
+  3. }
+(7,395 real changes made, 3,067 to missing)
+(7,116 real changes made, 30 to missing)
+(3,590 real changes made, 110 to missing)
+(8,078 real changes made, 21 to missing)
+(4,823 real changes made, 365 to missing)
+(5,526 real changes made, 21 to missing)
+
+. *gen adl_index=adl_eat_help+adl_bath_help+adl_toil_help+adl_dres_help+adl_ins_
+> help+adl_bed_help
+. replace adl_index=. if adl_index<0
+(0 real changes made)
+
+. gen adl_independent=adl_index==0 if adl_index!=.
+(3,614 missing values generated)
+
+. gen adl_impair=adl_index>0 if adl_index!=.
+(3,614 missing values generated)
+
+. gen iadl_index=iadl_laun_help+iadl_shop_help+iadl_bank_help+iadl_meal_help+iad
+> l_meds_help
+(5,848 missing values generated)
+
+. replace iadl_index=. if iadl_index<0
+(0 real changes made)
+
+. gen iadl_independent=iadl_index==0 if iadl_index!=.
+(5,848 missing values generated)
+
+. gen iadl_impair=iadl_index>0 if iadl_index!=.
+(5,848 missing values generated)
+
+. foreach x in adl iadl {
+  2.         egen `x'_diff_index=rowtotal(`x'*diff)
+  3.         gen `x'_diff_ind=`x'_diff_index>=1 if !missing(`x'_diff_index)
+  4. }
+
+. label var adl_independent "Independent in ADLs"
+
+. label var adl_impair "Help with 1+ ADL"
+
+. label var adl_index "Index of help w/ ADLs"
+
+. 
+. foreach x in independent impair index {
+  2.         notes adl_`x' : sc*eathlp sc*bathhlp sc*toilhlp sc*dreshlp
+  3.         notes adl_`x' : "_"
+  4.         notes adl_`x' : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, s
+> tep-7 header
+  5. }
+
+. 
+. 
+. label var iadl_independent "Independent in IADLs"
+
+. label var iadl_impair "Help with 1+ IADL"
+
+. label var iadl_index "Index of help w/ IADLs"
+
+. 
+. gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+
+. format ivw_date %td
+
+. 
+. //addition of variables from Eric's homebound code
+. gen meals_wheels=.
+(47,778 missing values generated)
+
+. gen noone_talk=.
+(47,778 missing values generated)
+
+. gen restrnt_takeout=.
+(47,778 missing values generated)
+
+. 
+. 
+. replace meals_wheels=dmealwhl 
+(601 real changes made)
+
+. replace noone_talk=noonetalk
+(2,415 real changes made)
+
+. replace restrnt_takeout=dmealtkot 
+(3,619 real changes made)
+
+. foreach x in meals_wheels noone_talk restrnt_takeout {
+  2. replace `x'=0 if `x'==.
+  3. }
+(47,177 real changes made)
+(45,363 real changes made)
+(44,159 real changes made)
+
+. 
+. 
+. label var meals_wheels "Meals on wheels"
+
+. label var noone_talk "SP has no one to talk to"
+
+. label var restrnt_takeout "Received help with restaurant/takeout"
+
+. //pull in date of death, constructed from claims and nhats
+. merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", n
+> ogen
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                            47,778  
+    -----------------------------------------
+
+. 
+. gen died_12=mofd(death_date)-mofd(ivw_date)<=12
+
+. gen died_24=mofd(death_date)-mofd(ivw_date)<=24
+
+. //note-the following has been superseded by the death date using claims
+. /*
+> 
+> //use status to get death
+> gen died_12=.
+> gen died_24=.
+> forvalues i=1/3 {
+> replace died_12=inlist(r`=`i'+1'status,62,86) if wave==`i' & r`=`i'+1'status!=
+> 79
+> }
+> forvalues i=1/2 {
+> replace died_24=inlist(r`=`i'+2'status,62,86) if wave==`i' & !inlist(r`=`i'+2'
+> status,79,.)
+> }
+> replace died_24=1 if died_12==1
+> 
+> foreach i in 12 24 {
+> label var died_`i' "SP died w/in `i' months, per future wave status"
+> }*/
+. 
+. //update 8/2/17--pulled in nhats dod to share off server
+. 
+. //look at death month & year. don't have, so set date to last of month
+. gen dd=.
+(47,778 missing values generated)
+
+. replace yrdied=yrdied+2010 if yrdied>0 & wave==2
+(499 real changes made)
+
+. gen nhats_death_day=. 
+(47,778 missing values generated)
+
+. 
+.         foreach j in mth yr {
+  2.                 replace `j'died=. if `j'died<0 
+  3. }
+(0 real changes made)
+(0 real changes made)
+
+.         replace nhats_death_day=31 if inlist(mthdied,1,3,5,7,8,10,12)
+(532 real changes made)
+
+.         replace nhats_death_day=30 if inlist(mthdied,4,6,9,11)
+(348 real changes made)
+
+.         replace nhats_death_day=28 if inlist(mthdied,2)
+(94 real changes made)
+
+.         replace dd=mdy(mthdied,nhats_death_day,yrdied) if yrdied>0 & yrdied!=.
+(487 real changes made)
+
+. 
+. 
+. by spid, sort: egen nhats_death_date=max(dd)
+(46804 missing values generated)
+
+. label var nhats_death_date "Sensitive: SP death date, from NHATS (day imputed)
+> "
+
+. format nhats_death_date %td
+
+. gen nhats_death_month=month(nhats_death_date)
+(46,804 missing values generated)
+
+. gen nhats_death_year=year(nhats_death_date)
+(46,804 missing values generated)
+
+. foreach x in month year {
+  2. label var nhats_death_`x' "Sensitive: SP death `x', from NHATS"
+  3. }
+
+. 
+. drop dd
+
+. 
+. gen eligible_nsoc=fl1dnsoc==1
+
+. gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
+(37,686 missing values generated)
+
+. gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
+(41,834 missing values generated)
+
+. gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
+(37,686 missing values generated)
+
+. label var eligible  "Sensitive: Eligible for NSOC interview, wave 1 tracker"
+
+. label var complete  "Sensitive: Completed Interview"
+
+. label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Int
+> ertatus
+
+. 
+. //adverse consequences of unmet need
+. 
+. gen adverse=0
+
+. forvalues w=1/$w {
+  2.         foreach x of varlist launwout shopwout mealwout bankwout eatwout ba
+> thwout toilwout dreswout {
+  3.                 replace adverse=1 if `x'==1 & wave==`w'
+  4. }
+  5. }
+(71 real changes made)
+(94 real changes made)
+(105 real changes made)
+(45 real changes made)
+(8 real changes made)
+(124 real changes made)
+(267 real changes made)
+(40 real changes made)
+(57 real changes made)
+(78 real changes made)
+(91 real changes made)
+(35 real changes made)
+(9 real changes made)
+(74 real changes made)
+(228 real changes made)
+(36 real changes made)
+(35 real changes made)
+(71 real changes made)
+(62 real changes made)
+(21 real changes made)
+(2 real changes made)
+(76 real changes made)
+(205 real changes made)
+(17 real changes made)
+(20 real changes made)
+(56 real changes made)
+(60 real changes made)
+(29 real changes made)
+(7 real changes made)
+(63 real changes made)
+(192 real changes made)
+(16 real changes made)
+(49 real changes made)
+(110 real changes made)
+(129 real changes made)
+(54 real changes made)
+(21 real changes made)
+(112 real changes made)
+(264 real changes made)
+(33 real changes made)
+(41 real changes made)
+(102 real changes made)
+(99 real changes made)
+(42 real changes made)
+(9 real changes made)
+(114 real changes made)
+(280 real changes made)
+(30 real changes made)
+(40 real changes made)
+(70 real changes made)
+(90 real changes made)
+(38 real changes made)
+(9 real changes made)
+(92 real changes made)
+(220 real changes made)
+(30 real changes made)
+
+. label var adverse "Any adverse consequence of unmet need (excluding mobility)
+
+. 
+. local ha laun shop meal bank
+
+. local sc eat bath toil dres
+
+. local mo out insd bed
+
+. 
+. forvalues w=1/7{
+  2.         foreach x in `ha'{
+  3.                 capture gen adverse_`x'=0
+  4.                 replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+  5.                 
+.         }
+  6. }
+(71 real changes made)
+(116 real changes made)
+(153 real changes made)
+(76 real changes made)
+(57 real changes made)
+(95 real changes made)
+(129 real changes made)
+(59 real changes made)
+(35 real changes made)
+(84 real changes made)
+(95 real changes made)
+(36 real changes made)
+(20 real changes made)
+(63 real changes made)
+(80 real changes made)
+(42 real changes made)
+(49 real changes made)
+(127 real changes made)
+(176 real changes made)
+(93 real changes made)
+(41 real changes made)
+(112 real changes made)
+(133 real changes made)
+(65 real changes made)
+(40 real changes made)
+(84 real changes made)
+(122 real changes made)
+(52 real changes made)
+
+.         
+. forvalues w=1/$w{
+  2.         foreach x in `sc'{
+  3.                 capture gen adverse_`x'=0
+  4.                 replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+  5.         }
+  6. }
+(21 real changes made)
+(176 real changes made)
+(369 real changes made)
+(122 real changes made)
+(19 real changes made)
+(109 real changes made)
+(298 real changes made)
+(94 real changes made)
+(6 real changes made)
+(104 real changes made)
+(273 real changes made)
+(59 real changes made)
+(7 real changes made)
+(94 real changes made)
+(241 real changes made)
+(63 real changes made)
+(34 real changes made)
+(163 real changes made)
+(383 real changes made)
+(126 real changes made)
+(17 real changes made)
+(160 real changes made)
+(360 real changes made)
+(111 real changes made)
+(14 real changes made)
+(128 real changes made)
+(290 real changes made)
+(97 real changes made)
+
+. 
+. forvalues w=1/$w {
+  2.         foreach x in `mo'{
+  3.                 capture gen adverse_`x'=0
+  4.                 replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+  5.         }
+  6. }
+(507 real changes made)
+(464 real changes made)
+(205 real changes made)
+(342 real changes made)
+(375 real changes made)
+(142 real changes made)
+(285 real changes made)
+(301 real changes made)
+(139 real changes made)
+(247 real changes made)
+(232 real changes made)
+(88 real changes made)
+(468 real changes made)
+(430 real changes made)
+(165 real changes made)
+(417 real changes made)
+(366 real changes made)
+(161 real changes made)
+(371 real changes made)
+(329 real changes made)
+(137 real changes made)
+
+. 
+. label var adverse_laun "Ever go w/o clean laundry"
+
+. label var adverse_shop "Ever go w/o groceries/personal items"
+
+. label var adverse_meal "Ever go w/o hot meal"
+
+. label var adverse_bank "Ever go w/o handling bills and banking matters" 
+
+. label var adverse_eat "Ever go w/o eating"
+
+. label var adverse_bath "Ever go w/o showering/bath/washup"
+
+. label var adverse_toil "Ever go w/o using toilet"
+
+. label var adverse_dres "Ever go w/o getting dressed"
+
+. label var adverse_out "Ever go w/o going outside; stayed inside"
+
+. label var adverse_insd "Ever go w/o moving inside b/c unmet need" 
+
+. label var adverse_bed "Ever go w/o leaving bed"
+
+. 
+. //limited favorite activity
+. capture drop lim_fav
+
+. gen lim_fav=.
+(47,778 missing values generated)
+
+. 
+. forvalues w=1/5 { 
+  2.         replace lim_fav=helmfvact==1 if helmfvact>=0 & wave==`w'
+  3. }
+(8,245 real changes made)
+(7,075 real changes made)
+(5,799 real changes made)
+(4,737 real changes made)
+(8,334 real changes made)
+
+. label var lim_fav "Last month ever kept from favorite activity by health/funct
+> ion"
+
+. 
+. 
+. capture drop lim_fav_yr
+
+. ////NEW limited favorite activity
+> gen lim_fav_yr=.
+(47,778 missing values generated)
+
+. forvalues w=6/7 {
+  2.         replace lim_fav_yr=fvactlimyr==1 if fvactlimyr>=0 & wave==`w'
+  3. }
+(7,276 real changes made)
+(6,312 real changes made)
+
+. 
+. label var lim_fav_yr "Last year ever kept from favorite activity by health/fun
+> ction"
+
+. 
+. 
+. //social cohesion
+. gen cohesion_knowwell=.
+(47,778 missing values generated)
+
+. gen cohesion_willnghlp=.
+(47,778 missing values generated)
+
+. gen cohesion_peoptrstd=.
+(47,778 missing values generated)
+
+. 
+. forvalues w=1/$w {
+  2.         foreach x in knowwell willnghlp peoptrstd {
+  3.                 replace cohesion_`x'=`x' if !missing(`x') & wave==`w'
+  4. }
+  5. }
+(7,464 real changes made)
+(7,392 real changes made)
+(7,267 real changes made)
+(5,941 real changes made)
+(5,871 real changes made)
+(5,768 real changes made)
+(4,751 real changes made)
+(4,707 real changes made)
+(4,605 real changes made)
+(3,946 real changes made)
+(3,900 real changes made)
+(3,815 real changes made)
+(7,401 real changes made)
+(7,303 real changes made)
+(7,158 real changes made)
+(6,273 real changes made)
+(6,182 real changes made)
+(6,090 real changes made)
+(5,464 real changes made)
+(5,386 real changes made)
+(5,277 real changes made)
+
+. rename cohesion_willnghlp cohesion_willing
+
+. rename cohesion_peoptrstd cohesion_peop
+
+. 
+. gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
+> if !missing(cohesion_k) | !missing(cohesion_w) | !missing(cohesion_p)
+(5,935 missing values generated)
+
+. 
+. label var cohesion_knowwell "People know each other well in the community"
+
+. label var cohesion_w "People are willing to help each other in the commmunity"
+
+. label var cohesion_p "People can be trusted in the community"
+
+. label define cohesion_ 1 "Agree a lot" 2 "Agree a little" 3 "Do not agree"
+
+. label values cohesion_* cohesion_
+
+. label var cohesion "High community cohesion (Highest on all 3 statements)"
+
+. 
 end of do-file
-
-r(111);
 

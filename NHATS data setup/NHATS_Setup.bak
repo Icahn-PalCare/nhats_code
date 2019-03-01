@@ -8093,14 +8093,14 @@ foreach x of varlist `avoids' {
 	replace avoids=1 if `x'==1
 	replace `x'=. if `x'<0
 }
-}
+
 label var avoids "Avoids driving alone/at night/in weather*"
 
 gen miss=0
 gen ind_transp_disadv=.
 
 
-replace ind_transp_disadv=0 if (oftedrive==. | inlist(oftedrive,5,6)
+replace ind_transp_disadv=0 if oftedrive==. | inlist(oftedrive,5,6)
 local probs trkpfrvis trprrelsr trprkpfgr trprgoout
 foreach x in `probs' {
 replace ind_transp_disadv=1 if `x'==1
@@ -8109,7 +8109,7 @@ replace `x'=`x'2
 drop `x'2
 replace miss=miss+1 if missing(`x') 
 }
-///////////////////////////////////////////////////////////////////////////here
+
 replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
 replace ind_transp_disadv=. if miss==4
 label var ind_transp_disadv "Any transportation disadvantage"
@@ -8127,15 +8127,15 @@ local l=1
 forvalues i=1/7 {
 gen get_places`i'=.
 }
-forvalues w=1/7 {
-replace dt`w'getoplcs3=0 if !missing(dt`w'getoplcs7) & missing(dt`w'getoplcs3)
+
+replace getoplcs3=0 if !missing(getoplcs7) & missing(getoplcs3)
 forvalues x=1/7  {
-	replace get_places`x'=dt`w'getoplcs`x'==1 if wave==`w'
-	replace get_places`x'=. if (inlist(dt`w'getoplcs7,-1,.) | dt`w'getoplcs`x'==.) & wave==`w'
+	replace get_places`x'=getoplcs`x'==1 
+	replace get_places`x'=. if (inlist(getoplcs7,-1,.) | getoplcs`x'==.) 
 	label var get_places`x' "Get places: `lab`x''"
 	local l=`l'+1
 }
-}
+
 //marital status-3 vars: married, married_or_partnered
 
 gen married=maritalstat==1 if maritalstat!=. //married
@@ -8160,17 +8160,15 @@ notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header 
 
 //lives with spouse
 gen resspouse=.
-forvalues i=1/7 {
-	replace resspouse=hh`i'livwthspo==1 if wave==`i' & hh`i'livwthspo>0
-	replace resspouse=0 if marriedpart==0
-}
+replace resspouse=livwthspo==1 if livwthspo>0
+replace resspouse=0 if marriedpart==0
+
 label var resspouse "Lives with Spouse/Partner"
 
 //household members
 gen hhm=.
-forvalues i=1/7 {
-	replace hhm=hh`i'dhshldnum if hh`i'dhshldnum>0 & wave==`i'
-}
+replace hhm=dhshldnum if dhshldnum>0 
+
 label var hhm "Number of household members"
 
 //age categorical
@@ -8180,11 +8178,10 @@ by spid: replace age=age[_n-1]+1 if missing(age)
 label var age "Sensitive: age"
 
 gen agecat = .
-forvalues i=1/7 {
-replace agecat= r`i'd2intvrage if wave==`i'
-}
+replace agecat= d2intvrage
+
 replace agecat=. if agecat==-1
-label values agecat r1d2intvrage
+label values agecat d2intvrage
 label var agecat "Age, 5 yr categories"
 
 //activities past month
@@ -8197,15 +8194,15 @@ gen attclub=. //participate in club, organized activity, class, etc.
 gen impclub=. //importance of such activities
 gen vigact=. //vigorous activities
 
-forvalues i=1/7 {
-	replace attrelig=pa`i'attrelser==1 if pa`i'attrelser>0 & wave==`i'
-	replace imprelig=pa`i'imprelser if pa`i'imprelser>0 & wave==`i' 
-	replace visitfrfam=pa`i'vistfrfam==1 if pa`i'vistfrfam>0 & wave==`i'
-	replace impvisit=pa`i'impvstfam if pa`i'impvstfam>0 & wave==`i'
-	replace attclub=pa`i'clbmtgrac==1 if pa`i'clbmtgrac>0 & wave==`i'
-	replace impclub=pa`i'imparclub if pa`i'imparclub>0 & wave==`i'
-	replace vigact=pa`i'vigoractv==1 if pa`i'vigoractv>0 & wave==`i'
-}
+
+replace attrelig=attrelser==1 if attrelser>0 
+replace imprelig=imprelser if imprelser>0  
+replace visitfrfam=vistfrfam==1 if vistfrfam>0 
+replace impvisit=impvstfam if impvstfam>0 
+replace attclub=clbmtgrac==1 if clbmtgrac>0 
+replace impclub=imparclub if imparclub>0 
+replace vigact=vigoractv==1 if vigoractv>0 
+
 
 gen religvimp=imprelig==1 if imprelig!=. //very important binary
 
@@ -8226,24 +8223,24 @@ label values impclub pa1imparclub
 gen smokedever=. 
 gen smoke_start_age=.
 gen smoke_stop_age=.
+
 forvalues i=1(4)5 {
-	replace smokedever=sd`i'smokedreg==1 if wave==`i' & sd`i'smokedreg>0
-	replace smoke_start_age=sd`i'agesrtsmk if wave==`i' & sd`i'agesrtsmk>0
-	replace smoke_stop_age=sd`i'agelstsmk if wave==`i' & sd`i'agelstsmk>0
+	replace smokedever=smokedreg==1 if wave==`i' & smokedreg>0
+	replace smoke_start_age=agesrtsmk if wave==`i' & agesrtsmk>0
+	replace smoke_stop_age=agelstsmk if wave==`i' & agelstsmk>0
 }
 
 sort spid wave
-by spid: carryforward smoke*, replace
-notes drop smoke*
+by spid: carryforward smokedever smoke_start_age smoke_stop_age, replace
+notes drop smokedever smoke_start_age smoke_stop_age
+rename smokesnow smokesnow_old
 gen smokesnow=.
-by spid, sort: egen numcigsever=max(sd1numcigday)
+by spid, sort: egen numcigsever=max(numcigday)
 gen numcigsnow=.
 
+replace smokesnow=smokesnow_old==1 if smokesnow_old>0
+replace numcigsnow=numcigday if smokesnow==1
 
-forvalues i=1/7 {
-	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
-	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
-}
 replace smokedever=1 if smokesnow==1
 replace smokesnow=0 if smokedever==0
 replace numcigsnow=0 if smokesnow==0
@@ -8257,9 +8254,7 @@ label var smoke_stop_age "Age stopped smoking"
 
 //pain
 gen ind_pain=.
-forvalues i=1/7 {
-	replace ind_pain=ss`i'painb==1 if inrange(ss`i'painb,0,2) & wave==`i'
-}
+replace ind_pain=painb==1 if inrange(painb,0,2) 
 label var ind_pain "Bothered by pain"
 
 //weight
@@ -8268,11 +8263,9 @@ gen wgt_curr=.
 gen height_ft=.
 gen height_in=.
 
-forvalues i=1/7 {
-	replace wgt_curr=hw`i'currweigh if hw`i'currweigh>0 & wave==`i'
-	replace height_ft=hw`i'howtallft if hw`i'howtallft>0 & wave==`i'
-	replace height_in=hw`i'howtallin if hw`i'howtallin>0 & wave==`i'
-}
+replace wgt_curr=currweigh if currweigh>0 
+replace height_ft=howtallft if howtallft>0 
+replace height_in=howtallin if howtallin>0 
 
 label var wgt_curr "Current weight, lbs."
 label var height_ft "Current height, feet"
@@ -8284,10 +8277,11 @@ label var bmi "Current BMI"
 
 //get the per round weight, cluster, and strata vars (and why is moved created like that?)
 gen moved=.
-rename w1varunit varunit
-rename w1varstrat varstrat
-rename w1anfinwgt0 anfinwgt
-
+rename varunit varunit 
+rename varstrat varstrat 
+rename anfinwgt0 anfinwgt 
+///
+//look at moved anfinwgt varstrat varunit here 2/27/19
 forvalues i=2/7 {
 	replace moved=w`i'_moved if wave==`i'
 	foreach x in anfinwgt varstrat varunit {
@@ -8301,27 +8295,27 @@ label var moved "Moved since last ivw"
 /*these are taken from Rebecca's code*/
 
 gen community_dwelling = 0
-forvalues w=1/7 {
-	replace community_dwelling=1 if inlist(r`w'dresid,1,2)
-}
+
+replace community_dwelling=1 if inlist(dresid,1,2)
+
 replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | ///
 r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
 gen SP_completed = 0
 replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
 
-gen nhres=r1dresid==4 if r1dresid!=.
-gen rcfres=inlist(r1dresid,2,3) if r1dresid!=.
-gen res_care=r1dresid>1 if r1dresid!=.
+gen nhres=dresid==4 if dresid!=. & wave==1
+gen rcfres=inlist(dresid,2,3) if dresid!=. & wave==1
+gen res_care=dresid>1 if dresid!=. & wave==1
 gen sp_status=1 
 gen deceased=0
 gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
 label var prob_dem "Indicator probable dementia"
-forvalues i=2/7 {
-	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
-	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
-	replace rcfres=inlist(r`i'dresid,2,3,7) if wave==`i'
-	replace deceased=inlist(r`i'status,62,86) if wave>=`i'
-}
+	
+replace nhres=inlist(r`i'dresid,4,5,8) if wave>=2
+replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave>=2
+replace rcfres=inlist(r`i'dresid,2,3,7) if wave>=2
+replace deceased=inlist(r`i'status,62,86) if wave>=2
+
 
 note nhres : r*dresid
 notes nhres : Resid=4,5,8
@@ -8344,19 +8338,18 @@ gen adl_ins_help = .
 gen adl_ins_diff=.
 gen adl_ins_not_done=.
 
-foreach w in 1 2 3 4 5 6 7{
-	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
-	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
-	replace adl_ins_help=0 if mo`w'insdhlp==-1 & sp_ivw==1 & wave==`w'
-	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
-	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
-	replace adl_ins_diff=0 if mo`w'insddif==1 & wave==`w'
-	replace adl_ins_diff=1 if mo`w'insddif>1 & wave==`w'
-	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
-	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
-	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
-	replace adl_ins_not_done=inlist(mo`w'dinsdsfdf,1,8) if wave==`w'
-}
+replace adl_ins_help=1 if insdhlp==1 
+replace adl_ins_help=0 if insdhlp==2 
+replace adl_ins_help=0 if insdhlp==-1 & sp_ivw==1 
+replace adl_ins_help=-7 if insdhlp==-7 
+replace adl_ins_help=-8 if insdhlp==-8 
+replace adl_ins_diff=0 if insddif==1 
+replace adl_ins_diff=1 if insddif>1 
+replace adl_ins_diff=0 if insddif==-1 & sp_ivw==1 
+replace adl_ins_diff=-7 if insddif==-7 
+replace adl_ins_diff=-8 if insddif==-8 
+replace adl_ins_not_done=inlist(dinsdsfdf,1,8) 
+
 
 *replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
@@ -8368,19 +8361,19 @@ notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 gen adl_bed_help = .
 gen adl_bed_diff=.
 gen adl_bed_not_done=.
-foreach w in 1 2 3 4 5 6 7{
-	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
-	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
-	replace adl_bed_help=0 if mo`w'bedhlp==-1 & sp_ivw==1 & wave==`w'
-	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
-	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
-	replace adl_bed_diff=0 if mo`w'beddif==1 & wave==`w'
-	replace adl_bed_diff=1 if mo`w'beddif>1 & wave==`w'
-	replace adl_bed_diff=0 if mo`w'beddif==-1 & sp_ivw==1 & wave==`w'
-	replace adl_bed_diff=-7 if mo`w'beddif==-7 & wave==`w'
-	replace adl_bed_diff=-8 if mo`w'beddif==-8 & wave==`w'
-	replace adl_bed_not_done=inlist(mo`w'dbedsfdf,1,8) if wave==`w'
-}
+
+replace adl_bed_help=1 if bedhlp==1 
+replace adl_bed_help=0 if bedhlp==2 
+replace adl_bed_help=0 if bedhlp==-1 & sp_ivw==1 
+replace adl_bed_help=-7 if bedhlp==-7 
+replace adl_bed_help=-8 if bedhlp==-8 
+replace adl_bed_diff=0 if beddif==1 
+replace adl_bed_diff=1 if beddif>1 
+replace adl_bed_diff=0 if beddif==-1 & sp_ivw==1 
+replace adl_bed_diff=-7 if beddif==-7 
+replace adl_bed_diff=-8 if beddif==-8 
+replace adl_bed_not_done=inlist(dbedsfdf,1,8) 
+
 label var adl_bed_help "Received help getting out of bed"
 *replace adl_bed_diff=1 if adl_bed_help==1
 notes adl_bed_help : mo*bedhlp
@@ -8395,12 +8388,14 @@ label define ivw_day 1 "Not provided"
 label values ivw_day ivw_day
 gen ivw_month=.
 gen ivw_year=.
-forvalues i=1/7 {
-	replace ivw_month=r`i'spstatdtmt if wave==`i'
-	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
-	replace ivw_year=r`i'spstatdtyr if wave==`i'
-	replace ivw_year=201`i' if wave==`i' & r`i'spstatdtyr==.
+
+replace ivw_month=spstatdtmt 
+replace ivw_month=fqstatdtmt if spstatdtmt==.
+replace ivw_year=spstatdtyr
+forvalues w=1/$w{
+replace ivw_year=201`i' if wave==`i' & spstatdtyr==.
 }
+
 replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
 
@@ -8408,11 +8403,11 @@ replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
 /*These changes were made because the help variables were not capturing everyone 
 who may have been impaired for the ADL*/ 
 //changes made 5/20/18
-forvalues w=1/7 {
-	replace adl_dres_help=1 if sc`w'dresoft==5
-	replace adl_eat_help=1 if sc`w'eatdev==7
-	replace adl_ins_help=1 if fl`w'ntlvrmslp==1
-}
+
+	replace adl_dres_help=1 if dresoft==5
+	replace adl_eat_help=1 if eatdev==7
+	replace adl_ins_help=1 if ntlvrmslp==1
+
 
 gen adl_index=0
 foreach i in eat bath toil dres bed ins {
@@ -8453,14 +8448,14 @@ gen meals_wheels=.
 gen noone_talk=.
 gen restrnt_takeout=.
 
-forvalues i=1/7 {
-replace meals_wheels=ha`i'dmealwhl if wave==`i'
-replace noone_talk=fl`i'noonetalk if wave==`i'
-replace restrnt_takeout=ha`i'dmealtkot if wave==`i'
+
+replace meals_wheels=dmealwhl 
+replace noone_talk=noonetalk
+replace restrnt_takeout=dmealtkot 
 foreach x in meals_wheels noone_talk restrnt_takeout {
 replace `x'=0 if `x'==.
 }
-}
+
 
 label var meals_wheels "Meals on wheels"
 label var noone_talk "SP has no one to talk to"
@@ -8494,9 +8489,9 @@ label var died_`i' "SP died w/in `i' months, per future wave status"
 gen dd=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
 gen nhats_death_day=. 
-forvalues i=2/7 {
+
 	foreach j in mth yr {
-		replace pd`i'`j'died=. if pd`i'`j'<0
+		replace `j'died=. if `j'<0 if wave>=2
 }
 	replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
 	replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
