@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- opened on:   5 Mar 2019, 15:08:14
+ opened on:   6 Mar 2019, 16:38:23
 
 . 
 . 
@@ -829,31 +829,136 @@ R2 EW16 SKIP MEALS NO |
 > 
 . // recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
 . 
-. // From sensitive data
-. recode cancerty1 hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
-> hc1cancerty6 hc1cancerty7 hc1cancerty8 (-1 2=0) (-9 -8 =.), gen (sr_skincancer
-> _had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+. // From sensitive data, cancerty1 was from non-sensitive
+. //recode cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
+. foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bl
+> addercancer_had ///
 > sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer
-> _had)
-(33345 differences between cancerty1 and sr_skincancer_had)
-(7840 differences between hc1cancerty2 and sr_breastcancer_had)
-(7810 differences between hc1cancerty3 and sr_prostatecancer_had)
-(8178 differences between hc1cancerty4 and sr_bladdercancer_had)
-(8096 differences between hc1cancerty5 and sr_crvovrnutrncancer_had)
-(8078 differences between hc1cancerty6 and sr_coloncancer_had)
-(8197 differences between hc1cancerty7 and sr_kidneycancer_had)
-(7940 differences between hc1cancerty8 and sr_othercancer_had)
+> _had{
+  2. gen `x'=.
+  3. }
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
+(47,778 missing values generated)
 
 . 
-. foreach x of varlist sr*canc*d {
-  2.         local lab : var label `x'
-  3.         label var `x' "Sensitive: `lab'"
+. replace sr_skincancer_had=cancerty1 if wave==1
+(8,245 real changes made)
+
+. replace sr_breastcancer_had=hc1cancerty2 if wave==1
+(8,245 real changes made)
+
+. replace sr_prostatecancer_had=hc1cancerty3 if wave==1
+(8,245 real changes made)
+
+. replace sr_bladdercancer_had=hc1cancerty4 if wave==1
+(8,245 real changes made)
+
+. replace sr_crvovrnutrncancer_had=hc1cancerty5 if wave==1
+(8,245 real changes made)
+
+. replace sr_coloncancer_had=hc1cancerty6 if wave==1
+(8,245 real changes made)
+
+. replace sr_kidneycancer_had=hc1cancerty7 if wave==1
+(8,245 real changes made)
+
+. replace sr_othercancer_had=hc1cancerty8 if wave==1
+(8,245 real changes made)
+
+. 
+. forvalues w=4/$w{
+  2. replace sr_skincancer_had=cancerty1 if wave==`w'
+  3. replace sr_breastcancer_had=hc`w'cancerty2 if wave==`w'
+  4. replace sr_prostatecancer_had=hc`w'cancerty3 if wave==`w'
+  5. replace sr_bladdercancer_had=hc`w'cancerty4 if wave==`w'
+  6. replace sr_crvovrnutrncancer_had=hc`w'cancerty5 if wave==`w'
+  7. replace sr_coloncancer_had=hc`w'cancerty6 if wave==`w'
+  8. replace sr_kidneycancer_had=hc`w'cancerty7 if wave==`w'
+  9. replace sr_othercancer_had=hc`w'cancerty8 if wave==`w'
+ 10. }
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(4,737 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(8,334 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(7,276 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+(6,312 real changes made)
+
+. 
+. 
+. foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bl
+> addercancer_had ///
+> sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer
+> _had{
+  2. replace `x'=0 if inlist(`x',-1,2)
+  3. replace `x'=. if inlist(`x', -9,-8)
   4. }
+(32,498 real changes made)
+(847 real changes made, 847 to missing)
+(33,330 real changes made)
+(843 real changes made, 843 to missing)
+(33,273 real changes made)
+(843 real changes made, 843 to missing)
+(33,897 real changes made)
+(843 real changes made, 843 to missing)
+(33,822 real changes made)
+(843 real changes made, 843 to missing)
+(33,784 real changes made)
+(843 real changes made, 843 to missing)
+(33,957 real changes made)
+(843 real changes made, 843 to missing)
+(33,343 real changes made)
+(843 real changes made, 843 to missing)
 
-. //keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
-. //sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercanc
-> er_had
 . 
+. label var sr_skincancer_had "Sensitive: Skin Cancer"
+
+. label var sr_breastcancer_had "Sensitive: Breast Cancer"
+
+. label var sr_prostatecancer_had "Sensitive: Prostate Cancer"
+
+. label var sr_bladdercancer_had "Sensitive: Bladder Cancer"
+
+. label var sr_crvovrnutrncancer_had "Sensitive: Cervical/Ovarian/Uterine Cancer
+> "
+
+. label var sr_coloncancer_had "Sensitive: Colon Cancer"
+
+. label var sr_kidneycancer_had "Sensitive: Kidney Cancer"
+
+. label var sr_othercancer_had "Sensitive: Other Cancer"
+
 . 
 . //recoding all refuse, dk, na, as missing
 . qui destring *, replace
@@ -1775,21 +1880,49 @@ R2 EW16 SKIP MEALS NO |
 (28,416 real changes made, 28,416 to missing)
 (28,396 real changes made, 28,396 to missing)
 (28,396 real changes made, 28,396 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
+(28,468 real changes made, 28,468 to missing)
 (29,958 real changes made, 29,958 to missing)
 (1,480 real changes made, 1,480 to missing)
 (37,080 real changes made, 37,080 to missing)
 (37,060 real changes made, 37,060 to missing)
 (37,060 real changes made, 37,060 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
+(34,559 real changes made, 34,559 to missing)
 (22,163 real changes made, 22,163 to missing)
 (2,092 real changes made, 2,092 to missing)
 (33,534 real changes made, 33,534 to missing)
 (33,498 real changes made, 33,498 to missing)
 (33,498 real changes made, 33,498 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
+(33,717 real changes made, 33,717 to missing)
 (20,281 real changes made, 20,281 to missing)
 (2,481 real changes made, 2,481 to missing)
 (29,439 real changes made, 29,439 to missing)
 (29,416 real changes made, 29,416 to missing)
 (29,416 real changes made, 29,416 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
+(30,008 real changes made, 30,008 to missing)
 (18,399 real changes made, 18,399 to missing)
 (0 real changes made)
 (14,306 real changes made, 14,306 to missing)
@@ -2203,24 +2336,65 @@ R2 EW16 SKIP MEALS NO |
 (47,778 missing values generated)
 
 . 
-. replace avoids=0 if oftedrive>0 & oftedrive!=5
-(43,619 real changes made)
-
-. local avoids avoidriv1 avoidriv2 avoidriv4
-
-. 
+. forvalues w=1/$w {
+  2. replace avoids=0 if oftedrive>0 & oftedrive!=5 & wave==`w'
+  3. local avoids avoidriv1 avoidriv2 avoidriv4
+  4. 
 . foreach x of varlist `avoids' {
-  2.         replace avoids=1 if `x'==1
-  3.         replace `x'=. if `x'<0
-  4. }
+  5.         replace avoids=1 if `x'==1 
+  6.         replace `x'=. if `x'<0 
+  7. }
+  8. }
+(5,999 real changes made)
 (9,749 real changes made)
 (0 real changes made)
 (299 real changes made)
 (0 real changes made)
 (1,192 real changes made)
 (0 real changes made)
+(6,930 real changes made)
+(1,412 real changes made)
+(0 real changes made)
+(41 real changes made)
+(0 real changes made)
+(183 real changes made)
+(0 real changes made)
+(5,648 real changes made)
+(1,123 real changes made)
+(0 real changes made)
+(29 real changes made)
+(0 real changes made)
+(143 real changes made)
+(0 real changes made)
+(4,619 real changes made)
+(949 real changes made)
+(0 real changes made)
+(31 real changes made)
+(0 real changes made)
+(98 real changes made)
+(0 real changes made)
+(7,198 real changes made)
+(1,758 real changes made)
+(0 real changes made)
+(53 real changes made)
+(0 real changes made)
+(217 real changes made)
+(0 real changes made)
+(7,083 real changes made)
+(1,482 real changes made)
+(0 real changes made)
+(35 real changes made)
+(0 real changes made)
+(157 real changes made)
+(0 real changes made)
+(6,142 real changes made)
+(1,344 real changes made)
+(0 real changes made)
+(39 real changes made)
+(0 real changes made)
+(174 real changes made)
+(0 real changes made)
 
-. 
 . label var avoids "Avoids driving alone/at night/in weather*"
 
 . 
