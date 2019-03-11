@@ -2,7 +2,7 @@
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
   log type:  text
- opened on:   6 Mar 2019, 16:38:23
+ opened on:   7 Mar 2019, 14:43:26
 
 . 
 . 
@@ -50,7 +50,7 @@ xij variables:
 . tempfile metro
 
 . save `metro'
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000001.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000002.tmp saved
 
 . 
 . cd "${work}"
@@ -429,26 +429,26 @@ serarmfor:  (30900 real changes made)
 . 
 . 
 . foreach x in `a'{
-  2. replace `x'_n=0 if inlist(`x', 2, -8, -7) 
+  2. replace `x'_n=0 if `x'==2 
   3. replace `x'_n=1 if `x'==1
   4. drop `x'
   5. rename `x'_n `x' 
   6. }
-(30,860 real changes made)
+(30,263 real changes made)
 (11,278 real changes made)
-(7,067 real changes made)
+(7,066 real changes made)
 (4,211 real changes made)
 
 . 
 . foreach y in `b'{
-  2. replace `y'_n=0 if inlist(`y', 2, -8, -7) 
+  2. replace `y'_n=0 if `y'==2 
   3. replace `y'_n=1 if `y'==1
   4. drop `y'
   5. rename `y'_n `y' 
   6. }
-(17,803 real changes made)
+(17,772 real changes made)
 (24,335 real changes made)
-(27,428 real changes made)
+(27,384 real changes made)
 (14,710 real changes made)
 
 . 
@@ -473,16 +473,16 @@ serarmfor:  (30900 real changes made)
 (47,778 missing values generated)
 
 . replace unwgtloss=0 if lst10pnds==0 | trytolose==1
-(35,071 real changes made)
+(34,474 real changes made)
 
 . replace unwgtloss=1 if lst10pnds==1 & trytolose==0
-(7,067 real changes made)
+(7,066 real changes made)
 
 . replace lowphysact=0 if evrgowalk==1 | vigoractv==1
 (27,868 real changes made)
 
 . replace lowphysact=1 if evrgowalk==0 & vigoractv==0
-(14,270 real changes made)
+(14,227 real changes made)
 
 . 
 . label var unwgtloss "Unintentional Weight Loss"
@@ -2335,66 +2335,26 @@ R2 EW16 SKIP MEALS NO |
 . gen avoids=.
 (47,778 missing values generated)
 
+. replace avoids=0 if oftedrive>0 & oftedrive!=5 & avoidriv1==2 & avoidriv2==2 &
+>  avoidriv4==2
+(16,750 real changes made)
+
 . 
-. forvalues w=1/$w {
-  2. replace avoids=0 if oftedrive>0 & oftedrive!=5 & wave==`w'
-  3. local avoids avoidriv1 avoidriv2 avoidriv4
-  4. 
+. local avoids avoidriv1 avoidriv2 avoidriv4
+
+. 
 . foreach x of varlist `avoids' {
-  5.         replace avoids=1 if `x'==1 
-  6.         replace `x'=. if `x'<0 
-  7. }
-  8. }
-(5,999 real changes made)
+  2.         replace avoids=1 if `x'==1 
+  3.         replace `x'=. if `x'<0 
+  4. }
 (9,749 real changes made)
 (0 real changes made)
 (299 real changes made)
 (0 real changes made)
 (1,192 real changes made)
 (0 real changes made)
-(6,930 real changes made)
-(1,412 real changes made)
-(0 real changes made)
-(41 real changes made)
-(0 real changes made)
-(183 real changes made)
-(0 real changes made)
-(5,648 real changes made)
-(1,123 real changes made)
-(0 real changes made)
-(29 real changes made)
-(0 real changes made)
-(143 real changes made)
-(0 real changes made)
-(4,619 real changes made)
-(949 real changes made)
-(0 real changes made)
-(31 real changes made)
-(0 real changes made)
-(98 real changes made)
-(0 real changes made)
-(7,198 real changes made)
-(1,758 real changes made)
-(0 real changes made)
-(53 real changes made)
-(0 real changes made)
-(217 real changes made)
-(0 real changes made)
-(7,083 real changes made)
-(1,482 real changes made)
-(0 real changes made)
-(35 real changes made)
-(0 real changes made)
-(157 real changes made)
-(0 real changes made)
-(6,142 real changes made)
-(1,344 real changes made)
-(0 real changes made)
-(39 real changes made)
-(0 real changes made)
-(174 real changes made)
-(0 real changes made)
 
+. 
 . label var avoids "Avoids driving alone/at night/in weather*"
 
 . 
@@ -2622,7 +2582,7 @@ R2 EW16 SKIP MEALS NO |
 (47,778 missing values generated)
 
 . gen vigact=vigoractv //vigorous activities
-(5,640 missing values generated)
+(5,684 missing values generated)
 
 . 
 . 
@@ -2714,8 +2674,9 @@ smoke_stop_age:  (13794 real changes made)
 . gen smokesnow=.
 (47,778 missing values generated)
 
-. by spid, sort: egen numcigsever=max(numcigday)
-(26135 missing values generated)
+. by spid, sort: egen numcigsever=max(numcigday) if inlist(wave,1,5) & smokesnow
+> ==2
+(47778 missing values generated)
 
 . gen numcigsnow=.
 (47,778 missing values generated)
@@ -2742,7 +2703,8 @@ smoke_stop_age:  (13794 real changes made)
 
 . label var smokesnow "Smokes now"
 
-. label var numcigsever "Number of cigarettes/day when smoked"
+. label var numcigsever "Max number of cigarettes/day when smoked for current no
+> n-smokers"
 
 . label var numcigsnow "Number of cigarettes/day currently"
 
@@ -3272,15 +3234,15 @@ smoke_stop_age:  (13794 real changes made)
 . gen nhats_death_day=. 
 (47,778 missing values generated)
 
-. forvalues i=2/7 {
+. forvalues w=2/$w {
   2.         foreach j in mth yr {
-  3.                 replace pd`i'`j'died=. if pd`i'`j'<0
+  3.                 replace pd`w'`j'died=. if pd`w'`j'<0
   4. }
-  5.         replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
-  6.         replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
-  7.         replace nhats_death_day=28 if inlist(pd`i'm,2)
-  8.         replace dd=mdy(pd`i'mthdied,nhats_death_day,pd`i'yrdied) if pd`i'yr
-> died>0 & pd`i'yrdied!=.
+  5.         replace nhats_death_day=31 if inlist(pd`w'm,1,3,5,7,8,10,12)
+  6.         replace nhats_death_day=30 if inlist(pd`w'm,4,6,9,11)
+  7.         replace nhats_death_day=28 if inlist(pd`w'm,2)
+  8.         replace dd=mdy(pd`w'mthdied,nhats_death_day,pd`w'yrdied) if pd`w'yr
+> died>0 & pd`w'yrdied!=.
   9. }
 (0 real changes made)
 (0 real changes made)
@@ -3696,25 +3658,33 @@ smoke_stop_age:  (13794 real changes made)
 
 . foreach x of varlist areacond* {
   2. replace `x'=. if `x'==5
-  3. replace `x'=`x'>1 if !missing(`x')
-  4. }
+  3. replace `x'=0 if `x'==1
+  4. replace `x'=`x'>1 if !missing(`x')
+  5. }
 (713 real changes made, 713 to missing)
-(41,697 real changes made)
+(37,881 real changes made)
+(3,816 real changes made)
 (705 real changes made, 705 to missing)
-(41,705 real changes made)
+(40,610 real changes made)
+(1,095 real changes made)
 (772 real changes made, 772 to missing)
-(41,638 real changes made)
+(39,033 real changes made)
+(2,605 real changes made)
 (0 real changes made)
-(7,598 real changes made)
+(7,353 real changes made)
+(245 real changes made)
 
 . foreach x of varlist clutter* {
   2. replace `x'=. if `x'==4
-  3. replace `x'=`x'>1 if !missing(`x')
-  4. }
+  3. replace `x'=0 if `x'==1
+  4. replace `x'=`x'>1 if !missing(`x')
+  5. }
 (0 real changes made)
-(38,901 real changes made)
+(28,564 real changes made)
+(10,337 real changes made)
 (5,167 real changes made, 5,167 to missing)
-(33,734 real changes made)
+(25,760 real changes made)
+(7,974 real changes made)
 
 . foreach x of varlist condihom* {
   2. replace `x'=`x'==1 if !missing(`x')  
@@ -3735,13 +3705,17 @@ smoke_stop_age:  (13794 real changes made)
 > e==`w'
 > }
 > */
-.         egen insd=rowtotal(condihom*) 
+.         egen insd=rowtotal(condihom*), m 
+(8877 missing values generated)
 
-.         egen outsd=rowtotal(condhome*) 
+.         egen outsd=rowtotal(condhome*), m 
+(6069 missing values generated)
 
-.         egen area=rowtotal(areacond*) 
+.         egen area=rowtotal(areacond*), m 
+(6056 missing values generated)
 
-.         egen clutter=rowtotal(clutter*) 
+.         egen clutter=rowtotal(clutter*), m 
+(8877 missing values generated)
 
 .         
 . 
@@ -3749,10 +3723,10 @@ smoke_stop_age:  (13794 real changes made)
   2.                 replace home_disorder_`x'=`x'>=1 if !missing(`x')
   3.                 drop `x'
   4. }
-(47,778 real changes made)
-(47,778 real changes made)
-(47,778 real changes made)
-(47,778 real changes made)
+(38,901 real changes made)
+(41,709 real changes made)
+(41,722 real changes made)
+(38,901 real changes made)
 
 . 
 . 
@@ -4943,7 +4917,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000003.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000004.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -4996,7 +4970,7 @@ op1weeklypay    double  %12.0g     op1weeklypay
 (37,809 missing values generated)
 (37,809 missing values generated)
 (37,809 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000004.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000005.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5035,7 +5009,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000004.tmp saved
 Duplicates in terms of all variables
 
 (8,757 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000005.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000006.tmp saved
 (8,244 missing values generated)
 (6385 missing values generated)
 (8,639 missing values generated)
@@ -5052,7 +5026,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000005.tmp saved
 Duplicates in terms of all variables
 
 (5,162 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000006.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000007.tmp saved
 (1,019 missing values generated)
 (1,019 real changes made, 1,019 to missing)
 (1,021 real changes made, 1,021 to missing)
@@ -5064,7 +5038,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000007.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000008.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5115,7 +5089,7 @@ op2weeklypay    double  %12.0g     op2weeklypay
 (37,675 missing values generated)
 (37,675 missing values generated)
 (37,675 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000008.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000009.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5158,7 +5132,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000008.tmp saved
 Duplicates in terms of all variables
 
 (9,808 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000009.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000a.tmp saved
 (7,266 missing values generated)
 (5744 missing values generated)
 (7,377 missing values generated)
@@ -5175,7 +5149,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000009.tmp saved
 Duplicates in terms of all variables
 
 (4,597 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000a.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000b.tmp saved
 (915 missing values generated)
 (915 real changes made, 915 to missing)
 (922 real changes made, 922 to missing)
@@ -5187,7 +5161,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000b.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000c.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5238,7 +5212,7 @@ op3weeklypay    double  %12.0g     op3weeklypay
 (35,494 missing values generated)
 (35,494 missing values generated)
 (35,494 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000c.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000d.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5277,7 +5251,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000c.tmp saved
 Duplicates in terms of all variables
 
 (9,660 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000d.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000e.tmp saved
 (6,368 missing values generated)
 (4923 missing values generated)
 (6,321 missing values generated)
@@ -5294,7 +5268,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000d.tmp saved
 Duplicates in terms of all variables
 
 (4,172 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000e.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000f.tmp saved
 (700 missing values generated)
 (700 real changes made, 700 to missing)
 (705 real changes made, 705 to missing)
@@ -5306,7 +5280,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000f.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000g.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5358,7 +5332,7 @@ op4weeklypay    double  %12.0g     op4weeklypay
 (32,817 missing values generated)
 (32,817 missing values generated)
 (32,817 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000g.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000h.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5397,7 +5371,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000g.tmp saved
 Duplicates in terms of all variables
 
 (8,769 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000h.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000i.tmp saved
 (5,439 missing values generated)
 (4235 missing values generated)
 (5,309 missing values generated)
@@ -5414,7 +5388,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000h.tmp saved
 Duplicates in terms of all variables
 
 (3,547 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000i.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000j.tmp saved
 (758 missing values generated)
 (758 real changes made, 758 to missing)
 (765 real changes made, 765 to missing)
@@ -5426,7 +5400,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000j.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000k.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5479,7 +5453,7 @@ op5weeklypay    double  %12.0g     op5weeklypay
 (51,957 missing values generated)
 (51,957 missing values generated)
 (51,957 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000k.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000l.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5522,7 +5496,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000k.tmp saved
 Duplicates in terms of all variables
 
 (13,370 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000l.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000m.tmp saved
 (9,197 missing values generated)
 (7073 missing values generated)
 (9,356 missing values generated)
@@ -5539,7 +5513,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000l.tmp saved
 Duplicates in terms of all variables
 
 (6,002 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000m.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000n.tmp saved
 (866 missing values generated)
 (866 real changes made, 866 to missing)
 (877 real changes made, 877 to missing)
@@ -5551,7 +5525,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000n.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000o.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5602,7 +5576,7 @@ op6weeklypay    double  %12.0g     op6weeklypay
 (50,859 missing values generated)
 (50,859 missing values generated)
 (50,859 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000o.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000p.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5645,7 +5619,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000o.tmp saved
 Duplicates in terms of all variables
 
 (13,460 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000p.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000q.tmp saved
 (8,472 missing values generated)
 (6489 missing values generated)
 (8,489 missing values generated)
@@ -5662,7 +5636,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000p.tmp saved
 Duplicates in terms of all variables
 
 (5,630 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000q.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000r.tmp saved
 (746 missing values generated)
 (746 real changes made, 746 to missing)
 (748 real changes made, 748 to missing)
@@ -5674,7 +5648,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000r.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000s.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5724,7 +5698,7 @@ op7weeklypay    double  %12.0g     op7weeklypay
 (48,795 missing values generated)
 (48,795 missing values generated)
 (48,795 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000s.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000t.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5767,7 +5741,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000s.tmp saved
 Duplicates in terms of all variables
 
 (13,200 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000t.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000u.tmp saved
 (7,232 missing values generated)
 (5577 missing values generated)
 (7,183 missing values generated)
@@ -5784,7 +5758,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000t.tmp saved
 Duplicates in terms of all variables
 
 (4,766 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000u.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000v.tmp saved
 
 . 
 . foreach x in hours paid kids {
@@ -5805,15 +5779,15 @@ hours
 5
 6
 hours
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000v.tmp saved
-paid
-2
-3
-4
-5
-6
-paid
 file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000w.tmp saved
+paid
+2
+3
+4
+5
+6
+paid
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000x.tmp saved
 kids
 2
 3
@@ -5821,7 +5795,7 @@ kids
 5
 6
 kids
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000x.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_000010.tmp saved
 
 . 
 . restore
@@ -6300,11 +6274,101 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_264314_00000x.tmp saved
 > ep-5 header
 
 . 
-. saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7_new", replace version(12)
+. 
+. keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5st
+> atus r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy
+> _ivw freq_go_out ///
+> help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_
+> cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind 
+> imputed_inc1 ///
+> imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5 aveincome income_cat other
+> lang white black hisp other_race whiteoth maritalstat medicaid medigap mc_part
+> d tricare ///
+> private_ltc residence livearrang livealone srh srh_fp sr_ami_ever sr_ami_new s
+> r_stroke_ever sr_stroke_new sr_cancer_ever sr_cancer_new sr_hip_ever sr_hip_ne
+> w ///
+> sr_heart_dis_ever sr_heart_dis_new sr_htn_ever sr_htn_new sr_ra_ever sr_ra_new
+>  sr_osteoprs_ever sr_osteoprs_new sr_diabetes_ever sr_diabetes_new sr_lung_dis
+> _ever ///
+> sr_lung_dis_new sr_dementia_ever sr_dementia_new sr_depr_pqq1 sr_depr_pqq2 sr_
+> anx_gad1 sr_anx_gad2 sr_phq2_score sr_phq2_depressed sr_gad2_score sr_gad2_anx
+> iety ///
+> dem_3_cat dem_2_cat memory sr_numconditions1 fall_last_month adl_eat_diff adl_
+> eat_help adl_eat_not_done adl_bath_diff adl_bath_help adl_bath_not_done adl_to
+> il_diff ///
+> adl_toil_help adl_toil_not_done adl_dres_diff adl_dres_help adl_dres_not_done 
+> iadl_laun_help iadl_laun_diff iadl_laun_not_done iadl_shop_help iadl_shop_diff
+>  ///
+> iadl_shop_not_done iadl_meal_help iadl_meal_diff iadl_meal_not_done iadl_bank_
+> help iadl_bank_diff iadl_bank_not_done iadl_meds_help iadl_meds_diff iadl_meds
+> _not_done ///
+>  ind_meds_diff ind_meds_mistake ind_meds_problem reg_doc_have reg_doc_seen reg
+> _doc_homevisit sr_hosp_ind sr_hosp_stays prim_helper_opid prim_helper_cat ///
+>  tot_hrsmonth_help_i n_helpers tot_hrswk_help_i n_family_helpers ind_family_he
+> lper n_paid_helpers ind_paid_helper ind_rc_staff num_helpers_cat tot_hrsmonth_
+> paid_i ///
+>  tot_hrswk_paid_i ind_no_helpers metro_ind no_acp formal_acp informal_acp acp 
+> old_an2011wgt trfinwgt tr2011wgt serarmfor dresslf dresdif ntlvrmslp eatdev in
+> come_quart ///
+>  placedied hospice1 hospice2 hospicelml gripsc1 walksec1 walkhndr1 gripsc2 wal
+> ksec2 walkhndr2 origwksc nhatswksc nhatsgrav nhatsgrb lst10pnds trytolose evrg
+> owalk vigoractv ///
+>  unwgtloss lowphysact lowenergy oftcheer oftbored oftfol oftupset lifemean con
+> fident giveup livingsit selfdeter findway adjchg agefeel mealskip nopayhous no
+> payutil ///
+>  nopaymed mealskipnum sr_skincancer_had sr_breastcancer_had sr_prostatecancer_
+> had sr_bladdercancer_had sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidney
+> cancer_had ///
+>  sr_othercancer_had howgetdoc ind_imp_visit ind_imp_relig ind_imp_club ind_imp
+> _goout device_out device_insd device_bed device_eat device_bath device_toil de
+> vice_dres ///
+>  device_any drives avoids ind_transp_disadv get_places1 get_places2 get_places
+> 3 get_places4 get_places5 get_places6 get_places7 married marital_sep marital_
+> div ///
+>  marital_wid marital_nev marriedpartnered marital_sd resspouse hhm agecat attr
+> elig imprelig visitfrfam impvisit attclub impclub vigact religvimp smokedever 
+> ///
+>  smoke_start_age smoke_stop_age smokesnow numcigsever numcigsnow ind_pain wgt_
+> curr height_ft height_in bmi moved community_dwelling nhres rcfres res_care sp
+> _status ///
+>  prob_dem adl_ins_help adl_ins_diff adl_ins_not_done adl_bed_help adl_bed_diff
+>  adl_bed_not_done ivw_day ivw_month ivw_year adl_index adl_independent adl_imp
+> air ///
+>  iadl_index iadl_independent iadl_impair adl_diff_index adl_diff_ind iadl_diff
+> _index iadl_diff_ind ivw_date meals_wheels noone_talk restrnt_takeout nhats_de
+> ath_day ///
+>  nhats_death_date nhats_death_month nhats_death_year eligible_nsoc completed_n
+> soc total_caregiver_comp total_caregiver_elig adverse adverse_laun adverse_sho
+> p ///
+>  adverse_meal adverse_bank adverse_eat adverse_bath adverse_toil adverse_dres 
+> adverse_out adverse_insd adverse_bed lim_fav lim_fav_yr cohesion_knowwell cohe
+> sion_willing ///
+>  cohesion_peop cohesion home_disorder_insd home_disorder_outsd home_disorder_a
+> rea home_disorder_clutter creditdebt medcreditdebt medbillsovertime medpaynotc
+> ash finhlpfam ///
+>  fingftfam govtasst ownhome rent mortgagepaidoff paysmortgage mortpaymt timein
+> mort owedonmort homevalue rentpaid section8 n_social_network division region n
+> ortheast ///
+>  midwest south west n_children stairs_ind livesalone_ind ind_kids eat_jenny to
+> il_jenny insd_jenny bed_jenny dres_jenny bath_jenny adlcount_jenny laun_jenny 
+> meds_jenny ///
+>  shop_jenny meal_jenny bank_jenny iadlcount_jenny device_mobility spouse_help_
+> ind tot_spousehrs daughter_help_ind tot_daughterhrs son_help_ind tot_sonhrs ot
+> herfamily_help_ind ///
+>  tot_otherfamilyhrs paid_help_ind tot_paidhrs otherinformal_help_ind tot_other
+> informalhrs any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_unk any
+> _paid_by_oth ///
+>  any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by
+> _gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medi
+> caid any_paid_by_state ///
+>  ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 die
+> d_24
+
+.  
+. 
+. saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
 (saving in Stata 12 format, which can be read by Stata 11 or 12)
-  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode
-        and thus may not display well in Stata 13.
-file E:\nhats\data\NHATS cleaned\sp_round_1_7_new.dta saved
+file E:\nhats\data\NHATS cleaned\sp_round_1_7.dta saved
 
 . 
 . gen time2d=mofd(nhats_death_date)-mofd(ivw_date)

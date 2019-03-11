@@ -14684,7 +14684,7 @@ label var persontime "Waves contributing information"
 gen anydebt=creditdebt==1 | medpayno==1 if !missing(creditdebt) | !missing(medpayn)
 label var anydebt "Credit card or medical debt"
 
-//important to define 
+//important to define the last wave in community 
 sort spid wave
 by spid: egen lw=max(wave)
 label var lw "Last Wave in the Community"
@@ -14692,10 +14692,11 @@ label var lw "Last Wave in the Community"
 
 H="Code for sample characteristics"
 
+
 local cvars1 age
 local cvars2 n_social_network persontime income_adj n_helpers n_paid_helpers tot_hrsmonth_help_i ///
 tot_hrsmonth_paid_i 
-local ivars1 female white black hisp other_race married livealone educ_hs_ind proxy ind_noone
+local ivars1 female whiteoth black hisp married livealone educ_hs_ind proxy ind_noone
 local ivars2 ind_any_helpers ind_paid_helper top_quartile_help_helped ///
 medicaid medigap srh_fp nhres ///
 sr_ami_ever sr_stroke_ever sr_cancer_ever sr_hip_ever sr_heart_dis_ever ///
@@ -14759,7 +14760,7 @@ mat colnames tab="Community" "Incident Homebound" "Incident Nursing Home" "Died"
 mat list tab
 
 frmttable using sample_derivation_new.rtf, replace statmat(tab) title("Status by Wave for Original Cohort") ///
-sdec(0) varlabels note("2,656 people remain in the community after the last wave" ///
+sdec(0) varlabels note("2,302 people remain in the community after the last wave" ///
 "When status is missing that wave and subsequent waves are removed" )
 
 //creating community dwelling in wave 1 category. 
@@ -14794,7 +14795,7 @@ mat rownames tab4= "Wave 1" "Wave 2" "Wave 3" "Wave 4" "Wave 5" "Wave 6" "Wave 7
 mat colnames tab4="Community" "Incident Homebound" "Incident Nursing Home" "Died" "Lost to Follow-up"
 mat list tab4
 frmttable using sample_derivation_new.rtf, addtable statmat(tab4) title("Weighted Percentages by Wave for Original Cohort") ///
-sdec(2) varlabels note("2,656 people remain in the community after the last wave" ///
+sdec(2) varlabels note("2,302 people remain in the community after the last wave" ///
 "When status is missing that wave and subsequent waves are removed" )
 
 
@@ -14978,7 +14979,7 @@ frmttable using sample_derivation_new.rtf, addtable replace statmat(tab1) ///
  
 restore
 
-preserve
+//preserve
 
  capture drop group*
 
@@ -15251,10 +15252,7 @@ keep if wave==1 & status==1
 bys lw: sum everhb [aw=anfinw] 
  //rename wave wave1
  //rename lw wave
- rename anfinwgt anfinwgt1
- rename an2011wgt an2011wgt1
  
- merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta",  keepusing(anfinwgt an2011wgt) keep(matched)
 // gen weight=anfinwgt
  //replace anfinwgt=an2011wgt if wave==5 | wave==6
  
@@ -15265,6 +15263,7 @@ bys lw: sum everhb [aw=anfinw]
  restore
  preserve
  
+ //stp is weighted
  use stp.dta, clear
 mat tab=J(6,6,.)
 local r=1
@@ -15282,6 +15281,7 @@ local c=1
  local r=`r'+1
  }
  
+ //stp1 is unweighted
   use stp1.dta, clear
  local r=1
   forvalues i=1/6{
@@ -15355,7 +15355,9 @@ H="changelog"
 
 Updates:
 
-
+03/08/2019 MH
+------------
+Cleaned some code, added notes, using whiteoth variable in tables. 
 
 02/20/2019 MH
 ------------

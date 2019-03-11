@@ -7553,6 +7553,13 @@ gen criteria_none=criteria_a==0
 
 foreach time in 6 12 {
 	gen tot_paid_by_mc_`time'm=0 
+	//3/7/19-added op/pb combo for final jpsm submission
+	egen pbop_paid_by_mc_`time'm=rowtotal(pb_paid_by_mc_`time'm op_paid_by_mc_`time'm)
+	notes pbop_paid_by_mc_`time'm : clm_pmt_amt from pb & op files.
+	notes pbop_paid_by_mc_`time'm : combination of pb + op exp for `time' yr
+	notes tot_paid_by_mc_`time'm : E:\nhats_code\serious_ill\ICD9_10_serious_ill_comparison, ///
+	get spending and dataset cleaning headers
+	label var pbop_paid_by_mc_`time'm "PB & OP expenditures `time' months post ivw"
 	foreach x in ip snf hh hs pb op dm {
 		replace tot_paid_by_mc_`time'm=tot_paid_by_mc_`time'm+`x'_paid_by_mc_`time'm
 }
@@ -7770,7 +7777,7 @@ hisp other_race married educ_hs_ind `income' proxy medicaid medigap srh_fp ///
 adl_eat_help adl_bath_help adl_toil_help adl_dres_help adl_ins_help adl_bed_help ///
 adl_independent nhres comorb_*_0_6m smi*ind ind_hosp_adm_*6m mult_ip_adm_p6m ind_ed_op_p6m  ///
 ind_icu_p6m ind_hs_p6m died_6 ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
- hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m pbop_paid_by_mc_6m ///
  dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m wave cont_ffs* criteria_a ///
  criteria_b criteria_c smi_count ind_smi_any
  
@@ -8037,8 +8044,8 @@ H="Comparison tables, ICD-9 and ICD-10"
 Created by: EBL
 Date Created: 2/7/19
 
-Updated by:
-Date Updated:
+Updated by: EBL
+Date Updated: 3/7/19
 
 
 **************************************************
@@ -8100,7 +8107,7 @@ local ioutcomes ind_hosp_adm_p6m mult_ip_adm_p6m ind_ed_op_p6m  ///
 ind_icu_p6m ind_hs_p6m died_6
 
 local coutcomes ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
- hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m pbop_paid_by_mc_6m ///
  dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m
  
 
@@ -8270,8 +8277,8 @@ H="Comparison tables, shareable"
 Created by: EBL
 Date Created: 2/11/19
 
-Updated by: 
-Date Updated: 
+Updated by: EBL
+Date Updated: 3/7/19
 
 
 **************************************************
@@ -8333,7 +8340,7 @@ local ioutcomes ind_hosp_adm_p6m mult_ip_adm_p6m ind_ed_op_p6m  ///
 ind_icu_p6m ind_hs_p6m died_6
 
 local coutcomes ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
- hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m pbop_paid_by_mc_6m ///
  dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m
  
 
@@ -8506,8 +8513,8 @@ H="Comparison tables, restricted to hospital admission"
 Created by: EBL
 Date Created: 2/7/19
 
-Updated by:
-Date Updated:
+Updated by: EBL
+Date Updated: 3/7/19
 
 
 **************************************************
@@ -8569,7 +8576,7 @@ local ioutcomes ind_hosp_adm_p6m mult_ip_adm_p6m ind_ed_op_p6m  ///
 ind_icu_p6m ind_hs_p6m died_6
 
 local coutcomes ip_paid_by_mc_6m snf_paid_by_mc_6m hh_paid_by_mc_6m ///
- hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m ///
+ hs_paid_by_mc_6m pb_paid_by_mc_6m op_paid_by_mc_6m pbop_paid_by_mc_6m ///
  dm_paid_by_mc_6m tot_paid_by_mc_6m n_hospd_p6m
  
 
@@ -8971,6 +8978,8 @@ foreach smivar of local smi {
 
 
 H="changelog"
+3/7/19-EBL-added PB/OP combination for final output
+
 2/22/19-EBL-notes added for NHATS survey variables and project vars created in Stata
 
 2/14/19-EBL-added codebook code (not yet notes)
