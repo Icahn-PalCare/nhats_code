@@ -7601,8 +7601,8 @@ H="NHATS Data Cleaning Part 7--Variable Construction"
 Created by: --
 Date Created: --
 
-Updated by: MH
-Date Updated: 02/20/2019
+Updated by: EBL
+Date Updated: 03/15/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -7620,6 +7620,7 @@ with the most hours)
 Uses imputed hours per code 1a_help_hours_imputation.do
 (see NHATS Technical Paper #7 for imputation methodology)
 
+Bring in day of month from restricted tracker
 
 
 **************************************************
@@ -7643,6 +7644,15 @@ log using "${logs}`name'.smcl", text replace
 
 
 *********************************************
+
+
+//Pull dates from restricted tracker
+use "E:\nhats\data\NHATS Restricted\NHATS Round 7 Tracker Restricted STATA\NHATS_Round_7_Tracker_Restricted.dta", clear
+keep spid r*spstatdtdy
+rename r*spstatdtdy spstatdtdy*
+reshape long spstatdtdy, i(spid) j(wave)
+tempfile resttrack
+save `resttrack'
 
 //Does not need to change, unless get new metro file. 
 
@@ -8420,7 +8430,8 @@ notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
-gen ivw_day=1
+merge 1:1 spid wave using `resttrack', keep(match) nogen
+gen ivw_day=spstatdtdy
 label define ivw_day 1 "Not provided" 
 label values ivw_day ivw_day
 gen ivw_month=.
@@ -8434,6 +8445,15 @@ forvalues w=1/$w {
 
 replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
+
+
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
+label var ivw_date "Interview date from restricted tracker"
+
+gen ivw_date_sens=mdy(ivw_month,1,ivw_year)
+format ivw_date_sens %td
+label var ivw_date "Interview date, day of month set to one"
 
 /// Changes to Dressing and Eating
 /*These changes were made because the help variables were not capturing everyone 
@@ -8475,9 +8495,6 @@ foreach x in independent impair index {
 label var iadl_independent "Independent in IADLs"
 label var iadl_impair "Help with 1+ IADL"
 label var iadl_index "Index of help w/ IADLs"
-
-gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
-format ivw_date %td
 
 //addition of variables from Eric's homebound code
 gen meals_wheels=.
@@ -9278,6 +9295,7 @@ gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
 foreach x in 12 24 {
 	gen nhats_died_`x'=time2d<=`x' if !lml
 	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
+
 }
 
 capture log close
@@ -9285,8 +9303,8 @@ capture log close
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
-
-drop death_* died_12 died_24
+ 
+drop death_* died_12 died_24 ivw_day ivw_date
 
 drop time2d 
 
@@ -9321,6 +9339,10 @@ H="Changelog"
 
 
 Updates:
+
+03/15/2019 EBL
+----------
+Added NHATS restricted interview date to the dataset.
 
 03/05/2019 MH
 ----------

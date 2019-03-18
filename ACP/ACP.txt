@@ -923,10 +923,10 @@ H="NHATS MLOGIT Model"
 /*
 
 Created by: Mohammed 
-Date Created: 01/25/2019
+Date Created: 03/07/2019
 
 Updated by: MH
-Date Updated: 03/07/2019
+Date Updated: 03/18/2019
 
 Description: Multinomial Logit model 
 
@@ -951,11 +951,11 @@ set maxvar 10000
 log using "${logs}/`name'.smcl", text replace
 
 
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
+/*
+Using Wave 2 NHATS data b/c that is where ACP questions are asked.
+Using a Multinomail Logisitic Regression with the base being not having
+ACP. 
 
-Data format is multiple observations per subject, one for each round
 */
 
 
@@ -1034,27 +1034,38 @@ replace non_white=1 if white==0
 
 gen lninc=ln(aveincome)
 
-
-mlogit cat age female education4 lninc non_white ownhome livesalone_ind ///
+local vars age female education4 lninc non_white ownhome livesalone_ind ///
 married ind_kids soc_iso0 srh_fp sr_dementia_ever sr_hosp_ind sr_phq2_depressed ///
-sr_gad2_anxiety, rr b(0) 
+sr_gad2_anxiety
+
+mlogit cat `vars', rrr b(0) 
+
+///getting sample sizes for each group
+forvalues x=0/3{
+sum `vars' if cat==`x' & cat!=. & soc_iso0!=. & lninc!=. & education4!=. & ///
+ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_dementia_ever!=.
+local `x'=`r(N)'
+}
+
 
 outreg using "${logs}mlogit_nhats", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal vs Base" \ ///
-"2-Formal vs Base" \ "3-Two-Pronged vs Base") replace 
+title("NHATS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal(`1') vs Base(`0')" \ ///
+"2-Formal(`2') vs Base(`0')" \ "3-Two-Pronged(`3') vs Base(`0')") replace 
+
+
+
 
 
 H="HRS MLOGIT Model"
 /*
 
 Created by: Mohammed 
-Date Created: 01/31/2019
+Date Created: 03/07/2019
 
 Updated by: MH
-Date Updated: 02/28/2019
+Date Updated: 03/18/2019
 
-Description: Inital exploration, data cleaning, table creation.
-
+Description:  Multinomial Logit model 
 
 
 **************************************************
@@ -1076,11 +1087,11 @@ set maxvar 10000
 log using "${logs}/`name'.smcl", text replace
 
 
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
+/*
+Using only 2012 HRS data b/c they have ACP questionaire.
+Using a Multinomail Logisitic Regression with the base being not having
+ACP. 
 
-Data format is multiple observations per subject, one for each round
 */
 
 
@@ -1296,13 +1307,22 @@ gen non_white=.
 replace non_white=0 if white==1
 replace non_white=1 if white==0
 
-mlogit cat age female educ4 lnassets non_white h12wohous live_alone married soc_visit0 ///
-srh_pf dem hosp_last_2yr cesd_tot_ge3_n consc neuro, b(0) rr
+local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit0 ///
+srh_pf dem hosp_last_2yr cesd_tot_ge3_n consc neuro
 
+
+mlogit cat `vars', b(0) rr
+
+
+///getting sample sizes for each group
+forvalues x=0/3{
+sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & dem!=. & hosp_last_2yr!=.
+local `x'=`r(N)'
+}
 
 outreg using "${logs}mlogit_hrs", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("HRS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal vs Base" \ ///
-"2-Formal vs Base" \ "3-Two-Pronged vs Base" ) replace 
+title("HRS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal (`1') vs Base (`0')" \ ///
+"2-Formal (`2') vs Base (`0')" \ "3-Two-Pronged (`3') vs Base (`0')" ) replace 
 
 
 
@@ -1315,6 +1335,9 @@ H="Changelog"
 
 
 Updates:
+03/18/2019 MH
+------------
+Adding in sample sizes to the tables for MLOGIT.
 
 03/07/2019 MH
 ------------

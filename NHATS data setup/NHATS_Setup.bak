@@ -7601,8 +7601,8 @@ H="NHATS Data Cleaning Part 7--Variable Construction"
 Created by: --
 Date Created: --
 
-Updated by: MH
-Date Updated: 02/20/2019
+Updated by: EBL
+Date Updated: 03/15/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -7620,6 +7620,7 @@ with the most hours)
 Uses imputed hours per code 1a_help_hours_imputation.do
 (see NHATS Technical Paper #7 for imputation methodology)
 
+Bring in day of month from restricted tracker
 
 
 **************************************************
@@ -7643,6 +7644,15 @@ log using "${logs}`name'.smcl", text replace
 
 
 *********************************************
+
+
+//Pull dates from restricted tracker
+use "E:\nhats\data\NHATS Restricted\NHATS Round 7 Tracker Restricted STATA\NHATS_Round_7_Tracker_Restricted.dta", clear
+keep spid r*spstatdtdy
+rename r*spstatdtdy spstatdtdy*
+reshape long spstatdtdy, i(spid) j(wave)
+tempfile resttrack
+save `resttrack'
 
 //Does not need to change, unless get new metro file. 
 
@@ -8420,7 +8430,8 @@ notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
-gen ivw_day=1
+merge 1:1 spid wave using `resttrack', //nogen
+gen ivw_day=spstatdtdy
 label define ivw_day 1 "Not provided" 
 label values ivw_day ivw_day
 gen ivw_month=.
@@ -8434,6 +8445,15 @@ forvalues w=1/$w {
 
 replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
+
+
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
+label var ivw_date "Interview date from restricted tracker"
+
+gen ivw_date_sens=mdy(ivw_month,1,ivw_year)
+format ivw_date_sens %td
+label var ivw_date "Interview date, day of month set to one"
 
 /// Changes to Dressing and Eating
 /*These changes were made because the help variables were not capturing everyone 
@@ -8475,9 +8495,6 @@ foreach x in independent impair index {
 label var iadl_independent "Independent in IADLs"
 label var iadl_impair "Help with 1+ IADL"
 label var iadl_index "Index of help w/ IADLs"
-
-gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
-format ivw_date %td
 
 //addition of variables from Eric's homebound code
 gen meals_wheels=.
@@ -9238,6 +9255,39 @@ notes adl_dres_help : sc*dreshelp
 notes adl_dres_help : Help dresing in the last month
 notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
 
+
+keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
+help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind imputed_inc1 ///
+imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5 aveincome income_cat otherlang white black hisp other_race whiteoth maritalstat medicaid medigap mc_partd tricare ///
+private_ltc residence livearrang livealone srh srh_fp sr_ami_ever sr_ami_new sr_stroke_ever sr_stroke_new sr_cancer_ever sr_cancer_new sr_hip_ever sr_hip_new ///
+sr_heart_dis_ever sr_heart_dis_new sr_htn_ever sr_htn_new sr_ra_ever sr_ra_new sr_osteoprs_ever sr_osteoprs_new sr_diabetes_ever sr_diabetes_new sr_lung_dis_ever ///
+sr_lung_dis_new sr_dementia_ever sr_dementia_new sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score sr_phq2_depressed sr_gad2_score sr_gad2_anxiety ///
+dem_3_cat dem_2_cat memory sr_numconditions1 fall_last_month adl_eat_diff adl_eat_help adl_eat_not_done adl_bath_diff adl_bath_help adl_bath_not_done adl_toil_diff ///
+adl_toil_help adl_toil_not_done adl_dres_diff adl_dres_help adl_dres_not_done iadl_laun_help iadl_laun_diff iadl_laun_not_done iadl_shop_help iadl_shop_diff ///
+iadl_shop_not_done iadl_meal_help iadl_meal_diff iadl_meal_not_done iadl_bank_help iadl_bank_diff iadl_bank_not_done iadl_meds_help iadl_meds_diff iadl_meds_not_done ///
+ ind_meds_diff ind_meds_mistake ind_meds_problem reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind sr_hosp_stays prim_helper_opid prim_helper_cat ///
+ tot_hrsmonth_help_i n_helpers tot_hrswk_help_i n_family_helpers ind_family_helper n_paid_helpers ind_paid_helper ind_rc_staff num_helpers_cat tot_hrsmonth_paid_i ///
+ tot_hrswk_paid_i ind_no_helpers metro_ind no_acp formal_acp informal_acp acp old_an2011wgt trfinwgt tr2011wgt serarmfor dresslf dresdif ntlvrmslp eatdev income_quart ///
+ placedied hospice1 hospice2 hospicelml gripsc1 walksec1 walkhndr1 gripsc2 walksec2 walkhndr2 origwksc nhatswksc nhatsgrav nhatsgrb lst10pnds trytolose evrgowalk vigoractv ///
+ unwgtloss lowphysact lowenergy oftcheer oftbored oftfol oftupset lifemean confident giveup livingsit selfdeter findway adjchg agefeel mealskip nopayhous nopayutil ///
+ nopaymed mealskipnum sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had ///
+ sr_othercancer_had howgetdoc ind_imp_visit ind_imp_relig ind_imp_club ind_imp_goout device_out device_insd device_bed device_eat device_bath device_toil device_dres ///
+ device_any drives avoids ind_transp_disadv get_places1 get_places2 get_places3 get_places4 get_places5 get_places6 get_places7 married marital_sep marital_div ///
+ marital_wid marital_nev marriedpartnered marital_sd resspouse hhm agecat attrelig imprelig visitfrfam impvisit attclub impclub vigact religvimp smokedever ///
+ smoke_start_age smoke_stop_age smokesnow numcigsever numcigsnow ind_pain wgt_curr height_ft height_in bmi moved community_dwelling nhres rcfres res_care sp_status ///
+ prob_dem adl_ins_help adl_ins_diff adl_ins_not_done adl_bed_help adl_bed_diff adl_bed_not_done ivw_day ivw_month ivw_year adl_index adl_independent adl_impair ///
+ iadl_index iadl_independent iadl_impair adl_diff_index adl_diff_ind iadl_diff_index iadl_diff_ind ivw_date meals_wheels noone_talk restrnt_takeout nhats_death_day ///
+ nhats_death_date nhats_death_month nhats_death_year eligible_nsoc completed_nsoc total_caregiver_comp total_caregiver_elig adverse adverse_laun adverse_shop ///
+ adverse_meal adverse_bank adverse_eat adverse_bath adverse_toil adverse_dres adverse_out adverse_insd adverse_bed lim_fav lim_fav_yr cohesion_knowwell cohesion_willing ///
+ cohesion_peop cohesion home_disorder_insd home_disorder_outsd home_disorder_area home_disorder_clutter creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+ fingftfam govtasst ownhome rent mortgagepaidoff paysmortgage mortpaymt timeinmort owedonmort homevalue rentpaid section8 n_social_network division region northeast ///
+ midwest south west n_children stairs_ind livesalone_ind ind_kids eat_jenny toil_jenny insd_jenny bed_jenny dres_jenny bath_jenny adlcount_jenny laun_jenny meds_jenny ///
+ shop_jenny meal_jenny bank_jenny iadlcount_jenny device_mobility spouse_help_ind tot_spousehrs daughter_help_ind tot_daughterhrs son_help_ind tot_sonhrs otherfamily_help_ind ///
+ tot_otherfamilyhrs paid_help_ind tot_paidhrs otherinformal_help_ind tot_otherinformalhrs any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_unk any_paid_by_oth ///
+ any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medicaid any_paid_by_state ///
+ ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24
+ 
+
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
 
 gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
@@ -9245,6 +9295,7 @@ gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
 foreach x in 12 24 {
 	gen nhats_died_`x'=time2d<=`x' if !lml
 	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
+
 }
 
 capture log close
@@ -9252,8 +9303,8 @@ capture log close
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
-
-drop death_* died_12 died_24
+ 
+drop death_* died_12 died_24 ivw_day ivw_date
 
 drop time2d 
 
@@ -9288,6 +9339,10 @@ H="Changelog"
 
 
 Updates:
+
+03/15/2019 EBL
+----------
+Added NHATS restricted interview date to the dataset.
 
 03/05/2019 MH
 ----------
