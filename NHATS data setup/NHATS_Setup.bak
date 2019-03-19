@@ -7601,8 +7601,8 @@ H="NHATS Data Cleaning Part 7--Variable Construction"
 Created by: --
 Date Created: --
 
-Updated by: EBL
-Date Updated: 03/15/2019
+Updated by: MH
+Date Updated: 03/19/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -8282,7 +8282,10 @@ by spid: carryforward smokedever smoke_start_age smoke_stop_age, replace
 notes drop smokedever smoke_start_age smoke_stop_age
 rename smokesnow smokesnow_old
 gen smokesnow=.
-by spid, sort: egen numcigsever=max(numcigday) if inlist(wave,1,5) & smokesnow==2
+//Numcigever asked differently in rounds 1,5 then in other rounds. (Do you/ Did you)
+//Wanted to see the num. of cigs. smoked by non-smokers. 
+by spid, sort: egen numcigsever=max(numcigday) if inlist(wave,1,5) & smokesnow_old==2
+by spid: carryforward numcigsever if smokesnow_old==2, replace
 gen numcigsnow=.
 
 replace smokesnow=smokesnow_old==1 if smokesnow_old>0
@@ -8430,7 +8433,7 @@ notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
-merge 1:1 spid wave using `resttrack', //nogen
+merge 1:1 spid wave using `resttrack', keep(match) nogen
 gen ivw_day=spstatdtdy
 label define ivw_day 1 "Not provided" 
 label values ivw_day ivw_day
@@ -9128,7 +9131,7 @@ label var iadlcount_j "IADL count: some/lot of difficulty or adverse consequence
 
 // 11/8/18 Making National Estimates using 2011 population (using original weights) Rds 1-4
 rename anfinwgt old_anfinwgt
-gen anfinwgt=old_anfinwgt
+gen double anfinwgt=old_anfinwgt
 replace anfinw=old_anfinwgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,1,4)
 replace anfinw=old_anfinwgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,1,4)
 replace anfinw=old_anfinwgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,1,4)
@@ -9339,6 +9342,10 @@ H="Changelog"
 
 
 Updates:
+
+03/19/2019 MH
+----------
+Corrected numcigsever and anfinwgt variables. 
 
 03/15/2019 EBL
 ----------
