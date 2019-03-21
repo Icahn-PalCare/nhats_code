@@ -1,8 +1,9 @@
 --------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  E:\nhats\nhats_code\NHATS data setup\logs`name'.smcl
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\6_nhats_cleaning_21_Mar_2
+> 019.smcl
   log type:  text
- opened on:  19 Mar 2019, 10:56:05
+ opened on:  21 Mar 2019, 13:49:36
 
 . 
 . 
@@ -33,7 +34,7 @@ spstatdtdy1 spstatdtdy2 ... spstatdtdy7   ->   spstatdtdy
 . tempfile resttrack
 
 . save `resttrack'
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000001.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000001.tmp saved
 
 . 
 . //Does not need to change, unless get new metro file. 
@@ -77,7 +78,7 @@ xij variables:
 . tempfile metro
 
 . save `metro'
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000002.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000002.tmp saved
 
 . 
 . cd "${work}"
@@ -96,6 +97,127 @@ E:\nhats\data\NHATS working data
 
     matched                            41,466  
     -----------------------------------------
+
+. 
+. 
+. // 3/21/2019--Adding LM questions from LML interview section, P01 Aldridge
+. 
+. gen qoc_lml_e=.
+(47,778 missing values generated)
+
+. replace qoc_lml_e=1 if ratecare==1
+(1,317 real changes made)
+
+. replace qoc_lml_e=0 if inrange(ratecare,2,5)
+(1,259 real changes made)
+
+. note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+
+> ) 
+
+. note qoc_lml_e: Located in NHATS Setup, under Part 7.
+
+. note qoc_lml_e: Created: 3/21/19-MH  
+
+. /*
+> gen qoc_lml=ratecare
+> replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
+> */
+. 
+. foreach x in pain bre sad{
+  2. gen unmet_`x'_lml=.
+  3. replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
+  4. replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'
+> hlpam==1)  
+  5. }
+(47,778 missing values generated)
+(2,403 real changes made)
+(270 real changes made)
+(47,778 missing values generated)
+(2,443 real changes made)
+(190 real changes made)
+(47,778 missing values generated)
+(2,334 real changes made)
+(432 real changes made)
+
+. note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, L
+> M1B (Waves 2+) 
+
+. note unmet_pain_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_pain_lml: Created: 3/21/19-MH  
+
+. 
+. note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming fro
+> m LM2, LM2A, LM2B (Waves 2+) 
+
+. note unmet_bre_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_bre_lml: Created: 3/21/19-MH  
+
+. 
+. note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from 
+> LM3, LM3A, LM3B (Waves 2+) 
+
+. note unmet_sad_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_sad_lml: Created: 3/21/19-MH  
+
+. 
+. foreach x in respect informed{
+  2. gen `x'_lml=.
+  3. replace `x'_lml=0 if inrange(`x', 1, 4)
+  4. replace `x'_lml=1 if inrange(`x', 2,4)
+  5. }
+(47,778 missing values generated)
+(2,558 real changes made)
+(273 real changes made)
+(47,778 missing values generated)
+(2,552 real changes made)
+(430 real changes made)
+
+. 
+. note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
+
+. note respect_lml: Located in NHATS Setup, under Part 7.
+
+. note respect_lml: Created: 3/21/19-MH  
+
+. 
+. note informed_lml: Family not always informed for individuals condition. Comin
+> g from LM8 (Waves 2+) 
+
+. note informed_lml: Located in NHATS Setup, under Part 7.
+
+. note informed_lml: Created: 3/21/19-MH  
+
+. 
+. foreach x in caredecis carenowan{
+  2. gen `x'_lml=. 
+  3. replace `x'_lml=0 if inlist(`x', 1, 2)
+  4. replace `x'_lml=1 if `x'==1
+  5. }
+(47,778 missing values generated)
+(2,499 real changes made)
+(182 real changes made)
+(47,778 missing values generated)
+(2,493 real changes made)
+(231 real changes made)
+
+. 
+. note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Wa
+> ves 2+) 
+
+. note caredecis_lml: Located in NHATS Setup, under Part 7.
+
+. note caredecis_lml: Created: 3/21/19-MH  
+
+. 
+. note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from
+>  LM5 (Waves 2+) 
+
+. note carenowan_lml: Located in NHATS Setup, under Part 7.
+
+. note carenowan_lml: Created: 3/21/19-MH  
 
 . 
 . 
@@ -1823,6 +1945,25 @@ R2 EW16 SKIP MEALS NO |
 (36,862 real changes made, 36,862 to missing)
 (39,410 real changes made, 39,410 to missing)
 (39,019 real changes made, 39,019 to missing)
+(37,130 real changes made, 37,130 to missing)
+(37,823 real changes made, 37,823 to missing)
+(37,958 real changes made, 37,958 to missing)
+(37,090 real changes made, 37,090 to missing)
+(38,203 real changes made, 38,203 to missing)
+(38,351 real changes made, 38,351 to missing)
+(37,199 real changes made, 37,199 to missing)
+(38,298 real changes made, 38,298 to missing)
+(38,672 real changes made, 38,672 to missing)
+(36,923 real changes made, 36,923 to missing)
+(36,955 real changes made, 36,955 to missing)
+(36,894 real changes made, 36,894 to missing)
+(36,887 real changes made, 36,887 to missing)
+(36,883 real changes made, 36,883 to missing)
+(36,998 real changes made, 36,998 to missing)
+(37,982 real changes made, 37,982 to missing)
+(37,446 real changes made, 37,446 to missing)
+(38,623 real changes made, 38,623 to missing)
+(36,890 real changes made, 36,890 to missing)
 (8,975 real changes made, 8,975 to missing)
 (25,610 real changes made, 25,610 to missing)
 (17,548 real changes made, 17,548 to missing)
@@ -2177,6 +2318,14 @@ R2 EW16 SKIP MEALS NO |
 (14,691 real changes made, 14,691 to missing)
 (9,248 real changes made, 9,248 to missing)
 (12,214 real changes made, 12,214 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
@@ -4969,7 +5118,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000004.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000004.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5022,7 +5171,7 @@ op1weeklypay    double  %12.0g     op1weeklypay
 (37,809 missing values generated)
 (37,809 missing values generated)
 (37,809 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000005.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000005.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5061,7 +5210,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000005.tmp saved
 Duplicates in terms of all variables
 
 (8,757 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000006.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000006.tmp saved
 (8,244 missing values generated)
 (6385 missing values generated)
 (8,639 missing values generated)
@@ -5078,7 +5227,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000006.tmp saved
 Duplicates in terms of all variables
 
 (5,162 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000007.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000007.tmp saved
 (1,019 missing values generated)
 (1,019 real changes made, 1,019 to missing)
 (1,021 real changes made, 1,021 to missing)
@@ -5090,7 +5239,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000008.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000008.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5141,7 +5290,7 @@ op2weeklypay    double  %12.0g     op2weeklypay
 (37,675 missing values generated)
 (37,675 missing values generated)
 (37,675 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000009.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000009.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5184,7 +5333,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000009.tmp saved
 Duplicates in terms of all variables
 
 (9,808 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000a.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000a.tmp saved
 (7,266 missing values generated)
 (5744 missing values generated)
 (7,377 missing values generated)
@@ -5201,7 +5350,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000a.tmp saved
 Duplicates in terms of all variables
 
 (4,597 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000b.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000b.tmp saved
 (915 missing values generated)
 (915 real changes made, 915 to missing)
 (922 real changes made, 922 to missing)
@@ -5213,7 +5362,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000c.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000c.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5264,7 +5413,7 @@ op3weeklypay    double  %12.0g     op3weeklypay
 (35,494 missing values generated)
 (35,494 missing values generated)
 (35,494 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000d.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000d.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5303,7 +5452,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000d.tmp saved
 Duplicates in terms of all variables
 
 (9,660 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000e.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000e.tmp saved
 (6,368 missing values generated)
 (4923 missing values generated)
 (6,321 missing values generated)
@@ -5320,7 +5469,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000e.tmp saved
 Duplicates in terms of all variables
 
 (4,172 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000f.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000f.tmp saved
 (700 missing values generated)
 (700 real changes made, 700 to missing)
 (705 real changes made, 705 to missing)
@@ -5332,7 +5481,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000g.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000g.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5384,7 +5533,7 @@ op4weeklypay    double  %12.0g     op4weeklypay
 (32,817 missing values generated)
 (32,817 missing values generated)
 (32,817 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000h.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000h.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5423,7 +5572,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000h.tmp saved
 Duplicates in terms of all variables
 
 (8,769 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000i.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000i.tmp saved
 (5,439 missing values generated)
 (4235 missing values generated)
 (5,309 missing values generated)
@@ -5440,7 +5589,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000i.tmp saved
 Duplicates in terms of all variables
 
 (3,547 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000j.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000j.tmp saved
 (758 missing values generated)
 (758 real changes made, 758 to missing)
 (765 real changes made, 765 to missing)
@@ -5452,7 +5601,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000k.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000k.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5505,7 +5654,7 @@ op5weeklypay    double  %12.0g     op5weeklypay
 (51,957 missing values generated)
 (51,957 missing values generated)
 (51,957 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000l.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000l.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5548,7 +5697,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000l.tmp saved
 Duplicates in terms of all variables
 
 (13,370 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000m.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000m.tmp saved
 (9,197 missing values generated)
 (7073 missing values generated)
 (9,356 missing values generated)
@@ -5565,7 +5714,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000m.tmp saved
 Duplicates in terms of all variables
 
 (6,002 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000n.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000n.tmp saved
 (866 missing values generated)
 (866 real changes made, 866 to missing)
 (877 real changes made, 877 to missing)
@@ -5577,7 +5726,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000o.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000o.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5628,7 +5777,7 @@ op6weeklypay    double  %12.0g     op6weeklypay
 (50,859 missing values generated)
 (50,859 missing values generated)
 (50,859 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000p.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000p.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5671,7 +5820,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000p.tmp saved
 Duplicates in terms of all variables
 
 (13,460 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000q.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000q.tmp saved
 (8,472 missing values generated)
 (6489 missing values generated)
 (8,489 missing values generated)
@@ -5688,7 +5837,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000q.tmp saved
 Duplicates in terms of all variables
 
 (5,630 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000r.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000r.tmp saved
 (746 missing values generated)
 (746 real changes made, 746 to missing)
 (748 real changes made, 748 to missing)
@@ -5700,7 +5849,7 @@ note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
 note: label truncated to 80 characters
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000s.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000s.tmp saved
 
               storage   display    value
 variable name   type    format     label      variable label
@@ -5750,7 +5899,7 @@ op7weeklypay    double  %12.0g     op7weeklypay
 (48,795 missing values generated)
 (48,795 missing values generated)
 (48,795 missing values generated)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000t.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000t.tmp saved
 
     Result                           # of obs.
     -----------------------------------------
@@ -5793,7 +5942,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000t.tmp saved
 Duplicates in terms of all variables
 
 (13,200 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000u.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000u.tmp saved
 (7,232 missing values generated)
 (5577 missing values generated)
 (7,183 missing values generated)
@@ -5810,7 +5959,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000u.tmp saved
 Duplicates in terms of all variables
 
 (4,766 observations deleted)
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000v.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000v.tmp saved
 
 . 
 . foreach x in hours paid kids {
@@ -5831,7 +5980,7 @@ hours
 5
 6
 hours
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000w.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000w.tmp saved
 paid
 2
 3
@@ -5839,7 +5988,7 @@ paid
 5
 6
 paid
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_00000x.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_00000x.tmp saved
 kids
 2
 3
@@ -5847,7 +5996,7 @@ kids
 5
 6
 kids
-file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000010.tmp saved
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000010.tmp saved
 
 . 
 . restore
@@ -6414,7 +6563,7 @@ file C:\Users\husaim03\AppData\Local\Temp\9\ST_27bae4_000010.tmp saved
 > _gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medi
 > caid any_paid_by_state ///
 >  ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 die
-> d_24
+> d_24 *_lml
 
 .  
 . 

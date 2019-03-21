@@ -4624,9 +4624,9 @@ capture log close
 
 cd "E:\nhats\data\NHATS Sensitive\r7_sensitive"
 
-use NSOC_R7B_Crss_File.dta
+use NSOC_R7_Crss_File.dta
 
-merge 1:1 spid opid using NSOC_R7B_Crss_OP_Tracker_File.dta, gen(m1) keep(match master)
+merge 1:1 spid opid using NSOC_R7_Crss_OP_Tracker_File.dta, gen(m1) keep(match master)
 merge 1:1 spid opid using NHATS_Round_7_OP_Sen_Dem_File.dta, gen(m8) keep(match master)
 gen wave=7
 merge 1:1 spid opid wave using "E:\nhats\data\NHATS cleaned\op_round_1_7.dta", gen(m2) keep(match master)
@@ -5343,7 +5343,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 03/07/2019
+Date Updated: 03/21/2019
 
 Description: Inital dataset cleaning, renaming varaibles, merging variables from 
 sensitive dataset, and broad structuring.
@@ -5354,7 +5354,7 @@ sensitive dataset, and broad structuring.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 1-combine_waves`date'
+local name 1-combine_waves_`date'
 di "`name'"
 
 capture log close 
@@ -5417,57 +5417,57 @@ destring dfavact, replace
 
 if `w'==2 {	
 keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
-	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
+	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill lm*
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* ep`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* ep`w'* lm`w'*) ///
 (*) 
 }
 
 if `w'==3 {	
 keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
-	re3dcensdiv ip3nginslast ia*
+	re3dcensdiv ip3nginslast ia* lm*
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'* lm`w'*) ///
 (*) 
 }
 if `w'==4 {	
 keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
-	re4dcensdiv ip4nginslast
+	re4dcensdiv ip4nginslast lm*
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* lm`w'*) ///
 (*) 
 }
 if `w'==5 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
-	re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
+	re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0 lm*
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* rl`w'* el`w'* ia`w'* re`w'* va`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* rl`w'* el`w'* ia`w'* re`w'* va`w'* pd`w'* lm`w'*) ///
 (*) 
 }	
 if `w'==6 {	
 keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
-	re6dcensdiv ip6nginslast w6an2011wgt0	
+	re6dcensdiv ip6nginslast w6an2011wgt0 lm*	 
 
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* lm`w'*) ///
 (*) 
 }
 if `w'==7 {	
 keep `keepallwaves' re7intplace re7newstrct re7spadrsnew re7dresistrct ///
-	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0
+	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0 lm*
 	
 rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
 sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'*) ///
+sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'* lm`w'*) ///
 (*) 
 }
 
@@ -5580,7 +5580,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 02/01/2019
+Date Updated: 03/21/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -5594,7 +5594,7 @@ and also the NSOC caregiver dataset.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 1a-help_hours_imputation`date'
+local name 1a-help_hours_imputation_`date'
 di "`name'"
 
 capture log close 
@@ -5606,7 +5606,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 
@@ -6009,6 +6009,9 @@ save R`w'_hrs_imputed_added.dta,replace
 ********************************************************************
 log close
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
 
 H="NHATS Data Cleaning Part 3 (2_r12_cleaning_1_1)"
 /*
@@ -6017,7 +6020,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 02/06/2019
+Date Updated: 03/21/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -6031,7 +6034,7 @@ and also the NSOC caregiver dataset.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 2-r12_cleaning_1`date'
+local name 2-r12_cleaning_1_`date'
 di "`name'"
 
 capture log close 
@@ -6043,7 +6046,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 
@@ -6598,6 +6601,9 @@ tab `v'
 *********************************************
 log close
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
 
 H="NHATS Data Cleaning Part 4 (3_r12_cleaning_2_1)"
 /*
@@ -6606,7 +6612,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 02/14/2019
+Date Updated: 03/21/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -6620,7 +6626,7 @@ and also the NSOC caregiver dataset.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 3_nhats_cleaning`date'
+local name 3_nhats_cleaning_`date'
 di "`name'"
 
 capture log close 
@@ -6632,7 +6638,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 
@@ -7100,6 +7106,9 @@ save round_1_$w_cleanv2.dta, replace
 *************************************************
 log close
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
 
 H="NHATS Data Cleaning Part 5 (4_r12_cleaning_3_1)"
 /*
@@ -7108,7 +7117,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 02/14/2019
+Date Updated: 03/21/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -7122,7 +7131,7 @@ and also the NSOC caregiver dataset.
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 4_nhats_cleaning`date'
+local name 4_nhats_cleaning_`date'
 di "`name'"
 
 capture log close 
@@ -7134,7 +7143,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}/`name'.smcl", text replace
 
 
 
@@ -7350,6 +7359,10 @@ tab `w' wave,missing
 log close
 
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
+
 H="NHATS Data Cleaning Part 6 (5_r12_add_helper)"
 /*
 
@@ -7357,7 +7370,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 02/11/2019
+Date Updated: 03/21/2019
 
 Description: 
 
@@ -7379,7 +7392,7 @@ Uses imputed hours per code 1a_help_hours_imputation.do
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 5_nhats_cleaning`date'
+local name 5_nhats_cleaning_`date'
 di "`name'"
 
 capture log close 
@@ -7391,7 +7404,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}\`name'.smcl", text replace
 
 
 
@@ -7595,6 +7608,10 @@ saveold round_1_$w_clean_helper_added_old.dta, replace
 log close
 
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
+
 H="NHATS Data Cleaning Part 7--Variable Construction"
 /*
 
@@ -7602,7 +7619,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 03/19/2019
+Date Updated: 03/21/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -7627,7 +7644,7 @@ Bring in day of month from restricted tracker
 */
 
 local date = subinstr("$S_DATE"," ","_",.) 
-local name 6_nhats_cleaning`date'
+local name 6_nhats_cleaning_`date'
 di "`name'"
 
 capture log close 
@@ -7639,7 +7656,7 @@ set linesize 80
 set maxvar 10000
 
 
-log using "${logs}`name'.smcl", text replace
+log using "${logs}\`name'.smcl", text replace
 
 
 
@@ -7676,6 +7693,34 @@ cd "${work}"
 use round_1_$w_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
+
+// 3/21/2019--Adding LM questions from LML interview section, P01 Aldridge
+
+gen qoc_lml_e=.
+replace qoc_lml_e=1 if ratecare==1
+replace qoc_lml_e=0 if inrange(ratecare,2,5)
+/*
+gen qoc_lml=ratecare
+replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
+*/
+
+foreach x in pain bre sad{
+gen unmet_`x'_lml=.
+replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
+replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'hlpam==1)  
+}
+
+foreach x in respect informed{
+gen `x'_lml=.
+replace `x'_lml=0 if inrange(`x', 1, 4)
+replace `x'_lml=1 if inrange(`x', 2,4)
+}
+
+foreach x in caredecis carenowan{
+gen `x'_lml=. 
+replace `x'_lml=0 if inlist(`x', 1, 2)
+replace `x'_lml=1 if `x'==1
+}
 
 //1/28/2019-Advance Care Planning based off of Ornstein instructions
 
@@ -9288,7 +9333,7 @@ iadl_shop_not_done iadl_meal_help iadl_meal_diff iadl_meal_not_done iadl_bank_he
  shop_jenny meal_jenny bank_jenny iadlcount_jenny device_mobility spouse_help_ind tot_spousehrs daughter_help_ind tot_daughterhrs son_help_ind tot_sonhrs otherfamily_help_ind ///
  tot_otherfamilyhrs paid_help_ind tot_paidhrs otherinformal_help_ind tot_otherinformalhrs any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_unk any_paid_by_oth ///
  any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medicaid any_paid_by_state ///
- ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24
+ ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24 *_lml
  
 
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
@@ -9335,6 +9380,10 @@ describe `senslabs', fullnames
 log close
 
 
+translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
+exit
+
+
 H="Changelog"
 
 
@@ -9343,9 +9392,15 @@ H="Changelog"
 
 Updates:
 
+03/21/2019 MH
+----------
+Added in LM variables that will be used for P01. 
+Fixed log files to save in correct locations and output into PDFs.  
+
 03/19/2019 MH
 ----------
 Corrected numcigsever and anfinwgt variables. 
+Updated Round III NSOC from beta to final. 
 
 03/15/2019 EBL
 ----------
