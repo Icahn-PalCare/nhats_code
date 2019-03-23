@@ -7699,6 +7699,9 @@ merge 1:1 spid wave using `metro', keep(match master) nogen
 gen qoc_lml_e=.
 replace qoc_lml_e=1 if ratecare==1
 replace qoc_lml_e=0 if inrange(ratecare,2,5)
+note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+) 
+note qoc_lml_e: Located in NHATS Setup, under Part 7.
+note qoc_lml_e: Created: 3/21/19-MH  
 /*
 gen qoc_lml=ratecare
 replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
@@ -7709,6 +7712,17 @@ gen unmet_`x'_lml=.
 replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
 replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'hlpam==1)  
 }
+note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, LM1B (Waves 2+) 
+note unmet_pain_lml: Located in NHATS Setup, under Part 7.
+note unmet_pain_lml: Created: 3/21/19-MH  
+
+note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming from LM2, LM2A, LM2B (Waves 2+) 
+note unmet_bre_lml: Located in NHATS Setup, under Part 7.
+note unmet_bre_lml: Created: 3/21/19-MH  
+
+note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from LM3, LM3A, LM3B (Waves 2+) 
+note unmet_sad_lml: Located in NHATS Setup, under Part 7.
+note unmet_sad_lml: Created: 3/21/19-MH  
 
 foreach x in respect informed{
 gen `x'_lml=.
@@ -7716,11 +7730,28 @@ replace `x'_lml=0 if inrange(`x', 1, 4)
 replace `x'_lml=1 if inrange(`x', 2,4)
 }
 
+note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
+note respect_lml: Located in NHATS Setup, under Part 7.
+note respect_lml: Created: 3/21/19-MH  
+
+note informed_lml: Family not always informed for individuals condition. Coming from LM8 (Waves 2+) 
+note informed_lml: Located in NHATS Setup, under Part 7.
+note informed_lml: Created: 3/21/19-MH  
+
 foreach x in caredecis carenowan{
 gen `x'_lml=. 
 replace `x'_lml=0 if inlist(`x', 1, 2)
 replace `x'_lml=1 if `x'==1
 }
+
+note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Waves 2+) 
+note caredecis_lml: Located in NHATS Setup, under Part 7.
+note caredecis_lml: Created: 3/21/19-MH  
+
+note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from LM5 (Waves 2+) 
+note carenowan_lml: Located in NHATS Setup, under Part 7.
+note carenowan_lml: Created: 3/21/19-MH  
+
 
 //1/28/2019-Advance Care Planning based off of Ornstein instructions
 
@@ -9333,7 +9364,7 @@ iadl_shop_not_done iadl_meal_help iadl_meal_diff iadl_meal_not_done iadl_bank_he
  shop_jenny meal_jenny bank_jenny iadlcount_jenny device_mobility spouse_help_ind tot_spousehrs daughter_help_ind tot_daughterhrs son_help_ind tot_sonhrs otherfamily_help_ind ///
  tot_otherfamilyhrs paid_help_ind tot_paidhrs otherinformal_help_ind tot_otherinformalhrs any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_unk any_paid_by_oth ///
  any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medicaid any_paid_by_state ///
- ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24 *_lml
+ ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24 *_lml qoc_lml_e
  
 
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
