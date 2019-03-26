@@ -5297,7 +5297,7 @@ replace income_adj= (245.120/237.017)*aveincome if wave==5
 replace income_adj= (245.120/240.007)*aveincome if wave==6
 replace income_adj=aveincome if wave==7
 
-H="XXXXXXX Working on New Format XXXXXXX "
+H="XXXXXXX GLOBAL MACROS DEFINED XXXXXXX "
 /* 
 ********************HEADING******************** 
 
@@ -7808,6 +7808,11 @@ tab `x' if wave==2 , m
 // 8/10/2018 Add in 2011 weight for rd 5,6 
 rename an2011wgt0 an2011wgt 
 label var an2011wgt "2011 weights"
+note an2011wgt: an2011wgt0
+note an2011wgt: Analytic Weight for 2011 cohort, for rounds 5+
+note formal_acp: Located in NHATS Setup, under Part 7.
+note formal_acp: Created: 8/10/18-MH
+
 
 rename trfinwgt0 trfinwgt
 rename tr2011wgt0 tr2011wgt
@@ -7824,6 +7829,11 @@ label var serarmfor "Served in Armed Forces"
 sort spid wave
 by spid: carryforward serarmfor, replace
 notes drop serarmfor
+note serarmfor: Asked in rounds 1,5. Used serarmfor to find. 
+note serarmfor: Served in Arm Forces variable, carried previous value to new wave. 
+note formal_acp: Located in NHATS Setup, under Part 7.
+note formal_acp: Created: 7/3/18-MH
+
 
 //Add in 4/6/18
 label var dresslf "Often you Dress Yourself"
@@ -7846,6 +7856,11 @@ forvalues w=1/$w{
 drop income_quart`w'
 }
 
+note income_quart: Use aveincome to create variable.  
+note income_quart: Create an income quartile measure. Weighted. 
+note income_quart: Located in NHATS Setup, under Part 7.
+note income_quart: Created: 4/2/18-MH
+
 label var income_quart "Quartile of Income"
 label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
 label values income_quart income_quart
@@ -7855,14 +7870,32 @@ label values income_quart income_quart
 label var placedied "Place of Death"
 replace placedied=. if inlist(placedied,-1,-8)
 replace placedied=6 if placedied==91
+note placedied: placedied (6=91) (.=-1,-8) all else the same.   
+note placedied: Place died variable from LML interview. 
+note placedied: Located in NHATS Setup, under Part 7.
+note placedied: Created: 3/26/18-MH
 
 replace hospice2=. if inlist(hospice2,-1,-8) 
+note hospice2: hospice2 variable, (.=-1,-1)
+note hospice2: Hospice at other place, list.
+note hospice2: Located in NHATS Setup, under Part 7.
+note hospice2: Created: 3/26/18-MH
 
 rename hospcelml hospicelml
 foreach x in hospice1 hospicelml {
 replace `x'=. if inlist(`x',-1,-8)
 replace `x'=0 if `x'==2
 } 
+
+note hospice1: hospice1 variable (0=2) (.=-1,-1)
+note hospice1: Hospice at Nursing Home.
+note hospice1: Located in NHATS Setup, under Part 7.
+note hospice1: Created: 3/26/18-MH
+
+note hospicelml: hospicelml
+note hospicelml: Hospice at other place, list.
+note hospicelml: Located in NHATS Setup, under Part 7.
+note hospicelml: Created: 3/26/18-MH
  
 label var hospice1 "Hopsice at Nursing Home"
 label var hospice2 "Hospice Other Place"
@@ -9423,9 +9456,13 @@ H="Changelog"
 
 Updates:
 
+03/22/2019 MH
+----------
+Quick fix to keep LM variables from being dropped.
+
 03/21/2019 MH
 ----------
-Added in LM variables that will be used for P01. 
+Added in LM variables that will be used for P01, these variables come from the LML section of the survey. 
 Fixed log files to save in correct locations and output into PDFs.  
 
 03/19/2019 MH
@@ -9440,8 +9477,8 @@ Added NHATS restricted interview date to the dataset.
 03/05/2019 MH
 ----------
 Completed correcting errors found when comparing old and new final code. 
-- Changed Avoids driving variable. Nothing major
--Changed Vigorous activity variable. Nothing major
+- Changed Avoids driving variable name.
+-Changed Vigorous activity variable name.
 - Changed how nucigever is defined. 
 
 03/05/2019 MH
@@ -9518,3 +9555,13 @@ Change log conception was first introduced.
 
 
 */
+
+H="A note on NHATS vs. NSOC weights and populations"
+A note on NHATS vs. NSOC weights and populations
+
+-	NHATS round 1 weight is w1anfinwgt0
+-	NSOC weight is w1cgfinwgt0
+-	Weight usage is discussed in the NHATS and NSOC user guide, accessible on the NHATS website.
+-	From the NSOC user guide: Analyses in which the caregiver is the unit of analysis should use the NSOC weight. (NHATS weights should be used when the unit 					        of analysis is the care recipient (NHATS Sample person)).
+
+The key point when comparing weighted figures in NHATS and NSOC, as done in the Caregivers tables, is that the NHATS weights need to be applied to the NSOC-eligible population, rather than just those with participating caregivers, in order for the population of older adults with assistance to correspond.  That is, there are 2423 NSOC-eligible NHATS participants (with at least 1 informal caregiver) and 1369 with at least 1 caregiver who completed an NSOC interview.  The 2007 NSOC interviews are weighted to represent all informal caregivers of the population represented by the 2423, not just the 1369, so, for instance, to look at mean number of caregivers, the appropriate comparison is between the 2423 and the 2007.
