@@ -2,18 +2,28 @@
 
 H="merge multiple years"
 *libname medi 'E:\nhats\data\CMS_DUA_28016\Extracted'; 
-libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
-libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
+*libname extract'E:\nhats\data\20180625 NHATS CMS Data\extracted';
+*libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
 *libname 'E:\nhats\data\CMS_DUA_28016\Raw';
+
+libname extract 'E:\nhats\data\20190326\extracted';
+libname cumu 'E:\nhats\data\20190326\Cumulative';
 
 
 proc contents data=extract.mbsf_ab_15; run;
 
 proc contents data=extract.mbsf_abcd_16; run;
 
+proc contents data=extract.mbsf_abcd_summary_17; run;
+
 data mbsf_ab_16;
 set extract.mbsf_abcd_16 (drop = PTC_CNTRCT_ID_01--RDS_IND_12);
 run;
+
+data mbsf_ab_17;
+set extract.mbsf_abcd_summary_17 (drop = PTC_CNTRCT_ID_01--RDS_IND_12);
+run;
+
 
 
 
@@ -44,15 +54,27 @@ HMO_IND_07=BENE_HMO_IND_07 HMO_IND_08=BENE_HMO_IND_08 HMO_IND_09=BENE_HMO_IND_09
 MDCR_ENTLMT_BUYIN_IND_01=BENE_MDCR_ENTLMT_BUYIN_IND_01 MDCR_ENTLMT_BUYIN_IND_02=BENE_MDCR_ENTLMT_BUYIN_IND_02 MDCR_ENTLMT_BUYIN_IND_03=BENE_MDCR_ENTLMT_BUYIN_IND_03  
 MDCR_ENTLMT_BUYIN_IND_04=BENE_MDCR_ENTLMT_BUYIN_IND_04 MDCR_ENTLMT_BUYIN_IND_05=BENE_MDCR_ENTLMT_BUYIN_IND_05 MDCR_ENTLMT_BUYIN_IND_06=BENE_MDCR_ENTLMT_BUYIN_IND_06
 MDCR_ENTLMT_BUYIN_IND_07=BENE_MDCR_ENTLMT_BUYIN_IND_07 MDCR_ENTLMT_BUYIN_IND_08=BENE_MDCR_ENTLMT_BUYIN_IND_08 MDCR_ENTLMT_BUYIN_IND_09=BENE_MDCR_ENTLMT_BUYIN_IND_09
-MDCR_ENTLMT_BUYIN_IND_10=BENE_MDCR_ENTLMT_BUYIN_IND_10 MDCR_ENTLMT_BUYIN_IND_11=MDCR_ENTLMT_BUYIN_IND_11 MDCR_ENTLMT_BUYIN_IND_12=BENE_MDCR_ENTLMT_BUYIN_IND_12));
+MDCR_ENTLMT_BUYIN_IND_10=BENE_MDCR_ENTLMT_BUYIN_IND_10 MDCR_ENTLMT_BUYIN_IND_11=BENE_MDCR_ENTLMT_BUYIN_IND_11 MDCR_ENTLMT_BUYIN_IND_12=BENE_MDCR_ENTLMT_BUYIN_IND_12));
+run;
+
+data mbsf_ab_17;
+set mbsf_ab_17 (rename=(HMO_IND_01=BENE_HMO_IND_01 HMO_IND_02=BENE_HMO_IND_02  
+HMO_IND_03=BENE_HMO_IND_03 HMO_IND_04=BENE_HMO_IND_04 HMO_IND_05=BENE_HMO_IND_05 HMO_IND_06=BENE_HMO_IND_06 
+HMO_IND_07=BENE_HMO_IND_07 HMO_IND_08=BENE_HMO_IND_08 HMO_IND_09=BENE_HMO_IND_09 HMO_IND_10=BENE_HMO_IND_10 HMO_IND_11=BENE_HMO_IND_11 HMO_IND_12=BENE_HMO_IND_12 
+MDCR_ENTLMT_BUYIN_IND_01=BENE_MDCR_ENTLMT_BUYIN_IND_01 MDCR_ENTLMT_BUYIN_IND_02=BENE_MDCR_ENTLMT_BUYIN_IND_02 MDCR_ENTLMT_BUYIN_IND_03=BENE_MDCR_ENTLMT_BUYIN_IND_03  
+MDCR_ENTLMT_BUYIN_IND_04=BENE_MDCR_ENTLMT_BUYIN_IND_04 MDCR_ENTLMT_BUYIN_IND_05=BENE_MDCR_ENTLMT_BUYIN_IND_05 MDCR_ENTLMT_BUYIN_IND_06=BENE_MDCR_ENTLMT_BUYIN_IND_06
+MDCR_ENTLMT_BUYIN_IND_07=BENE_MDCR_ENTLMT_BUYIN_IND_07 MDCR_ENTLMT_BUYIN_IND_08=BENE_MDCR_ENTLMT_BUYIN_IND_08 MDCR_ENTLMT_BUYIN_IND_09=BENE_MDCR_ENTLMT_BUYIN_IND_09
+MDCR_ENTLMT_BUYIN_IND_10=BENE_MDCR_ENTLMT_BUYIN_IND_10 MDCR_ENTLMT_BUYIN_IND_11=BENE_MDCR_ENTLMT_BUYIN_IND_11 MDCR_ENTLMT_BUYIN_IND_12=BENE_MDCR_ENTLMT_BUYIN_IND_12));
 run;
 
 
 
-data cumu.mbsf_ab_summary_06_16;
+data cumu.mbsf_ab_summary_06_17;
 set extract.mbsf_ab_summary_06 extract.mbsf_ab_summary_07 extract.mbsf_ab_summary_08 extract.mbsf_ab_summary_09 
-extract.mbsf_ab_summary_10 extract.mbsf_ab_summary_11 extract.mbsf_ab_summary_12 extract.mbsf_ab_13 extract.mbsf_ab_14 extract.mbsf_ab_15 mbsf_ab_16;
+extract.mbsf_ab_summary_10 extract.mbsf_ab_summary_11 extract.mbsf_ab_summary_12 extract.mbsf_ab_13 extract.mbsf_ab_14 extract.mbsf_ab_15 mbsf_ab_16 mbsf_ab_17;
 run;
+
+proc sort data= cumu.mbsf_ab_summary_06_17 out=test; by descending BENE_ENROLLMT_REF_YR; run;
 
 /************************************************************************
 *************************************************************************
@@ -61,8 +83,8 @@ Clean birth_date, death_date in date format from denominator file
 ************************************************************************/
 
 /*note we can't use dob dod from CMS denominator file since a lot of them are missing,they should come from restricted file*/
-data cumu.mbsf_ab_summary_06_16;
-set cumu.mbsf_ab_summary_06_16;
+data cumu.mbsf_ab_summary_06_17;
+set cumu.mbsf_ab_summary_06_17;
 death_date = BENE_DEATH_DT;
 birth_date = BENE_BIRTH_DT;
 format death_date date9. birth_date date9.;
@@ -450,41 +472,41 @@ libname cumu 'E:\nhats\data\20180625 NHATS CMS Data\Cumulative';
 
 
 /*inpatient*/
-data cumu.Inpatient_base_claims_j_06_16;
+data cumu.Inpatient_base_claims_j_06_17;
 set extract.Inpatient_base_claims_j_06 extract.Inpatient_base_claims_j_07 extract.Inpatient_base_claims_j_08 extract.Inpatient_base_claims_j_09 
 extract.Inpatient_base_claims_j_10 extract.Inpatient_base_claims_j_11 extract.Inpatient_base_claims_j_12 extract.Inpatient_base_claims_13 extract.Inpatient_base_claims_14
-extract.Inpatient_base_claims_15 extract.Inpatient_base_claims_16;
+extract.Inpatient_base_claims_15 extract.Inpatient_base_claims_16 extract.Inpatient_base_claims_k_17;
 format clm_from_dt date9. clm_thru_dt date9.;
 rename CLM_FROM_DT = admit_date;
 rename CLM_THRU_DT = disch_date;
 run;
 
-data cumu.Inpatient_condition_codes_06_16;
+data cumu.Inpatient_condition_codes_06_17;
 set extract.Inpatient_condition_codes_06 extract.Inpatient_condition_codes_07 extract.Inpatient_condition_codes_08
 extract.Inpatient_condition_codes_09 extract.Inpatient_condition_codes_10 extract.Inpatient_condition_codes_11
-extract.Inpatient_condition_codes_12 extract.Inpatient_condition_13 extract.Inpatient_condition_14 extract.Inpatient_condition_15 extract.Inpatient_condition_16;
+extract.Inpatient_condition_codes_12 extract.Inpatient_condition_13 extract.Inpatient_condition_14 extract.Inpatient_condition_15 extract.Inpatient_condition_16 extract.Inpatient_condition_codes_17;
 run;
 
-data cumu.Inpatient_occurrnce_codes_06_16;
+data cumu.Inpatient_occurrnce_codes_06_17;
 set extract.Inpatient_occurrnce_codes_06 extract.Inpatient_occurrnce_codes_07 extract.Inpatient_occurrnce_codes_08 extract.Inpatient_occurrnce_codes_09
 extract.Inpatient_occurrnce_codes_10 extract.Inpatient_occurrnce_codes_11 extract.Inpatient_occurrnce_codes_12 extract.Inpatient_occurrnce_13 
-extract.Inpatient_occurrnce_14 extract.Inpatient_occurrnce_15 extract.Inpatient_occurrnce_16;
+extract.Inpatient_occurrnce_14 extract.Inpatient_occurrnce_15 extract.Inpatient_occurrnce_16 extract.Inpatient_occurrnce_codes_17;
 run;
 
-data cumu.Inpatient_revenue_center_j_06_16;
+data cumu.Inpatient_revenue_center_j_06_17;
 set extract.Inpatient_revenue_center_j_06 extract.Inpatient_revenue_center_j_07 extract.Inpatient_revenue_center_j_08 extract.Inpatient_revenue_center_j_09
 extract.Inpatient_revenue_center_j_10 extract.Inpatient_revenue_center_j_11 extract.Inpatient_revenue_center_j_12 extract.Inpatient_revenue_center_13 extract.Inpatient_revenue_center_14
-extract.Inpatient_revenue_center_15 extract.Inpatient_revenue_center_16;
+extract.Inpatient_revenue_center_15 extract.Inpatient_revenue_center_16 extract.Inpatient_revenue_center_k_17;
 run;
 
-data cumu.Inpatient_span_codes_06_16;
+data cumu.Inpatient_span_codes_06_17;
 set extract.Inpatient_span_codes_06 extract.Inpatient_span_codes_07 extract.Inpatient_span_codes_08 extract.Inpatient_span_codes_09 
-extract.Inpatient_span_codes_10 extract.Inpatient_span_codes_11 extract.Inpatient_span_codes_12 extract.Inpatient_span_13 extract.Inpatient_span_14 extract.Inpatient_span_15 extract.Inpatient_span_16;
+extract.Inpatient_span_codes_10 extract.Inpatient_span_codes_11 extract.Inpatient_span_codes_12 extract.Inpatient_span_13 extract.Inpatient_span_14 extract.Inpatient_span_15 extract.Inpatient_span_16 extract.Inpatient_span_codes_17;
 run;
 
-data cumu.Inpatient_value_codes_06_16;
+data cumu.Inpatient_value_codes_06_17;
 set extract.Inpatient_value_codes_06 extract.Inpatient_value_codes_07 extract.Inpatient_value_codes_08 extract.Inpatient_value_codes_09
-extract.Inpatient_value_codes_10 extract.Inpatient_value_codes_11 extract.Inpatient_value_codes_12 extract.Inpatient_value_13 extract.Inpatient_value_14 extract.Inpatient_value_15 extract.Inpatient_value_16;
+extract.Inpatient_value_codes_10 extract.Inpatient_value_codes_11 extract.Inpatient_value_codes_12 extract.Inpatient_value_13 extract.Inpatient_value_14 extract.Inpatient_value_15 extract.Inpatient_value_16 extract.Inpatient_value_codes_17;
 run;
 
 /*hospice & outpatient*/
@@ -494,27 +516,27 @@ run;
 %let i = 1;
 %let var = %scan(&varlist,&i);
 %do %while(&var ne );
-data cumu.&var._base_claims_j_09_16;
-set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+data cumu.&var._base_claims_j_09_17;
+set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16 extract.&var._base_claims_k_17;
 format clm_from_dt date9. clm_thru_dt date9.;
 rename CLM_FROM_DT = admit_date;
 rename CLM_THRU_DT = disch_date;
 run;
-data cumu.&var._condition_codes_09_16;
+data cumu.&var._condition_codes_09_17;
 set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
-extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16 extract.&var._condition_codes_17;
 run;
-data cumu.&var._occur_codes_09_16;
-set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+data cumu.&var._occur_codes_09_17;
+set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16 extract.&var._occurrnce_codes_17;
 run;
-data cumu.&var._rev_center_j_09_16;
-set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+data cumu.&var._rev_center_j_09_17;
+set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16 extract.&var._revenue_center_k_17;
 run;
-data cumu.&var._span_codes_09_16;
-set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+data cumu.&var._span_codes_09_17;
+set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16 extract.&var._span_codes_17;
 run;
-data cumu.&var._value_codes_09_16;
-set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+data cumu.&var._value_codes_09_17;
+set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16 extract.&var._value_codes_17;
 run;
 %let i = %eval(&i + 1);
 %let var = %scan(&varlist, &i);
@@ -529,38 +551,38 @@ run;
 %let i = 1;
 %let var = %scan(&varlist,&i);
 %do %while(&var ne );
-data cumu.&var._base_claims_j_09_16;
+data cumu.&var._base_claims_j_09_17;
 set extract.&var._base_claims_j_09 extract.&var._base_claims_j_10 extract.&var._base_claims_j_11 extract.&var._base_claims_j_12 
-extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16;
+extract.&var._base_claims_13 extract.&var._base_claims_14 extract.&var._base_claims_15 extract.&var._base_claims_16 extract.&var._base_claims_k_17;
 format clm_from_dt date9. clm_thru_dt date9.;
 rename CLM_FROM_DT = admit_date;
 rename CLM_THRU_DT = disch_date;
 run;
 %if &var = Hha %then %do;
-data cumu.&var._assess_summary_09_16;
+data cumu.&var._assess_summary_09_17;
 set extract.&var._assessment_summary_09 extract.&var._assessment_summary_10 extract.&var._assessment_summary_11
-extract.&var._assessment_summary_12 extract.&var._assessment_13 extract.&var._assessment_14 extract.&var._assessment_15 extract.&var._assessment_16;
+extract.&var._assessment_summary_12 extract.&var._assessment_13 extract.&var._assessment_14 extract.&var._assessment_15 extract.&var._assessment_16 extract.&var._assessment_summary_17;
 run;
 %end;
-data cumu.&var._condition_codes_09_16;
+data cumu.&var._condition_codes_09_17;
 set extract.&var._condition_codes_09 extract.&var._condition_codes_10 extract.&var._condition_codes_11
-extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16;
+extract.&var._condition_codes_12 extract.&var._condition_13 extract.&var._condition_14 extract.&var._condition_15 extract.&var._condition_16 extract.&var._condition_codes_17;
 run;
-data cumu.&var._occur_codes_09_16;
+data cumu.&var._occur_codes_09_17;
 set extract.&var._occurrnce_codes_09 extract.&var._occurrnce_codes_10 extract.&var._occurrnce_codes_11 
-extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16;
+extract.&var._occurrnce_codes_12 extract.&var._occurrnce_13 extract.&var._occurrnce_14 extract.&var._occurrnce_15 extract.&var._occurrnce_16 extract.&var._occurrnce_codes_17;
 run;
-data cumu.&var._rev_center_j_09_16;
+data cumu.&var._rev_center_j_09_17;
 set extract.&var._revenue_center_j_09 extract.&var._revenue_center_j_10 extract.&var._revenue_center_j_11 
-extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16;
+extract.&var._revenue_center_j_12 extract.&var._revenue_center_13 extract.&var._revenue_center_14 extract.&var._revenue_center_15 extract.&var._revenue_center_16 extract.&var._revenue_center_k_17;
 run;
-data cumu.&var._span_codes_09_16;
+data cumu.&var._span_codes_09_17;
 set extract.&var._span_codes_09 extract.&var._span_codes_10 extract.&var._span_codes_11 
-extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16;
+extract.&var._span_codes_12 extract.&var._span_13 extract.&var._span_14 extract.&var._span_15 extract.&var._span_16 extract.&var._span_codes_17;
 run;
-data cumu.&var._value_codes_09_16;
+data cumu.&var._value_codes_09_17;
 set extract.&var._value_codes_09 extract.&var._value_codes_10 extract.&var._value_codes_11 
-extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16;
+extract.&var._value_codes_12 extract.&var._value_13 extract.&var._value_14 extract.&var._value_15 extract.&var._value_16 extract.&var._value_codes_17;
 run;
 %let i = %eval(&i + 1);
 %let var = %scan(&varlist, &i);
@@ -575,16 +597,16 @@ run;
 %let i = 1;
 %let var1 = %scan(&varlist1,&i);
 %do %while(&var1 ne );
-data cumu.&var1._claims_j_09_16;
+data cumu.&var1._claims_j_09_17;
 set extract.&var1._claims_j_09 extract.&var1._claims_j_10 extract.&var1._claims_j_11 
-extract.&var1._claims_j_12 extract.&var1._claims_13 extract.&var1._claims_14 extract.&var1._claims_15 extract.&var1._claims_16;
+extract.&var1._claims_j_12 extract.&var1._claims_13 extract.&var1._claims_14 extract.&var1._claims_15 extract.&var1._claims_16 extract.&var1._claims_k_17;
 format clm_from_dt date9. clm_thru_dt date9.;
 rename CLM_FROM_DT = admit_date;
 rename CLM_THRU_DT = disch_date;
 run;
-data cumu.&var1._line_j_09_16;
+data cumu.&var1._line_j_09_17;
 set extract.&var1._line_j_09 extract.&var1._line_j_10 extract.&var1._line_j_11
-extract.&var1._line_j_12 extract.&var1._line_13 extract.&var1._line_14 extract.&var1._line_15 extract.&var1._line_16;
+extract.&var1._line_j_12 extract.&var1._line_13 extract.&var1._line_14 extract.&var1._line_15 extract.&var1._line_16 extract.&var1._line_k_17;
 run;
 %let i = %eval(&i + 1);
 %let var1 = %scan(&varlist1, &i);
@@ -594,11 +616,11 @@ run;
 
 /*ip*/
 data ip;
-set cumu.inpatient_base_claims_j_06_16;
+set cumu.inpatient_base_claims_j_06_17;
 run;
 
 data ip_rc;
-set cumu.inpatient_revenue_center_j_06_16(keep=bene_id clm_id hcpcs_cd clm_line_num);
+set cumu.inpatient_revenue_center_j_06_17(keep=bene_id clm_id hcpcs_cd clm_line_num);
 run;
 
 proc sort data=ip_rc;
@@ -611,7 +633,7 @@ var hcpcs_cd;
 run;
 
 proc sql;
-create table cumu.ip_09_16 as select *
+create table cumu.ip_09_17 as select *
 from ip a
 left join
 ip_rc_wide b 
@@ -620,17 +642,17 @@ quit;
 
 
 /*snf*/
-data cumu.snf_09_16;
-set cumu.snf_base_claims_j_09_16;
+data cumu.snf_09_17;
+set cumu.snf_base_claims_j_09_17;
 run;
 
 /*op*/
-data op_09_14;
-set cumu.outpatient_base_claims_j_09_16;
+data op_09_17;
+set cumu.outpatient_base_claims_j_09_17;
 run;
 
 data op_rev;
-set cumu.outpatient_rev_center_j_09_16(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
+set cumu.outpatient_rev_center_j_09_17(keep=bene_id clm_id rev_cntr_dt rev_cntr rev_cntr_unit_cnt hcpcs_cd);
 if rev_cntr='0762' then obs_stay1=1;
 if rev_cntr='0760' and rev_cntr_unit_cnt>=8 then poss_obs_stay1=1;
 run;
@@ -658,7 +680,7 @@ run;
 
 proc sql;
 create table op_09_142 as select *
-from op_09_14 a 
+from op_09_17 a 
 left join op_rev_wide1 b
 on a.bene_id=b.bene_id and a.clm_id=b.clm_id
 left join op_rev_wide2 c
@@ -667,7 +689,7 @@ left join op_rev_wide3 d
 on a.bene_id=d.bene_id and a.clm_id=d.clm_id;
 quit;
 
-data cumu.op_09_16;
+data cumu.op_09_17;
 set op_09_142;
 array list icd_prcdr_cd1-icd_prcdr_cd25;
 do over list;
@@ -677,12 +699,12 @@ run;
 
  
 /*pb*/
-data pb_09_14;
-set cumu.bcarrier_claims_j_09_16;
+data pb_09_17;
+set cumu.bcarrier_claims_j_09_17;
 run;
 
 data pb_line;
-set cumu.bcarrier_line_j_09_16 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd LINE_PLACE_OF_SRVC_CD);
+set cumu.bcarrier_line_j_09_17 (keep=bene_id clm_id hcpcs_cd line_1st_expns_dt betos_cd LINE_PLACE_OF_SRVC_CD);
 run;
 
 /* proc export data=merged.pb_09_14 outfile="E:\nhats\data\CMS_DUA_28016\merged stata\pb_09_14.dta" replace; run; */
@@ -710,8 +732,8 @@ by bene_id clm_id;
 var LINE_PLACE_OF_SRVC_CD;
 run;
 proc sql;
-create table cumu.pb_09_16 as select *
-from pb_09_14 a 
+create table cumu.pb_09_17 as select *
+from pb_09_17 a 
 left join pb_line_wide1 b
 on a.bene_id=b.bene_id and a.clm_id=b.clm_id
 left join pb_line_wide2 c
@@ -723,31 +745,31 @@ on a.bene_id=e.bene_id and a.clm_id=e.clm_id;
 quit;
 
 /*hh*/
-data cumu.hh_09_16;
-set cumu.hha_base_claims_j_09_16;
+data cumu.hh_09_17;
+set cumu.hha_base_claims_j_09_17;
 run;
 
 /*hs*/
-data cumu.hs_09_16;
-set cumu.hospice_base_claims_j_09_16;
+data cumu.hs_09_17;
+set cumu.hospice_base_claims_j_09_17;
 run;
 
 /*dm*/
 data dm_base;
-set cumu.dme_claims_j_09_16;
+set cumu.dme_claims_j_09_17;
 run;
 
 data dm_line(keep=bene_id clm_id home_oxygen);
-set cumu.dme_line_j_09_16;
+set cumu.dme_line_j_09_17;
 if betos_cd='D1C' then home_oxygen=1;
 if betos_cd~='D1C' then home_oxygen=0;
 run;
 
-proc sort data=cumu.dme_line_j_09_16 out=dme_line_j_09_16;
+proc sort data=cumu.dme_line_j_09_17 out=dme_line_j_09_17;
 by bene_id clm_id;
 run;
 
-proc transpose data=dme_line_j_09_16 out=dm_line_wide1 prefix=hcpcscd;
+proc transpose data=dme_line_j_09_17 out=dm_line_wide1 prefix=hcpcscd;
 by bene_id clm_id;
 var hcpcs_cd;
 run;
@@ -761,7 +783,7 @@ group by bene_id, clm_id;
 quit;
 
 proc sql;
-create table cumu.dm_09_16 as select *
+create table cumu.dm_09_17 as select *
 from dm_base a 
 left join 
 line b
@@ -773,8 +795,8 @@ quit;
 
 
 
-data cumu.mbsf_06_16;
-set cumu.mbsf_ab_summary_06_16;
+data cumu.mbsf_06_17;
+set cumu.mbsf_ab_summary_06_17;
 HMOIND12=BENE_HMO_IND_01||BENE_HMO_IND_02||BENE_HMO_IND_03||BENE_HMO_IND_04||BENE_HMO_IND_05||
 BENE_HMO_IND_06||BENE_HMO_IND_07||BENE_HMO_IND_08||BENE_HMO_IND_09||BENE_HMO_IND_10||BENE_HMO_IND_11||BENE_HMO_IND_12;
 BUYIN12=BENE_MDCR_ENTLMT_BUYIN_IND_01||BENE_MDCR_ENTLMT_BUYIN_IND_02||BENE_MDCR_ENTLMT_BUYIN_IND_03||

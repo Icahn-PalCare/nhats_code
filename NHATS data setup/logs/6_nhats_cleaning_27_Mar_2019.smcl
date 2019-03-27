@@ -1,0 +1,625 @@
+--------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\6_nhats_cleaning_27_Mar_2
+> 019.smcl
+  log type:  text
+ opened on:  27 Mar 2019, 13:05:44
+
+. 
+. 
+. 
+. *********************************************
+. 
+. 
+. //Pull dates from restricted tracker
+. use "E:\nhats\data\NHATS Restricted\NHATS Round 7 Tracker Restricted STATA\NHA
+> TS_Round_7_Tracker_Restricted.dta", clear
+
+. keep spid r*spstatdtdy
+
+. rename r*spstatdtdy spstatdtdy*
+
+. reshape long spstatdtdy, i(spid) j(wave)
+(note: j = 1 2 3 4 5 6 7)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                    19530   ->  136710
+Number of variables                   8   ->       3
+j variable (7 values)                     ->   wave
+xij variables:
+spstatdtdy1 spstatdtdy2 ... spstatdtdy7   ->   spstatdtdy
+-----------------------------------------------------------------------------
+
+. tempfile resttrack
+
+. save `resttrack'
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000001.tmp saved
+
+. 
+. //Does not need to change, unless get new metro file. 
+. 
+. //7/13/17--add in metro/nonmetro var
+. use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_
+> 6_MetNonmet.dta", clear
+
+. forvalues w=1/6 {
+  2. gen metro_ind`w'=r`w'd==1 if inrange(r`w'd,1,2)
+  3. }
+(4,182 missing values generated)
+(5,352 missing values generated)
+(6,628 missing values generated)
+(7,690 missing values generated)
+(4,093 missing values generated)
+(5,151 missing values generated)
+
+. reshape long metro_ind, i(spid) j(wave)
+(note: j = 1 2 3 4 5 6)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                    12427   ->   74562
+Number of variables                  13   ->       9
+j variable (6 values)                     ->   wave
+xij variables:
+   metro_ind1 metro_ind2 ... metro_ind6   ->   metro_ind
+-----------------------------------------------------------------------------
+
+. label var metro_ind "Lives in metropolitan area"
+
+. note metro_ind: From metro non-metro file, r(wave)dmetnomet raw variable. 
+
+. 
+. label define metro_ind  0 "Non-Metro" 1 "Metro" 
+
+. label values metro_ind metro_ind
+
+. 
+. tempfile metro
+
+. save `metro'
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_27c980_000002.tmp saved
+
+. 
+. cd "${work}"
+E:\nhats\data\NHATS working data
+
+. 
+. use round_1_$w_clean_helper_added.dta
+
+. merge 1:1 spid wave using `metro', keep(match master) nogen
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         6,312
+        from master                     6,312  
+        from using                          0  
+
+    matched                            41,466  
+    -----------------------------------------
+
+. 
+. 
+. // 3/21/2019--Adding LM questions from LML interview section, P01 Aldridge
+. 
+. gen qoc_lml_e=.
+(47,778 missing values generated)
+
+. replace qoc_lml_e=1 if ratecare==1
+(1,317 real changes made)
+
+. replace qoc_lml_e=0 if inrange(ratecare,2,5)
+(1,259 real changes made)
+
+. note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+
+> ) 
+
+. note qoc_lml_e: Located in NHATS Setup, under Part 7.
+
+. note qoc_lml_e: Created: 3/21/19-MH  
+
+. /*
+> gen qoc_lml=ratecare
+> replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
+> */
+. 
+. foreach x in pain bre sad{
+  2. gen unmet_`x'_lml=.
+  3. replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
+  4. replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'
+> hlpam==1)  
+  5. }
+(47,778 missing values generated)
+(2,403 real changes made)
+(270 real changes made)
+(47,778 missing values generated)
+(2,443 real changes made)
+(190 real changes made)
+(47,778 missing values generated)
+(2,334 real changes made)
+(432 real changes made)
+
+. note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, L
+> M1B (Waves 2+) 
+
+. note unmet_pain_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_pain_lml: Created: 3/21/19-MH  
+
+. 
+. note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming fro
+> m LM2, LM2A, LM2B (Waves 2+) 
+
+. note unmet_bre_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_bre_lml: Created: 3/21/19-MH  
+
+. 
+. note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from 
+> LM3, LM3A, LM3B (Waves 2+) 
+
+. note unmet_sad_lml: Located in NHATS Setup, under Part 7.
+
+. note unmet_sad_lml: Created: 3/21/19-MH  
+
+. 
+. foreach x in respect informed{
+  2. gen `x'_lml=.
+  3. replace `x'_lml=0 if inrange(`x', 1, 4)
+  4. replace `x'_lml=1 if inrange(`x', 2,4)
+  5. }
+(47,778 missing values generated)
+(2,558 real changes made)
+(273 real changes made)
+(47,778 missing values generated)
+(2,552 real changes made)
+(430 real changes made)
+
+. 
+. note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
+
+. note respect_lml: Located in NHATS Setup, under Part 7.
+
+. note respect_lml: Created: 3/21/19-MH  
+
+. 
+. note informed_lml: Family not always informed for individuals condition. Comin
+> g from LM8 (Waves 2+) 
+
+. note informed_lml: Located in NHATS Setup, under Part 7.
+
+. note informed_lml: Created: 3/21/19-MH  
+
+. 
+. foreach x in caredecis carenowan{
+  2. gen `x'_lml=. 
+  3. replace `x'_lml=0 if inlist(`x', 1, 2)
+  4. replace `x'_lml=1 if `x'==1
+  5. }
+(47,778 missing values generated)
+(2,499 real changes made)
+(182 real changes made)
+(47,778 missing values generated)
+(2,493 real changes made)
+(231 real changes made)
+
+. 
+. note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Wa
+> ves 2+) 
+
+. note caredecis_lml: Located in NHATS Setup, under Part 7.
+
+. note caredecis_lml: Created: 3/21/19-MH  
+
+. 
+. note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from
+>  LM5 (Waves 2+) 
+
+. note carenowan_lml: Located in NHATS Setup, under Part 7.
+
+. note carenowan_lml: Created: 3/21/19-MH  
+
+. 
+. 
+. //1/28/2019-Advance Care Planning based off of Ornstein instructions
+. 
+. gen no_acp=0
+
+. replace no_acp=1 if inlist(eoltalk, 2, -8, -7) & inlist(poweratty, 2, -7, -8) 
+> & inlist(livngwill, 2, -7, -8)
+(580 real changes made)
+
+. replace no_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) 
+> | inlist(livngwill, -1, -9, .) 
+(45,763 real changes made, 45,763 to missing)
+
+. note no_acp: Only in Rd2. no_acp=1 if eoltalk=2,-7,-8 & poweratty=2,-7,-8 & li
+> vingwill=2,-7,-8. 
+
+. note no_acp: No Advance Care Planning based off of talk about EOL care, legal 
+> arrangements, and living will all being no. 
+
+. note no_acp: Located in NHATS Setup, under Part 7.
+
+. note no_acp: Created: 1/28/19-MH 
+
+. 
+. gen formal_acp=0
+
+. replace formal_acp=1 if inlist(eoltalk, 2, -8, -7) & (poweratty==1 | livngwill
+> ==1)
+(279 real changes made)
+
+. replace formal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9,
+>  .) | inlist(livngwill, -1, -9, .) 
+(45,763 real changes made, 45,763 to missing)
+
+. note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 |
+>  livingwill=1)
+
+. note formal_acp: Formal Advance Care Planning based off of not talking about E
+> OL care and either having ///
+> having legal arrangements or having a living will.
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 1/28/19-MH 
+
+. 
+. gen informal_acp=0
+
+. replace informal_acp=1 if eoltalk==1 & inlist(poweratty, 2, -7, -8) & inlist(l
+> ivngwill, 2, -7, -8)
+(243 real changes made)
+
+. replace informal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -
+> 9, .) | inlist(livngwill, -1, -9, .) 
+(45,763 real changes made, 45,763 to missing)
+
+. note informal_acp: Only in Rd2. informal_acp=1 if eoltalk=1 & poweratty=2,-7,-
+> 8 & livingwill=2,-7,-8
+
+. note informal_acp: Informal Advance Care Planning based off of talking about E
+> OL care and not having ///
+> having legal arrangements and not having a living will.
+
+. note informal_acp: Located in NHATS Setup, under Part 7.
+
+. note informal_acp: Created: 1/28/19-MH 
+
+. 
+. gen acp=0
+
+. replace acp=1 if eoltalk==1 & (poweratty==1 | livngwill==1)
+(913 real changes made)
+
+. replace acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | i
+> nlist(livngwill, -1, -9, .)
+(45,763 real changes made, 45,763 to missing)
+
+. note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 |
+>  livingwill=1)
+
+. note formal_acp: Formal Advance Care Planning based off of not talking about E
+> OL care and either having ///
+> having legal arrangements or having a living will.
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 1/28/19-MH
+
+. 
+. 
+. label var no_acp "No Advance care planning, 1=yes"
+
+. label var formal_acp "Formal Advance care planning, 1=yes"
+
+. label var informal_acp "Informal Advance care planning, 1=yes"
+
+. label var acp "Advance care planning (Formal & Informal), 1=yes"
+
+. label define acp  0 "No" 1 "Yes" 
+
+. foreach x in no_acp formal_acp informal_acp acp {
+  2. label values `x' acp
+  3. }
+
+. 
+. 
+. foreach x in no_acp formal_acp informal_acp acp {
+  2. tab `x' if wave==2 , m
+  3. }
+
+ No Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,435       20.28       20.28
+        Yes |        580        8.20       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+     Formal |
+    Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,736       24.54       24.54
+        Yes |        279        3.94       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+   Informal |
+    Advance |
+       care |
+  planning, |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,772       25.05       25.05
+        Yes |        243        3.43       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+    Advance |
+       care |
+   planning |
+  (Formal & |
+ Informal), |
+      1=yes |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      1,102       15.58       15.58
+        Yes |        913       12.90       28.48
+          . |      5,060       71.52      100.00
+------------+-----------------------------------
+      Total |      7,075      100.00
+
+. 
+. // 8/10/2018 Add in 2011 weight for rd 5,6 
+. rename an2011wgt0 an2011wgt 
+
+. label var an2011wgt "2011 weights"
+
+. note an2011wgt: an2011wgt0
+
+. note an2011wgt: Analytic Weight for 2011 cohort, for rounds 5+
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 8/10/18-MH
+
+. 
+. 
+. rename trfinwgt0 trfinwgt
+
+. rename tr2011wgt0 tr2011wgt
+
+. 
+. //Add in 7/3/18
+. 
+. foreach w in 1 5{
+  2.         replace serarmfor=1 if serarmfor==1 & wave==`w'
+  3.         replace serarmfor=0 if serarmfor==2 & wave==`w'
+  4.         replace serarmfor=. if serarmfor==-7 & wave==`w'
+  5.         replace serarmfor=. if serarmfor==-8 & wave==`w'
+  6. }
+(0 real changes made)
+(5,740 real changes made)
+(7 real changes made, 7 to missing)
+(74 real changes made, 74 to missing)
+(0 real changes made)
+(5,661 real changes made)
+(4 real changes made, 4 to missing)
+(185 real changes made, 185 to missing)
+
+. label var serarmfor "Served in Armed Forces"
+
+. sort spid wave
+
+. by spid: carryforward serarmfor, replace
+serarmfor:  (30900 real changes made)
+
+. notes drop serarmfor
+  (1 note dropped)
+
+. note serarmfor: Asked in rounds 1,5. Used serarmfor to find. 
+
+. note serarmfor: Served in Arm Forces variable, carried previous value to new w
+> ave. 
+
+. note formal_acp: Located in NHATS Setup, under Part 7.
+
+. note formal_acp: Created: 7/3/18-MH
+
+. 
+. 
+. //Add in 4/6/18
+. label var dresslf "Often you Dress Yourself"
+
+. 
+. label var dresdif "Difficulty when using Special Items by Self"
+
+. 
+. label var ntlvrmslp "Often had to Stay in Bed"
+
+. 
+. label var eatdev "Ever use Adapted Utensils"
+
+. 
+. 
+. ////// 4/2/2018--Adding in income quartile
+> sort wave
+
+. forvalues w=1/$w {
+  2. xtile income_quart`w'=aveincome [aw=anfinwgt0] if wave==`w', nq(4) 
+  3. }
+
+. egen income_quart=rowmax(income_quart*)
+(3517 missing values generated)
+
+. 
+. forvalues w=1/$w{
+  2. drop income_quart`w'
+  3. }
+
+. 
+. note income_quart: Use aveincome to create variable.  
+
+. note income_quart: Create an income quartile measure. Weighted. 
+
+. note income_quart: Located in NHATS Setup, under Part 7.
+
+. note income_quart: Created: 4/2/18-MH
+
+. 
+. label var income_quart "Quartile of Income"
+
+. label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
+
+. label values income_quart income_quart
+
+. 
+. ///// 3/26/18 --Adding in Hospice and place died variables.
+> 
+. label var placedied "Place of Death"
+
+. replace placedied=. if inlist(placedied,-1,-8)
+(36,872 real changes made, 36,872 to missing)
+
+. replace placedied=6 if placedied==91
+(85 real changes made)
+
+. note placedied: placedied (6=91) (.=-1,-8) all else the same.   
+
+. note placedied: Place died variable from LML interview. 
+
+. note placedied: Located in NHATS Setup, under Part 7.
+
+. note placedied: Created: 3/26/18-MH
+
+. 
+. replace hospice2=. if inlist(hospice2,-1,-8) 
+(39,325 real changes made, 39,325 to missing)
+
+. note hospice2: hospice2 variable, (.=-1,-1)
+
+. note hospice2: Hospice at other place, list.
+
+. note hospice2: Located in NHATS Setup, under Part 7.
+
+. note hospice2: Created: 3/26/18-MH
+
+. 
+. rename hospcelml hospicelml
+
+. foreach x in hospice1 hospicelml {
+  2. replace `x'=. if inlist(`x',-1,-8)
+  3. replace `x'=0 if `x'==2
+  4. } 
+(38,761 real changes made, 38,761 to missing)
+(569 real changes made)
+(30,754 real changes made, 30,754 to missing)
+(972 real changes made)
+
+. 
+. note hospice1: hospice1 variable (0=2) (.=-1,-8)
+
+. note hospice1: Hospice at Nursing Home.
+
+. note hospice1: Located in NHATS Setup, under Part 7.
+
+. note hospice1: Created: 3/26/18-MH
+
+. 
+. note hospicelml: hospicelml variable (0=2) (.=-1,-8)
+
+. note hospicelml: Hospice at other place, list.
+
+. note hospicelml: Located in NHATS Setup, under Part 7.
+
+. note hospicelml: Created: 3/26/18-MH
+
+.  
+. label var hospice1 "Hopsice at Nursing Home"
+
+. label var hospice2 "Hospice Other Place"
+
+. label var hospicelml "Hospice Care in Last Month"
+
+.  
+.  
+. ///// 3/14/18 --Adding in Frailty underlying series
+> 
+. //activities done twice (grip test, walk test..)
+. 
+. forvalues i=1/2{
+  2. capture drop gripsc`i'
+  3. rename grp`i'rdng gripsc`i'
+  4. rename wlkc`i'secs walksec`i'
+  5. rename wlk`i'hndr walkhndr`i'
+  6. 
+. replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
+  7. replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
+  8. replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
+  9. }
+(12,833 real changes made, 12,833 to missing)
+(12,985 real changes made, 12,985 to missing)
+(13,083 real changes made, 13,083 to missing)
+(12,915 real changes made, 12,915 to missing)
+(13,044 real changes made, 13,044 to missing)
+(13,142 real changes made, 13,142 to missing)
+
+. 
+. label var gripsc1 "GRP1 Display Reading"
+
+. label var gripsc2 "GRP2 Display Reading"
+
+. label var walksec1 "Secs Hld Walking Course1"
+
+. label var walksec2 "Secs Hld Walking Course2"
+
+. label var walkhndr1 "Hnrds Hld Walking Course1"
+
+. label var walkhndr2 "Hnrds Hld Walking Course2"
+
+. 
+. foreach y in gripsc walksec walkhndr{
+  2. foreach x in 1 2{
+  3. note `y'`x': `y'`x' (.=-1,-7,-8,-9)
+  4. 
+. if "`y'"=="gripsc"{
+  5. note gripsc`x': Grip Strength `x' Reading 
+  6. }
+  7. else if "`y'"=="walksec"{
+  8. note walksec`x': Walking Course Completion in Seconds place `x' Reading 
+  9. }
+ 10. else if "`y'"=="walkhndr"{
+ 11. note walkhndr`x': Walking Course Completion Hundredths place `x' Reading
+ 12. }
+ 13. note `y'`x': Located in NHATS Setup, under Part 7.
+ 14. note `y'`x': Created: 3/14/18-MH
+ 15. }
+ 16. }
+
+. 
+end of do-file
+
+. tab dorigwksc
+
+  R1 D ORIGINAL |
+     WALK SCORE |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+     -9 Missing |      2,401        5.03        5.03
+-1 Inapplicable |      5,640       11.80       16.83
+              0 |      5,003       10.47       27.30
+              1 |      5,528       11.57       38.87
+              2 |      7,653       16.02       54.89
+              3 |      9,406       19.69       74.58
+              4 |     12,147       25.42      100.00
+----------------+-----------------------------------
+          Total |     47,778      100.00
+
