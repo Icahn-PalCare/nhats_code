@@ -5891,7 +5891,7 @@ tempfile metro
 save `metro'
 
 cd "`work'"
-use round_1_6_clean_helper_added.dta
+use round_1_7_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
 
@@ -6019,7 +6019,7 @@ gen non_proxy=0 if proxy_ivw==1
 replace non_proxy=1 if proxy_ivw==0
 label var non_proxy "Non-Proxy Interview"
 
-mat tab=J(6,1,.)
+mat tab=J(5,1,.)
 local r=1
 
 foreach x in `vars' {
@@ -6034,7 +6034,7 @@ mat rownames tab=`vars'
 frmttable using "`logpath'function.rtf", statmat(tab) replace title("Sample Derivation") ///
 sdec(0) varlabels
 
-use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & proxy_ivw==0, clear 
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
 //& !missing(adl_index), clear
 foreach x of varlist device* {
 	local device `device' `x'
@@ -6126,7 +6126,17 @@ label var fri_oxy "Any mobility indcator or oxygen from DME"
 gen bed_or_chair=bed==1 | chair==1
 label var bed_or_chair "Hospital bed or wheelchair from DME"
 
+gen bco=. 
+replace bco=0 if bed==0 & chair==0 & oxy==0
+replace bco=1 if bed==1 | chair==1 | oxy==1
+label var bco "Hospital bed or wheelchair or Oxygen from DME"
 
+gen cub=.
+replace cub=0 if commode==0 & urinal==0 & bedpan==0
+replace cub=1 if commode==1 | urinal==1 | bedpan==1
+label var cub "Commode or Urinal or Bedpan from DME"
+
+local dme cane walker caneorwalker cub commode urinal bedpan tub_toil_dev lift bed chair bco
 
 /* table 1
 demographics, by SR ADL impairment*/
@@ -6254,10 +6264,11 @@ NPV=No indicator or ADL/All non-indicator
 C-statistic=AUC
 */
 
+
 //note--3/7/18--added indicator of 2 and/or 3
 local vars `dme' bed_or_chair ind_fri mult_fri oxy ind_snf_12m ind_hh_12m ///
 ind_snf_or_hh_12m ///
-fri_hh_snf fri_oxy hh_snf_oxy fri_hh_snf_oxy ind_2 ind_3
+fri_hh_snf fri_oxy hh_snf_oxy fri_hh_snf_oxy ind_2 ind_3 bco
 
 local rn : word count `vars' 1 1 
 
@@ -7075,7 +7086,7 @@ gen non_proxy=0 if proxy_ivw==1
 replace non_proxy=1 if proxy_ivw==0
 label var non_proxy "Non-Proxy Interview"
 
-mat tab=J(6,1,.)
+mat tab=J(5,1,.)
 local r=1
 
 foreach x in `vars' {
@@ -7093,7 +7104,7 @@ sdec(0) varlabels
 frmttable using "`logpath'table_adl.rtf", statmat(tab) replace title("Sample Derivation") ///
 sdec(0) varlabels
 
-use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1 & proxy_ivw==0, clear 
+use serious_ill_nhats_sample if wave==1 & sp_ivw==1 & ffs_12m==1, clear 
 //& !missing(adl_index), clear
 foreach x of varlist device* {
 	local device `device' `x'

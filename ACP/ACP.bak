@@ -1789,13 +1789,13 @@ H="NHATS MLOGIT 3 model"
 /*
 
 Created by: Mohammed 
-Date Created: 03/07/2019
+Date Created: 03/25/2019
 
 Updated by: MH
-Date Updated: 03/29/2019
+Date Updated: 04/01/2019
 
-Description: Multinomial Logit model with base being no ACP
-
+Description: Multinomial Logit model with base being no ACP. 3 different model 
+specifications created. 
 
 
 **************************************************
@@ -1901,14 +1901,14 @@ replace non_white=1 if white==0
 gen lninc=ln(aveincome)
 
 local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso srh_fp
+married soc_iso ind_kids srh_fp
 
 mlogit cat `vars', rrr b(2) 
 
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. 
+ownhome!=. & srh_fp!=. & ind_kids!=.
 local `x'=`r(N)'
 }
 
@@ -1918,14 +1918,14 @@ title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No
 
 
 local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso srh_fp sr_hosp_ind
+married soc_iso ind_kids srh_fp sr_hosp_ind
 
 mlogit cat `vars', rrr b(2) 
 
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=.
+ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & ind_kids!=.
 local `x'=`r(N)'
 }
 
@@ -1936,14 +1936,14 @@ title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No
 
 
 local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso srh_fp sr_hosp_ind sr_phq2_depressed sr_gad2_anxiety
+married soc_iso ind_kids srh_fp sr_hosp_ind sr_phq2_depressed sr_gad2_anxiety
 
 mlogit cat `vars', rrr b(2) 
 
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_phq2_depressed!=. & sr_gad2_anxiety!=.
+ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_phq2_depressed!=. & sr_gad2_anxiety!=. & ind_kids!=.
 local `x'=`r(N)'
 }
 
@@ -1957,12 +1957,13 @@ H="HRS MLOGIT 3 model "
 /*
 
 Created by: Mohammed 
-Date Created: 01/31/2019
+Date Created: 03/25/2019
 
 Updated by: MH
-Date Updated: 03/29/2019
+Date Updated: 04/01/2019
 
-Description: Inital exploration, data cleaning, table creation.
+Description: Multinomial Logit model with base being no ACP. 3 different model 
+specifications created. 
 
 
 
@@ -2206,7 +2207,7 @@ replace non_white=0 if white==1
 replace non_white=1 if white==0
 
 local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-srh_pf 
+living_kids_ind srh_pf 
 
 
 mlogit cat `vars', b(2) rr
@@ -2214,7 +2215,7 @@ mlogit cat `vars', b(2) rr
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & cat!=. & lnassets!=. & non_white!=. & srh_pf!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=. 
+& live_alone!=. & soc_visit!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2224,14 +2225,14 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 
 
 local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-srh_pf hosp_last_2yr
+living_kids_ind srh_pf hosp_last_2yr
 
 mlogit cat `vars', b(2) rr
 
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=. 
+& live_alone!=. & soc_visit!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2241,14 +2242,14 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 
 
 local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-srh_pf hosp_last_2yr cesd_tot_ge3_n consc neuro 
+living_kids_ind srh_pf hosp_last_2yr cesd_tot_ge3_n consc neuro 
 
 mlogit cat `vars', b(2) rr
 
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=.
+& live_alone!=. & soc_visit!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2267,7 +2268,7 @@ H="Changelog"
 Updates:
 03/29/2019 MH
 ------------
-Adding in living children indicator variable. Reran tables and analysis.
+Adding in living children indicator variable. Added in different model specifications. Reran tables and analysis. 
 
 03/18/2019 MH
 ------------
