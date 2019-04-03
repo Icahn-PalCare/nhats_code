@@ -20,15 +20,20 @@ H="making file for date of first needing help"
 *clean up month of first disability-
 
 use "E:\nhats\data\Logs - NHATS setup\claire nhats setup files\pubnhats_1_6_raw.dta"
+*merge in 2017 data
+drop _merge
+merge 1:1 spid using "E:\nhats\data\NHATS Public\round_7\NHATS_Round_7_SP_File.dta", keepusing (dm7helpendmo dm7helpendyr ds7helpendmo ds7helpendyr ///
+dm7helpstmo dm7helpstyr ds7helpstmo ds7helpstyr)
 
 keep spid dm2helpstmo dm2helpstyr ds2helpstmo ds2helpstyr dm3helpstmo dm3helpstyr ds3helpstmo ds3helpstyr dm4helpstmo dm4helpstyr ds4helpstmo ds4helpstyr dm5helpstmo dm5helpstyr ds5helpstmo ds5helpstyr dm6helpstmo dm6helpstyr ds6helpstmo ds6helpstyr dm2helpendmo dm2helpendyr ds2helpendmo ds2helpendyr dm3helpendmo dm3helpendyr ds3helpendmo ds3helpendyr ///
 		dm4helpendmo dm4helpendyr ds4helpendmo ds4helpendyr dm5helpendmo dm5helpendyr ds5helpendmo ds5helpendyr  ///
-		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr
+		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr dm7helpendmo dm7helpendyr ds7helpendmo ds7helpendyr ///
+		dm7helpstmo dm7helpstyr ds7helpstmo ds7helpstyr
 
 *make missing if "inapplicable"
 foreach var of varlist dm2helpstmo dm2helpstyr ds2helpstmo ds2helpstyr dm3helpstmo dm3helpstyr ds3helpstmo ds3helpstyr dm4helpstmo dm4helpstyr ds4helpstmo ds4helpstyr dm5helpstmo dm5helpstyr ds5helpstmo ds5helpstyr dm6helpstmo dm6helpstyr ds6helpstmo ds6helpstyr dm2helpendmo dm2helpendyr ds2helpendmo ds2helpendyr dm3helpendmo dm3helpendyr ds3helpendmo ds3helpendyr ///
 		dm4helpendmo dm4helpendyr ds4helpendmo ds4helpendyr dm5helpendmo dm5helpendyr ds5helpendmo ds5helpendyr  ///
-		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr {
+		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr dm7helpstmo dm7helpstyr ds7helpstmo ds7helpstyr  dm7helpendmo dm7helpendyr ds7helpendmo ds7helpendyr {
 		replace `var'=. if `var'==-1
 		replace `var'=. if `var'==-9
 		replace `var'=. if `var'==-8
@@ -47,49 +52,54 @@ replace ds2helpendyr= 2012 if ds2helpendyr==2
 
 *make an indicator for never needing help
 gen indhelp=0 
-foreach var of varlist dm2helpstmo dm2helpstyr ds2helpstmo ds2helpstyr dm3helpstmo dm3helpstyr ds3helpstmo ds3helpstyr dm4helpstmo dm4helpstyr ds4helpstmo ds4helpstyr dm5helpstmo dm5helpstyr ds5helpstmo ds5helpstyr dm6helpstmo dm6helpstyr ds6helpstmo ds6helpstyr {
+foreach var of varlist dm2helpstmo dm2helpstyr ds2helpstmo ds2helpstyr dm3helpstmo dm3helpstyr ds3helpstmo ds3helpstyr ///
+dm4helpstmo dm4helpstyr ds4helpstmo ds4helpstyr dm5helpstmo dm5helpstyr ds5helpstmo ds5helpstyr dm6helpstmo dm6helpstyr ds6helpstmo ds6helpstyr ///
+dm7helpstmo dm7helpstyr ds7helpstmo ds7helpstyr{
 		replace indhelp=1 if `var'!=.
 		}
 		
 *drop people who never report a start date for help
 drop if indhelp==0
-*left with 3,147 observations
+*left with 3,631 observations
 
 *make an indicator for the people with a stop date
 gen indhelpstop=0 
 foreach var of varlist dm2helpendmo dm2helpendyr ds2helpendmo ds2helpendyr dm3helpendmo dm3helpendyr ds3helpendmo ds3helpendyr ///
 		dm4helpendmo dm4helpendyr ds4helpendmo ds4helpendyr dm5helpendmo dm5helpendyr ds5helpendmo ds5helpendyr  ///
-		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr {
+		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr dm7helpendmo dm7helpendyr ds7helpendmo ds7helpendyr {
 		replace indhelpstop=1 if `var'!=.
 		}
 		
 *turn the variables for dates of help starting into a date format
-foreach n of numlist 2 3 4 5 6 {
+foreach n of numlist 2 3 4 5 6 7 {
 gen dm`n'datehelp=mdy(dm`n'helpstmo, 1, dm`n'helpstyr)
 format dm`n'datehelp %td
 }
 
-foreach n of numlist 2 3 4 5 6 {
+foreach n of numlist 2 3 4 5 6 7 {
 gen ds`n'datehelp=mdy(ds`n'helpstmo, 1, ds`n'helpstyr)
 format ds`n'datehelp %td
 }
 
 *turn the variables for dates of help ending into a date format
-foreach n of numlist 2 3 4 5 6 {
+foreach n of numlist 2 3 4 5 6 7 {
 gen dm`n'datehelpend=mdy(dm`n'helpendmo, 1, dm`n'helpendyr)
 format dm`n'datehelpend %td
 }
 
-foreach n of numlist 2 3 4 5 6 {
+foreach n of numlist 2 3 4 5 6 7 {
 gen ds`n'datehelpend=mdy(ds`n'helpendmo, 1, ds`n'helpendyr)
 format ds`n'datehelpend %td
 }
 *drop the other date variables
 drop dm2helpstmo dm2helpstyr ds2helpstmo ds2helpstyr dm3helpstmo dm3helpstyr ds3helpstmo ds3helpstyr dm4helpstmo dm4helpstyr ds4helpstmo ds4helpstyr dm5helpstmo dm5helpstyr ds5helpstmo ds5helpstyr dm6helpstmo dm6helpstyr ds6helpstmo ds6helpstyr dm2helpendmo dm2helpendyr ds2helpendmo ds2helpendyr dm3helpendmo dm3helpendyr ds3helpendmo ds3helpendyr ///
 		dm4helpendmo dm4helpendyr ds4helpendmo ds4helpendyr dm5helpendmo dm5helpendyr ds5helpendmo ds5helpendyr  ///
-		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr
+		dm6helpendmo dm6helpendyr ds6helpendmo ds6helpendyr dm7helpendmo dm7helpendyr ds7helpendmo ds7helpendyr
 
-gen datefirsthelp= dm6datehelp 
+gen datefirsthelp= dm7datehelp 
+	replace datefirsthelp= ds7datehelp if ds7datehelp!=. & ds7datehelp<datefirsthelp
+	
+	replace datefirsthelp= dm6datehelp if dm6datehelp!=. & dm6datehelp<datefirsthelp
 	replace datefirsthelp= ds6datehelp if ds6datehelp!=. & ds6datehelp<datefirsthelp
 	
 	replace datefirsthelp= dm5datehelp if dm5datehelp!=. & dm5datehelp<datefirsthelp
@@ -106,21 +116,20 @@ gen datefirsthelp= dm6datehelp
 format datefirsthelp %td	
 
 drop if datefirsthelp==.
-*drops two observations: 10004347 and 10004340: one is a -7 (refused), another is missing the year of disability start- just has month
+*drops 4 observations: 10004347 and 10004340: one is a -7 (refused), another is missing the year of disability start- just has month
 
 *make a variable called repfirsthelp that is the wave of first reporting help
 gen repfirsthelp=.
-foreach n of numlist 2 3 4 5 6 {
+foreach n of numlist 2 3 4 5 6 7 {
 	replace repfirsthelp=`n' if datefirsthelp==dm`n'datehelp
 	replace repfirsthelp=`n' if datefirsthelp==ds`n'datehelp
 	}
 
 *make a variable called repsecondhelp that is the wave after the one first reporting help	
 	gen repsecondhelp=repfirsthelp+1
-	replace repsecondhelp=. if repsecondhelp==7
+	replace repsecondhelp=. if repsecondhelp==8
 
- save "E:\nhats\data\Projects\MA after disability\date of first disability.dta"
-
+ save "E:\nhats\data\Projects\MA after disability\date of first disability.dta", replace
 
 H="****THE NEXT 4 HEADINGS MAKES DATA FILE, ONLY DO ONCE***"
 
@@ -151,8 +160,8 @@ use "E:\nhats\data\20180625 NHATS CMS Data\merged stata\mbsf_06_16.dta"
 
 keep bene_id year bene_hmo_ind_01 bene_hmo_ind_02 bene_hmo_ind_03 bene_hmo_ind_04 bene_hmo_ind_05 bene_hmo_ind_06 bene_hmo_ind_07 bene_hmo_ind_08 bene_hmo_ind_09 bene_hmo_ind_10 bene_hmo_ind_11 bene_hmo_ind_12
 foreach var of varlist bene_hmo_ind_01 bene_hmo_ind_02 bene_hmo_ind_03 bene_hmo_ind_04 bene_hmo_ind_05 bene_hmo_ind_06 bene_hmo_ind_07 bene_hmo_ind_08 bene_hmo_ind_09 bene_hmo_ind_10 bene_hmo_ind_11 bene_hmo_ind_12 {
-recode `var'="0" if `var'=="4"
-recode `var'="1" if `var'=="C"
+replace `var'="0" if `var'=="4"
+replace `var'="1" if `var'=="C"
 }
 
 foreach x in 01 02 03 04 05 06 07 08 09 10 11 12 {
