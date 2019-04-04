@@ -623,3 +623,75 @@ end of do-file
 ----------------+-----------------------------------
           Total |     47,778      100.00
 
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD27c980_000000.tmp"
+
+. /* 
+> ********************HEADING******************** 
+> 
+> Project Name: NHATS Setup
+> 
+> Date Started: 
+> 
+> Primary Investigator:
+> Funding Source:
+> 
+> Created by: Many Authors
+> 
+> Primary Analyst:
+> Secondary Analyst:
+> 
+> Datasets Used: NHATS Raw public, sensitive, metro, and NSOC
+> 
+> Simple Outline: NHATS data cleanup, variable creation. 
+> 
+> 
+> */
+.  
+. //STATA
+. // Global Macros use $ symbol to be called. 
+. //File paths for raw data
+. 
+. //NEED TO CHANGE WAVE NUMBER FOR EACH WAVE
+. global w 7
+
+. 
+. global work E:\nhats\data\NHATS working data\
+
+. global logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+. 
+. forvalues w=1/$w{
+  2. global r`w'raw E:\nhats\data\NHATS Public\round_`w'\
+  3. global r`w's E:\nhats\data\NHATS Sensitive\r`w'_sensitive\
+  4. }
+
+. 
+end of do-file
+
+. do "C:\Users\husaim03\AppData\Local\Temp\9\STD27c980_000000.tmp"
+
+. /*
+> 
+> Created by: --
+> Date Created: --
+> 
+> Updated by: MH
+> Date Updated: 03/21/2019
+> 
+> Description: Inital dataset cleaning, renaming varaibles, merging variables from 
+> sensitive dataset, and broad structuring.
+> 
+> 
+> 
+> **************************************************
+> */
+. 
+. local date = subinstr("$S_DATE"," ","_",.) 
+
+. local name 1-combine_waves_`date'
+
+. di "`name'"
+1-combine_waves__4_Apr_2019
+
+. 
+. capture log close 

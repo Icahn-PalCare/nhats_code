@@ -6057,7 +6057,7 @@ global miss -9,-1
 
 cd "${work}"
 
-use round_1_to_$w.dta, clear
+use round_1_to_${w}.dta, clear
 *********************************************
 tab wave, missing
 
@@ -6589,7 +6589,7 @@ replace livealone=0 if inlist(livearrang,2,3,4)
 la var livealone "Lives alone"
 tab livealone livearrang, missing
 
-save round_1_$w_cleanv1.dta, replace
+save round_1_${w}_cleanv1.dta, replace
 local ivars age female race_cat education  income_cat otherlang maritalstat ///
 medicaid medigap mc_partd tricare private_ltc moved ht_new ///
 residence livearrang livealone
@@ -6612,7 +6612,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 03/21/2019
+Date Updated: 04/04/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -6646,7 +6646,7 @@ cd "${work}"
 
 *********************************************
 
-use round_1_$w_cleanv1.dta, clear
+use round_1_${w}_cleanv1.dta, clear
 
 *********************************************
 tab wave, missing
@@ -7101,7 +7101,7 @@ tab `w'
 }
 
 *************************************************
-save round_1_$w_cleanv2.dta, replace
+save round_1_${w}_cleanv2.dta, replace
 
 *************************************************
 log close
@@ -7151,7 +7151,7 @@ cd "${work}"
 
 *********************************************
 
-use round_1_$w_cleanv2.dta
+use round_1_${w}_cleanv2.dta
 
 *********************************************
 //fall in the last month
@@ -7347,7 +7347,7 @@ la var sr_hosp_stays "Number unique hospital stays last year"
 tab sr_hosp_stays wave, missing
 tab sr_hosp_stays wave if ivw_type==1, missing
 
-save round_1_$w_cleanv3.dta, replace
+save round_1_${w}_cleanv3.dta, replace
 
 local ivars fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help ///
 iadl_meal_help iadl_bank_help iadl_meds_help reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind sr_hosp_stays
@@ -7548,7 +7548,7 @@ replace n_sn=0 if missing(n_sn)
 label var n_sn "Number in social network"
 
 //save as op file before dropping down to one obs per spid
-saveold "E:/nhats/data/NHATS cleaned/op_round_1_$w.dta", replace version(12)
+saveold "E:/nhats/data/NHATS cleaned/op_round_1_${w}.dta", replace version(12)
 
 //keep the entry for the primary caregiver only, this will then be the 
 //information merged into the SP dataset
@@ -7567,7 +7567,7 @@ tab prim_helper_cat wave, missing
 //merge this helper data with the main SP dataset
 save helper_by_sp.dta, replace
 
-use round_1_$w_cleanv3, clear
+use round_1_${w}_cleanv3, clear
 
 merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers n_fam ind_fam ///
  tot_hrsmonth_* prim_helper_cat ind_pa n_pai tot_hrswk* num_helpers_cat ind_rc_*)
@@ -7600,9 +7600,9 @@ la var prim_helper_opid "Primary helper OPID"
 ***************************************************************
 //save the dataset with helper information added
 
-save round_1_$w_clean_helper_added.dta, replace
+save round_1_${w}_clean_helper_added.dta, replace
 
-saveold round_1_$w_clean_helper_added_old.dta, replace
+saveold round_1_${w}_clean_helper_added_old.dta, replace
 
 ***************************************************************
 log close
@@ -7887,12 +7887,12 @@ replace `x'=. if inlist(`x',-1,-8)
 replace `x'=0 if `x'==2
 } 
 
-note hospice1: hospice1 variable (0=2) (.=-1,-1)
+note hospice1: hospice1 variable (0=2) (.=-1,-8)
 note hospice1: Hospice at Nursing Home.
 note hospice1: Located in NHATS Setup, under Part 7.
 note hospice1: Created: 3/26/18-MH
 
-note hospicelml: hospicelml
+note hospicelml: hospicelml variable (0=2) (.=-1,-8)
 note hospicelml: Hospice at other place, list.
 note hospicelml: Located in NHATS Setup, under Part 7.
 note hospicelml: Created: 3/26/18-MH
@@ -7923,17 +7923,25 @@ label var walksec1 "Secs Hld Walking Course1"
 label var walksec2 "Secs Hld Walking Course2"
 label var walkhndr1 "Hnrds Hld Walking Course1"
 label var walkhndr2 "Hnrds Hld Walking Course2"
-/*
-forvalues i=1/2{
-capture drop walk`i'
-if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
-if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
-replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
+
+foreach y in gripsc walksec walkhndr{
+foreach x in 1 2{
+note `y'`x': `y'`x' (.=-1,-7,-8,-9)
+
+if "`y'"=="gripsc"{
+note gripsc`x': Grip Strength `x' Reading 
 }
-rename walk1 walksec
-rename walk2 walkhnrds
-label var walk1 "Secs Hld Walking Course)
-*/
+else if "`y'"=="walksec"{
+note walksec`x': Walking Course Completion in Seconds place `x' Reading 
+}
+else if "`y'"=="walkhndr"{
+note walkhndr`x': Walking Course Completion Hundredths place `x' Reading
+}
+note `y'`x': Located in NHATS Setup, under Part 7.
+note `y'`x': Created: 3/14/18-MH
+}
+}
+
 
 foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
 capture drop `x'
@@ -7946,6 +7954,25 @@ label var nhatswksc "NHATS Walk Score"
 label var nhatsgrav "NHATS Avg. Grip Score"
 label var nhatsgrb "NHATS Best Grip Score"
 
+foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
+note `x': d`x' (.=-1,-9)
+
+if "`x'"=="origwksc"{
+note `x': Original Walk Score 
+}
+else if "`x'"=="nhatswksc"{
+note `x': NHATS Walk Score
+}
+else if "`x'"=="nhatsgrav"{
+note `x': NHATS Avg Grip Score
+}
+else if "`x'"=="nhatsgrb"{
+note `x': NHATS Best grip Score
+}
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 3/14/18-MH
+
+}
 
 local a lst10pnds trytolose 
 local b evrgowalk vigoractv
@@ -7970,13 +7997,10 @@ drop `y'
 rename `y'_n `y' 
 }
 
-
-
 label var lst10pnds "Lost 10 Pounds in Last Yr."
 label var trytolose "Were You Trying to Lose Weight"
 label var evrgowalk "Ever Go Walking for Exercise"
 label var vigoractv "Ever Vigorous Activities"
-
 
 capture drop unwgtloss lowphysact
 gen unwgtloss=. 
@@ -9147,7 +9171,7 @@ duplicates drop
 tempfile paid`wave'
 save `paid`wave''
 
-use "E:\nhats\data\NHATS Cleaned\op_round_1_7" if wave==`wave' & opishelp==1, clear
+use "E:\nhats\data\NHATS Cleaned\op_round_1_${w}" if wave==`wave' & opishelp==1, clear
 tokenize spouse daughter son otherfamily paid otherinformal
 drop spouse daughter son paid
 forvalues i=1/6 {
@@ -9455,6 +9479,10 @@ H="Changelog"
 
 
 Updates:
+
+04/04/2019 MH
+----------
+Change to code to read global macros correctly. Use curly brackets to read in or save stata files. 
 
 03/26/2019 MH
 ----------

@@ -288,9 +288,7 @@ foreach x in n p {
 	replace cont_ffs_`x'_mos=strpos(hmoind_`x',"1")-1 if strpos(hmoind_`x',"1")!=0
 	}
 
-	gen mchk=cont_ffs_p_mos+cont_ma_p_mos
-	tab mchk cont_ma_p_all_mos
-	
+
 label var ind_ma_index "Indicator MA at first disability"
 label var cont_ma_n_mos "Months of continous MA coverage pre-disability: first digit is 12 months prior"
 label var cont_ma_p_mos "Months of continous MA coverage post-disability"
@@ -315,6 +313,7 @@ don't count as switch if is because enrolling in hospice (needs an indicator for
 	*make switch after disability =1 if in MA at time of disability and months on MA shorter than months observed
 	gen switch_ma_p=0
 	replace switch_ma_p=1 if cont_ma_p_all_mos>cont_ma_p_mos & ind_ma_index==1
+	replace switch_ma_p=0 if switch_ma_p==1 & cont_ma_p_mos>12
 	label var switch_ma_p "switched from MA to FFS post-disability"
 	*include those who switched the same month they became disabled
 	gen switcht0=. 
@@ -327,6 +326,7 @@ don't count as switch if is because enrolling in hospice (needs an indicator for
 *make a variable to indicate switching from ffs
 	gen switch_ffs_p=0
 	replace switch_ffs_p=1 if cont_ma_p_all_mos>cont_ffs_p_mos & ind_ma_index==0
+	replace switch_ffs_p=0 if switch_ffs_p==1 & cont_ffs_p_mos>12
 	label var switch_ffs_p "switched from FFS to MA post-disability"
 	*include those who switched the same month they became disabled
 	gen switchFFSt0=. 
@@ -336,22 +336,30 @@ don't count as switch if is because enrolling in hospice (needs an indicator for
 	
 *making variable to indicate switching from MA before disability*
 	gen switch_ma_n=1 if firsthmo==1 & cont_ma_n_all_mos>cont_ma_n_mos
+	replace switch_ma_n=0 if switch_ma_n!=1 & cont_ma_n_all_mos==12 & firsthmo==1
+	replace switch_ma_n=. if firsthmo==0 | (cont_ma_n_all_mos<12 & switch_ma_n!=1)
 *making variable to indicate switching from FFS before disability
 	gen switch_ffs_n=1 if firsthmo==0 & cont_ma_n_all_mos>cont_ffs_n_mos
+	replace switch_ffs_n=0 if switch_ffs_n!=1 & cont_ma_n_all_mos==12 &  firsthmo==0
+	replace switch_ffs_n=. if firsthmo==1 | (cont_ma_n_all_mos<12 & switch_ffs_n!=1)
 
-	
-*need to consider hospice switches and not count as real switches out of MA
+	*need to consider hospice switches and not count as real switches out of MA
 	*first, make a variable for the date of the MA switch
 	gen date_switch= index_date-365+(30*cont_ma_n_mos) if switch_ma_n==1 & firsthmo==1
 	replace date_switch= index_date+(30*cont_ma_p_mos) if switch_ma_p==1 & firsthmo==1 & date_switch==.
 	*make a variable for if hospice occurs within 30 days after (or before- a claims fluke- switch)
 	gen days_switch_hs= first_hs-date_switch
 	recode days_switch_hs (-2878/15=1) (.=0)(16/1066=0), gen (hospswitch)
+	gen months_hosp=(floor(days_switch_hs/30))
 	
 *recode switch_ma_p and switch_ma_n to not count if the switch is from hospice
 	replace switch_ma_p=0 if hospswitch==1
 	replace switch_ma_n=0 if hospswitch==1
 
+*don't count as a switch after disability if switched before
+	replace switch_ma_p=0 if switch_ma_n==1
+	replace switch_ffs_p=0 if switch_ffs_n==1
+	
 *don't count a switch if the person seems to have switched after they died
 	*first make a variable for days from switch to death
 	gen days_switch_death= death_date-date_switch
@@ -376,6 +384,12 @@ don't count as switch if is because enrolling in hospice (needs an indicator for
 	replace flag2=2 if flag2==1 & simple_switchdate==simple_deathdate & death_date!=.
 	replace switch_ma_p=0 if flag2==2
 
+*make the switch variables missing if not in ffs/ma
+	replace switch_ma_p=. if firsthmo!=1
+	replace switch_ma_n=. if firsthmo!=1
+	replace switch_ffs_p=. if firsthmo!=0
+	replace switch_ffs_n=. if firsthmo!=0
+	
 *make a variable for any switch, before or after disability, called switch_indicator
 	gen switch_indicator=0
 	replace switch_indicator= 1 if (switch_ma_p==1 | switch_ma_n==1) & firsthmo==1
@@ -590,36 +604,50 @@ replace biq`n'ind=5 if biq8ind==5
 
 H="calculating incidence of switches"
 *calculating cumulative incidence rate of switches
+*looking at those who switched with new year
 
-	*number switches after disability if MA
-	tab switch_ma_p if firsthmo==1 
-	*number switches after disability if MA
-	tab switch_ma_n if firsthmo==1 & switch_ma_p!=1
-	*number switches before disability if FFS
-	tab switch_ffs_p if firsthmo==0 
-	*number switches after disability if FFS
-	tab switch_ffs_n if firsthmo==0 & switch_ffs_p!=1
-	
-	
-	*calculating person time if started in MA, by potential situations
-	*prior to disability: in MA
-	tab cont_ma_n_mos if cont_ma_n_all_mos==12
-	*prior to disability: in ffs
-	tab cont_ffs_n_mos if cont_ma_n_all_mos==12
-	
-	*post disability: in MA
-	count if firsthmo==1 & switch_ma_n!=1 & switch_ma_p!=1 & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
-	tab cont_ma_p_mos if firsthmo==1 & switch_ma_n!=1 & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
-	tab months_dis_death if firsthmo==1 
-	tab months_truncated if firsthmo==1
-	count if cont_ma_n_mos==12 & cont_ma_p_mos==0 
-	
-	*post disability: in ffs
-	count if firsthmo==0 & switch_ffs_n!=1 & switch_ffs_p!=1 & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
-	tab cont_ffs_p_mos if firsthmo==0 & switch_ffs_n!=1 & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
-	tab months_dis_death if firsthmo==0 
-	tab months_truncated if firsthmo==0
-	count if cont_ffs_n_mos==12 & cont_ffs_p_mos==0 
+*NUMBER OF SWITCHES FOR MA AND FFS before and after disability
+*number switches before disability if MA
+tab switch_ma_n 
+*number switches before disability if FFS
+tab switch_ffs_n  
+*number of switches after disability if MA
+tab switch_ma_p 
+*number of switches after disability if FFS
+tab switch_ffs_p 
+
+*New variable: persontime for the months followed until: switch/die/enroll in hospice/truncated. N= prior to disability, P= following
+*Persontime before disability
+gen persontime_n=.
+replace persontime_n=12 if switch_ma_n==0
+replace persontime_n=12 if switch_ffs_n==0
+replace persontime_n=cont_ma_n_mos if switch_ma_n==1
+replace persontime_n=cont_ffs_n_mos if switch_ffs_n==1
+*truncate if enrolled in hospice 
+gen mnthsnohosp= (persontime_n+months_hosp) if (months_hosp<0 & months_hosp!=.) & switch_ma_n==0 
+replace persontime_n=mnthsnohosp if persontime_n>mnthsnohosp & mnthsnohosp!=. & mnthsnohosp>0
+
+*Persontime after disability
+gen persontime_p=.
+*person time if didn't switch/die/truncated
+replace persontime_p=12 if (switch_ma_n==0 & switch_ma_p!=1) & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
+replace persontime_p=12 if (switch_ffs_n==0 & switch_ffs_p!=1) & (months_dis_death>12 | months_dis_death==.) & (months_truncated>12 | months_truncated==.)
+*person time if didn't previously switch but died (down the road, will be subbed out for PT if switched in case someone switched than died)
+replace persontime_p= months_dis_death if (switch_ma_n==0 | switch_ffs_n==0) & months_dis_death<12
+*person time if didn't previously switch or die but was truncated
+replace persontime_p= months_truncated if (switch_ma_n==0 | switch_ffs_n==0) & (months_dis_death>12 | months_dis_death==.) & months_truncated<12
+*person time if switched
+replace persontime_p= cont_ma_p_mos if switch_ma_p==1
+replace persontime_p= cont_ffs_p_mos if switch_ffs_p==1
+*replace with time until went onto hospice if that's shorter
+replace persontime_p=months_hosp if months_hosp<persontime & months_hosp>0
+
+
+
+
+
+
+
 
 
 H="***BELOW THIS LINE IS TRASH*****"
