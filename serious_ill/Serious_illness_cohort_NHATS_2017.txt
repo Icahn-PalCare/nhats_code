@@ -16,7 +16,7 @@ for use in other projects!!
 libname nhats 'E:\nhats\data\NHATS cleaned';
 
 /*medicare xwalk and claims path*/
-libname medi 'E:\nhats\data\20190326\Cumulative';
+libname medi 'E:\nhats\data\NHATS CMS DUA 28016\Merged\SAS';
 
 /*project data paths*/
 libname proj_int 'E:\nhats\data\projects\serious_ill\int_data';
@@ -27,8 +27,8 @@ libname proj_ref 'E:\nhats\data\projects\serious_ill\ref_data';
 
 
 H="get index date"
-/*Import NHATS Cleaned Dataset for Rounds 1-6*/
-proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_6.dta" out=proj_int.nhats replace; run;
+/*Import NHATS Cleaned Dataset for Rounds 1-7*/
+proc import datafile="E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" out=proj_int.nhats replace; run;
 
 
 data index1;
@@ -39,7 +39,7 @@ index_year=ivw_year;
 run;
 
 proc import out=xwalk
-	    datafile = "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta" replace;
+	    datafile = "E:\nhats\data\NHATS CMS DUA 28016\Crosswalks\xwalk_2016.dta" replace;
 run;
 
  
@@ -5903,7 +5903,7 @@ proc sql;
 create table dm_meet as select * from
 proj_int.index a 
 left join 
-medi.dm_09_16 b 
+medi.dm_09_17 b 
 on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
 quit;
 
@@ -5911,7 +5911,7 @@ proc sql;
 create table pb_meet as select * from
 proj_int.index a 
 left join 
-medi.pb_09_16 b 
+medi.pb_09_17 b 
 on a.bene_id=b.bene_id and b.admit_date<=a.index_date<=b.admit_date+365;
 quit;
 
@@ -10733,3 +10733,7 @@ frmttable using `logpath'\sample_characteristics_xwave1.doc, `replace' statmat(t
  restore
  }
 capture log close
+
+
+H="Changelog"
+04/04/19 - Updated claims and waves to 2017. Omari

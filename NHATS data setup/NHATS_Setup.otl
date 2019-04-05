@@ -5042,16 +5042,16 @@ save "E:\nhats\data\CMS_DUA_28016\death_date.dta", replace
 
 H="new code for dod from claims"
 /*
-//sas code to pull dod from the mbsf (note-there is no information in the ndi 
-libname medi 'E:\nhats\data\20180625 NHATS CMS Data\merged\';
-libname medraw 'E:\nhats\data\20180625 NHATS CMS Data\raw';
+*sas code to pull dod from the mbsf (note-there is no information in the ndi
+libname medi 'E:\nhats\data\NHATS CMS DUA 28016\Merged\SAS';
+libname xwalk 'E:\nhats\data\NHATS CMS DUA 28016\Crosswalks';
 
 proc import out=xwalka
-	    datafile = "E:\nhats\data\20180625 NHATS CMS Data\merged\xwalk_2016.dta" replace;
+	    datafile = "E:\nhats\data\NHATS CMS DUA 28016\Crosswalks\xwalk_2016.dta" replace;
 run;
 
 data xwalkb;
-set medraw.nhats2bene_xwalk;
+set xwalk.nhats2bene_xwalk;
 run;
 
 proc sql;  
@@ -5062,7 +5062,7 @@ on a.nhats_cms_num=b.nhats_cms_num;
 quit;
 
 data death1;
-set medi.mbsf_06_16 (keep=bene_id death_date);
+set medi.mbsf_06_17 (keep=bene_id death_date);
 if death_date~=.;
 run;
 
@@ -5072,12 +5072,12 @@ run;
 
 
 data claims (keep=bene_id admit_date);
-set medi.ip_06_16 
-	medi.snf_09_16
-	medi.op_09_16
-	medi.pb_09_16
-	medi.hh_09_16
-	medi.hs_09_16;
+set medi.ip_06_17 
+	medi.snf_09_17
+	medi.op_09_17
+	medi.pb_09_17
+	medi.hh_09_17
+	medi.hs_09_17;
 run;
 
 proc sort data=claims out=claims2;
@@ -5101,7 +5101,7 @@ on a.bene_id=c.bene_id;
 quit;
 
 
-proc export data=death outfile="E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta" replace; run;
+proc export data=death outfile="E:\nhats\data\NHATS CMS DUA 28016\Cumulative\mbsf_dod_17.dta" replace; run;
 
 
 */
@@ -5109,7 +5109,7 @@ proc export data=death outfile="E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_1
 
 
 
-use spid death_date admit using "E:\nhats\data\20180625 NHATS CMS Data\mbsf_dod_16.dta", clear
+use spid death_date admit using "E:\nhats\data\NHATS CMS DUA 28016\Cumulative\mbsf_dod_17.dta", clear
 
 duplicates drop 
 rename death_date dd_claims
@@ -5210,7 +5210,8 @@ label define death_source 1 "MBSF" 2 "last claim after NHATS DOD" 3 "NHATS" 4 "B
 label values death_source death_source
 
 keep spid death*
-save "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", replace
+saveold "E:\nhats\data\NHATS CMS DUA 28016\merged\stata\death_date.dta", ///
+replace version(12)
 
 
 
@@ -5351,7 +5352,7 @@ sensitive dataset, and broad structuring.
 
 
 **************************************************
-*/
+*/o
 
 local date = subinstr("$S_DATE"," ","_",.) 
 local name 1-combine_waves_`date'
@@ -7983,18 +7984,22 @@ gen `x'_n=.
 }
 
 
-foreach x in `a'{
+foreach x in `a' `b'{
 replace `x'_n=0 if `x'==2 
 replace `x'_n=1 if `x'==1
 drop `x'
 rename `x'_n `x' 
+note `x': `x' (0=2) (1=1) (.=-1, -9)
 }
 
-foreach y in `b'{
-replace `y'_n=0 if `y'==2 
-replace `y'_n=1 if `y'==1
-drop `y'
-rename `y'_n `y' 
+note lst10pnds: Lost 10 Pounds in Last Year (Y/N)
+note trytolose: Were you trying to lose Weight (Y/N)
+note evrgowalk: Ever go walking for exercise (Y/N)
+note vigoractv: Ever Vigorous Activities (Y/N)
+
+foreach x in `a' `b'{
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
 }
 
 label var lst10pnds "Lost 10 Pounds in Last Yr."
@@ -8013,11 +8018,22 @@ replace lowphysact=1 if evrgowalk==0 & vigoractv==0
 label var unwgtloss "Unintentional Weight Loss"
 label var lowphysact "Low Physical Activity"
 
-capture drop lowenrgy
+note unwgtloss: Created from lst10pnds and trytolose, if lst10pnds is yes and trytolose is no.
+note unwgtloss: Unintentional Weight Loss
+note lowphysact: Created frin evrgowalk and vigoractv, if evrgowalk is no and vigoractv is no. 
+note lowphysact: Low Physical Activity
+
 replace lowenergy=. if inlist(lowenergy, -9, -8, -7, -1)
 replace lowenergy=0 if lowenergy==2
 label var lowenergy "Low Energy in Last Month"
 
+note lowenergy: lowenergy is (.=-9,-8,-7,-1) (0=2) (1=1)
+note lowenergy: Low Energy in Last Month (Y/N)
+
+foreach x in unwgtloss lowphysact lowenergy{
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
+} 
 
 ///// 3/7/18 --Adding in Well-Being questions 
 /// Inapplicable is people who have no interview, had a proxy, or died. turned to missing. 
@@ -8030,6 +8046,8 @@ foreach j in 1 2 4 {
 }
 drop wbq44
 
+note wbq11: Often 
+
 forvalues i=1/4 {
 replace wbq1`i'=1 if offelche`i'==4 
 replace wbq1`i'=2 if offelche`i'==3 
@@ -8037,6 +8055,21 @@ replace wbq1`i'=3 if offelche`i'==2
 replace wbq1`i'=4 if offelche`i'==1 
 replace wbq1`i'=0 if offelche`i'==5 
 replace wbq1`i'=5 if (offelche`i'==-7 | offelche`i'==-8) 
+note wbq1`i': offelche`i' (0=5) (1=4) (2=3) (3=2) (4=1) (5=-7,-8)
+if `i'==1{
+note wbq1`i': Often you feel Cheerful (wb)
+}
+else if `i'==2{
+note wbq1`i': Often you feel Bored (wb)
+}
+else if `i'==3{
+note wbq1`i': Often you feel Full of Life (wb)
+}
+else if `i'==4{
+note wbq1`i': Often you feel Upset (wb)
+}
+note wbq1`i': Located in NHATS Setup, under Part 7.
+note wbq1`i': Created: 04/05/18-MH
 }
 
 
@@ -8055,13 +8088,29 @@ label var wbq14 "Often you Feel Upset"
 rename wbq14 oftupset
 label values oftupset oftcheer
 
-
+note drop oftcheer in 1
+note renumber oftcheer
 
 forvalues i=1/4 {
 replace wbq2`i'=1 if truestme`i'==3 
 replace wbq2`i'=2 if truestme`i'==2 
 replace wbq2`i'=3 if truestme`i'==1
 replace wbq2`i'=4 if (truestme`i'==-7 | truestme`i'==-8) 
+note wbq2`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
+if `i'==1{
+note wbq2`i': Life has Meaning and Purpose (wb)
+}
+else if `i'==2{
+note wbq2`i': I Feel Confident and Good about Myself (wb)
+}
+else if `i'==3{
+note wbq2`i': I gave up trying ot imporve my life a long time ago (wb)
+}
+else if `i'==4{
+note wbq2`i': I like my living situation very much (wb)
+}
+note wbq2`i': Located in NHATS Setup, under Part 7.
+note wbq2`i': Created: 04/05/18-MH
 }
 
 
@@ -8084,7 +8133,19 @@ forvalues i=1/3 {
 replace wbq4`i'=1 if agrwstmt`i'==3 
 replace wbq4`i'=2 if agrwstmt`i'==2 
 replace wbq4`i'=3 if agrwstmt`i'==1 
-replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8) 
+replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8)
+note wbq4`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
+if `i'==1{
+note wbq4`i': Other people determine most of what I can and cannot do (wb)
+}
+else if `i'==2{
+note wbq4`i': When I really want to do something, I usually find a way to do it. (wb)
+}
+else if `i'==3{
+note wbq4`i': I have an easy time adjusting to change.  (wb)
+}
+note wbq4`i': Located in NHATS Setup, under Part 7.
+note wbq4`i': Created: 04/05/18-MH
 }
 
 
@@ -8104,6 +8165,10 @@ egen agefeel= rowmax(ageyofeel)
 replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
 label var agefeel "Age you Feel Most Times"
 
+note agefeel: From ageyofeel 
+note agefeel: Age you feel most of the time
+note agefeel: Located in NHATS Setup, under Part 7.
+note agefeel: Created: 04/05/18-MH
 
 ///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
 //missing if in NH-FQ, dead, in NH-FQ R1 & R2
@@ -8115,6 +8180,21 @@ tab `x'
 replace `x'=0 if `x'==2 
 replace `x'=1 if `x'==1
 replace `x'=. if inlist(`x', -9,-8,-7,-1)
+note `x': `x' (0=2) (1=1) (.=-9,-8,-7,-1)
+if "`x'"=="mealskip1"{
+note `x': Skip any meals b/c there was not enough food, or money to buy food
+}
+else if "`x'"=="nopayhous"{
+note `x': Not enough money to pay rent or mortgage
+}
+else if "`x'"=="nopayutil"{
+note `x':  Not enough money to pay utility bills(gas, electric)
+}
+else if "`x'"=="nopaymed"{
+note `x':  Not enough money to pay medical or prescription drug bills
+}
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
 }
 
 
@@ -8130,8 +8210,6 @@ label values `ew' mealskip
 rename mealskip1 mealskip
 
 gen mealskipnum=.
-
-
 replace mealskipnum=0 if mealskip2==-1 & mealskip==0
 replace mealskipnum=1 if mealskip2==4
 replace mealskipnum=2 if mealskip2==3
@@ -8144,6 +8222,10 @@ label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)"
 3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
 label values mealskipnum mealskipnum1
 
+note mealskipnum: mealskip2 mealskip1 (0=mealskip2 -1 & mealskip1 0) (1=4) (2=3) (3=2) (4=1)
+note mealskipnum: How often are meals skipped
+note mealskipnum: Located in NHATS Setup, under Part 7.
+note mealskipnum: Created: 04/05/18-MH
 
 ///// 12/5/17 --Adding in Cancer 
 
@@ -8176,11 +8258,39 @@ replace sr_kidneycancer_had=hc`w'cancerty7 if wave==`w'
 replace sr_othercancer_had=hc`w'cancerty8 if wave==`w'
 }
 
-
+local r=1
 foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had{
 replace `x'=0 if inlist(`x',-1,2)
 replace `x'=. if inlist(`x', -9,-8)
+notes `x': cancerty`r' (0=-1,2) (.=-9,-8)
+if "`x'"=="sr_skincancer_had"{
+notes `x': Had Skin Cancer
+}
+else if "`x'"=="sr_breastcancer_had"{
+notes `x': Had Breast Cancer
+}
+else if "`x'"=="sr_prostatecancer_had"{
+notes `x': Had Prostate Cancer
+}
+else if "`x'"=="sr_bladdercancer_had"{
+notes `x': Had Bladder Cancer
+}
+else if "`x'"=="sr_crvovrnutrncancer_had"{
+notes `x': Had Cervical/Ovarian/Uterine Cancer
+}
+else if "`x'"=="sr_coloncancer_had"{
+notes `x': Had Colon Cancer
+}
+else if "`x'"=="sr_kidneycancer_had"{
+notes `x': Had Kidney Cancer
+}
+else if "`x'"=="sr_othercancer_had"{
+notes `x': Had Other Type of Cancer
+}
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
+local r=`r'+1
 }
 
 label var sr_skincancer_had "Sensitive: Skin Cancer"
@@ -8204,6 +8314,10 @@ gen howgetdoc=.
 forvalues i=1/9 {
 replace howgetdoc=`i' if hwgtregd`i'==1 
 }
+note howgetdoc: hwgtredd# used to create variable
+note howgetdoc: How did you get a ride to the doctor; transportation method
+note howgetdoc: Located in NHATS Setup, under Part 7.
+note howgetdoc: Created: 04/05/18-MH
 
 label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" ///
 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" ///
@@ -8222,10 +8336,25 @@ replace ind_imp_relig=inlist(imprelser,1,2)
 replace ind_imp_club=inlist(imparclub,1,2) 
 replace ind_imp_goout=inlist(impouteny,1,2) 
 
+note ind_imp_visit: impvstfam (1=1,2) (0=3)
+note ind_imp_visit: Very/somewhat important to visit friends/family in person 
+note ind_imp_relig: imprelser (1=1,2) (0=3)
+note ind_imp_relig: Very/somewhat important to attend religious services 
+note ind_imp_club: imparclub (1=1,2) (0=3)
+note ind_imp_club: Very/somewhat important to participate in clubs, classes, or other organized activities.
+note ind_imp_goout: impouteny (1=1,2) (0=3)
+note ind_imp_goout: Very/somewhat important to go out for enjoyment
+
+foreach x in visit relig club goout{
+note ind_imp_`x': Located in NHATS Setup, under Part 7.
+note ind_imp_`x': Created: 04/05/18-MH
+}
+
 label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
 label var ind_imp_relig "Very/somewhat important to attend religious services"
 label var ind_imp_club "Very/somewhat important to participate in clubs, classes, etc."
 label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
+
 
 foreach x in out insd bed {
 	gen device_`x'=.
@@ -8650,7 +8779,7 @@ label var meals_wheels "Meals on wheels"
 label var noone_talk "SP has no one to talk to"
 label var restrnt_takeout "Received help with restaurant/takeout"
 //pull in date of death, constructed from claims and nhats
-merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", nogen
+merge m:1 spid using "E:\nhats\data\NHATS CMS DUA 28016\Merged\Stata\death_date.dta", nogen
 
 gen died_12=mofd(death_date)-mofd(ivw_date)<=12
 gen died_24=mofd(death_date)-mofd(ivw_date)<=24
@@ -9480,6 +9609,11 @@ H="Changelog"
 
 Updates:
 
+
+04/04/2019 EBL
+----------
+Updated death date file for 2017 claims.
+
 04/04/2019 MH
 ----------
 Change to code to read global macros correctly. Use curly brackets to read in or save stata files. 
@@ -9587,6 +9721,25 @@ Change log conception was first introduced.
 
 
 */
+
+H="Variable definition changes"
+
+
+********Variable Definition Changes*********
+
+-When a previosuly defined variable has its definition changed, due to error or logic
+
+
+04/05/2019 MH
+-------------
+Numcigsever-- Changed from looking at number of cigs. ever smoked in each round to, only looking at waves 1 and 5 because they ask "did you smoke", instead of "do you smoke". Also explicitly looking at current non-smokers. 
+
+Sr_cancer--was not being asked in waves 2 and 3, but was asked for all other rounds. 
+
+iadl_`act'_not_done--not being correctly captured and put into proper groups. Error with not done.
+
+
+
 
 H="A note on NHATS vs. NSOC weights and populations"
 A note on NHATS vs. NSOC weights and populations
