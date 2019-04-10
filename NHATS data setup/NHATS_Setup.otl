@@ -5352,7 +5352,7 @@ sensitive dataset, and broad structuring.
 
 
 **************************************************
-*/o
+*/
 
 local date = subinstr("$S_DATE"," ","_",.) 
 local name 1-combine_waves_`date'
@@ -7620,7 +7620,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 03/21/2019
+Date Updated: 04/05/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -8069,7 +8069,7 @@ else if `i'==4{
 note wbq1`i': Often you feel Upset (wb)
 }
 note wbq1`i': Located in NHATS Setup, under Part 7.
-note wbq1`i': Created: 04/05/18-MH
+note wbq1`i': Created: 04/05/19-MH
 }
 
 
@@ -8347,7 +8347,7 @@ note ind_imp_goout: Very/somewhat important to go out for enjoyment
 
 foreach x in visit relig club goout{
 note ind_imp_`x': Located in NHATS Setup, under Part 7.
-note ind_imp_`x': Created: 04/05/18-MH
+note ind_imp_`x': Created: 04/05/19-MH
 }
 
 label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
@@ -8356,27 +8356,58 @@ label var ind_imp_club "Very/somewhat important to participate in clubs, classes
 label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
 
 
-foreach x in out insd bed {
+foreach x in out insd bed eat bath toil dres {
 	gen device_`x'=.
-	label var device_`x' "Uses any assistive device for mobility `x'"
 }
+
 label var device_out "Uses any assistive device for mobility outside"
 label var device_ins "Uses any assistive device for mobility inside"
 label var device_bed "Uses any assistive device to get out of bed"
+label var device_eat "Uses any assistive device for eating"
+label var device_bath "Uses any assistive device for bathing"
+label var device_toil "Uses any assistive device for toileting"
+label var device_dres "Uses any assistive device for dressing"
 
+/*
 foreach x in eat bath toil dres {
 	gen device_`x'=.
 	label var device_`x' "Uses assistive device for `x'ing"
 }
+*/
 
-
-foreach x in out insd bed {
-	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+foreach x in out insd bed eat bath toil dres{
+	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2)
+	note device_`x': d`x'devi (2=1,2); derived variable 
+	if "`x'"=="out"{
+		note device_`x': Go outside using devices
+	}
+	else if "`x'"=="insd"{
+		note device_`x': Move inside with devices
+	}
+	else if "`x'"=="bed"{
+		note device_`x': Device used to get out of bed
+	}	
+	else if "`x'"=="eat"{
+		note device_`x': Uses devices while eating
+	}
+	else if "`x'"=="bath"{
+		note device_`x': Uses devices while bathing
+	}
+	else if "`x'"=="toil"{
+		note device_`x': Uses devices while toileting
+	}
+	else if "`x'"=="dres"{
+		note device_`x': Uses devices while dressing
+	}
+	note device_`x': Located in NHATS Setup, under Part 7.
+	note device_`x': Created: 04/05/18-MH
 }
 
+/*
 foreach x in eat bath toil dres {
 	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
 }
+*/
 replace device_bath=0 if dbathdevi==9 
 
 
@@ -8384,6 +8415,11 @@ gen device_any=0
 foreach x in out ins bed eat bath toil dres {
 	replace device_any=1 if device_`x'==1
 }
+note device_any: Derived using device_ variables. 1 is any device used. 
+note device_any: Any devices used for ADL's. 
+note device_any: Located in NHATS Setup, under Part 7.
+note device_any: Created: 04/05/18-MH
+
 label var device_any "Uses any assistive device for ADLs"
 
 rename drives dtdrives //a drive flag exists in nhats
@@ -8392,6 +8428,11 @@ gen drives=.
 replace drives=oftedrive>0 & oftedrive<5 
 
 label var drives "Drives"
+
+note drives: oftedrive (1=1,2,3,4) (0=5)
+note drives: Did you ever drive. 
+note drives: Located in NHATS Setup, under Part 7.
+note drives: Created: 04/05/18-MH
 
 gen avoids=.
 replace avoids=0 if oftedrive>0 & oftedrive!=5 & avoidriv1==2 & avoidriv2==2 & avoidriv4==2
@@ -8405,9 +8446,13 @@ foreach x of varlist `avoids' {
 
 label var avoids "Avoids driving alone/at night/in weather*"
 
+note avoids: oftedrive avoidriv1 avoidriv2 avoidriv4
+note avoids: a person drives and doesn't avoid driving.
+note avoids: Located in NHATS Setup, under Part 7.
+note avoids: Created: 04/05/18-MH
+
 gen miss=0
 gen ind_transp_disadv=.
-
 
 replace ind_transp_disadv=0 if oftedrive==. | inlist(oftedrive,5,6)
 local probs trkpfrvis trprrelsr trprkpfgr trprgoout
@@ -8423,6 +8468,11 @@ replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
 replace ind_transp_disadv=. if miss==4
 label var ind_transp_disadv "Any transportation disadvantage"
 drop miss
+
+note ind_transp_disadv: oftedrive trkpfrvis trprrelsr trprkpfgr trprgoout
+note ind_transp_disadv: Indicate any transportation disadvantage 
+note ind_transp_disadv: Located in NHATS Setup, under Part 7.
+note ind_transp_disadv: Created: 04/05/18-MH
 
 local lab1 Walked
 local lab2 Got ride
@@ -8442,7 +8492,12 @@ forvalues x=1/7  {
 	replace get_places`x'=getoplcs`x'==1 
 	replace get_places`x'=. if (inlist(getoplcs7,-1,.) | getoplcs`x'==.) 
 	label var get_places`x' "Get places: `lab`x''"
+	note get_places`x': getoplcs`x'
+	note get_places`x': `lab`x'' to get to places
+	note get_places`x': Located in NHATS Setup, under Part 7.
+	note get_places`x': Created: 04/05/18-MH
 	local l=`l'+1
+	
 }
 
 //marital status-3 vars: married, married_or_partnered
@@ -8463,9 +8518,34 @@ label var marital_sep "Separated"
 label var marital_div "Divorced"
 label var marital_wid "Widowed"
 label var marital_nev "Never married"
-notes married : hh1martlstat
-notes married : "_"
+notes married : martlstat
+notes married : (Y/N)
 notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header for intermediate var and step-7 for final
+notes married : Updated: 04/05/18-MH
+
+foreach x in marital_sep marital_div marital_wid marital_nev marriedpartnered marital_sd{
+notes `x': martlstat dmarstat 
+	if "`x'"=="marital_sep"{
+	notes `x': Seperated, marital status.
+	}
+	if "`x'"=="marital_div"{
+	notes `x': Divorced, marital status.
+	}
+	if "`x'"=="marital_wid"{
+	notes `x': Widowed, marital status.
+	}
+	if "`x'"=="marital_nev"{
+	notes `x': Never Married, marital status.
+	}
+	if "`x'"=="marriedpartnered"{
+	notes `x': Married or Living with a partner.
+	}
+	if "`x'"=="marital_sep"{
+	notes `x': Seperated or Divorced, marital status.
+	}
+note `x': Located in NHATS Setup part 3 initial cleanup, part 7 final cleanup.
+note `x': Created: 04/05/18-MH
+}
 
 //lives with spouse
 gen resspouse=.
@@ -8473,12 +8553,20 @@ replace resspouse=livwthspo==1 if livwthspo>0
 replace resspouse=0 if marriedpart==0
 
 label var resspouse "Lives with Spouse/Partner"
+notes resspouse : livwthspo martlstat
+notes resspouse : Living with spouse or partner (Y/N)
+notes resspouse : Located in NHATS Setup, under Part 7.
+notes resspouse : Updated: 04/08/19-MH
 
 //household members
 gen hhm=.
 replace hhm=dhshldnum if dhshldnum>0 
 
 label var hhm "Number of household members"
+notes hhm : dhshldnum 
+notes hhm : Count of the number of household members. 
+notes hhm : Located in NHATS Setup, under Part 7.
+notes hhm : Updated: 04/08/19-MH
 
 //age categorical
 
@@ -8488,10 +8576,14 @@ label var age "Sensitive: age"
 
 gen agecat = .
 replace agecat= d2intvrage
-
 replace agecat=. if agecat==-1
 label values agecat d2intvrage
 label var agecat "Age, 5 yr categories"
+
+notes agecat : d2intvrage (same)
+notes agecat : Age cateory 65-59, 70-74, 75-79, 80-84, 85-89, 90+ 
+notes agecat : Located in NHATS Setup, under Part 7.
+notes agecat : Updated: 04/09/19-MH
 
 //activities past month
 
@@ -8528,6 +8620,38 @@ label values imprelig pa1imprelser
 label values impvisit pa1impvstfam
 label values impclub pa1imparclub
 
+notes attrelig : attrelser (same)
+notes attrelig : Ever attend religious services 
+notes attrelig : Located in NHATS Setup, under Part 7.
+notes attrelig : Updated: 04/09/19-MH
+
+notes imprelig : imprelser (same)
+notes imprelig : How important are religious services, very, somewhat, or not so important. 
+notes imprelig : Located in NHATS Setup, under Part 7.
+notes imprelig : Updated: 04/09/19-MH
+
+notes visitfrfam : visfrfam (same)
+notes visitfrfam : Ever visit in person with friends or family, not living with.
+notes visitfrfam : Located in NHATS Setup, under Part 7.
+notes visitfrfam : Updated: 04/09/19-MH
+
+notes impvisit : impvstfam (same)
+notes impvisit : How important to visit in person with friends or family not living with. 
+notes impvisit : Located in NHATS Setup, under Part 7.
+notes impvisit : Updated: 04/09/19-MH
+
+notes attclub : clbmtgrac (same)
+notes attclub : Ever participate in clubs, classes, or other organized activites. 
+notes attclub : Located in NHATS Setup, under Part 7.
+notes attclub : Updated: 04/09/19-MH
+
+notes vigact : vigoractv (same)
+notes vigact : Ever spend time on vigorous activites that increased heart rate. ///
+Working out, swimming, running, biking, or any sport.  
+notes vigact : Located in NHATS Setup, under Part 7.
+notes vigact : Updated: 04/09/19-MH
+
+
 //smokin'
 gen smokedever=. 
 gen smoke_start_age=.
@@ -8543,11 +8667,32 @@ sort spid wave
 by spid: carryforward smokedever smoke_start_age smoke_stop_age, replace
 notes drop smokedever smoke_start_age smoke_stop_age
 rename smokesnow smokesnow_old
+
+notes smokedever: smokedreg 
+notes smokedever: Only in rounds 1,5. Ever smoke cigarettes regularly. 
+
+notes smoke_start_age: agesrtsmk 
+notes smoke_start_age: How old when first smoked, age.
+
+notes smoke_stop_age: agelstsmk  
+notes smoke_stop_age: How old when last smoked cigarettes regularly.
+
+foreach x in smokedever smoke_start_age smoke_stop_age{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x' : Updated: 04/10/19-MH
+}
+
 gen smokesnow=.
 //Numcigever asked differently in rounds 1,5 then in other rounds. (Do you/ Did you)
 //Wanted to see the num. of cigs. smoked by non-smokers. 
 by spid, sort: egen numcigsever=max(numcigday) if inlist(wave,1,5) & smokesnow_old==2
 by spid: carryforward numcigsever if smokesnow_old==2, replace
+
+notes drop numcigsever
+
+notes numcigsever: numcigday
+notes numcigsever: Take max if they were a non-smoker. 
+
 gen numcigsnow=.
 
 replace smokesnow=smokesnow_old==1 if smokesnow_old>0
@@ -8557,6 +8702,10 @@ replace smokedever=1 if smokesnow==1
 replace smokesnow=0 if smokedever==0
 replace numcigsnow=0 if smokesnow==0
 
+notes smokesnow: smokedever
+notes smokesnow: 
+
+
 label var smokedever "Ever smoked"
 label var smokesnow "Smokes now"
 label var numcigsever "Max number of cigarettes/day when smoked for current non-smokers"
@@ -8564,11 +8713,16 @@ label var numcigsnow "Number of cigarettes/day currently"
 label var smoke_start_age "Age started smoking"
 label var smoke_stop_age "Age stopped smoking"
 
+notes numcigsever: Located in NHATS Setup, under Part 7.
+notes numcigsever: Updated: 04/10/19-MH
+
 //pain
 gen ind_pain=.
 replace ind_pain=painb==1 if inrange(painb,0,2) 
 label var ind_pain "Bothered by pain"
 
+notes ind_pain: painbothr
+notes ind_pain: Have been bothered by pain in the last month. 
 //weight
 
 gen wgt_curr=.
@@ -8583,9 +8737,24 @@ label var wgt_curr "Current weight, lbs."
 label var height_ft "Current height, feet"
 label var height_in "Current height, inches"
 
+notes wgt_curr: currweigh
+notes wgt_curr: Current Weight in pounds. 
+notes height_ft: howtallft
+notes height_ft: How tall in feet. 
+notes height_in: howtallin
+notes height_in: How tall in inches, after feet. 
+
 gen bmi=(wgt_curr/((height_ft*12+height_in)^2))*703
 
 label var bmi "Current BMI"
+
+notes bmi: wgt_curr height_ft height_in
+notes bmi: Body Mass Index calculation from weight and height. 
+
+foreach x in wgt_curr height_ft height_in bmi{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/10/19-MH
+}
 
 //get the per round weight, cluster, and strata vars (and why is moved created like that?)
 //gen moved=.
@@ -8613,6 +8782,8 @@ forvalues w=1/$w {
 replace community_dwelling=1 if inlist(dresid,1,2) & wave==`w'
 replace SP_completed=1 if (inlist(dresid,1,2) & wave==1) | (inlist(dresid,1,2,4) & wave==`w')
 }
+notes community_dwelling: dresid = 1,2 
+notes community_dwelling: In the community. 
 
 gen nhres=dresid==4 if dresid!=. & wave==1
 gen rcfres=inlist(dresid,2,3) if dresid!=. & wave==1
@@ -8629,9 +8800,26 @@ replace rcfres=inlist(dresid,2,3,7) if wave==`w'
 replace deceased=inlist(r`w'status,62,86) if wave>=`w'
 }
 
-note nhres : r*dresid
-notes nhres : Resid=4,5,8
+note nhres : dresid
+notes nhres : Resid=4,5,8, Nursing Home. 
 notes nhres : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+notes rcfres: dresid (2,3)
+notes rcfres: Residential Care, excluding Nursing Home. 
+
+notes res_care: dresid (2-8)
+notes res_care: Residential Care, excluding Nursing Home. 
+
+notes deceased: status 62 68
+notes deceased: Died after round 1
+
+notes prob_dem: dem_cat_3, sr_dementia_ever
+notes prob_dem: Probable Dementia. 
+
+foreach x in community_dwelling rcfres res_care deceased prob_dem{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/10/19-MH
+}
 
 
 replace sp_status=2 if res_care==1
@@ -8665,11 +8853,12 @@ replace adl_ins_not_done=inlist(dinsdsfdf,1,8)
 
 *replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
-notes adl_ins_help : mo*insdhlp
-notes adl_ins_help : "_"
+notes adl_ins_help : insdhlp
+notes adl_ins_help : "Anyone help you get arounbd inside house"
 notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
-
+notes adl_ins_diff: insddif
+notes adl_ins_diff: How much difficulty getting around inside. 
 gen adl_bed_help = .
 gen adl_bed_diff=.
 gen adl_bed_not_done=.
@@ -8716,9 +8905,20 @@ gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
 format ivw_date %td
 label var ivw_date "Interview date from restricted tracker"
 
+note ivw_date: ivw_month ivw_day ivw_year
+note ivw_date: Interview date from the restricted file. 
+
 gen ivw_date_sens=mdy(ivw_month,1,ivw_year)
 format ivw_date_sens %td
 label var ivw_date "Interview date, day of month set to one"
+
+note ivw_date_sens: ivw_month ivw_year 
+note ivw_date_sens: Using only month and year, all dates put as first of the month. 
+
+foreach x in ivw_date ivw_date_sens{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/10/19-MH
+} 
 
 /// Changes to Dressing and Eating
 /*These changes were made because the help variables were not capturing everyone 
@@ -8756,7 +8956,25 @@ foreach x in independent impair index {
 	notes adl_`x' : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 }
 
+note adl_index: adl_*_help
+note adl_index: Number of ADL's needing helped with.
 
+note adl_independnet: adl_index =0 
+note adl_independent: No ADL help for the individual.
+
+note adl_impair: adl_index >0 
+note adl_impair: ADl help for the individual.
+
+note iadl_index: iadl_*_help
+note iadl_index: Number of IADL's needing helped with.
+
+note iadl_independnet: iadl_index =0 
+note iadl_independent: No IADL help for the individual.
+
+note iadl_impair: iadl_index >0 
+note iadl_impair: IADl help for the individual.
+
+ 
 label var iadl_independent "Independent in IADLs"
 label var iadl_impair "Help with 1+ IADL"
 label var iadl_index "Index of help w/ IADLs"
@@ -9609,6 +9827,13 @@ H="Changelog"
 
 Updates:
 
+04/06/2019 MH
+----------
+Added in notes to NHATS setup part 7.
+
+04/05/2019 MH
+----------
+Added in notes to NHATS setup part 7. Optimized code, removed extra steps. 
 
 04/04/2019 EBL
 ----------

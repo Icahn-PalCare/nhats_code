@@ -2857,7 +2857,7 @@ mat list b
 asymbol(*,**)
 
 
-H="updated 11/14 --any caregiver"
+H="updated 3/19 --any caregiver"
 //includes wave 1-6 using self report from nhats for rounds 4,5, 6
 //still using hospice from both claims(1-3) and nhats (4-6)
 clear all
@@ -3039,7 +3039,7 @@ replace ind_hospice=1 if ind_hs_nhats==1 & wave>=4
 gen good_hs=0
 replace good_hs=1 if hs_los>=3
 
-drop if wave==6
+drop if wave==6 | wave==7
 drop if lml==1
 sort spid wave
 keep if died_12==1 
@@ -3080,94 +3080,119 @@ metro_ind northeast midwest south prob_dem sr_heart_dis_ever sr_cancer_ever ///
 sr_dementia_ever sr_ami_ever sr_stroke_ever sr_hip_ever sr_htn_ever sr_ra_ever ///
 sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever
 
-local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1
+local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1 1
 
-mat tab=J(`rn',15,.)
-mat stars=J(`rn',15,0)
+mat tab=J(`rn',25,.)
+mat stars=J(`rn',25,0)
 local r=1 
 local c=1
 foreach i in 0 1 {
 local r=1
 	foreach x in `cvars1' `cvars2' `cvars3'{
 		sum `x' [aw=anfinw] if ind_hs==`i'
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		mat tab[`r',`c'+1]=r(mean)
+		mat tab[`r',`c'+2]=r(sd)
 		ttest `x', by(ind_hs)
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
+		
 	}
 	
 	foreach x in `ivars1' `ivars2' `ivars3'{
 		sum `x' [aw=anfinw] if ind_hs==`i' & `x'==1
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		sum `x' [aw=anfinw] if ind_hs==`i'
 		mat tab[`r',`c'+1]=r(mean)*100
+		mat tab[`r',`c'+2]=r(sd)
 		tab `x' ind_hs, chi2
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
+		
 	}
 	sum n if ind_hs==`i'
 	mat tab[`r',`c']=r(N)
 	local r=1
-	local c=`c'+3
+	local c=`c'+4
 }
+mat list tab
 
 foreach i in 0 1 {
 local r=1
 	foreach x in `cvars1' `cvars2' `cvars3'{
 		sum `x' [aw=anfinw] if hrswk_unpaid_40==`i'
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		mat tab[`r',`c'+1]=r(mean)
+		mat tab[`r',`c'+2]=r(sd)
 		ttest `x', by(hrswk_20)
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
 	}
 	
 	foreach x in `ivars1' `ivars2' `ivars3'{
 		sum `x' [aw=anfinw] if hrswk_unpaid_40==`i' & `x'==1
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		sum `x' [aw=anfinw] if hrswk_20==`i'
 		mat tab[`r',`c'+1]=r(mean)*100
+		mat tab[`r',`c'+2]=r(sd)
 		tab `x' hrswk_20, chi2
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
 	}
 	sum n [aw=anfinw] if hrswk_unpaid_40==`i'
 	mat tab[`r',`c']=r(N)
 	local r=1
-	local c=`c'+3
+	local c=`c'+4
 }
 
 foreach i in 1 {
 local r=1
 	foreach x in `cvars1' `cvars2' `cvars3'{
 		sum `x' [aw=anfinw] if n==`i'
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		mat tab[`r',`c'+1]=r(mean)
+		mat tab[`r',`c'+2]=r(sd)
+		}
 		local r=`r'+1
 	}
 	
 	foreach x in `ivars1' `ivars2' `ivars3'{
 		sum `x' [aw=anfinw] if n==`i' & `x'==1
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		sum `x' [aw=anfinw] if n==`i'
 		mat tab[`r',`c'+1]=r(mean)*100
+		mat tab[`r',`c'+2]=r(sd)
+		}
 		local r=`r'+1
 	}
 	sum n [aw=anfinw] if n==`i'
 	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum_w)
 	local r=1
-	local c=`c'+3
+	local c=`c'+4
 }
 mat list tab
 
 
-mat rownames tab=`cvars1' `cvars2' `cvars3' `ivars1' `ivars2' `ivars3' N
+mat rownames tab=`cvars1' `cvars2' `cvars3' `ivars1' `ivars2' `ivars3' N "National Estimate"
 
 frmttable using decedent_hospice_1_5.rtf, replace statmat(tab) title("Sample Characteristics by Hospice Use for N-1 Decedents") ///
-ctitles("" "No Hospice, N" "No Hospice, Mean/%" "No Hospice, P-value" "Yes Hospice, N" "Yes Hospice, Mean/%" ///
-"Yes Hospice, P-value" "Didn't Recieve 40+ Hours Unpaid, N" "Didn't Recieve 40+ Hours Unpaid, Mean/%" "Didn't Recieve 40+ Hours Unpaid, P-value" ///
-"Recieved 40+ Hours Unpaid, N" "Recieved 40+ Hours Unpaid, Mean/%" "Recieved 40+ Hours Unpaid, P-value" "Full Sample, N" "Full Sample, Mean/%") varlabels  ///
+ctitles("" "No Hospice, N" "No Hospice, Mean/%" "No Hospice, SD" "No Hospice, P-value" /// 
+"Yes Hospice, N" "Yes Hospice, Mean/%" "Yes Hospice, SD" "Yes Hospice, P-value" ///
+"Didn't Recieve 40+ Hours Unpaid, N" "Didn't Recieve 40+ Hours Unpaid, Mean/%" ///
+"Didn't Recieve 40+ Hours Unpaid, SD" "Didn't Recieve 40+ Hours Unpaid, P-value" ///
+"Recieved 40+ Hours Unpaid, N" "Recieved 40+ Hours Unpaid, Mean/%" "Recieved 40+ Hours Unpaid, SD" ///
+"Recieved 40+ Hours Unpaid, P-value" "Full Sample, N" "Full Sample, Mean/%" "Full Sample, SD") varlabels  ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" ///
 "1-5 Waves Claims used to determine hospice" ///
 "If multiple ivws in 12m prior to death, earliest is taken" ///
@@ -3193,52 +3218,62 @@ metro_ind northeast midwest south  ///
 sr_dementia_ever sr_ami_ever sr_stroke_ever sr_hip_ever sr_htn_ever sr_ra_ever ///
 sr_osteoprs_ever sr_diabetes_ever sr_lung_dis_ever
 
-local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1
+local rn : word count `cvars1' `ivars1' `cvars2' `ivars2' `cvars3' `ivars3' 1 1
 
-mat tab=J(`rn',15,.)
-mat stars=J(`rn',15,0)
+mat tab=J(`rn',20,.)
+mat stars=J(`rn',20,0)
 local r=1 
 local c=1
 foreach i in 1 2 3 {
 local r=1
 	foreach x in `cvars1' `cvars2' `cvars3'{
 		sum `x' [aw=anfinw] if group`i'==1
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		mat tab[`r',`c'+1]=r(mean)
+		mat tab[`r',`c'+2]=r(sd)
 		ttest `x', by(group`i')
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
 	}
 	
 	foreach x in `ivars1' `ivars2' `ivars3'{
 		sum `x' [aw=anfinw] if group`i'==1 & `x'==1
+		if `r(N)'>=11 | `r(N)'==0{
 		mat tab[`r',`c']=r(N)
 		sum `x' [aw=anfinw] if group`i'==1
 		mat tab[`r',`c'+1]=r(mean)*100
+		mat tab[`r',`c'+2]=r(sd)
 		tab `x' group`i', chi2
-		mat tab[`r',`c'+2]=r(p)
+		mat tab[`r',`c'+3]=r(p)
+		}
 		local r=`r'+1
 	}
-	sum n if group`i'==1
+	sum n [aw=anfinw] if group`i'==1
 	mat tab[`r',`c']=r(N)
+	mat tab[`r'+1,`c']=r(sum_w)
 	local r=1
-	local c=`c'+3
+	local c=`c'+4
 }
 
 mat list tab
 
 
-mat rownames tab=`cvars1' `cvars2' `cvars3' `ivars1' `ivars2' `ivars3' N
+mat rownames tab=`cvars1' `cvars2' `cvars3' `ivars1' `ivars2' `ivars3' N "National Estimate"
 
 frmttable using decedent_hospice_1_5.rtf, replace statmat(tab) title("Sample Characteristics by Hospice Use for N-1 Decedents") ///
-ctitles("" "Probable Dementia, N" "Probable Dementia, Mean/%" "Probable Dementia, P-value" "SR Cancer, N" "SR Cancer, Mean/%" ///
-"SR Cancer, P-value" "SR Heart Disease, N" "SR Heart Disease, Mean/%" "SR Heart Disease, P-value") varlabels  ///
+ctitles("" "Probable Dementia, N" "Probable Dementia, Mean/%" "Probable Dementia, SD" ///
+"Probable Dementia, P-value" "SR Cancer, N" "SR Cancer, Mean/%" "SR Cancer, SD" ///
+"SR Cancer, P-value" "SR Heart Disease, N" "SR Heart Disease, Mean/%" "SR Heart Disease, SD" ///
+"SR Heart Disease, P-value") varlabels  ///
 note("Waves 1-5 NHATS community-dwelling sample with 12m mortality" ///
 "1-5 Waves Claims used to determine hospice" ///
 "If multiple ivws in 12m prior to death, earliest is taken" ///
 "P-values diff. btwn Yes/No Prob. Dem.; Yes/No SR Cancer; Yes/No SR Heart Disease" ///
 "Results based off of interivew before death.") annotate(stars) ///
 asymbol(*,**) addtable
+
 
 //////
 
@@ -3585,7 +3620,9 @@ H="Changelog"
 
 Updates:
 
-
+03/18/2019 MH
+------------
+Added in standard deviation and changed table to only show cell sizes that are reportable. 
 
 02/19/2019 MH
 ------------

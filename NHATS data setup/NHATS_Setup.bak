@@ -7620,7 +7620,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 03/21/2019
+Date Updated: 04/05/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -7984,18 +7984,22 @@ gen `x'_n=.
 }
 
 
-foreach x in `a'{
+foreach x in `a' `b'{
 replace `x'_n=0 if `x'==2 
 replace `x'_n=1 if `x'==1
 drop `x'
 rename `x'_n `x' 
+note `x': `x' (0=2) (1=1) (.=-1, -9)
 }
 
-foreach y in `b'{
-replace `y'_n=0 if `y'==2 
-replace `y'_n=1 if `y'==1
-drop `y'
-rename `y'_n `y' 
+note lst10pnds: Lost 10 Pounds in Last Year (Y/N)
+note trytolose: Were you trying to lose Weight (Y/N)
+note evrgowalk: Ever go walking for exercise (Y/N)
+note vigoractv: Ever Vigorous Activities (Y/N)
+
+foreach x in `a' `b'{
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
 }
 
 label var lst10pnds "Lost 10 Pounds in Last Yr."
@@ -8014,11 +8018,22 @@ replace lowphysact=1 if evrgowalk==0 & vigoractv==0
 label var unwgtloss "Unintentional Weight Loss"
 label var lowphysact "Low Physical Activity"
 
-capture drop lowenrgy
+note unwgtloss: Created from lst10pnds and trytolose, if lst10pnds is yes and trytolose is no.
+note unwgtloss: Unintentional Weight Loss
+note lowphysact: Created frin evrgowalk and vigoractv, if evrgowalk is no and vigoractv is no. 
+note lowphysact: Low Physical Activity
+
 replace lowenergy=. if inlist(lowenergy, -9, -8, -7, -1)
 replace lowenergy=0 if lowenergy==2
 label var lowenergy "Low Energy in Last Month"
 
+note lowenergy: lowenergy is (.=-9,-8,-7,-1) (0=2) (1=1)
+note lowenergy: Low Energy in Last Month (Y/N)
+
+foreach x in unwgtloss lowphysact lowenergy{
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
+} 
 
 ///// 3/7/18 --Adding in Well-Being questions 
 /// Inapplicable is people who have no interview, had a proxy, or died. turned to missing. 
@@ -8031,6 +8046,8 @@ foreach j in 1 2 4 {
 }
 drop wbq44
 
+note wbq11: Often 
+
 forvalues i=1/4 {
 replace wbq1`i'=1 if offelche`i'==4 
 replace wbq1`i'=2 if offelche`i'==3 
@@ -8038,6 +8055,21 @@ replace wbq1`i'=3 if offelche`i'==2
 replace wbq1`i'=4 if offelche`i'==1 
 replace wbq1`i'=0 if offelche`i'==5 
 replace wbq1`i'=5 if (offelche`i'==-7 | offelche`i'==-8) 
+note wbq1`i': offelche`i' (0=5) (1=4) (2=3) (3=2) (4=1) (5=-7,-8)
+if `i'==1{
+note wbq1`i': Often you feel Cheerful (wb)
+}
+else if `i'==2{
+note wbq1`i': Often you feel Bored (wb)
+}
+else if `i'==3{
+note wbq1`i': Often you feel Full of Life (wb)
+}
+else if `i'==4{
+note wbq1`i': Often you feel Upset (wb)
+}
+note wbq1`i': Located in NHATS Setup, under Part 7.
+note wbq1`i': Created: 04/05/19-MH
 }
 
 
@@ -8056,13 +8088,29 @@ label var wbq14 "Often you Feel Upset"
 rename wbq14 oftupset
 label values oftupset oftcheer
 
-
+note drop oftcheer in 1
+note renumber oftcheer
 
 forvalues i=1/4 {
 replace wbq2`i'=1 if truestme`i'==3 
 replace wbq2`i'=2 if truestme`i'==2 
 replace wbq2`i'=3 if truestme`i'==1
 replace wbq2`i'=4 if (truestme`i'==-7 | truestme`i'==-8) 
+note wbq2`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
+if `i'==1{
+note wbq2`i': Life has Meaning and Purpose (wb)
+}
+else if `i'==2{
+note wbq2`i': I Feel Confident and Good about Myself (wb)
+}
+else if `i'==3{
+note wbq2`i': I gave up trying ot imporve my life a long time ago (wb)
+}
+else if `i'==4{
+note wbq2`i': I like my living situation very much (wb)
+}
+note wbq2`i': Located in NHATS Setup, under Part 7.
+note wbq2`i': Created: 04/05/18-MH
 }
 
 
@@ -8085,7 +8133,19 @@ forvalues i=1/3 {
 replace wbq4`i'=1 if agrwstmt`i'==3 
 replace wbq4`i'=2 if agrwstmt`i'==2 
 replace wbq4`i'=3 if agrwstmt`i'==1 
-replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8) 
+replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8)
+note wbq4`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
+if `i'==1{
+note wbq4`i': Other people determine most of what I can and cannot do (wb)
+}
+else if `i'==2{
+note wbq4`i': When I really want to do something, I usually find a way to do it. (wb)
+}
+else if `i'==3{
+note wbq4`i': I have an easy time adjusting to change.  (wb)
+}
+note wbq4`i': Located in NHATS Setup, under Part 7.
+note wbq4`i': Created: 04/05/18-MH
 }
 
 
@@ -8105,6 +8165,10 @@ egen agefeel= rowmax(ageyofeel)
 replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
 label var agefeel "Age you Feel Most Times"
 
+note agefeel: From ageyofeel 
+note agefeel: Age you feel most of the time
+note agefeel: Located in NHATS Setup, under Part 7.
+note agefeel: Created: 04/05/18-MH
 
 ///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
 //missing if in NH-FQ, dead, in NH-FQ R1 & R2
@@ -8116,6 +8180,21 @@ tab `x'
 replace `x'=0 if `x'==2 
 replace `x'=1 if `x'==1
 replace `x'=. if inlist(`x', -9,-8,-7,-1)
+note `x': `x' (0=2) (1=1) (.=-9,-8,-7,-1)
+if "`x'"=="mealskip1"{
+note `x': Skip any meals b/c there was not enough food, or money to buy food
+}
+else if "`x'"=="nopayhous"{
+note `x': Not enough money to pay rent or mortgage
+}
+else if "`x'"=="nopayutil"{
+note `x':  Not enough money to pay utility bills(gas, electric)
+}
+else if "`x'"=="nopaymed"{
+note `x':  Not enough money to pay medical or prescription drug bills
+}
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
 }
 
 
@@ -8131,8 +8210,6 @@ label values `ew' mealskip
 rename mealskip1 mealskip
 
 gen mealskipnum=.
-
-
 replace mealskipnum=0 if mealskip2==-1 & mealskip==0
 replace mealskipnum=1 if mealskip2==4
 replace mealskipnum=2 if mealskip2==3
@@ -8145,6 +8222,10 @@ label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)"
 3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
 label values mealskipnum mealskipnum1
 
+note mealskipnum: mealskip2 mealskip1 (0=mealskip2 -1 & mealskip1 0) (1=4) (2=3) (3=2) (4=1)
+note mealskipnum: How often are meals skipped
+note mealskipnum: Located in NHATS Setup, under Part 7.
+note mealskipnum: Created: 04/05/18-MH
 
 ///// 12/5/17 --Adding in Cancer 
 
@@ -8177,11 +8258,39 @@ replace sr_kidneycancer_had=hc`w'cancerty7 if wave==`w'
 replace sr_othercancer_had=hc`w'cancerty8 if wave==`w'
 }
 
-
+local r=1
 foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
 sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had{
 replace `x'=0 if inlist(`x',-1,2)
 replace `x'=. if inlist(`x', -9,-8)
+notes `x': cancerty`r' (0=-1,2) (.=-9,-8)
+if "`x'"=="sr_skincancer_had"{
+notes `x': Had Skin Cancer
+}
+else if "`x'"=="sr_breastcancer_had"{
+notes `x': Had Breast Cancer
+}
+else if "`x'"=="sr_prostatecancer_had"{
+notes `x': Had Prostate Cancer
+}
+else if "`x'"=="sr_bladdercancer_had"{
+notes `x': Had Bladder Cancer
+}
+else if "`x'"=="sr_crvovrnutrncancer_had"{
+notes `x': Had Cervical/Ovarian/Uterine Cancer
+}
+else if "`x'"=="sr_coloncancer_had"{
+notes `x': Had Colon Cancer
+}
+else if "`x'"=="sr_kidneycancer_had"{
+notes `x': Had Kidney Cancer
+}
+else if "`x'"=="sr_othercancer_had"{
+notes `x': Had Other Type of Cancer
+}
+note `x': Located in NHATS Setup, under Part 7.
+note `x': Created: 04/05/18-MH
+local r=`r'+1
 }
 
 label var sr_skincancer_had "Sensitive: Skin Cancer"
@@ -8205,6 +8314,10 @@ gen howgetdoc=.
 forvalues i=1/9 {
 replace howgetdoc=`i' if hwgtregd`i'==1 
 }
+note howgetdoc: hwgtredd# used to create variable
+note howgetdoc: How did you get a ride to the doctor; transportation method
+note howgetdoc: Located in NHATS Setup, under Part 7.
+note howgetdoc: Created: 04/05/18-MH
 
 label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" ///
 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" ///
@@ -8223,32 +8336,77 @@ replace ind_imp_relig=inlist(imprelser,1,2)
 replace ind_imp_club=inlist(imparclub,1,2) 
 replace ind_imp_goout=inlist(impouteny,1,2) 
 
+note ind_imp_visit: impvstfam (1=1,2) (0=3)
+note ind_imp_visit: Very/somewhat important to visit friends/family in person 
+note ind_imp_relig: imprelser (1=1,2) (0=3)
+note ind_imp_relig: Very/somewhat important to attend religious services 
+note ind_imp_club: imparclub (1=1,2) (0=3)
+note ind_imp_club: Very/somewhat important to participate in clubs, classes, or other organized activities.
+note ind_imp_goout: impouteny (1=1,2) (0=3)
+note ind_imp_goout: Very/somewhat important to go out for enjoyment
+
+foreach x in visit relig club goout{
+note ind_imp_`x': Located in NHATS Setup, under Part 7.
+note ind_imp_`x': Created: 04/05/18-MH
+}
+
 label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
 label var ind_imp_relig "Very/somewhat important to attend religious services"
 label var ind_imp_club "Very/somewhat important to participate in clubs, classes, etc."
 label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
 
-foreach x in out insd bed {
+
+foreach x in out insd bed eat bath toil dres {
 	gen device_`x'=.
-	label var device_`x' "Uses any assistive device for mobility `x'"
 }
+
 label var device_out "Uses any assistive device for mobility outside"
 label var device_ins "Uses any assistive device for mobility inside"
 label var device_bed "Uses any assistive device to get out of bed"
-
+label var device_eat "Uses any assistive device for eating"
+label var device_bath "Uses any assistive device for bathing"
+label var device_toil "Uses any assistive device for toileting"
+label var device_dres "Uses any assistive device for dressing"
+/*
 foreach x in eat bath toil dres {
 	gen device_`x'=.
 	label var device_`x' "Uses assistive device for `x'ing"
 }
+*/
 
-
-foreach x in out insd bed {
-	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+foreach x in out insd bed eat bath toil dres{
+	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2)
+	note device_`x': d`x'devi (2=1,2); derived variable 
+	if "`x'"=="out"{
+		note device_`x': Go outside using devices
+	}
+	else if "`x'"=="insd"{
+		note device_`x': Move inside with devices
+	}
+	else if "`x'"=="bed"{
+		note device_`x': Device used to get out of bed
+	}	
+	else if "`x'"=="eat"{
+		note device_`x': Uses devices while eating
+	}
+	else if "`x'"=="bath"{
+		note device_`x': Uses devices while bathing
+	}
+	else if "`x'"=="toil"{
+		note device_`x': Uses devices while toileting
+	}
+	else if "`x'"=="dres"{
+		note device_`x': Uses devices while dressing
+	}
+	note device_`x': Located in NHATS Setup, under Part 7.
+	note device_`x': Created: 04/05/18-MH
 }
 
+/*
 foreach x in eat bath toil dres {
 	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
 }
+*/
 replace device_bath=0 if dbathdevi==9 
 
 
@@ -8256,6 +8414,11 @@ gen device_any=0
 foreach x in out ins bed eat bath toil dres {
 	replace device_any=1 if device_`x'==1
 }
+note device_any: Derived using device_ variables. 1 is any device used. 
+note device_any: Any devices used for ADL's. 
+note device_any: Located in NHATS Setup, under Part 7.
+note device_any: Created: 04/05/18-MH
+
 label var device_any "Uses any assistive device for ADLs"
 
 rename drives dtdrives //a drive flag exists in nhats
@@ -8264,6 +8427,11 @@ gen drives=.
 replace drives=oftedrive>0 & oftedrive<5 
 
 label var drives "Drives"
+
+note drives: oftedrive (1=1,2,3,4) (0=5)
+note drives: Did you ever drive. 
+note drives: Located in NHATS Setup, under Part 7.
+note drives: Created: 04/05/18-MH
 
 gen avoids=.
 replace avoids=0 if oftedrive>0 & oftedrive!=5 & avoidriv1==2 & avoidriv2==2 & avoidriv4==2
@@ -8277,9 +8445,13 @@ foreach x of varlist `avoids' {
 
 label var avoids "Avoids driving alone/at night/in weather*"
 
+note avoids: oftedrive avoidriv1 avoidriv2 avoidriv4
+note avoids: a person drives and doesn't avoid driving.
+note avoids: Located in NHATS Setup, under Part 7.
+note avoids: Created: 04/05/18-MH
+
 gen miss=0
 gen ind_transp_disadv=.
-
 
 replace ind_transp_disadv=0 if oftedrive==. | inlist(oftedrive,5,6)
 local probs trkpfrvis trprrelsr trprkpfgr trprgoout
@@ -8295,6 +8467,11 @@ replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
 replace ind_transp_disadv=. if miss==4
 label var ind_transp_disadv "Any transportation disadvantage"
 drop miss
+
+note ind_transp_disadv: oftedrive trkpfrvis trprrelsr trprkpfgr trprgoout
+note ind_transp_disadv: Indicate any transportation disadvantage 
+note ind_transp_disadv: Located in NHATS Setup, under Part 7.
+note ind_transp_disadv: Created: 04/05/18-MH
 
 local lab1 Walked
 local lab2 Got ride
@@ -8314,7 +8491,12 @@ forvalues x=1/7  {
 	replace get_places`x'=getoplcs`x'==1 
 	replace get_places`x'=. if (inlist(getoplcs7,-1,.) | getoplcs`x'==.) 
 	label var get_places`x' "Get places: `lab`x''"
+	note get_places`x': getoplcs`x'
+	note get_places`x': `lab`x'' to get to places
+	note get_places`x': Located in NHATS Setup, under Part 7.
+	note get_places`x': Created: 04/05/18-MH
 	local l=`l'+1
+	
 }
 
 //marital status-3 vars: married, married_or_partnered
@@ -8335,9 +8517,34 @@ label var marital_sep "Separated"
 label var marital_div "Divorced"
 label var marital_wid "Widowed"
 label var marital_nev "Never married"
-notes married : hh1martlstat
-notes married : "_"
+notes married : martlstat
+notes married : (Y/N)
 notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header for intermediate var and step-7 for final
+notes married : Updated: 04/05/18-MH
+
+foreach x in marital_sep marital_div marital_wid marital_nev marriedpartnered marital_sd{
+notes `x': martlstat dmarstat 
+	if "`x'"=="marital_sep"{
+	notes `x': Seperated, marital status.
+	}
+	if "`x'"=="marital_div"{
+	notes `x': Divorced, marital status.
+	}
+	if "`x'"=="marital_wid"{
+	notes `x': Widowed, marital status.
+	}
+	if "`x'"=="marital_nev"{
+	notes `x': Never Married, marital status.
+	}
+	if "`x'"=="marriedpartnered"{
+	notes `x': Married or Living with a partner.
+	}
+	if "`x'"=="marital_sep"{
+	notes `x': Seperated or Divorced, marital status.
+	}
+note `x': Located in NHATS Setup part 3 initial cleanup, part 7 final cleanup.
+note `x': Created: 04/05/18-MH
+}
 
 //lives with spouse
 gen resspouse=.
@@ -8345,12 +8552,20 @@ replace resspouse=livwthspo==1 if livwthspo>0
 replace resspouse=0 if marriedpart==0
 
 label var resspouse "Lives with Spouse/Partner"
+notes resspouse : livwthspo martlstat
+notes resspouse : Living with spouse or partner (Y/N)
+notes resspouse : Located in NHATS Setup, under Part 7.
+notes resspouse : Updated: 04/08/19-MH
 
 //household members
 gen hhm=.
 replace hhm=dhshldnum if dhshldnum>0 
 
 label var hhm "Number of household members"
+notes hhm : dhshldnum 
+notes hhm : Count of the number of household members. 
+notes hhm : Located in NHATS Setup, under Part 7.
+notes hhm : Updated: 04/08/19-MH
 
 //age categorical
 
@@ -8360,10 +8575,14 @@ label var age "Sensitive: age"
 
 gen agecat = .
 replace agecat= d2intvrage
-
 replace agecat=. if agecat==-1
 label values agecat d2intvrage
 label var agecat "Age, 5 yr categories"
+
+notes agecat : d2intvrage (same)
+notes agecat : Age cateory 65-59, 70-74, 75-79, 80-84, 85-89, 90+ 
+notes agecat : Located in NHATS Setup, under Part 7.
+notes agecat : Updated: 04/09/19-MH
 
 //activities past month
 
@@ -8399,6 +8618,38 @@ label var vigact "Past mo. engage in vigorous activity"
 label values imprelig pa1imprelser
 label values impvisit pa1impvstfam
 label values impclub pa1imparclub
+
+notes attrelig : attrelser (same)
+notes attrelig : Ever attend religious services 
+notes attrelig : Located in NHATS Setup, under Part 7.
+notes attrelig : Updated: 04/09/19-MH
+
+notes imprelig : imprelser (same)
+notes imprelig : How important are religious services, very, somewhat, or not so important. 
+notes imprelig : Located in NHATS Setup, under Part 7.
+notes imprelig : Updated: 04/09/19-MH
+
+notes visitfrfam : visfrfam (same)
+notes visitfrfam : Ever visit in person with friends or family, not living with.
+notes visitfrfam : Located in NHATS Setup, under Part 7.
+notes visitfrfam : Updated: 04/09/19-MH
+
+notes impvisit : impvstfam (same)
+notes impvisit : How important to visit in person with friends or family not living with. 
+notes impvisit : Located in NHATS Setup, under Part 7.
+notes impvisit : Updated: 04/09/19-MH
+
+notes attclub : clbmtgrac (same)
+notes attclub : Ever participate in clubs, classes, or other organized activites. 
+notes attclub : Located in NHATS Setup, under Part 7.
+notes attclub : Updated: 04/09/19-MH
+
+notes vigact : vigoractv (same)
+notes vigact : Ever spend time on vigorous activites that increased heart rate. ///
+Working out, swimming, running, biking, or any sport.  
+notes vigact : Located in NHATS Setup, under Part 7.
+notes vigact : Updated: 04/09/19-MH
+
 
 //smokin'
 gen smokedever=. 
@@ -8651,7 +8902,7 @@ label var meals_wheels "Meals on wheels"
 label var noone_talk "SP has no one to talk to"
 label var restrnt_takeout "Received help with restaurant/takeout"
 //pull in date of death, constructed from claims and nhats
-merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", nogen
+merge m:1 spid using "E:\nhats\data\NHATS CMS DUA 28016\Merged\Stata\death_date.dta", nogen
 
 gen died_12=mofd(death_date)-mofd(ivw_date)<=12
 gen died_24=mofd(death_date)-mofd(ivw_date)<=24
@@ -9481,6 +9732,13 @@ H="Changelog"
 
 Updates:
 
+04/06/2019 MH
+----------
+Added in notes to NHATS setup part 7.
+
+04/05/2019 MH
+----------
+Added in notes to NHATS setup part 7. Optimized code, removed extra steps. 
 
 04/04/2019 EBL
 ----------
