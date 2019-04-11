@@ -438,6 +438,53 @@ replace sw4cat=4 if switch_ffs_n==0 & switch_ffs_p==0
 replace sw4cat=. if hs_pre_study==1
 tab sw4cat
 
+H="cleaning variables: making quarter indicators"
+gen q0ind = .
+replace q0ind=1 if firsthmo==1 
+
+gen q1ind=q0ind
+replace q1ind=3 if firsthmo==1 & (cont_ma_n_mos==1 | cont_ma_n_mos==2 | cont_ma_n_mos==3) & hospswitch==0
+
+gen q2ind=q1ind 
+replace q2ind=3 if firsthmo==1 & (cont_ma_n_mos==4 | cont_ma_n_mos==5 | cont_ma_n_mos==6) & hospswitch==0
+
+gen q3ind=q2ind 
+replace q3ind=3 if firsthmo==1 & (cont_ma_n_mos==7 | cont_ma_n_mos==8 | cont_ma_n_mos==9) & hospswitch==0
+
+gen q4ind=q3ind 
+replace q4ind=3 if firsthmo==1 & (cont_ma_n_mos==10 | cont_ma_n_mos==11)
+
+gen q5ind=q4ind
+replace q5ind=2 if q4ind==1 & switch_indicator==0 & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
+replace q5ind=3 if switch_indicator==1 &  hospswitch==0 & (cont_ma_p_mos==1 | cont_ma_p_mos==2 | cont_ma_p_mos==3) & (months_dis_death==. | months_dis_death>3)
+replace q5ind=3 if cont_ma_n_mos==12 & cont_ma_p_mos==0 & hospswitch==0
+replace q5ind=4 if switch_indicator==1 & months_dis_death<4
+
+gen q6ind=q5ind
+replace q6ind=2 if q5ind==1 & switch_indicator==0 & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
+replace q6ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==4 | cont_ma_p_mos==5 | cont_ma_p_mos==6) & (months_dis_death==. | months_dis_death>6)
+replace q6ind=4 if switch_indicator==1 & months_dis_death<7
+replace q6ind=5 if firsthmo==1 & months_truncated<3
+
+gen q7ind=q6ind
+replace q7ind=2 if q6ind==1 & switch_indicator==0 & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
+replace q7ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==7 | cont_ma_p_mos==8 | cont_ma_p_mos==9) & (months_dis_death==. | months_dis_death>9)
+replace q7ind=4 if switch_indicator==1 & months_dis_death<10
+replace q7ind=5 if firsthmo==1 & months_truncated<7
+
+gen q8ind=q7ind
+replace q8ind=2 if q7ind==1 & switch_indicator==0 & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
+replace q8ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==10 | cont_ma_p_mos==11 | cont_ma_p_mos==12) & (months_dis_death==. | months_dis_death>12)
+replace q8ind=4 if switch_indicator==1 & months_dis_death<13
+replace q8ind=5 if firsthmo==1 & months_truncated<10
+
+
+*now, remove everyone from the sample who has incomplete follow up (q8ind==5)
+foreach n of numlist 0/7 {
+replace q`n'ind=5 if q8ind==5
+}
+replace q0ind=5 if q8ind==5
+
 H="table 1, also merge w serious illness and cleaning covariates for table"
 *look at the characteristics of those who switched  vs those who did not
 
@@ -506,13 +553,21 @@ H="table 1, also merge w serious illness and cleaning covariates for table"
 *recode homebound to 3 categories
 	recode homebound_cat (1=1 "never or rarely leaves home")(2/3=2 "leaves home, but needs assistance or has difficulty")(4=3 "independent, able to leave home"), gen (homebound_3cat)
 	
+*flip married/partnered
+		recode marriedpartnered (0=1)(1=0), gen(not_marriedpartnered)
+*flip hs education
+	recode educ_hs_ind (0=1)(1=0), gen(not_hs_educ)
+*recode 
+	recode income_cat_2 (2=0), gen(income_less_15k)
+*recode age
+	recode age (min/75=1 "65-75")(75/85=2 "75/85")(85/max=3 "85+"), gen(age3cat)
+	
 *TABLE 1
 tab female sw4cat, column chi2
 tabstat age, by(sw4cat) stats(mean sd)
 tab race_cat_2 sw4cat, column chi2
-tab educ_hs_ind sw4cat, column chi2
-tab income_cat_2 sw4cat, column chi2
-ttest adl_index, by(sw4cat)
+tab not_hs_educ sw4cat, column chi2
+tab income_less_15k sw4cat, column chi2
 tab adl3catn sw4cat, column chi2 
 tab nhres sw4cat, column chi2
 tab medicaid sw4cat, column chi2
@@ -523,7 +578,7 @@ tabstat year, by(sw4cat) stats(mean sd)
 tab livealone sw4cat, column chi2
 tab dem_2_cat sw4cat, column chi2
 tab ind_no_helpers sw4cat if adl3catn!=0, column chi2
-tab marriedpartnered sw4cat, column chi2
+tab not_marriedpartnered sw4cat, column chi2
 tab homebound_3cat sw4cat, column chi2
 tab sr_phq2_depressed sw4cat, column chi2
 tab sr_gad2_anxiety sw4cat, column chi2
@@ -536,16 +591,16 @@ logistic switchma female
 logistic switchma age
 logistic switchma race_cat_2
 logistic switchma livealone
-logistic switchma marriedpartnered
+logistic switchma not_marriedpartnered
 logistic switchma ib3.region
-logistic switchma educ_hs_ind
-logistic switchma income_cat_2
+logistic switchma not_hs_educ
+logistic switchma income_less_15k
 logistic switchma medicaid
-logistic switchma adl3catn
+logistic switchma i.adl3cat
 logistic switchma ind_no_helpers if adl3catn!=0
 logistic switchma dem_2_cat
 logistic switchma nhres
-logistic switchma homebound_3cat
+logistic switchma ib3.homebound_3cat
 logistic switchma sr_phq2_depressed
 logistic switchma sr_gad2_anxiety
 logistic switchma srh_fp
@@ -555,24 +610,30 @@ logistic switchffs female
 logistic switchffs age
 logistic switchffs race_cat_2
 logistic switchffs livealone
-logistic switchffs marriedpartnered
+logistic switchffs not_marriedpartnered
 logistic switchffs ib3.region
-logistic switchffs educ_hs_ind
-logistic switchffs income_cat_2
+logistic switchffs not_hs_educ
+logistic switchffs income_less_15k
 logistic switchffs medicaid
-logistic switchffs adl3catn
+logistic switchffs i.adl3catn
 logistic switchffs ind_no_helpers if adl3catn!=0
 logistic switchffs dem_2_cat
 logistic switchffs nhres
-logistic switchffs homebound_3cat
+logistic switchffs ib3.homebound_3cat
 logistic switchffs sr_phq2_depressed
 logistic switchffs sr_gad2_anxiety
 logistic switchffs srh_fp
 logistic switchffs died12mo
 
-logistic switchffs 
+logistic switchma female i.agecat race_cat_2 livealone not_marriedpartnered not_hs_educ medicaid i.adl3catn ind_no_helpers dem_2_cat nhres ib3.homebound_3cat year
+linktest, nolog
 
-logistic switchma female age race_cat_2
+logistic switchma race_cat_2 livealone not_marriedpartnered medicaid i.adl3catn ind_no_helpers dem_2_cat nhres ib3.homebound_3cat year age##age female
+fitstat
+female age race_cat_2 livealone not_marriedpartnered not_hs_educ income_less_15k medicaid i.adl3catn dem_2_cat nhres
+
+linktest, nolog
+logistic switchffs age race_cat_2 not_marriedpartnered not_hs_educ income_less_15k medicaid  ind_no_helpers died12mo year
 
 
 
@@ -622,18 +683,11 @@ replace persontime_p= cont_ffs_p_mos if switch_ffs_p==1
 *replace with time until went onto hospice if that's shorter
 replace persontime_p=months_hosp if months_hosp<persontime_p & months_hosp>0
 
-*make a variable for switching before and after
-gen switch_pre=switch_ma_n
-replace switch_pre=switch_ffs_n if switch_pre==.
-
-gen switch_post=switch_ma_p
-replace switch_post=switch_ffs_p if switch_post==.
 
 
 
 ir switch_pre firsthmo persontime_n if hs_pre_study!=1
 ir switch_post firsthmo persontime_p if hs_pre_study!=1
-
 
 
 
@@ -1011,53 +1065,6 @@ tab  days_truncated_cat if died_post_index==. & firsthmo==1 & (ind_ma_index==1 |
 gen switcht0=. 
 replace switcht0=1 if firsthmo==1 & cont_ma_n_mos==12 & ind_ma_index==0
 sort switcht0
-
-H="cleaning variables: making quarter indicators"
-gen q0ind = .
-replace q0ind=1 if firsthmo==1 
-
-gen q1ind=q0ind
-replace q1ind=3 if firsthmo==1 & (cont_ma_n_mos==1 | cont_ma_n_mos==2 | cont_ma_n_mos==3) & hospswitch==0
-
-gen q2ind=q1ind 
-replace q2ind=3 if firsthmo==1 & (cont_ma_n_mos==4 | cont_ma_n_mos==5 | cont_ma_n_mos==6) & hospswitch==0
-
-gen q3ind=q2ind 
-replace q3ind=3 if firsthmo==1 & (cont_ma_n_mos==7 | cont_ma_n_mos==8 | cont_ma_n_mos==9) & hospswitch==0
-
-gen q4ind=q3ind 
-replace q4ind=3 if firsthmo==1 & (cont_ma_n_mos==10 | cont_ma_n_mos==11)
-
-gen q5ind=q4ind
-replace q5ind=2 if q4ind==1 & switch_indicator==0 & (months_dis_death==1 | months_dis_death==2 | months_dis_death==3)
-replace q5ind=3 if switch_indicator==1 &  hospswitch==0 & (cont_ma_p_mos==1 | cont_ma_p_mos==2 | cont_ma_p_mos==3) & (months_dis_death==. | months_dis_death>3)
-replace q5ind=3 if cont_ma_n_mos==12 & cont_ma_p_mos==0 & hospswitch==0
-replace q5ind=4 if switch_indicator==1 & months_dis_death<4
-
-gen q6ind=q5ind
-replace q6ind=2 if q5ind==1 & switch_indicator==0 & (months_dis_death==4 | months_dis_death==5 | months_dis_death==6)
-replace q6ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==4 | cont_ma_p_mos==5 | cont_ma_p_mos==6) & (months_dis_death==. | months_dis_death>6)
-replace q6ind=4 if switch_indicator==1 & months_dis_death<7
-replace q6ind=5 if firsthmo==1 & months_truncated<3
-
-gen q7ind=q6ind
-replace q7ind=2 if q6ind==1 & switch_indicator==0 & (months_dis_death==7 | months_dis_death==8 | months_dis_death==9)
-replace q7ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==7 | cont_ma_p_mos==8 | cont_ma_p_mos==9) & (months_dis_death==. | months_dis_death>9)
-replace q7ind=4 if switch_indicator==1 & months_dis_death<10
-replace q7ind=5 if firsthmo==1 & months_truncated<7
-
-gen q8ind=q7ind
-replace q8ind=2 if q7ind==1 & switch_indicator==0 & (months_dis_death==10 | months_dis_death==11 | months_dis_death==12)
-replace q8ind=3 if switch_indicator==1 & hospswitch==0 & (cont_ma_p_mos==10 | cont_ma_p_mos==11 | cont_ma_p_mos==12) & (months_dis_death==. | months_dis_death>12)
-replace q8ind=4 if switch_indicator==1 & months_dis_death<13
-replace q8ind=5 if firsthmo==1 & months_truncated<10
-
-
-*now, remove everyone from the sample who has incomplete follow up (q8ind==5)
-foreach n of numlist 0/7 {
-replace q`n'ind=5 if q8ind==5
-}
-replace q0ind=5 if q8ind==5
 
 H="figure 1"
 *Making figure 1

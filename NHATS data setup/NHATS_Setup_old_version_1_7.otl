@@ -1,100 +1,118 @@
 = V4 Outline MultiLine NoSorting TabWidth=30
 
-H="XXXXXXX GLOBAL MACROS DEFINED XXXXXXX "
-/* 
-********************HEADING******************** 
-
-Project Name: NHATS Setup
-
-Date Started: 
-
-Primary Investigator:
-Funding Source:
-
-Created by: Many Authors
-
-Primary Analyst:
-Secondary Analyst:
-
-Datasets Used: NHATS Raw public, sensitive, metro, and NSOC
-
-Simple Outline: NHATS data cleanup, variable creation. 
-
-
-*/
- 
-//STATA
-// Global Macros use $ symbol to be called. 
-//File paths for raw data
-
-//NEED TO CHANGE WAVE NUMBER FOR EACH WAVE
-global w 7
-
-global work E:\nhats\data\NHATS working data\
-global logs E:\nhats\nhats_code\NHATS data setup\logs\
-
-forvalues w=1/$w{
-global r`w'raw E:\nhats\data\NHATS Public\round_`w'\
-global r`w's E:\nhats\data\NHATS Sensitive\r`w'_sensitive\
-}
-
-
 H="NHATS Data Cleaning Part 1 (1_combine_waves)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 03/21/2019
-
-Description: Inital dataset cleaning, renaming varaibles, merging variables from 
-sensitive dataset, and broad structuring.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 1-combine_waves_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
 /*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
+sensitive demo and the round 2 cumulative tracker file case 
+status l into a d file
 
 Data format is multiple observations per subject, one for each round
 */
+capture log close
+clear all
+set more off
+set maxvar 10000
+
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+log using "`logs'1_nhats_setup1.txt", text replace
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+
+cd "`work'"
 *********************************************
 
-forvalues w=1/$w {
-//round w
-use "${r`w'raw}NHATS_Round_`w'_SP_File.dta"
+//round 1
+use "`r1raw'NHATS_Round_1_SP_File.dta"
 //check to make sure sample ids are unique
 sort spid 
 quietly by spid: gen dup = cond(_N==1,0,_n)
 tab dup
-capture gen wave=`w'
+capture gen wave=1
 la var wave "Survey wave"
-save round_`w'_1.dta, replace
+save round_1_1.dta, replace
 clear
-}
+
+//round 2
+use "`r2raw'NHATS_Round_2_SP_File_v2.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=2
+la var wave "Survey wave"
+save round_2_1.dta, replace
+clear 
+
+//round 3
+use "`r3raw'NHATS_Round_3_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=3
+la var wave "Survey wave"
+save round_3_1.dta, replace
+clear 
+
+//round 4
+use "`r4raw'NHATS_Round_4_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=4
+la var wave "Survey wave"
+save round_4_1.dta, replace
+clear 
+
+//round 5
+use "`r5raw'NHATS_Round_5_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid 
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=5
+la var wave "Survey wave"
+save round_5_1.dta, replace
+clear 
+
+//round 6 
+use "`r6raw'NHATS_Round_6_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=6
+la var wave "Survey Wave"
+save round_6_1.dta, replace
+clear
+
+//round 7 
+use "`r7raw'NHATS_Round_7_SP_File.dta"
+//check to make sure sample ids are unique
+sort spid
+quietly by spid: gen dup = cond(_N==1,0,_n)
+tab dup
+capture gen wave=7
+la var wave "Survey Wave"
+save round_7_1.dta, replace
+clear
 
 //round 1
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 use round_`w'_1.dta
 
 if `w'!=1 local pd pd* 
@@ -109,160 +127,112 @@ local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  
 
 if `w'==1 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
-	ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* rl`w'* el`w'* ia`w'* re`w'* va`w'*) ///
-(*) 
-destring dfavact, replace
+ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
 }
 
 if `w'==2 {	
 keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
-	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill lm*
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* ep`w'* lm`w'*) ///
-(*) 
+	re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
 }
 
 if `w'==3 {	
 keep `keepallwaves' re3intplace re3newstrct re3spadrsnew re3dresistrct ///
-	re3dcensdiv ip3nginslast ia* lm*
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'* lm`w'*) ///
-(*) 
+	re3dcensdiv ip3nginslast ia*
 }
 if `w'==4 {	
 keep `keepallwaves' re4intplace re4newstrct re4spadrsnew re4dresistrct ///
-	re4dcensdiv ip4nginslast lm*
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* lm`w'*) ///
-(*) 
+	re4dcensdiv ip4nginslast
 }
 if `w'==5 {	
 keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
-	re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0 lm*
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* rl`w'* el`w'* ia`w'* re`w'* va`w'* pd`w'* lm`w'*) ///
-(*) 
+	re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
 }	
 if `w'==6 {	
 keep `keepallwaves' re6intplace re6newstrct re6spadrsnew re6dresistrct ///
-	re6dcensdiv ip6nginslast w6an2011wgt0 lm*	 
-
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* pd`w'* lm`w'*) ///
-(*) 
+	re6dcensdiv ip6nginslast w6an2011wgt0	
 }
 if `w'==7 {	
 keep `keepallwaves' re7intplace re7newstrct re7spadrsnew re7dresistrct ///
-	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0 lm*
-	
-rename (r`w'* w`w'* mo`w'* hh`w'* ip`w'* hc`w'* ss`w'* pc`w'* cp`w'* cg`w'* ha`w'* ///
-sc`w'* mc`w'* sd`w'* pa`w'* hw`w'* is`w'* ht`w'* fl`w'* ir`w'* cm`w'* ew`w'* hp`w'* ///
-sn`w'* dt`w'* gr`w'* wa`w'* wb`w'* ho`w'* cs`w'* re`w'* ia`w'* pd`w'* lm`w'*) ///
-(*) 
+	re7dcensdiv ip7nginslast ia`w'* w7an2011wgt0
 }
 
 save round_`w'_ltd.dta, replace
 }
 
 //check sensitive data files, keep only some variables, merge with ltd datasets
-forvalues w=1/$w{
-	use "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File.dta"
+foreach w in 1 2 3 4 5 6 7{
+	use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
 	sort spid 
 	quietly by spid: gen dup = cond(_N==1,0,_n)
 	tab dup	
 	clear
 }
 
-//combine waves into single dataset
+	
+//combine 3 waves into single dataset
 use round_1_ltd.dta
-forvalues w=2/$w{
-append using round_`w'_ltd.dta
-}
-
-preserve
-
-forvalues w=1/$w{
-use "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File.dta", clear
-gen wave=`w'
-save "${r`w's}NHATS_Round_`w'_SP_Sen_Dem_File_new.dta", replace
-
-}
-
-restore
+append using round_2_ltd.dta
+append using round_3_ltd.dta
+append using round_4_ltd.dta
+append using round_5_ltd.dta
+append using round_6_ltd.dta
+append using round_7_ltd.dta
 
 //merge in sensitive data, use r1 as basis, added in cancer vars
-merge m:1 spid wave using "${r1s}NHATS_Round_1_SP_Sen_Dem_File_new.dta", ///
+merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
 	keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
-	rl1primarace rl1hisplatno hc1cancerty*) nogen
+	rl1primarace rl1hisplatno hc1cancerty*)	
+
+drop _merge
 
 //merge in additional r2 sensitive data
-merge m:1 spid using "${r2s}NHATS_Round_2_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied) nogen
+merge m:1 spid using "`r2s'NHATS_Round_2_SP_Sen_Dem_File.dta", ///
+	keepusing(r2dintvwrage hh2dspousage r2ddeathage pd2mthdied pd2yrdied)
+drop _merge
 
 //merge in additional r3 sensitive data
-merge m:1 spid using "${r3s}NHATS_Round_3_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied)  nogen
+merge m:1 spid using "`r3s'NHATS_Round_3_SP_Sen_Dem_File.dta", ///
+	keepusing(r3dintvwrage hh3dspousage r3ddeathage pd3mthdied pd3yrdied)
+drop _merge
 
 //merge in additional r4 sensitive data
-merge m:1 spid using "${r4s}NHATS_Round_4_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r4dintvwrage hh4dspousage r4ddeathage pd4mthdied pd4yrdied hc4cancerty*) nogen
+merge m:1 spid using "`r4s'NHATS_Round_4_SP_Sen_Dem_File.dta", ///
+	keepusing(r4dintvwrage hh4dspousage r4ddeathage pd4mthdied pd4yrdied)
+drop _merge
 
 //merge in additional r5 sensitive data
-merge m:1 spid using "${r5s}NHATS_Round_5_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied hc5cancerty*) nogen
+merge m:1 spid using "`r5s'NHATS_Round_5_SP_Sen_Dem_File.dta", ///
+	keepusing(r5dintvwrage hh5spageall r5ddeathage pd5mthdied pd5yrdied)
+drop _merge
 
 //merge in additional r6 sensitive data
-merge m:1 spid using "${r6s}NHATS_Round_6_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied hc6cancerty*) nogen
+merge m:1 spid using "`r6s'NHATS_Round_6_SP_Sen_Dem_File.dta", ///
+	keepusing(r6dintvwrage hh6spageall r6ddeathage pd6mthdied pd6yrdied)
+drop _merge
 
 //merge in additional r7 sensitive data
-merge m:1 spid using "${r7s}NHATS_Round_7_SP_Sen_Dem_File_new.dta", ///
-	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied hc7cancerty*) nogen
+merge m:1 spid using "`r7s'NHATS_Round_7_SP_Sen_Dem_File.dta", ///
+	keepusing(r7dintvwrage hh7spageall r7ddeathage pd7mthdied pd7yrdied)
+drop _merge
 
 //3B?
 //merge in tracker status information
-
-
-merge m:1 spid using "${r7raw}NHATS_Round_7_Tracker_File", keepusing( yearsample ///
-w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
-w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
-w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt ///
-w4trfinwgt0 			 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt ///
-w3trfinwgt0 			 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
-w2trfinwgt0 			 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt ///
-w1trfinwgt0 			 r1status r1spstat r1spstatdtmt r1spstatdtyr r1fqstatdt*)
-
-gen trfinwgt0=.
-gen tr2011wgt0=.
-forvalues w=1/$w{
-replace trfinwgt0= w`w'trfinwgt0 if wave==`w'
-capture replace tr2011wgt0 = w`w'tr2011wgt0 if wave==`w'
-capture drop w`w'trfinwgt0 w`w'tr2011wgt0
-}
-
+merge m:1 spid using "`r7raw'NHATS_Round_7_Tracker_File", ///
+	keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
+	 w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
+	w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+		w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
+		r1fqstatdt*)
 
 //merge in nsoc tracker information
-merge m:1 spid using "${r1s}NSOC_Round_1_SP_tracker_file", nogen
+merge m:1 spid using "`r1s'NSOC_Round_1_SP_tracker_file", nogen
 //drop obs that are in tracker file but not sp file
 drop if _merge==2
 drop _merge	
-save round_1_to_$w.dta, replace
+save round_1_to_7.dta, replace
 
-//old version of stata
-forvalues w=1/$w{
+//10/17/2018--old version of stata
+forvalues w=1/7{
 clear all
 use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
 saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
@@ -271,110 +241,137 @@ saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dt
 *********************************************
 log close
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
-
 
 H="NHATS Data Cleaning Part 2 (1a_help_hours_imputation)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 03/21/2019
-
-Description: This section uses the SP and OP data files and imputes
+/*this section uses the SP and OP R1,2&3 data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
 
-Variables from this dataset are then brought in to the SP Rounds dataset
-and also the NSOC caregiver dataset.
+Variables from this dataset are then brought in to the SP R 1,2,3 dataset
+and also the NSOC caregiver dataset*/
 
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 1a-help_hours_imputation_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
 set maxvar 10000
 
+local logs E:\nhats\nhats_code\NHATS data setup\logs
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
+log using "`logs'1a-help_hours_imputation-LOG.txt", text replace
 
-log using "${logs}/`name'.smcl", text replace
+//PC file paths
+local r1raw "E:\nhats\data\NHATS Public\round_1\"
+local r2raw "E:\nhats\data\NHATS Public\round_2\"
+local r3raw "E:\nhats\data\NHATS Public\round_3\"
+local r4raw "E:\nhats\data\NHATS PUBLIC\round_4\"
+local r5raw "E:\nhats\data\NHATS PUBLIC\round_5\"
+local r6raw "E:\nhats\data\NHATS Public\round_6\"
+local r7raw "E:\nhats\data\NHATS Public\round_7\"
+local work "E:\nhats\data\NHATS working data\"
+local r1s "E:\nhats\data\NHATS Sensitive\r1_sensitive\"
+local r2s "E:\nhats\data\NHATS Sensitive\r2_sensitive\"
+local r3s "E:\nhats\data\NHATS Sensitive\r3_sensitive\"
+local r4s "E:\nhats\data\NHATS Sensitive\r4_sensitive\"
+local r5s "E:\nhats\data\NHATS Sensitive\r5_sensitive\"
+local r6s "E:\nhats\data\NHATS Sensitive\r6_sensitive\"
+local r7s "E:\nhats\data\NHATS Sensitive\r7_sensitive\"
 
-
-
-
-*********************************************
-
-cd "${work}"
+/* //Rebecca mac file paths
+local r1raw /Users/rebeccagorges/Documents/data/nhats/round_1/
+local r2raw /Users/rebeccagorges/Documents/data/nhats/round_2/
+local r3raw /Users/rebeccagorges/Documents/data/nhats/round_3/
+local work /Users/rebeccagorges/Documents/data/nhats/working
+local r1s /Users/rebeccagorges/Documents/data/nhats/r1_sensitive/
+local r2s /Users/rebeccagorges/Documents/data/nhats/r2_sensitive/ 
+ */
+ 
+cd "`work'"
 
 **User note: This section can be commented out after run one time to set up datasets
 ********************************************************************
 //combine op and sp data files
 
-forvalues w=1/2{
-use "${r`w'raw}NHATS_Round_`w'_OP_File_v2.dta", clear
+//round 1
+use "`r1raw'NHATS_Round_1_OP_File_v2.dta", clear
 sort spid opid 
 
-merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+merge m:1 spid using round_1_1.dta //bring in sorted sp ivw dataset
 keep if _merge==3 //drop obs with no OP entries
-save R`w'_OPSPlinked.dta, replace
-}
+save R1_OPSPlinked.dta, replace
 
-forvalues w=3/$w{
-use "${r`w'raw}NHATS_Round_`w'_OP_File.dta", clear
-sort spid opid 
+//round 2
+use "`r2raw'NHATS_Round_2_OP_File_v2.dta", clear
+sort spid opid
 
-merge m:1 spid using round_`w'_1.dta //bring in sorted sp ivw dataset
+merge m:1 spid using round_2_1.dta //bring in sorted sp ivw dataset
 keep if _merge==3 //drop obs with no OP entries
-save R`w'_OPSPlinked.dta, replace
-}
+save R2_OPSPlinked.dta, replace
 
+//round 3
+use "`r3raw'NHATS_Round_3_OP_File.dta", clear
+sort spid opid
 
-//now create limited datasets for each wave with only needed variables
-forvalues w=1/$w{
+merge m:1 spid using round_3_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R3_OPSPlinked.dta, replace
+
+//round 4
+use "`r4raw'NHATS_Round_4_OP_File.dta", clear
+sort spid opid
+
+merge m:1 spid using round_4_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R4_OPSPlinked.dta, replace
+
+//round 5
+use "`r5raw'NHATS_Round_5_OP_File.dta", clear
+sort spid opid
+
+merge m:1 spid using round_5_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R5_OPSPlinked.dta, replace
+
+//round 6
+use "`r6raw'NHATS_Round_6_OP_File.dta", clear
+sort spid opid
+
+merge m:1 spid using round_6_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R6_OPSPlinked.dta, replace
+
+//round 7
+use "`r7raw'NHATS_Round_7_OP_File.dta", clear
+sort spid opid
+
+merge m:1 spid using round_7_1.dta //bring in sorted sp ivw dataset
+keep if _merge==3 //drop obs with no OP entries
+save R7_OPSPlinked.dta, replace
+
+foreach w in 1 2 3 4 5 6 7{
 	use R`w'_OPSPlinked.dta
 	
-		if inlist(`w',1,2,3,4){
-			keep spid opid op`w'* wave w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid ///
-		mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhelp ///
-		sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ///
-		ha`w'dbankreas mc`w'dmedsreas
-		}
-		//add new wave to list below
-		if inrange(`w',5,$w){ 
-			keep spid opid op`w'* wave w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid ///
-		mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhelp ///
-		sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ///
-		ha`w'dbankreas mc`w'dmedsreas w`w'an2011wgt0 
-		}
-		
-	rename (op`w'* w`w'* r`w'* mo`w'* sc`w'* ha`w'* mc`w'*) (*) 
-
+//now create limited datasets for each wave with only needed variables
+local keeplist spid op* wave  w`w'anfinwgt0 w`w'varstrat w`w'varunit r`w'dresid ///
+ mo`w'douthelp mo`w'dinsdhelp mo`w'dbedhelp sc`w'deathelp sc`w'dbathhelp ///
+ sc`w'dtoilhelp sc`w'ddreshelp ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ///
+ ha`w'dbankreas mc`w'dmedsreas w`w'an2011wgt0 w`w'tr2011wgt0 w`w'tran
+ 
+	capture keep `keeplist'
 	save R`w'_OPSPltd.dta, replace
 }
-
-
 
 ********************************************************************
 //merge into single file for initial setup
 use R1_OPSPltd.dta, clear
-forvalues w=2/$w{
-append using R`w'_OPSPltd.dta
-}
+append using R2_OPSPltd.dta
+append using R3_OPSPltd.dta
+append using R4_OPSPltd.dta
+append using R5_OPSPltd.dta
+append using R6_OPSPltd.dta
+append using R7_OPSPltd.dta
 
-save R1234_OPSPltd_n.dta, replace
+save R1234_OPSPltd.dta, replace
 ********************************************************************
+use R1234_OPSPltd.dta, clear
 
 tab wave, missing
 
@@ -382,37 +379,36 @@ tab wave, missing
 //recode helper time variables to -1 (na) if not helper per flag variable
 **Note, these OP variables are backfilled from wave to wave
 gen opishelper_allw=.
-forvalues w=1/$w{
-tab ishelper wave if wave==`w', missing //helper flag variable
-replace opishelper_allw=ishelper if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+tab op`w'ishelper wave, missing //helper flag variable
+replace opishelper_allw=op`w'ishelper if wave==`w'
 }
 tab opishelper_allw wave, missing
 
-forvalues w=1/$w{
-	foreach v in helpsched numdayswk numdaysmn numhrsday {
-		tab `v' if ishelper==-1 & wave==`w', missing
-		replace `v'=-1 if ishelper==-1 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	foreach v in op`w'helpsched op`w'numdayswk op`w'numdaysmn op`w'numhrsday {
+		tab `v' if op`w'ishelper==-1 & wave==`w', missing
+		replace `v'=-1 if op`w'ishelper==-1 & wave==`w'
 	}
 }
-
 //generate indicator of help with any task that has monthly reference period
 gen month=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace month=0 if wave==`w'
-replace month=1 if (outhlp==1 | insdhlp==1 | bedhlp==1 | tkplhlp1==1 | ///
- tkplhlp2==1 | launhlp==1 | shophlp==1 | mealhlp==1 | bankhlp==1 | ///
- eathlp==1 | bathhlp==1 | toilhlp==1 | dreshlp==1 | medshlp==1) & wave==`w'
+replace month=1 if (op`w'outhlp==1 | op`w'insdhlp==1 | op`w'bedhlp==1 | ///
+ op`w'tkplhlp1==1 | op`w'tkplhlp2==1 | op`w'launhlp==1 | op`w'shophlp==1 | ///
+ op`w'mealhlp==1 | op`w'bankhlp==1 | op`w'eathlp==1 | op`w'bathhlp==1 | ///
+ op`w'toilhlp==1 | op`w'dreshlp==1 | op`w'medshlp==1) & wave==`w'
 } 
 tab month wave, missing
 
  //generate indicator of help with any task that has yearly reference period
 gen year=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace year=0 if wave==`w'
-replace year=1 if (moneyhlp==1 | dochlp==1 | insurhlp==1) & wave==`w'
+replace year=1 if (op`w'moneyhlp==1 | op`w'dochlp==1 | op`w'insurhlp==1) & wave==`w'
 tab year month if wave==`w', missing
 }
-
 
 //generate indicator of help in last year but not last month
 gen yearnotmonth=0
@@ -421,22 +417,22 @@ tab yearnotmonth wave, missing
 ********************************************************************
 //pull variable for sits in with doctor
 gen op_doc_help=.
-forvalues w=1/$w {
-	replace op_doc_help=dochlp if wave==`w'
+forvalues i=1/7 {
+	replace op_doc_help=op`i'dochlp if wave==`i'
 }
 ********************************************************************
 //generate SP received help with self care or mobility activity or 
 //household activity for health and functioning reasons
 gen disab=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace disab=0 if wave==`w'
 //self care or mobility, assumed to be for health reasons
-replace disab=1 if (douthelp==2 | dinsdhelp==2 | dbedhelp==2 | ///
-deathelp==2 | dbathhelp==2 | dtoilhelp==2 | ddreshelp==2) & wave==`w'
+replace disab=1 if (mo`w'douthelp==2 | mo`w'dinsdhelp==2 | mo`w'dbedhelp==2 | ///
+ sc`w'deathelp==2 | sc`w'dbathhelp==2 | sc`w'dtoilhelp==2 | sc`w'ddreshelp==2) & wave==`w'
 //household activity for health or functioning reasons or in residential care
 **note this is different from tech paper #7 because codes disab=1 if 1,3 or 4
 **not just if 3 or 4
-foreach v in dlaunreas dshopreas dmealreas dbankreas dmedsreas{
+foreach v in ha`w'dlaunreas ha`w'dshopreas ha`w'dmealreas ha`w'dbankreas mc`w'dmedsreas{
 replace disab=1 if inlist(`v',1,3,4) & wave==`w'
 }
 }
@@ -444,10 +440,10 @@ tab disab wave, missing
 
 ********************************************************************
 //flag variable for hours/month reported, valid
-tab dhrsmth wave, missing //derived hours/month from HL section
+tab op1dhrsmth wave, missing //derived hours/month from HL section
 gen op_ind_hrsmth=.
-forvalues w=1/$w{
-replace op_ind_hrsmth=dhrsmth if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+replace op_ind_hrsmth=op`w'dhrsmth if wave==`w'
 }
 recode op_ind_hrsmth (1/750=1)
 
@@ -458,16 +454,17 @@ tab op_ind_hrsmth wave, missing
 
 //generate variable indicating one day per month or one day per week
 gen justone=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace justone=0 if wave==`w'
-replace justone=1 if (numdayswk==1 | numdaysmn==1) & wave==`w'
+replace justone=1 if (op`w'numdayswk==1 | op`w'numdaysmn==1) & wave==`w'
 }
 tab justone op_ind_hrsmth, missing
 
 //recode help flags to 0=(no or inapplicable) or 1=yes
-forvalues w=1/$w{
-foreach v in outhlp insdhlp bedhlp tkplhlp1 tkplhlp2 launhlp shophlp mealhlp ///
-bankhlp eathlp bathhlp toilhlp dreshlp medshlp moneyhlp dochlp insurhlp{
+foreach w in 1 2 3 4 5 6 7{
+foreach v in op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
+ op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp op`w'dreshlp ///
+ op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp{
 tab `v' if wave==`w', missing
 replace `v'=0 if `v'==-1 & wave==`w'
 }
@@ -475,10 +472,10 @@ replace `v'=0 if `v'==-1 & wave==`w'
 
 //generate variable indicating help with only one activity
 gen numact=.
-forvalues w=1/$w{
-replace numact=outhlp + insdhlp + bedhlp + tkplhlp1 + tkplhlp2 + launhlp + ///
-shophlp + mealhlp + bankhlp + eathlp + bathhlp + toilhlp + dreshlp + medshlp ///
-+ moneyhlp + dochlp + insurhlp if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+replace numact=op`w'outhlp + op`w'insdhlp + op`w'bedhlp + op`w'tkplhlp1 + op`w'tkplhlp2 + ///
+ op`w'launhlp + op`w'shophlp + op`w'mealhlp + op`w'bankhlp + op`w'eathlp + op`w'bathhlp + ///
+ op`w'toilhlp + op`w'dreshlp + op`w'medshlp + op`w'moneyhlp + op`w'dochlp + op`w'insurhlp if wave==`w'
 }
 
 tab numact wave, missing
@@ -499,20 +496,21 @@ label var otherrel "Non-spouse relative"
 label var oth_fam "Family member of SP, not spouse, son, or daughter"
 label var nonrel "Non-relative"
 
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace spouse=0 if wave==`w'
-replace spouse=1 if relat==2 & wave==`w'
+replace spouse=1 if op`w'relat==2 & wave==`w'
 replace otherrel=0 if wave==`w'
-replace otherrel=1 if ((relat>2 & relat<=29) | relat==91) & wave==`w'
+replace otherrel=1 if ((op`w'relat>2 & op`w'relat<=29) | op`w'relat==91) & wave==`w'
 replace nonrel=0 if wave==`w'
-replace nonrel=1 if (relat>=30 & relat~=91) & wave==`w'
-replace daughter=1 if inlist(relat,3,5,7) & wave==`w'
-replace son=1 if inlist(relat,4,6,8) & wave==`w'
-replace oth_fam=1 if ((relat>8 & relat<=29) | relat==91) & wave==`w'
+replace nonrel=1 if (op`w'relat>=30 & op`w'relat~=91) & wave==`w'
+replace daughter=1 if inlist(op`w'relat,3,5,7) & wave==`w'
+replace son=1 if inlist(op`w'relat,4,6,8) & wave==`w'
+replace oth_fam=1 if ((op`w'relat>8 & op`w'relat<=29) | op`w'relat==91) & wave==`w'
 
-tab relat spouse
-tab relat otherrel
-tab relat nonrel
+tab op`w'relat spouse
+tab op`w'relat otherrel
+tab op`w'relat nonrel
+
 }
 
 tab spouse wave, missing
@@ -520,44 +518,42 @@ tab otherrel wave, missing
 tab nonrel wave, missing
 
 ********************************************************************
-//generate variables indicating help w/ adls & iadls
+//generate variables indicating help w/ adls & a
 local adl insd bed eat bath toil dres
 local iadl laun shop meal bank meds 
 local nonadl out money tkpl
-
-gen tkplhlp=.
-forvalues w=1/$w{
-replace tkplhlp=tkplhlp1==1 | tkplhlp2==1 if wave==`w'
+forvalues i=1/7 {
+	gen op`i'tkplhlp=op`i'tkplhlp1==1 | op`i'tkplhlp2==1
 }
 
-foreach x in `adl' {
+foreach x of local adl {
 	gen op_adl_`x'=0
 }
-foreach x in `iadl' {
+foreach x of local iadl {
 	gen op_iadl_`x'=0
 }
-foreach x in `nonadl' {
+foreach x of local nonadl {
 	gen op_nonadl_`x'=0
 }
 
-forvalues w=1/$w {
-foreach x in `adl' {
-	replace op_adl_`x'=1 if `x'hlp==1 & wave==`w'
+forvalues i=1/7 {
+	foreach x of local adl{
+		replace op_adl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
 }
-foreach x in `iadl' {
-	replace op_iadl_`x'=1 if `x'hlp==1 & wave==`w'
+	foreach x of local iadl {
+		replace op_iadl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
 }
-foreach x in `nonadl' {
-	replace op_nonadl_`x'=1 if `x'hlp==1 & wave==`w'
+	foreach x of local nonadl {
+		replace op_nonadl_`x'=1 if op`i'`x'hlp==1 & wave==`i'
 }
 }
 
 ********************************************************************
 //generate variables indicating help on a regular schedule
 gen regular=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 replace regular=0 if wave==`w'
-replace regular=1 if helpsched==1 & wave==`w'
+replace regular=1 if op`w'helpsched==1 & wave==`w'
 }
 tab regular wave, missing
 
@@ -579,29 +575,29 @@ gen impute_cat=-1
 //wave=1
 	//1=impute
 	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-10) | ///
-	(op_ind_hrsmth==-9 & yearnotmonth==0) & ishelper==1 & wave==1
-	replace impute_cat=1 if op_ind_hrsmth==9999 & (numdayswk==1 | numdaysmn==1) ///
-	 & yearnotmonth==0 & ishelper==1 & wave==1
+	(op_ind_hrsmth==-9 & yearnotmonth==0) & op1ishelper==1 & wave==1
+	replace impute_cat=1 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
+	 & yearnotmonth==0 & op1ishelper==1 & wave==1
 	//2=recode to zero
-	replace impute_cat=2 if op_ind_hrsmth==-9 & yearnotmonth==1 & ishelper==1 & wave==1
-	replace impute_cat=2 if op_ind_hrsmth==9999 & (numdayswk==1 | numdaysmn==1) ///
-	& yearnotmonth==1 & ishelper==1 & wave==1
+	replace impute_cat=2 if op_ind_hrsmth==-9 & yearnotmonth==1 & op1ishelper==1 & wave==1
+	replace impute_cat=2 if op_ind_hrsmth==9999 & (op1numdayswk==1 | op1numdaysmn==1) ///
+	& yearnotmonth==1 & op1ishelper==1 & wave==1
 	//3=set to small number
 	replace impute_cat=3 if op_ind_hrsmth==9999 & ///
-	(numdayswk~=1 & numdaysmn~=1) & ishelper==1 & wave==1
+	(op1numdayswk~=1 & op1numdaysmn~=1) & op1ishelper==1 & wave==1
 	//4=imputation not necessary, complete info
-	replace impute_cat=4 if op_ind_hrsmth==1 & ishelper==1 & wave==1
+	replace impute_cat=4 if op_ind_hrsmth==1 & op1ishelper==1 & wave==1
 
 //if wave==2 | wave==3 | wave == 4
 	//1=impute, wave 2,3 criteria
-	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inrange(wave,2,$w)
-	replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inrange(wave,2,$w)
+	replace impute_cat=1 if inlist(op_ind_hrsmth,-11,-9) & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
+	replace impute_cat=1 if op_ind_hrsmth==-12 & yearnotmonth==0 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
 	//2=recode to zero, wave 2, 3
-	replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inrange(wave,2,$w)
+	replace impute_cat=2 if op_ind_hrsmth==-12 & yearnotmonth==1 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
 	//3=recode to small number
-	replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inrange(wave,2,$w)
+	replace impute_cat=3 if op_ind_hrsmth==9999 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
 	//4=imputation not necessary
-	replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inrange(wave,2,$w)
+	replace impute_cat=4 if op_ind_hrsmth==1 & opishelper_allw==1 & inlist(wave,2,3,4,5,6,7)
 
 la def impute_cat -1"N/A, not helper" 1"Impute" 2"Recode to zero" ///
 3"Recode to small number" 4"No imputation needed"
@@ -616,13 +612,13 @@ tab impute_cat op_ind_hrsmth if wave==5, missing
 tab impute_cat op_ind_hrsmth if wave==6, missing
 tab impute_cat op_ind_hrsmth if wave==7, missing
 
-******************************************************************** 
-//save separate datasets for each round so can run imputation with weighting
-forvalues w=1/$w{
+********************************************************************
+//save separate datasets for r 1 2 & 3 so can run imputation with weighting
+foreach w in 1 2 3 4 5 6 7{
 preserve  
-/*keep op* wave numact yearnotmonth disab anfinwgt0 varstrat varunit ///
- dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
- daughter oth_fam */
+keep op* wave numact yearnotmonth disab w`w'anfinwgt0 w`w'varstrat w`w'varunit ///
+ r`w'dresid spid justone spouse otherrel nonrel regular oneact impute_cat son ///
+ daughter oth_fam 
 keep if wave==`w'
 save R`w'_for_hrs_impute.dta,replace
 restore
@@ -630,53 +626,53 @@ restore
 */
 ********************************************************************
 //implement matching, do separately for each wave
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 use R`w'_for_hrs_impute.dta, clear
 
-svyset varunit [pweight=anfinwgt0], strata(varstrat)
+svyset w`w'varunit [pweight=w`w'anfinwgt0], strata(w`w'varstrat)
 
 //wave 1 imputation... need to check what is different if anything for wave 2
 gen op_hrsmth_i=0
-replace op_hrsmth_i=dhrsmth if impute_cat==4  //use actual value
+replace op_hrsmth_i=op`w'dhrsmth if impute_cat==4  //use actual value
 replace op_hrsmth_i=0 if impute_cat==2 //set to zero
-replace op_hrsmth_i=(.5*numdayswk*4.3) if impute_cat==3 & helpsched==1 //assign small hours
-replace op_hrsmth_i=(.5*numdaysmn) if impute_cat==3 & inlist(helpsched,2,-7,-8)  //assign small hours
+replace op_hrsmth_i=(.5*op`w'numdayswk*4.3) if impute_cat==3 & op`w'helpsched==1 //assign small hours
+replace op_hrsmth_i=(.5*op`w'numdaysmn) if impute_cat==3 & inlist(op`w'helpsched,2,-7,-8)  //assign small hours
 
 //impute where op_ind_hrsmth=-10, missing days per month
 gen op_numdays_i=0
-replace op_numdays_i=numdayswk*4.3 if inlist(impute_cat,3,4) & helpsched==1
-replace op_numdays_i=numdaysmn if inlist(impute_cat,3,4) & inlist(helpsched,2,-7,-8)
+replace op_numdays_i=op`w'numdayswk*4.3 if inlist(impute_cat,3,4) & op`w'helpsched==1
+replace op_numdays_i=op`w'numdaysmn if inlist(impute_cat,3,4) & inlist(op`w'helpsched,2,-7,-8)
 
 gen ln_opnumdays_i=ln(op_numdays_i) if inlist(impute_cat,3,4)
 
 local adjvars spouse otherrel regular yearnotmonth oneact disab ///
- outhlp insdhlp bedhlp tkplhlp1 tkplhlp2 launhlp ///
- shophlp mealhlp bankhlp eathlp bathhlp toilhlp ///
- dreshlp medshlp moneyhlp dochlp insurhlp
+ op`w'outhlp op`w'insdhlp op`w'bedhlp op`w'tkplhlp1 op`w'tkplhlp2 op`w'launhlp ///
+ op`w'shophlp op`w'mealhlp op`w'bankhlp op`w'eathlp op`w'bathhlp op`w'toilhlp ///
+ op`w'dreshlp op`w'medshlp op`w'moneyhlp op`w'dochlp op`w'insurhlp
 
 svy: reg ln_opnumdays_i `adjvars' if inlist(impute_cat,3,4)
 predict ln_opnumdays_i2 if impute_cat==1 & op_ind_hrsmth==-10
 gen op_numdays_i2=exp(ln_opnumdays_i2) if impute_cat==1 & op_ind_hrsmth==-10
-replace op_hrsmth_i= op_numdays_i2*numhrsday if impute_cat==1 & ///
- op_ind_hrsmth==-10 & numhrsday>=1
+replace op_hrsmth_i= op_numdays_i2*op`w'numhrsday if impute_cat==1 & ///
+ op_ind_hrsmth==-10 & op`w'numhrsday>=1
 replace op_hrsmth_i= op_numdays_i2*.5 if impute_cat==1 & ///
- op_ind_hrsmth==-10 & numhrsday==0
+ op_ind_hrsmth==-10 & op`w'numhrsday==0
 
 //impute where op_ind_hrsmth=-11, missing hours per day
 gen op_numhrsday_i=0
 replace op_numhrsday_i=.5 if impute_cat==3
-replace op_numhrsday_i=numhrsday if impute_cat==4
+replace op_numhrsday_i=op`w'numhrsday if impute_cat==4
 gen ln_opnumhrsday_i=ln(op_numhrsday_i) if inlist(impute_cat,3,4)
 svy: reg ln_opnumhrsday_i `adjvars' if inlist(impute_cat,3,4)
 predict ln_opnumhrsday_i2 if impute_cat==1 & op_ind_hrsmth==-11
 gen op_numhrsday_i2=exp(ln_opnumhrsday_i2) if impute_cat==1 & op_ind_hrsmth==-11
-replace op_hrsmth_i=numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
- op_ind_hrsmth==-11 & helpsched==1
-replace op_hrsmth_i=numdaysmn*op_numhrsday_i2 if impute_cat==1 & ///
- op_ind_hrsmth==-11 & inlist(helpsched,2,-7,-8) & numdaysmn>=1
-replace op_hrsmth_i=numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
- op_ind_hrsmth==-11 & inlist(helpsched,2,-7,-8) & ///
- numdaysmn<1 & numdayswk>=1 
+replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & op`w'helpsched==1
+replace op_hrsmth_i=op`w'numdaysmn*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & op`w'numdaysmn>=1
+replace op_hrsmth_i=op`w'numdayswk*4.3*op_numhrsday_i2 if impute_cat==1 & ///
+ op_ind_hrsmth==-11 & inlist(op`w'helpsched,2,-7,-8) & ///
+ op`w'numdaysmn<1 & op`w'numdayswk>=1 
 
 //impute where op_ind_hrsmth=-9, -12 or 9999, missing hours and days or <1hr/day
 gen ln_opdhrsmth_i=ln(op_hrsmth_i) if inlist(impute_cat,3,4)
@@ -684,26 +680,26 @@ svy: reg ln_opdhrsmth_i `adjvars' if inlist(impute_cat,3,4)
 predict ln_opdhrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
 gen op_hrsmth_i2=exp(ln_opdhrsmth_i2) if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
 replace op_hrsmth_i=op_hrsmth_i2 if impute_cat==1 & inlist(op_ind_hrsmth,-9,-12,9999)
-replace op_hrsmth_i=-1 if ishelper~=1 
+replace op_hrsmth_i=-1 if op`w'ishelper~=1 
 
 //look at imputed hours per month by imputation category
 di "where op_ind_hrsmth==-12"
-capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-12 [pweight=anfinwgt0]
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-12 [pweight=w`w'anfinwgt0]
 di "where op_ind_hrsmth==-11"
-mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-11 [pweight=anfinwgt0]
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-11 [pweight=w`w'anfinwgt0]
 di "where op_ind_hrsmth==-10"
-capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-10 [pweight=anfinwgt0]
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-10 [pweight=w`w'anfinwgt0]
 di "where op_ind_hrsmth==-9"
-mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-9 [pweight=anfinwgt0] 
+mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==-9 [pweight=w`w'anfinwgt0] 
 di "where op_ind_hrsmth==9999"
-capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==9999 [pweight=anfinwgt0] 
+capture noisily: mean op_hrsmth_i if impute_cat==1 & op_ind_hrsmth==9999 [pweight=w`w'anfinwgt0] 
 
 di "impute_cat==2"
-mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==2 [pweight=anfinwgt0]
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==2 [pweight=w`w'anfinwgt0]
 di "impute_cat==3"
-mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==3 [pweight=anfinwgt0]
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==3 [pweight=w`w'anfinwgt0]
 di "impute_cat==4"
-mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=anfinwgt0]
+mean op_hrsmth_i if op_hrsmth_i~=-1 & impute_cat==4 [pweight=w`w'anfinwgt0]
 
 save R`w'_hrs_imputed_added.dta,replace
 
@@ -712,55 +708,22 @@ save R`w'_hrs_imputed_added.dta,replace
 ********************************************************************
 log close
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
 
 H="NHATS Data Cleaning Part 3 (2_r12_cleaning_1_1)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 03/21/2019
-
-Description: This section uses the SP and OP data files and imputes
-hours of help provided to SP per methods in NHATS Technical Paper #7
-
-Variables from this dataset are then brought in to the SP Rounds dataset
-and also the NSOC caregiver dataset.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 2-r12_cleaning_1_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
-set maxvar 10000
 
+local logs "E:\nhats\nhats_code\NHATS data setup\logs"
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
-log using "${logs}/`name'.smcl", text replace
+log using "`logs'2_nhats_cleaning.txt", text replace
 
+local work "E:\nhats\data\NHATS working data\"
+//local work /Users/rebeccagorges/Documents/data/nhats/working
 
-
-
-*********************************************
-
-global miss -9,-1
-
-cd "${work}"
-
-use round_1_to_${w}.dta, clear
+cd "`work'"
+use round_1_to_7.dta
 *********************************************
 tab wave, missing
 
@@ -773,7 +736,7 @@ tab r3status if wave==3
 gen ivw_type=3
 replace ivw_type=1 if r1spstat==20 & wave==1 
 
-forvalues w=2/$w{
+foreach w in 2 3 4 5 6 7{
 	replace ivw_type=1 if (r`w'spstat==20 & r`w'status!=62) & wave==`w'
 	replace ivw_type=2 if (r`w'spstat==20 & r`w'status==62) & wave==`w'
 }
@@ -784,23 +747,23 @@ la val ivw_type ivw_type
 tab ivw_type wave, missing
 
 tab r1status r1spstat if wave==1, missing
-tab dresid r1spstat if wave==1, missing
+tab r1dresid r1spstat if wave==1, missing
+//compare to old code, if r1dresid=1 or 2, then include in homebound paper
 //so use ivw type=1 is the same thing for r1
 
 gen sp_ivw_yes=1 if r1spstat==20 & wave==1
 replace sp_ivw_yes=0 if inlist(r1spstat,11,24) & wave==1
 
-forvalues w=2/$w{
+foreach w in 2 3 4 5 6 7{
 	tab r`w'status r`w'spstat if wave==`w', missing
 	replace sp_ivw_yes=1 if r`w'spstat==20 & wave==`w'
 	replace sp_ivw_yes=0 if inlist(r`w'spstat,11,12,24) & wave==`w'
 }
-
 la var sp_ivw_yes "SP interview conducted? yes=1" //note this includes lml interviews
 tab sp_ivw_yes wave, missing
 
 gen lml_ivw_yes = 0
-forvalues w=2/$w{
+foreach w in 2 3 4 5 6 7{
 	replace lml_ivw_yes=1 if r`w'spstat==20 & r`w'status==62 & wave==`w'
 }
 la var lml_ivw_yes "LWL interview? yes=1"
@@ -808,14 +771,14 @@ la var lml_ivw_yes "LWL interview? yes=1"
 tab sp_ivw_yes lml_ivw_yes, missing
 tab lml_ivw_yes wave, missing
 
-tab outoft r2status if wave==2, missing
-tab outoft r3status if wave==3, missing
+tab mo2outoft r2status if wave==2, missing
+tab mo3outoft r3status if wave==3, missing
 
 //identify proxy SP interviews
 gen proxy_ivw=.
-forvalues w=1/$w{
-replace proxy_ivw=1 if resptype==2
-replace proxy_ivw=0 if resptype==1
+foreach w in 1 2 3 4 5 6 7{
+replace proxy_ivw=1 if is`w'resptype==2
+replace proxy_ivw=0 if is`w'resptype==1
 }
 la var proxy_ivw "Interview via proxy"
 tab proxy_ivw wave, missing
@@ -829,7 +792,7 @@ The following codes were used at the item level for missing data of different ty
 -8 = Don’t Know
 -1 = Inapplicable
 -9 = Not Ascertained*/
-
+local miss -9,-1
 
 *********************************************
 *********************************************
@@ -838,17 +801,16 @@ The following codes were used at the item level for missing data of different ty
 *********************************************
 //how often go out of the house?
 gen freq_go_out=.
-forvalues w=1/$w{
-	tab outoft if wave==`w', missing
-	replace freq_go_out=outoft if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab mo`w'outoft, missing
+	replace freq_go_out=mo`w'outoft if wave==`w'
 }
 
-replace freq_go_out=. if inlist(freq_go_out,$miss)
+replace freq_go_out=. if inlist(freq_go_out,`miss')
 la def freq_go_out 1 "Every day" 2 "Most days (5-6/week)" ///
 	3 "Some days (2-4/week)" 4 "Rarely" 5 "Never"
 la val 	freq_go_out freq_go_out
 la var freq_go_out "How often go outside"
-
 tab freq_go_out sp_ivw_yes, missing
 tab freq_go_out sp_ivw_yes if wave==1, missing
 tab freq_go_out sp_ivw_yes if wave==2 & lml_ivw_yes==0, missing
@@ -858,18 +820,18 @@ tab freq_go_out sp_ivw_yes if wave==3 & lml_ivw_yes==0, missing
 
 //MO questions not asked in lml interviews where persons were not alert(PD6)
 //or not mobile(PD7) in last month so lml has more missingless
-tab freq_go_out outoft if wave==2 & lml_ivw_yes==1, missing
+tab freq_go_out mo2outoft if wave==2 & lml_ivw_yes==1, missing
 
 *********************************************
 //Did anyone ever help you - asked if report going outside
 //left missing if report never go outside
 gen help_go_out=.
-forvalues w=1/$w{
-	tab outhlp if wave==`w', missing
-	replace help_go_out=1 if outhlp==1 & wave==`w'
-	replace help_go_out=0 if outhlp==2 & wave==`w'
-	replace help_go_out=-7 if outhlp==-7 & wave==`w'
-	replace help_go_out=-8 if outhlp==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab mo`w'outhlp, missing
+	replace help_go_out=1 if mo`w'outhlp==1
+	replace help_go_out=0 if mo`w'outhlp==2
+	replace help_go_out=-7 if mo`w'outhlp==-7
+	replace help_go_out=-8 if mo`w'outhlp==-8
 }
 la var help_go_out "Anyone ever help you leave home?"
 tab help_go_out wave if sp_ivw_yes==1, missing
@@ -878,14 +840,14 @@ tab help_go_out wave if sp_ivw_yes==1, missing
 //go out of the house on own?
 //only asked if report having help when go outside (help_go_out==1)
 gen out_on_own=.
-forvalues w=1/$w{
-	tab outslf help_go_out if wave==`w', missing
-	replace out_on_own=outslf if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab mo`w'outslf help_go_out if wave==`w', missing
+	replace out_on_own=mo`w'outslf if wave==`w'
 }
-replace out_on_own=. if inlist(out_on_own,$miss)
+replace out_on_own=. if inlist(out_on_own,`miss')
 replace out_on_own=5 if help_go_out==0
 replace out_on_own=6 if freq_go_out==5
-la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never" 5"NA, reported no help" ///
+la def out_on_own 1"Most times" 2"Sometimes" 3"Rarely" 4"Never"5"NA, reported no help" ///
 6"NA, never left home"
 la val out_on_own out_on_own
 la var out_on_own "When left house, left by yourself?"
@@ -894,7 +856,7 @@ tab out_on_own wave if sp_ivw_yes==1, missing
 *********************************************
 //needs help when go outside? gets help and also goes outside on own != never
 gen needshelp=0
-replace needshelp=1 if help_go_out==1 & out_on_own~=4
+replace needshelp=1 if help_go_out==1& out_on_own~=4
 la var needshelp "Leaves home but with help"
 tab needshelp wave, missing
 
@@ -903,12 +865,12 @@ tab needshelp wave, missing
 //did you have leaving the house by yourself? 1=none, 2=a little, 3=some, 4=a lot
 //inapplicable if don't report using any device to help, so set to 0 here
 gen hasdifficulty=0
-forvalues w=1/$w{
-	tab outdif if wave==`w', missing
-	replace hasdifficulty=1 if inlist(outdif,2,3,4,5) & wave==`w'
-	replace hasdifficulty=0 if outdif==1 & wave==`w'
-	replace hasdifficulty=-7 if outdif==-7 & wave==`w'
-	replace hasdifficulty=-8 if outdif==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab mo`w'outdif if wave==`w', missing
+	replace hasdifficulty=1 if inlist(mo`w'outdif,2,3,4,5)
+	replace hasdifficulty=0 if mo`w'outdif==1
+	replace hasdifficulty=-7 if  mo`w'outdif==-7
+	replace hasdifficulty=-8 if  mo`w'outdif==-8
 
 }
 la var hasdifficulty "Leaves home on own but has difficulty"
@@ -975,7 +937,7 @@ tab indephigh wave if sp_ivw_yes==1, missing
 *********************************************
 //age at interview, note this is missing for wave 7 b/c no wave 7 sensitive data yet
 gen age=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 	replace age=r`w'dintvwrage if wave==`w'
 	sum age if wave==`w', detail
 	}	
@@ -994,72 +956,79 @@ sum age, detail
 
 //gender, only asked in round 1
 gen female=.
-replace female=1 if dgender==2 & wave==1
-replace female=0 if dgender==1 & wave==1
-replace female=1 if dgender==2 & wave==5
-replace female=0 if dgender==1 & wave==5
+replace female=1 if r1dgender==2
+replace female=0 if r1dgender==1
+replace female=1 if r5dgender==2
+replace female=0 if r5dgender==1
 
 la var female "Female"
 la def female 0"Male" 1"Female"
 la val female female
 tab female if wave==1, missing
-tab dracehisp, missing
+tab rl1dracehisp, missing
 
 //race, ethnicity
-gen race_cat=dracehisp
-replace race_cat=-8 if inlist(dracehisp,5,6)
+gen race_cat=rl1dracehisp
+replace race_cat=-8 if inlist(rl1dracehisp,5,6)
 label define race 1 "White Non-His" 2 "Black Non-His" 4 "Hispanic" ///
 	3 "Other (Am Indian/Asian/Nat. Hawaii)" -8 "DKRF"
 label values race_cat race
 la var race_cat "Race, categorical"
 tab race_cat if wave==1, missing
 
-replace race_cat = 1 if dracehisp==1 & wave==5
-replace race_cat = 2 if dracehisp==2 & wave==5
-replace race_cat = 3 if dracehisp==3 & wave==5
-replace race_cat = 4 if dracehisp==4 & wave==5
-replace race_cat = -8 if inlist(dracehisp,5,6) & wave==5 
+replace race_cat = 1 if rl5dracehisp==1
+replace race_cat = 2 if rl5dracehisp==2
+replace race_cat = 3 if rl5dracehisp==3
+replace race_cat = 4 if rl5dracehisp==4
+replace race_cat = -8 if inlist(rl5dracehisp,5,6) 
 
 //education
 generate education=.
-foreach w in 1 5{
-replace education=1 if inlist(higstschl,1,2,3) & wave==`w'
-replace education=2 if higstschl==4 & wave==`w'
-replace education=3 if inlist(higstschl,5,6,7) & wave==`w'
-replace education=4 if inlist(higstschl,8,9) & wave==`w'
-}
+replace education=1 if inlist(el1higstschl,1,2,3)
+replace education=2 if el1higstschl==4
+replace education=3 if inlist(el1higstschl,5,6,7)
+replace education=4 if inlist(el1higstschl,8,9)
+replace education=-7 if el1higstschl == -7
+replace education=-8 if el1higstschl == -8
+
+replace education=1 if inlist(el5higstschl,1,2,3)
+replace education=2 if el5higstschl==4
+replace education=3 if inlist(el5higstschl,5,6,7)
+replace education=4 if inlist(el5higstschl,8,9)
+
 
 la var education "Education level, categorical"
 label define edulbl 1 "<High School" 2 "High School/GED" 3 "Some College" ///
 	4 ">=Bachelors" 5 "DKRF"
 label values education edulbl
-tab education higstschl if wave==1, missing
+tab education el1higstschl if wave==1, missing
 
 gen educ_hs_ind=education>=2 if education>0 & education!=.
 
-//income, just wave 1, reported every other wave
-sum totinc if wave==1, detail //this is the actual reported income, only present 40% sample
+//income, just wave 1
+sum ia1totinc, detail //this is the actual reported income, only present 40% sample
 
 forvalues i = 1/5 {
 	gen imputed_inc`i'=.
-	forvalues w=1 3 : $w{
-		di "`w'"
-		replace toincim`i'=. if inlist(toincim`i',-9,-1) & wave==`w'
-		sum toincim`i' if wave==`w',detail //imputed income variables
-		replace imputed_inc`i' = toincim`i' if wave==`w'
+	foreach w in 1 3 5 {
+		replace ia`w'toincim`i'=. if inlist(ia`w'toincim`i',-9,-1)
+		sum ia`w'toincim`i' if wave==`w',detail //imputed income variables
+		replace imputed_inc`i' = ia`w'toincim`i' if wave==`w'
 }
 		label var imputed_inc`i' "Imputed Income `i'"
 }
 
 
+
 egen aveincome=rowmean(imputed_inc1-imputed_inc5)
-forvalues w=1 3 : $w{
-	replace aveincome=totinc if wave==`w' & totinc>=0 & ///
-	!missing(totinc)
+foreach w in 1 3 5 7{
+	replace aveincome=ia`w'totinc if wave==`w' & ia`w'totinc>=0 & ///
+	!missing(ia`w'totinc)
 }
 
 sort spid wave
 by spid: carryforward aveincome, replace
+notes drop aveincome
 //use first income imputation to set income categorical variable
 gen income_cat=0 if aveincome<15000 & aveincome!=.
 replace income_cat=1 if aveincome>=15000 & aveincome<30000 & aveincome!=.
@@ -1069,24 +1038,26 @@ label define income_cat 0 "<15000" 1 "15-29,999" 2 "30-59,999" 3 ">60000"
 label values income_cat income_cat
 tab income_cat, missing
 
-//speak language other than english? Asked when new cohort
-gen otherlang=spkothlan if wave==1
-replace otherlang=0 if spkothlan==2 & wave==1
-replace otherlang=1 if condspanh==1 & wave==1
+//speak language other than english?
+gen otherlang=rl1spkothlan
+replace otherlang=0 if rl1spkothlan==2
+replace otherlang = 1 if rl1condspanh == 1
 replace otherlang = . if inlist(otherlang,-9,-1)
 la var otherlang "Speak language other than English?"
 tab otherlang wave, missing
 
-replace otherlang=0 if spkothlan==2 & wave==5
-replace otherlang=1 if spkothlan==1 & wave==5
-replace otherlang=1 if condspanh==1 & wave==5
-replace otherlang=. if inlist(spkothlan,-9,-1) & wave==5
+replace otherlang=0 if rl5spkothlan==2
+replace otherlang=1 if rl5spkothlan==1
+replace otherlang=1 if rl5condspanh==1
+replace otherlang=. if inlist(rl5spkothlan,-9,-1)
 
 
 //fill in gender, race, education, income, etc. for wave 2 interviews
 sort spid wave
 by spid (wave): carryforward female race_cat education income_cat ///
 otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5, replace
+notes drop female race_cat education income_cat ///
+otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5
 
 gen white=race_cat==1
 gen black=race_cat==2
@@ -1099,20 +1070,21 @@ label var other_race "Other race/ethnicity"
 //merge white & other for reportability
 gen whiteoth=white | other_race if !missing(white) & !missing(other_r)
 label var whiteoth "White Non-Hispanic or other"
-
 //marital status
 //wave 2,3, use derived variable which is populated if not asked b/c no change 
-gen maritalstat=martlstat if wave==1
-replace maritalstat=dmarstat if wave!=1
-replace maritalstat=-9 if inlist(maritalstat,-9, -1)
-
-
+gen maritalstat=hh1martlstat if wave==1
+foreach w in 2 3 4 5 6 7{
+	replace maritalstat=hh`w'dmarstat if wave==`w'
+}
+replace maritalstat=-9 if inlist(maritalstat,`miss')
 
 la var maritalstat "Marital status"
 label define maritallbl 1 "Married" 2 "Live w/Part" 3 "Separated" ///
 	4 "Divorced" 5 "Widowed" 6 "Never Married" -7 "Refused" -8 "DK"
 la val maritalstat maritallbl
 tab maritalstat wave, missing
+
+
 
 
 *********************************************
@@ -1122,71 +1094,71 @@ tab maritalstat wave, missing
 *********************************************
 //medicaid status
 gen medicaid=.
-forvalues w=1/$w{
-	tab cmedicaid if wave==`w' , missing
-	replace medicaid=1 if cmedicaid==1 & wave==`w'
-	replace medicaid=0 if cmedicaid==2 & wave==`w'
-	replace medicaid=-7 if cmedicaid==-7 & wave==`w'
-	replace medicaid=-8 if cmedicaid==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab ip`w'cmedicaid if wave==`w' , missing
+	replace medicaid=1 if ip`w'cmedicaid==1 & wave==`w'
+	replace medicaid=0 if ip`w'cmedicaid==2 & wave==`w'
+	replace medicaid=-7 if ip`w'cmedicaid==-7 & wave==`w'
+	replace medicaid=-8 if ip`w'cmedicaid==-8 & wave==`w'
 }
 la var medicaid "Medicaid"
 tab medicaid wave,missing
 tab medicaid if wave==1 & ivw_type==1,missing
 //medigap status
 gen medigap=.
-forvalues w=1/$w{
-	tab mgapmedsp if wave==`w' , missing
-	replace medigap=1 if mgapmedsp==1 & wave==`w'
-	replace medigap=0 if mgapmedsp==2 & wave==`w'
-	replace medigap=-7 if mgapmedsp==-7 & wave==`w'
-	replace medigap=-8 if mgapmedsp==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab ip`w'mgapmedsp if wave==`w' , missing
+	replace medigap=1 if ip`w'mgapmedsp==1 & wave==`w'
+	replace medigap=0 if ip`w'mgapmedsp==2 & wave==`w'
+	replace medigap=-7 if ip`w'mgapmedsp==-7 & wave==`w'
+	replace medigap=-8 if ip`w'mgapmedsp==-8 & wave==`w'
 }
 la var medigap "Medigap"
-tab medigap wave, missing
+tab medigap wave,missing
 
 //medicare part d
 gen mc_partd=.
-forvalues w=1/$w{
-	tab covmedcad if wave==`w' , missing
-	replace mc_partd=1 if covmedcad==1 & wave==`w'
-	replace mc_partd=0 if covmedcad==2 & wave==`w'
-	replace mc_partd=-7 if covmedcad==-7 & wave==`w'
-	replace mc_partd=-8 if covmedcad==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab ip`w'covmedcad if wave==`w' , missing
+	replace mc_partd=1 if ip`w'covmedcad==1 & wave==`w'
+	replace mc_partd=0 if ip`w'covmedcad==2 & wave==`w'
+	replace mc_partd=-7 if ip`w'covmedcad==-7 & wave==`w'
+	replace mc_partd=-8 if ip`w'covmedcad==-8 & wave==`w'
 }
 la var mc_partd "Medicare Part D"
 tab mc_partd wave,missing
 
 //tricare - va insurance
 gen tricare=.
-forvalues w=1/$w{
-	tab covtricar if wave==`w' , missing
-	replace tricare=1 if covtricar==1 & wave==`w'
-	replace tricare=0 if covtricar==2 & wave==`w'
-	replace tricare=-7 if covtricar==-7 & wave==`w'
-	replace tricare=-8 if covtricar==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab ip`w'covtricar if wave==`w' , missing
+	replace tricare=1 if ip`w'covtricar==1 & wave==`w'
+	replace tricare=0 if ip`w'covtricar==2 & wave==`w'
+	replace tricare=-7 if ip`w'covtricar==-7 & wave==`w'
+	replace tricare=-8 if ip`w'covtricar==-8 & wave==`w'
 }
 la var tricare "Tricare - veterans insurance"
 tab tricare wave,missing
 
 //long term care nursing home insurance, private
 gen private_ltc=.
-forvalues w=1/$w{
-	tab nginsnurs if wave==`w' , missing
-	replace private_ltc=1 if nginsnurs==1 & wave==`w'
-	replace private_ltc=0 if nginsnurs==2 & wave==`w'
-	replace private_ltc=-7 if nginsnurs==-7 & wave==`w'
-	replace private_ltc=-8 if nginsnurs==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	tab ip`w'nginsnurs if wave==`w' , missing
+	replace private_ltc=1 if ip`w'nginsnurs==1 & wave==`w'
+	replace private_ltc=0 if ip`w'nginsnurs==2 & wave==`w'
+	replace private_ltc=-7 if ip`w'nginsnurs==-7 & wave==`w'
+	replace private_ltc=-8 if ip`w'nginsnurs==-8 & wave==`w'
 }
 la var private_ltc "Private nursing home insurance"
 tab private_ltc wave,missing
 
 //if report nh insurance in prev wave, asked to verify still have it curr wave
-forvalues w=1/$w{
-tab nginslast if wave==`w' & nginsnurs==-1, missing
-replace private_ltc=1 if nginslast==1 & nginsnurs==-1 & wave==`w'
-replace private_ltc=0 if nginslast==2 & nginsnurs==-1 & wave==`w'
-replace private_ltc=-7 if nginslast==-7 & nginsnurs==-1 & wave==`w'
-replace private_ltc=-8 if nginslast==-8 & nginsnurs==-1 & wave==`w'
+foreach w in 2 3 4 5 6 7{
+tab ip`w'nginslast if wave==`w' & ip`w'nginsnurs==-1, missing
+replace private_ltc=1 if ip`w'nginslast==1 & ip`w'nginsnurs==-1 & wave==`w'
+replace private_ltc=0 if ip`w'nginslast==2 & ip`w'nginsnurs==-1 & wave==`w'
+replace private_ltc=-7 if ip`w'nginslast==-7 & ip`w'nginsnurs==-1 & wave==`w'
+replace private_ltc=-8 if ip`w'nginslast==-8 & ip`w'nginsnurs==-1 & wave==`w'
 }
 tab private_ltc wave,missing
 
@@ -1196,60 +1168,75 @@ tab private_ltc wave,missing
 *********************************************
 *********************************************
 //residence physical structure variable only in wave 1
-tab resistrct if wave==1, missing
-tab resistrct placedesc if wave==1, missing
+tab re1resistrct if wave==1, missing
+tab re1resistrct ht1placedesc if wave==1, missing
 //derived variable in waves 2, 3
-tab dresistrct if wave==2, missing
+tab re2dresistrct if wave==2, missing
 //per user guide, need to fix this variable since incorrectly coded for 71 obs
-replace dresistrct = newstrct if inlist(spadrsnew,1,3) & inlist(newstrct,1,2,3,4,91)
+replace re2dresistrct = re2newstrct if inlist(re2spadrsnew,1,3) & inlist(re2newstrct,1,2,3,4,91)
 
-tab dresistrct if wave==3, missing
+tab re3dresistrct if wave==3, missing
 
 //housing type in each wave, however missing if same residence as prior wave
-forvalues w=1/$w{
-tab placedesc if wave==`w', missing
+foreach w in 1 2 3{
+tab ht`w'placedesc if wave==`w', missing
 }
 
 //if missing housing type in waves 2,3, backfill with wave 1 info
 //get indicators for moving in waves 2 or 3
-tab dadrscorr if wave==2, missing
+tab re2dadrscorr, missing
 
-gen moved=1 if dadrscorr==2 & wave==2
-replace moved=0 if (dadrscorr==1 | dadrscorr==3) & wave==2
-tab moved
+gen w2_moved=1 if re2dadrscorr==2
+replace w2_moved=0 if re2dadrscorr==1 | re2dadrscorr==3
+tab w2_moved
 
-forvalues w=3/$w{
-tab spadrsnew if wave==`w', missing
-replace moved=1 if spadrsnew==2 & wave==`w'
-replace moved=0 if (spadrsnew==1 | spadrsnew==3) & wave==`w'
-tab moved
-}
+tab re3spadrsnew, missing
+gen w3_moved=1 if re3spadrsnew==2
+replace w3_moved=0 if re3spadrsnew==1 | re3spadrsnew==3
+tab w3_moved
+
+gen w4_moved=1 if re4spadrsnew==2
+replace w4_moved=0 if re4spadrsnew==1 | re4spadrsnew==3
+tab w4_moved
+
+gen w5_moved=1 if re5spadrsnew==2
+replace w5_moved=0 if re5spadrsnew==1 | re5spadrsnew==3
+tab w5_moved
+
+gen w6_moved=1 if re6spadrsnew==2
+replace w6_moved=0 if re6spadrsnew==1 | re6spadrsnew==3
+tab w6_moved
+
+gen w7_moved=1 if re7spadrsnew==2
+replace w7_moved=0 if re7spadrsnew==1 | re7spadrsnew==3
+tab w7_moved
 
 gen ht_new=.
-
-forvalues w=1/$w{
-replace ht_new=placedesc if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+replace ht_new=ht`w'placedesc if wave==`w'
 }
 
-forvalues w=2/$w{
-replace ht_new=. if placedesc==-1 & moved==0 & wave==`w'
+foreach w in 2 3 4 5 6 7{
+replace ht_new=. if ht`w'placedesc==-1 & w`w'_moved==0
 }
 
 tab ht_new wave, missing
 
 sort spid wave
 by spid (wave): carryforward ht_new, replace
-
+notes drop ht_new
 tab ht_new wave, missing
 
 //most residence information from wave 1
 //used derived variables wave 2,3
 gen residence=.
-replace residence=resistrct if wave==1
-forvalues w=2/$w{
-replace residence=dresistrct if wave==`w'
-}
-
+replace residence=re1resistrct if wave==1
+replace residence=re2dresistrct if wave==2
+replace residence=re3dresistrct if wave==3
+replace residence=re4dresistrct if wave==4
+replace residence=re5dresistrct if wave==5
+replace residence=re6dresistrct if wave==6
+replace residence=re7dresistrct if wave==7
 replace residence=3 if inlist(residence,4,91)
 
 tab residence wave
@@ -1263,20 +1250,24 @@ tab residence wave, missing
 label define residlbl 1 "Private Res." 2 "Group Home/Facility" ///
 	3 "Mobile Home/Multi-Unit"
 label values residence residlbl
-forvalues w=1/$w{
-tab residence if wave==`w', missing
-}
+tab residence if wave==1, missing
+tab residence if wave==2, missing
+tab residence if wave==3, missing
+tab residence if wave==4, missing
+tab residence if wave==5, missing
+tab residence if wave==6, missing
+tab residence if wave==7, missing
 
 
 ***********************************************************
 //living arrangement, NHATS derived variable
 gen livearrang=.
-forvalues w=1/$w{
-tab dlvngarrg if wave==`w' & ivw_type==1, missing
-replace livearrang=dlvngarrg if wave==`w'
-replace livearrang=1 if (dlvngarrg==-9 & dhshldnum==1)  & wave==`w'
-replace livearrang=-7 if dlvngarrg == -7 & wave == `w'
-replace livearrang=-8 if dlvngarrg == -8 & wave == `w'
+foreach w in 1 2 3 4 5 6 7{
+tab hh`w'dlvngarrg if wave==`w' & ivw_type==1, missing
+replace livearrang=hh`w'dlvngarrg if wave==`w'
+replace livearrang=1 if (hh`w'dlvngarrg==-9 & hh`w'dhshldnum==1)  & wave==`w'
+replace livearrang=-7 if hh`w'dlvngarrg == -7 & wave == `w'
+replace livearrang=-8 if hh`w'dlvngarrg == -8 & wave == `w'
 }
 replace livearrang=. if livearrang==-1 
 
@@ -1292,64 +1283,37 @@ replace livealone=0 if inlist(livearrang,2,3,4)
 la var livealone "Lives alone"
 tab livealone livearrang, missing
 
-save round_1_${w}_cleanv1.dta, replace
-local ivars age female race_cat education  income_cat otherlang maritalstat ///
-medicaid medigap mc_partd tricare private_ltc moved ht_new ///
-residence livearrang livealone
+save round_1_7_cleanv1.dta, replace
+local ivars age female race_cat education  income_cat otherlang maritalstat medicaid medigap mc_partd tricare private_ltc w2_moved w3_moved ht_new residence livearrang livealone
+foreach w in `ivars'{
 
-foreach v in `ivars'{
-tab `v'
+tab `w'
+
+
 }
+
+
+
 
 *********************************************
 log close
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
 
 H="NHATS Data Cleaning Part 4 (3_r12_cleaning_2_1)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 04/04/2019
-
-Description: This section uses the SP and OP data files and imputes
-hours of help provided to SP per methods in NHATS Technical Paper #7
-
-Variables from this dataset are then brought in to the SP Rounds dataset
-and also the NSOC caregiver dataset.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 3_nhats_cleaning_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
-set maxvar 10000
 
+local logs "E:\nhats\nhats_code\NHATS data setup\logs"
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
-log using "${logs}/`name'.smcl", text replace
+log using "`logs'3_nhats_cleaning.txt", text replace
 
+local work "E:\nhats\data\NHATS working data\"
+//local work /Users/rebeccagorges/Documents/data/nhats/working
 
-
-cd "${work}"
-
-*********************************************
-
-use round_1_${w}_cleanv1.dta, clear
+cd "`work'"
+use round_1_7_cleanv1.dta
 
 *********************************************
 tab wave, missing
@@ -1360,9 +1324,9 @@ tab wave, missing
 *********************************************
 *********************************************
 gen srh=.
-forvalues w=1/$w{
-tab health if wave==`w', missing
-replace srh=health if wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+tab hc`w'health if wave==`w', missing
+replace srh=hc`w'health if wave==`w'
 }
 replace srh=. if inlist(srh,-9,-1)
 
@@ -1407,24 +1371,25 @@ program define disease
 	args dis num
 	
 	gen sr_`dis'_raw=.
-	forvalues w=1/$w{
-		replace sr_`dis'_raw=1 if disescn`num'==1 & wave==`w'
-		replace sr_`dis'_raw=0 if disescn`num'==2 & wave==`w'
-		replace sr_`dis'_raw=-7 if disescn`num'==-7 & wave==`w'
-		replace sr_`dis'_raw=-8 if disescn`num'==-8 & wave==`w'
+	foreach w in 1 2 3 4 5 6 7{
+		replace sr_`dis'_raw=1 if hc`w'disescn`num'==1 & wave==`w'
+		replace sr_`dis'_raw=0 if hc`w'disescn`num'==2 & wave==`w'
+		replace sr_`dis'_raw=-7 if hc`w'disescn`num'==-7 & wave==`w'
+		replace sr_`dis'_raw=-8 if hc`w'disescn`num'==-8 & wave==`w'
 	}
 	//create two new variables from this...
 	gen sr_`dis'_ever=sr_`dis'_raw
-	replace sr_`dis'_ever=. if inrange(wave, 2, $w) & sr_`dis'_raw==0 //set to missing if report no new wave
+	replace sr_`dis'_ever=. if (wave==2 | wave==3| wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_raw==0 //set to missing if report no new wave
 	replace sr_`dis'_ever=-7 if sr_`dis'_raw == -7
 	replace sr_`dis'_ever=-8 if sr_`dis'_raw == -8
 
 	sort spid wave
 	by spid (wave): carryforward sr_`dis'_ever if ivw_type==1 , replace
+	notes drop sr_`dis'_ever
 	
-	replace sr_`dis'_ever = sr_`dis'_raw if inrange(wave,2,$w) & sr_`dis'_ever == . & sr_`dis'_raw != .
+	replace sr_`dis'_ever = sr_`dis'_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_`dis'_ever == . & sr_`dis'_raw != .
 
-	gen sr_`dis'_new=sr_`dis'_raw if inrange(wave,2,$w)
+	gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7
 
 	end
 
@@ -1445,22 +1410,22 @@ la var sr_cancer_new "Self report Cancer since prev year"
 
 //same question pattern, different variable name though, for hip fracture
 gen sr_hip_raw=.
-forvalues w=1/$w{
-	replace sr_hip_raw=1 if brokebon1==1 & wave==`w'
-	replace sr_hip_raw=0 if brokebon1==2 & wave==`w'
-	replace sr_hip_raw = -7 if brokebon1==-7 & wave==`w'
-	replace sr_hip_raw = -8 if brokebon1==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace sr_hip_raw=1 if hc`w'brokebon1==1 & wave==`w'
+	replace sr_hip_raw=0 if hc`w'brokebon1==2 & wave==`w'
+	replace sr_hip_raw = -7 if hc`w'brokebon1==-7 & wave==`w'
+	replace sr_hip_raw = -8 if hc`w'brokebon1==-8 & wave==`w'
 }
 //create two new variables from this...
 gen sr_hip_ever=sr_hip_raw
-replace sr_hip_ever=. if (inrange(wave,2,$w)) & sr_hip_raw==0 //set to missing if report no new wave
+replace sr_hip_ever=. if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_raw==0 //set to missing if report no new wave
 
 sort spid wave
 by spid (wave): carryforward sr_hip_ever if ivw_type==1 , replace
+notes drop sr_hip_ever
+replace sr_hip_ever = sr_hip_raw if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & sr_hip_ever == . & sr_hip_raw != .
 
-replace sr_hip_ever = sr_hip_raw if inrange(wave,2,$w) & sr_hip_ever == . & sr_hip_raw != .
-
-gen sr_hip_new=sr_hip_raw if inrange(wave,2,$w)
+gen sr_hip_new=sr_hip_raw if wave==2 | wave==3 | wave == 4 | wave==5 | wave==6 | wave==7
 la var sr_hip_raw "Self report Hip Fracture, Raw"
 la var sr_hip_ever "Ever Self report Hip Fracture (since age 50)"
 la var sr_hip_new "Self report Hip Fracture since prev year"
@@ -1483,12 +1448,12 @@ program define prev_report
 	args dis num
  
 	gen sr_`dis'_raw=.
-		forvalues w=1/$w{
-			replace sr_`dis'_raw=1 if disescn`num'==1 & wave==`w'
-			replace sr_`dis'_raw=0 if disescn`num'==2 & wave==`w'
-			replace sr_`dis'_raw=7 if disescn`num'==7 & wave==`w'
-			replace sr_`dis'_raw=-7 if disescn`num'==-7 & wave==`w'
-			replace sr_`dis'_raw=-8 if disescn`num'==-8 & wave==`w'
+		foreach w in 1 2 3 4 5 6 7{
+			replace sr_`dis'_raw=1 if hc`w'disescn`num'==1 & wave==`w'
+			replace sr_`dis'_raw=0 if hc`w'disescn`num'==2 & wave==`w'
+			replace sr_`dis'_raw=7 if hc`w'disescn`num'==7 & wave==`w'
+			replace sr_`dis'_raw=-7 if hc`w'disescn`num'==-7 & wave==`w'
+			replace sr_`dis'_raw=-8 if hc`w'disescn`num'==-8 & wave==`w'
 		}
 
 	la val sr_`dis'_raw sr_prev_rept
@@ -1501,9 +1466,9 @@ program define prev_report
 	tab sr_`dis'_ever sr_`dis'_raw, missing
 	tab sr_`dis'_ever wave if ivw_type==1, missing
 
-	gen sr_`dis'_new=sr_`dis'_raw if inrange(wave,2,$w)
+	gen sr_`dis'_new=sr_`dis'_raw if wave==2 | wave==3 | wave== 4 | wave==5 | wave==6 | wave==7
 	replace sr_`dis'_new=0 if sr_`dis'_raw==7
-	tab sr_`dis'_new if inrange(wave,2,$w) & ivw_type==1, missing
+	tab sr_`dis'_new if (wave==2 | wave==3 | wave==4 | wave==5 | wave==6 | wave==7) & ivw_type==1, missing
 
 	end
 
@@ -1541,12 +1506,12 @@ gen sr_depr_pqq2=.
 gen sr_anx_gad1=.
 gen sr_anx_gad2=.
 
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 	//set up new variables for individual wave variables
 	foreach q in 1 2 3 4 {
-	gen temp_hc`w'deprsan`q'=. if inlist(depresan`q',-9,-8,-7,-1) & wave==`w'
-	replace temp_hc`w'deprsan`q'=depresan`q'-1 if inlist(depresan`q',1,2,3,4) & wave==`w'
-	replace temp_hc`w'deprsan`q'=0 if inlist(depresan`q',-8,-7) & wave==`w'
+	gen temp_hc`w'deprsan`q'=. if inlist(hc`w'depresan`q',-9,-8,-7,-1)
+	replace temp_hc`w'deprsan`q'=hc`w'depresan`q'-1 if inlist(hc`w'depresan`q',1,2,3,4)
+	replace temp_hc`w'deprsan`q'=0 if inlist(hc`w'depresan`q',-8,-7)
 	}
 	//now create clean depression, anxiety variables
 	replace sr_depr_pqq1=temp_hc`w'deprsan1 if wave==`w' //little interest or pleasure in doing things
@@ -1606,19 +1571,19 @@ replace dem_3_cat=1 if sr_dementia_ever==1 //if reported directly
 forvalues i = 1/8{
 gen pr_ad8_`i'=-1 //initialize to n/a
 replace pr_ad8_`i'=. if proxy_ivw==1 & dem_3_cat==. //set missing if proxy ivw w/o direct report dementia
-forvalues w=1/$w{
-	replace pr_ad8_`i'=1 if inlist(chgthink`i',1,3) & wave==`w' & dem_3_cat==. & proxy_ivw==1 //yes or dementia reported
-	replace pr_ad8_`i'=0 if inlist(chgthink`i',2,-8) & wave==`w' & dem_3_cat==. &  proxy_ivw==1 //no or don't know
+foreach w in 1 2 3 4 5 6 7{
+	replace pr_ad8_`i'=1 if inlist(cp`w'chgthink`i',1,3) & wave==`w' & dem_3_cat==. & proxy_ivw==1 //yes or dementia reported
+	replace pr_ad8_`i'=0 if inlist(cp`w'chgthink`i',2,-8) & wave==`w' & dem_3_cat==. &  proxy_ivw==1 //no or don't know
 	}	
 tab pr_ad8_`i' wave, missing
 tab pr_ad8_`i' wave if proxy_ivw==1, missing
 }
 
-tab pr_ad8_3 chgthink3 if wave==1, missing
-tab chgthink1 dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
+tab pr_ad8_3 cp1chgthink3 if wave==1, missing
+tab cp2chgthink1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
 
 tab pr_ad8_1 wave, missing
-tab pr_ad8_1 dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
+tab pr_ad8_1 cp2dad8dem if wave==2 & proxy_ivw==1, missing //previous proxy ivw ad8 items indicated dementia
 tab pr_ad8_1 sr_dementia_ever if wave==2 & proxy_ivw==1, missing // reported dementia directly
 
 gen pr_ad8_score=(pr_ad8_1+pr_ad8_2+pr_ad8_3+pr_ad8_4+pr_ad8_5+pr_ad8_6+pr_ad8_7+pr_ad8_8) if proxy_ivw==1 & dem_3_cat==.
@@ -1627,17 +1592,16 @@ tab pr_ad8_score wave, missing
 
 gen dem_via_proxy=1 if pr_ad8_score>=2 & pr_ad8_score~=. //from ad8 score directly
 replace dem_via_proxy=0 if inlist(pr_ad8_score,0,1)
-replace dem_via_proxy=1 if (dad8dem==1 | dad8dem==1) & proxy_ivw==1 //if previous interview ad8 indicated dementia
+replace dem_via_proxy=1 if (cp2dad8dem==1 | cp3dad8dem==1) & proxy_ivw==1 //if previous interview ad8 indicated dementia
 replace dem_via_proxy=-1 if sr_dementia_ever==1
 tab dem_via_proxy wave if proxy_ivw==1 & ivw_type==1, missing
 
 //set 3 category dementia state variable
 //first xwave variable for proxy allowed sp to answer cg section
-/*2/14/19 Speaktosp already exists since removing prefixes. 
 gen speaktosp=.
-forvalues w=1/$w{
+foreach w in 1 2 3 4 5 6 7{
 	replace speaktosp=cg`w'speaktosp if wave==`w'
-}*/
+}
 
 replace dem_3_cat=1 if dem_3_cat==. & dem_via_proxy==1 //if proxy ivw indicates dem
 replace dem_3_cat=3 if dem_3_cat==. & dem_via_proxy==0 & speaktosp==2  //proxy ind no dem
@@ -1646,13 +1610,13 @@ tab dem_3_cat wave, missing
 //for self interviews
 *************************************************
 //current date questions
-tab todaydat1 speaktosp if wave==1 & ivw_type==1, missing
+tab cg1todaydat1 cg1speaktosp if wave==1 & ivw_type==1, missing
 
 forvalues i = 1/4{
 	gen date_item`i'=.
-	forvalues w=1/$w{
-		replace date_item`i'=1 if todaydat`i'==1 & wave==`w' //yes
-		replace date_item`i'=0 if inlist(todaydat`i',2,-7) & wave==`w' //no, dont know, refused
+	foreach w in 1 2 3 4 5 6 7{
+		replace date_item`i'=1 if cg`w'todaydat`i'==1 & wave==`w' //yes
+		replace date_item`i'=0 if inlist(cg`w'todaydat`i',2,-7) & wave==`w' //no, dont know, refused
 	}
 }
 //count date questions correct
@@ -1660,10 +1624,10 @@ gen date_sum=date_item1+date_item2+date_item3+date_item4
 tab date_sum wave, missing
 
 //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
-forvalues w=1/$w{
-	replace date_sum=-2 if date_sum==. & speaktosp==2 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace date_sum=-2 if date_sum==. & cg`w'speaktosp==2 & wave==`w'
 	replace date_sum=-3 if (date_item1==. | date_item2==. | date_item3==. | ///
-		date_item4==. ) & speaktosp==1 & wave==`w'
+		date_item4==. ) & cg`w'speaktosp==1 & wave==`w'
 }
 tab date_sum wave, missing
 
@@ -1677,9 +1641,9 @@ capture program drop president
 program define president
 	args newv oldv
 	gen `newv'=.	
-	forvalues w=1/$w{
-		replace `newv'=1 if `oldv'==1  & wave==`w' //yes
-		replace `newv'=0 if inlist(`oldv',2,-7) & wave==`w' //no, refused
+	foreach w in 1 2 3 4 5 6 7{
+		replace `newv'=1 if cg`w'`oldv'==1  & wave==`w' //yes
+		replace `newv'=0 if inlist(cg`w'`oldv',2,-7) & wave==`w' //no, refused
 	}
 	tab `newv' wave, missing
 end
@@ -1694,10 +1658,10 @@ gen presvp=preslast+presfirst+vplast+vpfirst
 tab presvp wave, missing
 
 //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
-forvalues w=1/$w{
-	replace presvp=-2 if presvp==. & speaktosp==2 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace presvp=-2 if presvp==. & cg`w'speaktosp==2 & wave==`w'
 	replace presvp=-3 if presvp==. & (preslast==. | presfirst==. | vplast==. | ///
-		vpfirst==. ) & speaktosp==1 & wave==`w'
+		vpfirst==. ) & cg`w'speaktosp==1 & wave==`w'
 }
 tab presvp wave, missing
 
@@ -1712,13 +1676,13 @@ tab date_prvp, missing
 
 //executive function domain, clock drawing score
 gen clock_scorer=.
-forvalues w=1/$w{
-	replace clock_scorer=dclkdraw if wave==`w'
-	replace clock_scorer=. if inlist(dclkdraw,-2,-9) & wave==`w' //missing
-	replace clock_scorer=0 if inlist(dclkdraw,-3,-4,-7) & wave==`w' //refused,unable
+foreach w in 1 2 3 4 5 6 7{
+	replace clock_scorer=cg`w'dclkdraw if wave==`w'
+	replace clock_scorer=. if inlist(cg`w'dclkdraw,-2,-9) & wave==`w' //missing
+	replace clock_scorer=0 if inlist(cg`w'dclkdraw,-3,-4,-7) & wave==`w' //refused,unable
 //assign mean values where missing response
-	replace clock_scorer=2 if dclkdraw==-9 & speaktosp==1 & wave==`w' //proxy
-	replace clock_scorer=3 if dclkdraw==-9 & speaktosp==-1 & wave==`w' //self
+	replace clock_scorer=2 if cg`w'dclkdraw==-9 & cg`w'speaktosp==1 & wave==`w' //proxy
+	replace clock_scorer=3 if cg`w'dclkdraw==-9 & cg`w'speaktosp==-1 & wave==`w' //self
 	}
 tab clock_scorer wave, missing //left as -1 if inapplicable
 
@@ -1727,10 +1691,10 @@ capture program drop recall
 program define recall
 	args newv oldv
 	gen `newv'=.
-	forvalues w=1/$w{
-		replace `newv'=`oldv' if wave==`w'
-		replace `newv'=. if inlist(`oldv',-2,-1) & wave==`w' //n/a or not asked
-		replace `newv'=0 if inlist(`oldv',-7,-3) & wave==`w' //refused or unable
+	foreach w in 1 2 3 4 5 6 7{
+		replace `newv'=cg`w'`oldv' if wave==`w'
+		replace `newv'=. if inlist(cg`w'`oldv',-2,-1) & wave==`w' //n/a or not asked
+		replace `newv'=0 if inlist(cg`w'`oldv',-7,-3) & wave==`w' //refused or unable
 	}
 	tab `newv' wave, missing
 end
@@ -1771,9 +1735,9 @@ tab dem_2_cat wave, missing
 *************************************************
 //rate memory
 gen memory=.
-forvalues w=1/$w{
-replace memory=ratememry if wave==`w' & proxy_ivw==0 //self interview
-replace memory=memrygood if wave==`w' & proxy_ivw==1 //proxy interview
+foreach w in 1 2 3 4 5 6 7{
+replace memory=cg`w'ratememry if wave==`w'&proxy_ivw==0 //self interview
+replace memory=cp`w'memrygood if wave==`w'&proxy_ivw==1 //proxy interview
 
 }
 replace memory=. if inlist(memory,-1)
@@ -1804,66 +1768,36 @@ tab `w'
 }
 
 *************************************************
-save round_1_${w}_cleanv2.dta, replace
+save round_1_7_cleanv2.dta, replace
 
 *************************************************
 log close
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
 
 H="NHATS Data Cleaning Part 5 (4_r12_cleaning_3_1)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 03/21/2019
-
-Description: This section uses the SP and OP data files and imputes
-hours of help provided to SP per methods in NHATS Technical Paper #7
-
-Variables from this dataset are then brought in to the SP Rounds dataset
-and also the NSOC caregiver dataset.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 4_nhats_cleaning_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
-set maxvar 10000
 
+local logs "E:\nhats\nhats_code\NHATS data setup\logs"
+//local logs /Users/rebeccagorges/Documents/data/nhats/logs/
 
-log using "${logs}/`name'.smcl", text replace
+log using "`logs'4_nhats_cleaning.txt", text replace
 
+local work "E:\nhats\data\NHATS working data\"
+//local work /Users/rebeccagorges/Documents/data/nhats/working
 
-
-cd "${work}"
-
-*********************************************
-
-use round_1_${w}_cleanv2.dta
+cd "`work'"
+use round_1_7_cleanv2.dta
 
 *********************************************
 //fall in the last month
 gen fall_last_month=.
-forvalues w=1/$w{
-	replace fall_last_month=1 if fllsinmth==1 & wave==`w'
-	replace fall_last_month=0 if fllsinmth==2 & wave==`w'
-	replace fall_last_month = -7 if fllsinmth==-7 & wave==`w'
-	replace fall_last_month = -8 if fllsinmth==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace fall_last_month=1 if hc`w'fllsinmth==1 & wave==`w'
+	replace fall_last_month=0 if hc`w'fllsinmth==2 & wave==`w'
+	replace fall_last_month = -7 if hc`w'fllsinmth==-7 & wave==`w'
+	replace fall_last_month = -8 if hc`w'fllsinmth==-8 & wave==`w'
 }
 la var fall_last_month "Fall down in last month"
 tab fall_last_month wave, missing
@@ -1872,23 +1806,23 @@ tab fall_last_month wave, missing
 //self care help, using the derived variables in the SC section
 //uses the "has help" variables (has difficulty, uses devices other options)
 //if don't know, refused, or not done, set to missing
-tab deathelp, missing
-rename eatslfdif eatdif
-rename eatslfoft eatoft
+tab sc1deathelp, missing
+rename sc*eatslfdif sc*eatdif
+rename sc*eatslfoft sc*eatoft
 capture program drop selfcare
 program define selfcare
 	args act
 	gen adl_`act'_diff=.
 	gen adl_`act'_help=.
 	gen adl_`act'_not_done=.
-	forvalues w=1/$w{
-		replace adl_`act'_help=1 if `act'hlp==1 & wave==`w' //yes
-		replace adl_`act'_help=0 if `act'hlp==2 & wave==`w' //no
-		replace adl_`act'_help=0 if `act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
-		replace adl_`act'_help=-7 if `act'hlp==-7 & wave==`w' //refused
-		replace adl_`act'_help=-8 if `act'hlp==-8 & wave==`w' //DK
-		replace adl_`act'_diff=`act'dif>1 if `act'dif>0 & wave==`w'
-		replace adl_`act'_not_done=`act'oft==4 if `act'oft>0 & wave==`w'
+	foreach w in 1 2 3 4 5 6 7{
+		replace adl_`act'_help=1 if sc`w'`act'hlp==1 & wave==`w' //yes
+		replace adl_`act'_help=0 if sc`w'`act'hlp==2 & wave==`w' //no
+		replace adl_`act'_help=0 if sc`w'`act'hlp==-1 & sp_ivw==1 & wave==`w' //bias to null
+		replace adl_`act'_help=-7 if sc`w'`act'hlp==-7 & wave==`w' //refused
+		replace adl_`act'_help=-8 if sc`w'`act'hlp==-8 & wave==`w' //DK
+		replace adl_`act'_diff=sc`w'`act'dif>1 if sc`w'`act'dif>0 & wave==`w'
+		replace adl_`act'_not_done=sc`w'`act'oft==4 if sc`w'`act'oft>0 & wave==`w'
 }
 	tab adl_`act'_help wave, missing
 	tab adl_`act'_help wave if ivw_type==1, missing
@@ -1909,8 +1843,8 @@ la var adl_dres_help "Has help while dressing"
 //household activity help, using derived variables in the HA section
 //if did not do by self b/c of health
 //reason only or health and other reason, then new help var ==1
-tab dlaunsfdf dlaunreas if wave==1, missing
-tab dlaunsfdf dlaunreas if wave==2, missing
+tab ha1dlaunsfdf ha1dlaunreas if wave==1, missing
+tab ha2dlaunsfdf ha2dlaunreas if wave==2, missing
 
 capture program drop hhact
 program define hhact
@@ -1919,17 +1853,17 @@ program define hhact
 	gen iadl_`act'_help=.
 	gen iadl_`act'_diff=.
 	gen iadl_`act'_not_done=.
-	forvalues w=1/$w{
-		replace iadl_`act'_help=1 if inlist(d`act'sfdf,1,8) & ///
-			inlist(d`act'reas,1,3) & wave==`w'
-		replace iadl_`act'_help=0 if inlist(d`act'sfdf,2,3,6) & wave==`w' //did by self
-		replace iadl_`act'_help=0 if inlist(d`act'sfdf,1,8) & ///
-			inlist(d`act'reas,2,4) & wave==`w'		
-		replace iadl_`act'_help=-8 if inlist(d`act'sfdf,4,5,7) & wave==`w' //dkrf
-		replace iadl_`act'_help=-8 if inlist(d`act'sfdf,1,8) & ///
-			inlist(d`act'reas,-7,-8) & wave==`w'
-		replace iadl_`act'_diff=`act'dif>1 if `act'dif>0 & wave==`w'
-		replace iadl_`act'_not_done=`act'==5 if `act'>0 & wave==`w'
+	foreach w in 1 2 3 4 5 6 7{
+		replace iadl_`act'_help=1 if inlist(ha`w'd`act'sfdf,1,8) & ///
+			inlist(ha`w'd`act'reas,1,3) & wave==`w'
+		replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,2,3,6) & wave==`w' //did by self
+		replace iadl_`act'_help=0 if inlist(ha`w'd`act'sfdf,1,8) & ///
+			inlist(ha`w'd`act'reas,2,4) & wave==`w'		
+		replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,4,5,7) & wave==`w' //dkrf
+		replace iadl_`act'_help=-8 if inlist(ha`w'd`act'sfdf,1,8) & ///
+			inlist(ha`w'd`act'reas,-7,-8) & wave==`w'
+		replace iadl_`act'_diff=ha`w'`act'dif>1 if ha`w'`act'dif>0 & wave==`w'
+		replace iadl_`act'_not_done=ha`w'`act'==5 if ha`w'`act'>0 & wave==`w'
 	}	
 	tab iadl_`act'_help wave, missing
 	tab iadl_`act'_help wave if ivw_type==1, missing
@@ -1948,24 +1882,24 @@ la var iadl_bank_help "Rec'd help with banking last month"
  
 //taking medications, questions slightly different and in mc section
 //set to =0 if do not take medications
-tab dmedssfdf dmedsreas if wave==1, missing
-tab dmedssfdf dmedsreas if wave==2, missing
+tab mc1dmedssfdf mc1dmedsreas if wave==1, missing
+tab mc2dmedssfdf mc2dmedsreas if wave==2, missing
 
 gen iadl_meds_help=.
 gen iadl_meds_diff=.
 gen iadl_meds_not_done=.
-forvalues w=1/$w{
-	replace iadl_meds_help=1 if inlist(dmedssfdf,1,8) & ///
-		inlist(dmedsreas,1,3) & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace iadl_meds_help=1 if inlist(mc`w'dmedssfdf,1,8) & ///
+		inlist(mc`w'dmedsreas,1,3) & wave==`w'
 	//did by self or don't take medications
-	replace iadl_meds_help=0 if inlist(dmedssfdf,2,3,6,9) & wave==`w' 
-	replace iadl_meds_help=0 if inlist(dmedssfdf,1,8) & ///
-		inlist(dmedsreas,2,4) & wave==`w'		
-	replace iadl_meds_help=-8 if dmedssfdf == 7 & wave==`w' 
-	replace iadl_meds_help=-8 if inlist(dmedssfdf,1,8) & ///
-		inlist(dmedsreas,-7,-8) & wave==`w'
-	replace iadl_meds_dif=medsdif>1 if medsdif>0 & wave==`w'
-	replace iadl_meds_not_done=inlist(dmedssfdf,1,8) if wave==`w'
+	replace iadl_meds_help=0 if inlist(mc`w'dmedssfdf,2,3,6,9) & wave==`w' 
+	replace iadl_meds_help=0 if inlist(mc`w'dmedssfdf,1,8) & ///
+		inlist(mc`w'dmedsreas,2,4) & wave==`w'		
+	replace iadl_meds_help=-8 if mc`w'dmedssfdf == 7 & wave==`w' 
+	replace iadl_meds_help=-8 if inlist(mc`w'dmedssfdf,1,8) & ///
+		inlist(mc`w'dmedsreas,-7,-8) & wave==`w'
+	replace iadl_meds_dif=mc`w'medsdif>1 if mc`w'medsdif>0 & wave==`w'
+	replace iadl_meds_not_done=inlist(mc`w'dmedssfdf,1,8) if wave==`w'
 }	
 
 la var iadl_meds_help "Rec'd help taking medications last month"
@@ -1975,11 +1909,11 @@ replace iadl_meds_diff=1 if iadl_meds_help==1
 //other meds questions, for treatment burden
 gen ind_meds_diff=.
 gen ind_meds_mistake=.
-forvalues w=1/$w{
-replace ind_meds_diff=inlist(medsdif,2,3,4) if medsdif>0 & !missing(medsdif) & wave==`w'
-replace ind_meds_diff=0 if meds==2 & wave==`w'
-replace ind_meds_diff=0 if dmedsrea==2 & inlist(medstrk,2,3) & wave==`w'
-replace ind_meds_mistake=medsmis==1 if medsmis>0 & !missing(medsmis) & wave==`w'
+forvalues w=1/7 {
+replace ind_meds_diff=inlist(mc`w'medsdif,2,3,4) if mc`w'medsdif>0 & !missing(mc`w'medsdif)
+replace ind_meds_diff=0 if mc`w'meds==2
+replace ind_meds_diff=0 if mc`w'dmedsrea==2 & inlist(mc`w'medstrk,2,3)
+replace ind_meds_mistake=mc`w'medsmis==1 if mc`w'medsmis>0 & !missing(mc`w'medsmis)
 }
 label var ind_meds_diff "Any difficulty keeping track of meds"
 label var ind_meds_mistake "Any mistake taking meds"
@@ -1989,36 +1923,36 @@ label var ind_meds_prob "SR difficulty keeping track of or mistake taking meds"
 *********************************************
 //has , sees regular doctor
 gen reg_doc_have = .
-forvalues w=1/$w{
-	replace reg_doc_have=1 if havregdoc==1 & wave==`w'
-	replace reg_doc_have=0 if havregdoc==2 & wave==`w'
-	replace reg_doc_have=-7 if havregdoc==-7 & wave==`w'
-	replace reg_doc_have=-8 if havregdoc==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace reg_doc_have=1 if mc`w'havregdoc==1
+	replace reg_doc_have=0 if mc`w'havregdoc==2
+	replace reg_doc_have=-7 if mc`w'havregdoc==-7
+	replace reg_doc_have=-8 if mc`w'havregdoc==-8
 }
 la var reg_doc_have "Have regular doctor"
 tab reg_doc_have wave, missing
 tab reg_doc_have wave if ivw_type==1, missing
 
 gen reg_doc_seen = .
-forvalues w=1/$w{
-	replace reg_doc_seen=1 if regdoclyr==1 & wave==`w'
-	replace reg_doc_seen=0 if regdoclyr==2 & wave==`w'
-	replace reg_doc_seen=-7 if regdoclyr==-7 & wave==`w'
-	replace reg_doc_seen=-8 if regdoclyr==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace reg_doc_seen=1 if mc`w'regdoclyr==1 & wave==`w'
+	replace reg_doc_seen=0 if mc`w'regdoclyr==2 & wave==`w'
+	replace reg_doc_seen=-7 if mc`w'regdoclyr==-7 & wave==`w'
+	replace reg_doc_seen=-8 if mc`w'regdoclyr==-8 & wave==`w'
 }
 la var reg_doc_seen "Seen regular doctor within last year"
 tab reg_doc_seen wave, missing
 tab reg_doc_seen wave if ivw_type==1, missing
 
 //home visit, missing if did not see regular doctor within the last year
-tab regdoclyr hwgtregd8 if wave==1, missing
+tab mc1regdoclyr mc1hwgtregd8 if wave==1, missing
 
 gen reg_doc_homevisit = .
-forvalues w=1/$w{
-	replace reg_doc_homevisit=1 if hwgtregd8==1 & wave==`w'
-	replace reg_doc_homevisit=0 if hwgtregd8==2 & wave==`w'
-	replace reg_doc_homevisit=-7 if hwgtregd8==-7 & wave==`w'
-	replace reg_doc_homevisit=-8 if hwgtregd8==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace reg_doc_homevisit=1 if mc`w'hwgtregd8==1
+	replace reg_doc_homevisit=0 if mc`w'hwgtregd8==2
+	replace reg_doc_homevisit=-7 if mc`w'hwgtregd8==-7
+	replace reg_doc_homevisit=-8 if mc`w'hwgtregd8==-8
 	//replace reg_doc_homevisit=0 if mc`w'regdoclyr==2
 }
 la var reg_doc_homevisit "Was regular doctor visit a home visit?"
@@ -2026,31 +1960,31 @@ tab reg_doc_homevisit wave, missing
 tab reg_doc_homevisit wave if ivw_type==1, missing
 
 //hospital stay last 12 months?
-tab hosptstay, missing
+tab hc1hosptstay, missing
 
 gen sr_hosp_ind=.
-forvalues w=1/$w{
-	replace sr_hosp_ind=1 if hosptstay==1 & wave==`w'
-	replace sr_hosp_ind=0 if hosptstay==2 & wave==`w'
-	replace sr_hosp_ind=-7 if hosptstay==-7 & wave==`w'
-	replace sr_hosp_ind=-8 if hosptstay==-8 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace sr_hosp_ind=1 if hc`w'hosptstay==1
+	replace sr_hosp_ind=0 if hc`w'hosptstay==2
+	replace sr_hosp_ind=-7 if hc`w'hosptstay==-7
+	replace sr_hosp_ind=-8 if hc`w'hosptstay==-8
 }
 la var sr_hosp_ind "Hospital stay in the last year 1=yes"
 tab sr_hosp_ind wave, missing
 tab sr_hosp_ind wave if ivw_type==1, missing
 
 //number of separate hospital stays?
-tab hosovrnht hosptstay, missing //if ind=no above, raw variable is n/a
+tab hc1hosovrnht hc1hosptstay, missing //if ind=no above, raw variable is n/a
 gen sr_hosp_stays=.
-forvalues w=1/$w{
-	replace sr_hosp_stays=hosovrnht if hosovrnht>0 & wave==`w'
+foreach w in 1 2 3 4 5 6 7{
+	replace sr_hosp_stays=hc`w'hosovrnht if hc`w'hosovrnht>0 & wave==`w'
 }
 replace sr_hosp_stays=0 if sr_hosp_ind==0 //set to 0 if none reported in y/n ? above
 la var sr_hosp_stays "Number unique hospital stays last year"
 tab sr_hosp_stays wave, missing
 tab sr_hosp_stays wave if ivw_type==1, missing
 
-save round_1_${w}_cleanv3.dta, replace
+save round_1_7_cleanv3.dta, replace
 
 local ivars fall_last_month adl_eat_help adl_bath_help adl_toil_help adl_dres_help iadl_laun_help iadl_shop_help ///
 iadl_meal_help iadl_bank_help iadl_meds_help reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind sr_hosp_stays
@@ -2062,22 +1996,8 @@ tab `w' wave,missing
 log close
 
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
-
 H="NHATS Data Cleaning Part 6 (5_r12_add_helper)"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 03/21/2019
-
-Description: 
-
-Collapse helper information to the SP - wave level
+/*Collapse helper information to the SP - wave level
 and merge into SP dataset
 
 variables created are:
@@ -2088,52 +2008,57 @@ with the most hours)
 
 Uses imputed hours per code 1a_help_hours_imputation.do
 (see NHATS Technical Paper #7 for imputation methodology)
-
-
-
-**************************************************
 */
 
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 5_nhats_cleaning_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
-set maxvar 10000
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
+log using "`logs'6-add_helper_to_SP_ds-LOG.txt", text replace
 
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\r4_sensitive\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
-log using "${logs}\`name'.smcl", text replace
-
-
-
-
-*********************************************
-
-cd "${work}"
+cd "`work'"
 ***************************************************************
 //get all 3 waves helper imputed hours into a single dataset
-
 use R1_hrs_imputed_added.dta
 
 local keepvars spid wave opid op_hrsmth_i numact yearnotmonth disab ///
  justone spouse otherrel nonrel regular oneact impute_cat opishelper_allw paid ///
  op_adl* op_iadl* op_nonadl* son daughter oth_fam rc_staff op_doc_help op_sn op_age
 
-forvalues w=2/$w{
-qui append using R`w'_hrs_imputed_added.dta
+qui append using R2_hrs_imputed_added.dta
  
-}
+qui append using R3_hrs_imputed_added.dta
+
+qui append using R4_hrs_imputed_added.dta
+
+qui append using R5_hrs_imputed_added.dta
+
+qui append using R6_hrs_imputed_added.dta
+
+qui append using R7_hrs_imputed_added.dta
  
 tab wave opishelper_allw, missing
 
 //  age categories
-egen op_age=rowmax(dage)
-label val op_age dage 
+egen op_age=rowmax(op*dage)
+label val op_age op2dage 
 replace op_age=. if inlist(op_age, -8, -7, -1, .) 
 
 
@@ -2141,17 +2066,17 @@ replace op_age=. if inlist(op_age, -8, -7, -1, .)
 //identify paid helpers and staff at residence (not helpers)
 gen paid=0
 gen rc_staff=0
-forvalues w=1/$w {
-	replace paid=1 if paidh==1 & ((relat>=30 & relat<=40)| ///
-	relat==92) & wave==`w'
-	foreach x of varlist hlp *hlp1 *hlp2 *hlpmst {
-		replace rc_staff=1 if relat==37 & `x'==1 & wave==`w'
+forvalues i=1/7 {
+	replace paid=1 if op`i'paidh==1 & ((op`i'relat>=30 & op`i'relat<=40)| ///
+	op`i'relat==92) & wave==`i'
+	foreach x of varlist op`i'*hlp op`i'*hlp1 op`i'*hlp2 op`i'*hlpmst {
+		replace rc_staff=1 if op`i'relat==37 & `x'==1 & wave==`i'
 }
 }
 
 gen op_sn=0 
-forvalues w=1/$w {
-	replace op_sn=socl==1 if wave==`w'
+forvalues i=1/7 {
+	replace op_sn=op`i'socl==1 if wave==`i'
 }
 label var op_sn "OP in SP's social network"
 
@@ -2251,7 +2176,7 @@ replace n_sn=0 if missing(n_sn)
 label var n_sn "Number in social network"
 
 //save as op file before dropping down to one obs per spid
-saveold "E:/nhats/data/NHATS cleaned/op_round_1_${w}.dta", replace version(12)
+saveold "E:/nhats/data/NHATS cleaned/op_round_1_7.dta", replace version(12)
 
 //keep the entry for the primary caregiver only, this will then be the 
 //information merged into the SP dataset
@@ -2270,7 +2195,7 @@ tab prim_helper_cat wave, missing
 //merge this helper data with the main SP dataset
 save helper_by_sp.dta, replace
 
-use round_1_${w}_cleanv3, clear
+use round_1_7_cleanv3, clear
 
 merge 1:1 spid wave using helper_by_sp.dta, keepusing(opid n_helpers n_fam ind_fam ///
  tot_hrsmonth_* prim_helper_cat ind_pa n_pai tot_hrswk* num_helpers_cat ind_rc_*)
@@ -2303,197 +2228,76 @@ la var prim_helper_opid "Primary helper OPID"
 ***************************************************************
 //save the dataset with helper information added
 
-save round_1_${w}_clean_helper_added.dta, replace
+save round_1_7_clean_helper_added.dta, replace
 
-saveold round_1_${w}_clean_helper_added_old.dta, replace
+saveold round_1_7_clean_helper_added_old.dta, replace
 
 ***************************************************************
 log close
 
 
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
-
-
 H="NHATS Data Cleaning Part 7--Variable Construction"
-/*
-
-Created by: --
-Date Created: --
-
-Updated by: MH
-Date Updated: 04/05/2019
-
-Description: This section uses the SP and OP data files and imputes
-hours of help provided to SP per methods in NHATS Technical Paper #7
-
-
-Collapse helper information to the SP - wave level
-and merge into SP dataset
-
-variables created are:
-Total # helpers for the SP
-Total hours/month help provided for SP
-Indicators for relationship of primary helper (identified as helper 
-with the most hours)
-
-Uses imputed hours per code 1a_help_hours_imputation.do
-(see NHATS Technical Paper #7 for imputation methodology)
-
-Bring in day of month from restricted tracker
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name 6_nhats_cleaning_`date'
-di "`name'"
-
-capture log close 
+capture log close
 clear all
-
 set more off
-version 12
-set linesize 80
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
 set maxvar 10000
 
+local r1raw E:\nhats\data\NHATS Public\round_1\
+local r2raw E:\nhats\data\NHATS Public\round_2\
+local r3raw E:\nhats\data\NHATS Public\round_3\
+local r4raw E:\nhats\data\NHATS Public\round_4\
+local r5raw E:\nhats\data\NHATS Public\round_5\
+local r6raw E:\nhats\data\NHATS Public\round_6\
+local r7raw E:\nhats\data\NHATS Public\round_7\
+local work E:\nhats\data\NHATS working data
+local r1s E:\nhats\data\NHATS Sensitive\r1_sensitive\
+local r2s E:\nhats\data\NHATS Sensitive\r2_sensitive\
+local r3s E:\nhats\data\NHATS Sensitive\r3_sensitive\
+local r4s E:\nhats\data\NHATS Sensitive\com\
+local r5s E:\nhats\data\NHATS Sensitive\r5_sensitive\
+local r6s E:\nhats\data\NHATS Sensitive\r6_sensitive\
+local r7s E:\nhats\data\NHATS Sensitive\r7_sensitive\
+local logs E:\nhats\nhats_code\NHATS data setup\logs\
 
-log using "${logs}\`name'.smcl", text replace
-
-
-
-*********************************************
-
-
-//Pull dates from restricted tracker
-use "E:\nhats\data\NHATS Restricted\NHATS Round 7 Tracker Restricted STATA\NHATS_Round_7_Tracker_Restricted.dta", clear
-keep spid r*spstatdtdy
-rename r*spstatdtdy spstatdtdy*
-reshape long spstatdtdy, i(spid) j(wave)
-tempfile resttrack
-save `resttrack'
-
-//Does not need to change, unless get new metro file. 
 
 //7/13/17--add in metro/nonmetro var
 use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_6_MetNonmet.dta", clear
-forvalues w=1/6 {
-gen metro_ind`w'=r`w'd==1 if inrange(r`w'd,1,2)
+forvalues i=1/6 {
+gen metro_ind`i'=r`i'd==1 if inrange(r`i'd,1,2)
 }
 reshape long metro_ind, i(spid) j(wave)
 label var metro_ind "Lives in metropolitan area"
-note metro_ind: From metro non-metro file, r(wave)dmetnomet raw variable. 
-
-label define metro_ind  0 "Non-Metro" 1 "Metro" 
-label values metro_ind metro_ind
-
 tempfile metro
 save `metro'
 
-cd "${work}"
-
-use round_1_$w_clean_helper_added.dta
+cd "`work'"
+use round_1_7_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
-
-
-// 3/21/2019--Adding LM questions from LML interview section, P01 Aldridge
-
-gen qoc_lml_e=.
-replace qoc_lml_e=1 if ratecare==1
-replace qoc_lml_e=0 if inrange(ratecare,2,5)
-note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+) 
-note qoc_lml_e: Located in NHATS Setup, under Part 7.
-note qoc_lml_e: Created: 3/21/19-MH  
-/*
-gen qoc_lml=ratecare
-replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
-*/
-
-foreach x in pain bre sad{
-gen unmet_`x'_lml=.
-replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
-replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'hlpam==1)  
-}
-note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, LM1B (Waves 2+) 
-note unmet_pain_lml: Located in NHATS Setup, under Part 7.
-note unmet_pain_lml: Created: 3/21/19-MH  
-
-note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming from LM2, LM2A, LM2B (Waves 2+) 
-note unmet_bre_lml: Located in NHATS Setup, under Part 7.
-note unmet_bre_lml: Created: 3/21/19-MH  
-
-note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from LM3, LM3A, LM3B (Waves 2+) 
-note unmet_sad_lml: Located in NHATS Setup, under Part 7.
-note unmet_sad_lml: Created: 3/21/19-MH  
-
-foreach x in respect informed{
-gen `x'_lml=.
-replace `x'_lml=0 if inrange(`x', 1, 4)
-replace `x'_lml=1 if inrange(`x', 2,4)
-}
-
-note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
-note respect_lml: Located in NHATS Setup, under Part 7.
-note respect_lml: Created: 3/21/19-MH  
-
-note informed_lml: Family not always informed for individuals condition. Coming from LM8 (Waves 2+) 
-note informed_lml: Located in NHATS Setup, under Part 7.
-note informed_lml: Created: 3/21/19-MH  
-
-foreach x in caredecis carenowan{
-gen `x'_lml=. 
-replace `x'_lml=0 if inlist(`x', 1, 2)
-replace `x'_lml=1 if `x'==1
-}
-
-note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Waves 2+) 
-note caredecis_lml: Located in NHATS Setup, under Part 7.
-note caredecis_lml: Created: 3/21/19-MH  
-
-note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from LM5 (Waves 2+) 
-note carenowan_lml: Located in NHATS Setup, under Part 7.
-note carenowan_lml: Created: 3/21/19-MH  
 
 
 //1/28/2019-Advance Care Planning based off of Ornstein instructions
 
+tab ep2eoltalk ep2poweratty
+tab ep2poweratty 
+tab ep2livngwill
+
 gen no_acp=0
-replace no_acp=1 if inlist(eoltalk, 2, -8, -7) & inlist(poweratty, 2, -7, -8) & inlist(livngwill, 2, -7, -8)
-replace no_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
-note no_acp: Only in Rd2. no_acp=1 if eoltalk=2,-7,-8 & poweratty=2,-7,-8 & livingwill=2,-7,-8. 
-note no_acp: No Advance Care Planning based off of talk about EOL care, legal arrangements, and living will all being no. 
-note no_acp: Located in NHATS Setup, under Part 7.
-note no_acp: Created: 1/28/19-MH 
+replace no_acp=1 if inlist(ep2eoltalk, 2, -8, -7) & inlist(ep2poweratty, 2, -7, -8) & inlist(ep2livngwill, 2, -7, -8)
+replace no_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen formal_acp=0
-replace formal_acp=1 if inlist(eoltalk, 2, -8, -7) & (poweratty==1 | livngwill==1)
-replace formal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
-note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 | livingwill=1)
-note formal_acp: Formal Advance Care Planning based off of not talking about EOL care and either having ///
-having legal arrangements or having a living will.
-note formal_acp: Located in NHATS Setup, under Part 7.
-note formal_acp: Created: 1/28/19-MH 
+replace formal_acp=1 if inlist(ep2eoltalk, 2, -8, -7) & (ep2poweratty==1 | ep2livngwill==1)
+replace formal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen informal_acp=0
-replace informal_acp=1 if eoltalk==1 & inlist(poweratty, 2, -7, -8) & inlist(livngwill, 2, -7, -8)
-replace informal_acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .) 
-note informal_acp: Only in Rd2. informal_acp=1 if eoltalk=1 & poweratty=2,-7,-8 & livingwill=2,-7,-8
-note informal_acp: Informal Advance Care Planning based off of talking about EOL care and not having ///
-having legal arrangements and not having a living will.
-note informal_acp: Located in NHATS Setup, under Part 7.
-note informal_acp: Created: 1/28/19-MH 
+replace informal_acp=1 if ep2eoltalk==1 & inlist(ep2poweratty, 2, -7, -8) & inlist(ep2livngwill, 2, -7, -8)
+replace informal_acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .) 
 
 gen acp=0
-replace acp=1 if eoltalk==1 & (poweratty==1 | livngwill==1)
-replace acp=. if inlist(eoltalk, -1, -9, .) | inlist(poweratty, -1, -9, .) | inlist(livngwill, -1, -9, .)
-note formal_acp: Only in Rd2. formal_acp=1 if eoltalk=2,-7,-8 & (poweratty=1 | livingwill=1)
-note formal_acp: Formal Advance Care Planning based off of not talking about EOL care and either having ///
-having legal arrangements or having a living will.
-note formal_acp: Located in NHATS Setup, under Part 7.
-note formal_acp: Created: 1/28/19-MH
-
-
+replace acp=1 if ep2eoltalk==1 & (ep2poweratty==1 | ep2livngwill==1)
+replace acp=. if inlist(ep2eoltalk, -1, -9, .) | inlist(ep2poweratty, -1, -9, .) | inlist(ep2livngwill, -1, -9, .)
+ 
 label var no_acp "No Advance care planning, 1=yes"
 label var formal_acp "Formal Advance care planning, 1=yes"
 label var informal_acp "Informal Advance care planning, 1=yes"
@@ -2508,61 +2312,60 @@ foreach x in no_acp formal_acp informal_acp acp {
 tab `x' if wave==2 , m
 }
 
-// 8/10/2018 Add in 2011 weight for rd 5,6 
-rename an2011wgt0 an2011wgt 
+// 8/10/2018 Add in 2011 weight for rd5,6 
+egen an2011wgt=rowmax(w*an2011wgt0)
+drop w*an2011wgt0
 label var an2011wgt "2011 weights"
-note an2011wgt: an2011wgt0
-note an2011wgt: Analytic Weight for 2011 cohort, for rounds 5+
-note formal_acp: Located in NHATS Setup, under Part 7.
-note formal_acp: Created: 8/10/18-MH
 
-
-rename trfinwgt0 trfinwgt
-rename tr2011wgt0 tr2011wgt
+gen trfinwgt=.
+gen tr2011wgt=.
+forvalues w=1/7{
+replace trfinwgt=w`w'trfinwgt0 if wave==`w'
+capture replace tr2011wgt=w`w'tr2011wgt0 if wave==`w'
+}
+drop w*trfinwgt0 w*tr2011wgt0
 
 //Add in 7/3/18
-
+gen serarmfor=.
 foreach w in 1 5{
-	replace serarmfor=1 if serarmfor==1 & wave==`w'
-	replace serarmfor=0 if serarmfor==2 & wave==`w'
-	replace serarmfor=. if serarmfor==-7 & wave==`w'
-	replace serarmfor=. if serarmfor==-8 & wave==`w'
+	replace serarmfor=1 if va`w'serarmfor==1 & wave==`w'
+	replace serarmfor=0 if va`w'serarmfor==2 & wave==`w'
+	replace serarmfor=-7 if va`w'serarmfor==-7 & wave==`w'
+	replace serarmfor=-8 if va`w'serarmfor==-8 & wave==`w'
 }
 label var serarmfor "Served in Armed Forces"
 sort spid wave
 by spid: carryforward serarmfor, replace
 notes drop serarmfor
-note serarmfor: Asked in rounds 1,5. Used serarmfor to find. 
-note serarmfor: Served in Arm Forces variable, carried previous value to new wave. 
-note formal_acp: Located in NHATS Setup, under Part 7.
-note formal_acp: Created: 7/3/18-MH
-
 
 //Add in 4/6/18
+egen dresslf=rowmax(sc*dresslf)
+label val dresslf sc2dresslf
 label var dresslf "Often you Dress Yourself"
 
+egen dresdif=rowmax(sc*dresdif)
+label val dresdif sc2dresdif
 label var dresdif "Difficulty when using Special Items by Self"
 
+egen ntlvrmslp=rowmax(fl*ntlvrmslp)
+label val ntlvrmslp fl2ntlvrmslp 
 label var ntlvrmslp "Often had to Stay in Bed"
 
+egen eatdev=rowmax(sc*eatdev)
+label val eatdev sc2eatdev
 label var eatdev "Ever use Adapted Utensils"
 
 
 ////// 4/2/2018--Adding in income quartile
 sort wave
-forvalues w=1/$w {
-xtile income_quart`w'=aveincome [aw=anfinwgt0] if wave==`w', nq(4) 
+forvalues w=1/7 {
+xtile income_quart`w'=aveincome [aw=w`w'anfinwgt0] if wave==`w', nq(4) 
 }
 egen income_quart=rowmax(income_quart*)
 
-forvalues w=1/$w{
+forvalues w=1/7{
 drop income_quart`w'
 }
-
-note income_quart: Use aveincome to create variable.  
-note income_quart: Create an income quartile measure. Weighted. 
-note income_quart: Located in NHATS Setup, under Part 7.
-note income_quart: Created: 4/2/18-MH
 
 label var income_quart "Quartile of Income"
 label define income_quart 1 "Bottom" 2 "Second" 3 "Third" 4 "Top"
@@ -2570,35 +2373,22 @@ label values income_quart income_quart
 
 ///// 3/26/18 --Adding in Hospice and place died variables.
 
+egen placedied=rowmax(pd*placedied)
+label value pd2placedied placedied
 label var placedied "Place of Death"
 replace placedied=. if inlist(placedied,-1,-8)
 replace placedied=6 if placedied==91
-note placedied: placedied (6=91) (.=-1,-8) all else the same.   
-note placedied: Place died variable from LML interview. 
-note placedied: Located in NHATS Setup, under Part 7.
-note placedied: Created: 3/26/18-MH
+
+egen hospice1=rowmax(pd*hospice1)
+egen hospice2=rowmax(pd*hospice2)
+egen hospicelml=rowmax(pd*hospcelml)
 
 replace hospice2=. if inlist(hospice2,-1,-8) 
-note hospice2: hospice2 variable, (.=-1,-1)
-note hospice2: Hospice at other place, list.
-note hospice2: Located in NHATS Setup, under Part 7.
-note hospice2: Created: 3/26/18-MH
 
-rename hospcelml hospicelml
 foreach x in hospice1 hospicelml {
 replace `x'=. if inlist(`x',-1,-8)
 replace `x'=0 if `x'==2
 } 
-
-note hospice1: hospice1 variable (0=2) (.=-1,-8)
-note hospice1: Hospice at Nursing Home.
-note hospice1: Located in NHATS Setup, under Part 7.
-note hospice1: Created: 3/26/18-MH
-
-note hospicelml: hospicelml variable (0=2) (.=-1,-8)
-note hospicelml: Hospice at other place, list.
-note hospicelml: Located in NHATS Setup, under Part 7.
-note hospicelml: Created: 3/26/18-MH
  
 label var hospice1 "Hopsice at Nursing Home"
 label var hospice2 "Hospice Other Place"
@@ -2611,10 +2401,9 @@ label var hospicelml "Hospice Care in Last Month"
 
 forvalues i=1/2{
 capture drop gripsc`i'
-rename grp`i'rdng gripsc`i'
-rename wlkc`i'secs walksec`i'
-rename wlk`i'hndr walkhndr`i'
-
+egen gripsc`i'= rowmax(gr*grp`i'rdng)
+egen walksec`i'= rowmax(wa*wlkc`i'secs)
+egen walkhndr`i'=rowmax(wa*wlk`i'hndr)
 replace gripsc`i'=. if inlist(gripsc`i', -1, -9, -7, -8)
 replace walksec`i'=. if inlist(walksec`i', -1, -9, -7, -8)
 replace walkhndr`i'=. if inlist(walkhndr`i', -1, -9, -7, -8)
@@ -2626,30 +2415,24 @@ label var walksec1 "Secs Hld Walking Course1"
 label var walksec2 "Secs Hld Walking Course2"
 label var walkhndr1 "Hnrds Hld Walking Course1"
 label var walkhndr2 "Hnrds Hld Walking Course2"
-
-foreach y in gripsc walksec walkhndr{
-foreach x in 1 2{
-note `y'`x': `y'`x' (.=-1,-7,-8,-9)
-
-if "`y'"=="gripsc"{
-note gripsc`x': Grip Strength `x' Reading 
+/*
+forvalues i=1/2{
+capture drop walk`i'
+if `i'==1 egen walk`i'=rowmax(wa*wlkc1secs)  
+if `i'==2 egen walk`i'=rowmax(wa*wlk1hndr)
+replace walk`i'=. if inlist(walk`i', -1, -9, -7, -8)
 }
-else if "`y'"=="walksec"{
-note walksec`x': Walking Course Completion in Seconds place `x' Reading 
-}
-else if "`y'"=="walkhndr"{
-note walkhndr`x': Walking Course Completion Hundredths place `x' Reading
-}
-note `y'`x': Located in NHATS Setup, under Part 7.
-note `y'`x': Created: 3/14/18-MH
-}
-}
-
+rename walk1 walksec
+rename walk2 walkhnrds
+label var walk1 "Secs Hld Walking Course)
+*/
 
 foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
 capture drop `x'
 gen `x'=.
-replace `x'=d`x' if  inlist( d`x', 0, 1, 2, 3, 4)
+forvalues w=1/7 {
+replace `x'=r`w'd`x' if  inlist( r`w'd`x', 0, 1, 2, 3, 4)
+}
 }
 
 label var origwksc "Original Walk Score"
@@ -2657,57 +2440,31 @@ label var nhatswksc "NHATS Walk Score"
 label var nhatsgrav "NHATS Avg. Grip Score"
 label var nhatsgrb "NHATS Best Grip Score"
 
-foreach x in origwksc nhatswksc nhatsgrav nhatsgrb{
-note `x': d`x' (.=-1,-9)
-
-if "`x'"=="origwksc"{
-note `x': Original Walk Score 
-}
-else if "`x'"=="nhatswksc"{
-note `x': NHATS Walk Score
-}
-else if "`x'"=="nhatsgrav"{
-note `x': NHATS Avg Grip Score
-}
-else if "`x'"=="nhatsgrb"{
-note `x': NHATS Best grip Score
-}
-note `x': Located in NHATS Setup, under Part 7.
-note `x': Created: 3/14/18-MH
-
-}
 
 local a lst10pnds trytolose 
 local b evrgowalk vigoractv
 
 foreach x in `a' `b'{
-capture drop `x'_n
-gen `x'_n=.
+capture drop `x'
+gen `x'=.
 }
 
-
-foreach x in `a' `b'{
-replace `x'_n=0 if `x'==2 
-replace `x'_n=1 if `x'==1
-drop `x'
-rename `x'_n `x' 
-note `x': `x' (0=2) (1=1) (.=-1, -9)
+forvalues w=1/7{
+foreach x in `a'{
+replace `x'=0 if inlist(hw`w'`x', 2, -8, -7) 
+replace `x'=1 if hw`w'`x'==1
 }
-
-note lst10pnds: Lost 10 Pounds in Last Year (Y/N)
-note trytolose: Were you trying to lose Weight (Y/N)
-note evrgowalk: Ever go walking for exercise (Y/N)
-note vigoractv: Ever Vigorous Activities (Y/N)
-
-foreach x in `a' `b'{
-note `x': Located in NHATS Setup, under Part 7.
-note `x': Created: 04/05/18-MH
+foreach y in `b'{
+replace `y'=0 if inlist(pa`w'`y', 2, -8, -7) 
+replace `y'=1 if pa`w'`y'==1
+}
 }
 
 label var lst10pnds "Lost 10 Pounds in Last Yr."
 label var trytolose "Were You Trying to Lose Weight"
 label var evrgowalk "Ever Go Walking for Exercise"
 label var vigoractv "Ever Vigorous Activities"
+
 
 capture drop unwgtloss lowphysact
 gen unwgtloss=. 
@@ -2720,22 +2477,12 @@ replace lowphysact=1 if evrgowalk==0 & vigoractv==0
 label var unwgtloss "Unintentional Weight Loss"
 label var lowphysact "Low Physical Activity"
 
-note unwgtloss: Created from lst10pnds and trytolose, if lst10pnds is yes and trytolose is no.
-note unwgtloss: Unintentional Weight Loss
-note lowphysact: Created frin evrgowalk and vigoractv, if evrgowalk is no and vigoractv is no. 
-note lowphysact: Low Physical Activity
+capture drop lowenrgy
+egen lowenrgy=rowmax(ss*lowenergy)
+replace lowenrgy=. if inlist(lowenrgy, -9, -8, -7, -1)
+replace lowenrgy=0 if lowenrgy==2
+label var lowenrgy "Low Energy in Last Month"
 
-replace lowenergy=. if inlist(lowenergy, -9, -8, -7, -1)
-replace lowenergy=0 if lowenergy==2
-label var lowenergy "Low Energy in Last Month"
-
-note lowenergy: lowenergy is (.=-9,-8,-7,-1) (0=2) (1=1)
-note lowenergy: Low Energy in Last Month (Y/N)
-
-foreach x in unwgtloss lowphysact lowenergy{
-note `x': Located in NHATS Setup, under Part 7.
-note `x': Created: 04/05/18-MH
-} 
 
 ///// 3/7/18 --Adding in Well-Being questions 
 /// Inapplicable is people who have no interview, had a proxy, or died. turned to missing. 
@@ -2748,32 +2495,16 @@ foreach j in 1 2 4 {
 }
 drop wbq44
 
-note wbq11: Often 
-
+forvalues w=1/7 {
 forvalues i=1/4 {
-replace wbq1`i'=1 if offelche`i'==4 
-replace wbq1`i'=2 if offelche`i'==3 
-replace wbq1`i'=3 if offelche`i'==2
-replace wbq1`i'=4 if offelche`i'==1 
-replace wbq1`i'=0 if offelche`i'==5 
-replace wbq1`i'=5 if (offelche`i'==-7 | offelche`i'==-8) 
-note wbq1`i': offelche`i' (0=5) (1=4) (2=3) (3=2) (4=1) (5=-7,-8)
-if `i'==1{
-note wbq1`i': Often you feel Cheerful (wb)
-}
-else if `i'==2{
-note wbq1`i': Often you feel Bored (wb)
-}
-else if `i'==3{
-note wbq1`i': Often you feel Full of Life (wb)
-}
-else if `i'==4{
-note wbq1`i': Often you feel Upset (wb)
-}
-note wbq1`i': Located in NHATS Setup, under Part 7.
-note wbq1`i': Created: 04/05/19-MH
-}
-
+	replace wbq1`i'=1 if wb`w'offelche`i'==4 
+	replace wbq1`i'=2 if wb`w'offelche`i'==3 
+	replace wbq1`i'=3 if wb`w'offelche`i'==2 
+	replace wbq1`i'=4 if wb`w'offelche`i'==1 
+	replace wbq1`i'=0 if wb`w'offelche`i'==5 
+	replace wbq1`i'=5 if wb`w'offelche`i'==-7 | wb`w'offelche`i'==-8
+	}
+	}
 
 label var wbq11 "Often you Feel Cheerful"
 rename wbq11 oftcheer 
@@ -2790,31 +2521,15 @@ label var wbq14 "Often you Feel Upset"
 rename wbq14 oftupset
 label values oftupset oftcheer
 
-note drop oftcheer in 1
-note renumber oftcheer
 
-forvalues i=1/4 {
-replace wbq2`i'=1 if truestme`i'==3 
-replace wbq2`i'=2 if truestme`i'==2 
-replace wbq2`i'=3 if truestme`i'==1
-replace wbq2`i'=4 if (truestme`i'==-7 | truestme`i'==-8) 
-note wbq2`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
-if `i'==1{
-note wbq2`i': Life has Meaning and Purpose (wb)
+forvalues w=1/7 {
+	forvalues i=1/4 {
+	replace wbq2`i'=1 if wb`w'truestme`i'==3 
+	replace wbq2`i'=2 if wb`w'truestme`i'==2 
+	replace wbq2`i'=3 if wb`w'truestme`i'==1 
+	replace wbq2`i'=4 if wb`w'truestme`i'==-7 | wb`w'truestme`i'==-8
+	}
 }
-else if `i'==2{
-note wbq2`i': I Feel Confident and Good about Myself (wb)
-}
-else if `i'==3{
-note wbq2`i': I gave up trying ot imporve my life a long time ago (wb)
-}
-else if `i'==4{
-note wbq2`i': I like my living situation very much (wb)
-}
-note wbq2`i': Located in NHATS Setup, under Part 7.
-note wbq2`i': Created: 04/05/18-MH
-}
-
 
 label var wbq21 "Life has Meaning Purpose"
 rename wbq21 lifemean 
@@ -2830,26 +2545,14 @@ label var wbq24 "Likes Living Situation"
 rename wbq24 livingsit
 label values livingsit lifemean
 
-
-forvalues i=1/3 {
-replace wbq4`i'=1 if agrwstmt`i'==3 
-replace wbq4`i'=2 if agrwstmt`i'==2 
-replace wbq4`i'=3 if agrwstmt`i'==1 
-replace wbq4`i'=4 if (agrwstmt`i'==-7 | agrwstmt`i'==-8)
-note wbq4`i': truestme`i' (1=3) (2=2) (3=1) (4=-7,-8)
-if `i'==1{
-note wbq4`i': Other people determine most of what I can and cannot do (wb)
+forvalues w=1/7 {
+	forvalues i=1/3 {
+	replace wbq4`i'=1 if wb`w'agrwstmt`i'==3 
+	replace wbq4`i'=2 if wb`w'agrwstmt`i'==2 
+	replace wbq4`i'=3 if wb`w'agrwstmt`i'==1 
+	replace wbq4`i'=4 if wb`w'agrwstmt`i'==-7 | wb`w'agrwstmt`i'==-8
+	}
 }
-else if `i'==2{
-note wbq4`i': When I really want to do something, I usually find a way to do it. (wb)
-}
-else if `i'==3{
-note wbq4`i': I have an easy time adjusting to change.  (wb)
-}
-note wbq4`i': Located in NHATS Setup, under Part 7.
-note wbq4`i': Created: 04/05/18-MH
-}
-
 
 label var wbq41 "Self Determination"
 rename wbq41 selfdeter 
@@ -2863,146 +2566,73 @@ label values adjchg lifemean
 	
 
 capture drop agefeel
-egen agefeel= rowmax(ageyofeel) 
+egen agefeel= rowmax(wb*ageyofeel) 
 replace agefeel=. if agefeel==-9 | agefeel==-8 | agefeel==-7 | agefeel==-1
 label var agefeel "Age you Feel Most Times"
 
-note agefeel: From ageyofeel 
-note agefeel: Age you feel most of the time
-note agefeel: Located in NHATS Setup, under Part 7.
-note agefeel: Created: 04/05/18-MH
 
 ///// 3/2/18 --Adding in meal skippped questions; update 3/13 added in EW18
 //missing if in NH-FQ, dead, in NH-FQ R1 & R2
 
+capture drop mealskip1 nopayhous nopayutil nopaymed
 local ew mealskip1 nopayhous nopayutil nopaymed
+foreach x in `ew'{
+gen `x'=.
+}
 
 foreach x in `ew'{
-tab `x'
-replace `x'=0 if `x'==2 
-replace `x'=1 if `x'==1
-replace `x'=. if inlist(`x', -9,-8,-7,-1)
-note `x': `x' (0=2) (1=1) (.=-9,-8,-7,-1)
-if "`x'"=="mealskip1"{
-note `x': Skip any meals b/c there was not enough food, or money to buy food
+forvalues w=2/7 {
+replace `x'=0 if ew`w'`x'==2 
+replace `x'=1 if ew`w'`x'==1
+replace `x'=2 if ew`w'`x'==-7 | ew`w'`x'==-8
 }
-else if "`x'"=="nopayhous"{
-note `x': Not enough money to pay rent or mortgage
 }
-else if "`x'"=="nopayutil"{
-note `x':  Not enough money to pay utility bills(gas, electric)
-}
-else if "`x'"=="nopaymed"{
-note `x':  Not enough money to pay medical or prescription drug bills
-}
-note `x': Located in NHATS Setup, under Part 7.
-note `x': Created: 04/05/18-MH
-}
-
 
 label var mealskip1 "No Money, Meals Skipped"
 label var nopayhous "No Money for Housing"
 label var nopayutil "No Money for Utilities"
 label var nopaymed "No Money for Medical"
 
-label define mealskip 0 "No" 1 "Yes" 
+label define mealskip 0 "No" 1 "Yes" 2 "RF/DK"
 foreach x in `ew' {
 label values `ew' mealskip
 }
 rename mealskip1 mealskip
 
+capture drop mealskipnum
 gen mealskipnum=.
-replace mealskipnum=0 if mealskip2==-1 & mealskip==0
-replace mealskipnum=1 if mealskip2==4
-replace mealskipnum=2 if mealskip2==3
-replace mealskipnum=3 if mealskip2==2
-replace mealskipnum=4 if mealskip2==1
-
+c
+forvalues w=2/7 {
+replace mealskipnum=0 if ew`w'mealskip2==-1 & ew`w'mealskip1==2
+replace mealskipnum=1 if ew`w'mealskip2==4
+replace mealskipnum=2 if ew`w'mealskip2==3
+replace mealskipnum=3 if ew`w'mealskip2==2
+replace mealskipnum=4 if ew`w'mealskip2==1
+replace mealskipnum=5 if ew`w'mealskip2==-7 | ew`w'mealskip2==-8
+}
 
 label var mealskipnum "How Often Meals Skipped"
 label define mealskipnum1 0 "No" 1 "A Few Days" 2 "Several Days(less than half)" ///
 3 "More than Half the Days" 4 " Nearly Every Day" 5 "RF/DK"
 label values mealskipnum mealskipnum1
 
-note mealskipnum: mealskip2 mealskip1 (0=mealskip2 -1 & mealskip1 0) (1=4) (2=3) (3=2) (4=1)
-note mealskipnum: How often are meals skipped
-note mealskipnum: Located in NHATS Setup, under Part 7.
-note mealskipnum: Created: 04/05/18-MH
 
 ///// 12/5/17 --Adding in Cancer 
 
 // recode hc1cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
 
-// From sensitive data, cancerty1 was from non-sensitive
-//recode cancerty1 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had)
-foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
-sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had{
-gen `x'=.
-}
+// From sensitive data
+recode hc1cancerty1 hc1cancerty2 hc1cancerty3 hc1cancerty4 hc1cancerty5 ///
+hc1cancerty6 hc1cancerty7 hc1cancerty8 (-1 2=0) (-9 -8 =.), gen (sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had)
 
-replace sr_skincancer_had=cancerty1 if wave==1
-replace sr_breastcancer_had=hc1cancerty2 if wave==1
-replace sr_prostatecancer_had=hc1cancerty3 if wave==1
-replace sr_bladdercancer_had=hc1cancerty4 if wave==1
-replace sr_crvovrnutrncancer_had=hc1cancerty5 if wave==1
-replace sr_coloncancer_had=hc1cancerty6 if wave==1
-replace sr_kidneycancer_had=hc1cancerty7 if wave==1
-replace sr_othercancer_had=hc1cancerty8 if wave==1
+foreach x of varlist sr*canc*d {
+	local lab : var label `x'
+	label var `x' "Sensitive: `lab'"
+}
+//keep sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
+//sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had
 
-forvalues w=4/$w{
-replace sr_skincancer_had=cancerty1 if wave==`w'
-replace sr_breastcancer_had=hc`w'cancerty2 if wave==`w'
-replace sr_prostatecancer_had=hc`w'cancerty3 if wave==`w'
-replace sr_bladdercancer_had=hc`w'cancerty4 if wave==`w'
-replace sr_crvovrnutrncancer_had=hc`w'cancerty5 if wave==`w'
-replace sr_coloncancer_had=hc`w'cancerty6 if wave==`w'
-replace sr_kidneycancer_had=hc`w'cancerty7 if wave==`w'
-replace sr_othercancer_had=hc`w'cancerty8 if wave==`w'
-}
-
-local r=1
-foreach x in sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had ///
-sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had sr_othercancer_had{
-replace `x'=0 if inlist(`x',-1,2)
-replace `x'=. if inlist(`x', -9,-8)
-notes `x': cancerty`r' (0=-1,2) (.=-9,-8)
-if "`x'"=="sr_skincancer_had"{
-notes `x': Had Skin Cancer
-}
-else if "`x'"=="sr_breastcancer_had"{
-notes `x': Had Breast Cancer
-}
-else if "`x'"=="sr_prostatecancer_had"{
-notes `x': Had Prostate Cancer
-}
-else if "`x'"=="sr_bladdercancer_had"{
-notes `x': Had Bladder Cancer
-}
-else if "`x'"=="sr_crvovrnutrncancer_had"{
-notes `x': Had Cervical/Ovarian/Uterine Cancer
-}
-else if "`x'"=="sr_coloncancer_had"{
-notes `x': Had Colon Cancer
-}
-else if "`x'"=="sr_kidneycancer_had"{
-notes `x': Had Kidney Cancer
-}
-else if "`x'"=="sr_othercancer_had"{
-notes `x': Had Other Type of Cancer
-}
-note `x': Located in NHATS Setup, under Part 7.
-note `x': Created: 04/05/18-MH
-local r=`r'+1
-}
-
-label var sr_skincancer_had "Sensitive: Skin Cancer"
-label var sr_breastcancer_had "Sensitive: Breast Cancer"
-label var sr_prostatecancer_had "Sensitive: Prostate Cancer"
-label var sr_bladdercancer_had "Sensitive: Bladder Cancer"
-label var sr_crvovrnutrncancer_had "Sensitive: Cervical/Ovarian/Uterine Cancer"
-label var sr_coloncancer_had "Sensitive: Colon Cancer"
-label var sr_kidneycancer_had "Sensitive: Kidney Cancer"
-label var sr_othercancer_had "Sensitive: Other Cancer"
 
 //recoding all refuse, dk, na, as missing
 qui destring *, replace
@@ -3014,16 +2644,11 @@ foreach x of varlist * {
 //how do you get to the doctor?
 gen howgetdoc=.
 forvalues i=1/9 {
-replace howgetdoc=`i' if hwgtregd`i'==1 
+	forvalues w=1/7 {
+		replace howgetdoc=`i' if mc`w'hwgtregd`i'==1 & wave==`w'
 }
-note howgetdoc: hwgtredd# used to create variable
-note howgetdoc: How did you get a ride to the doctor; transportation method
-note howgetdoc: Located in NHATS Setup, under Part 7.
-note howgetdoc: Created: 04/05/18-MH
-
-label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" ///
-4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" ///
-8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
+}
+label define howgetdoc 1 "Drove" 2 "Got a Ride" 3 "Van/Shuttle from place lives" 4 "Van/Shuttle for seniors & disabled" 5 "Pulic transit" 6 "Taxi" 7 "Walked" 8 "Home visit" 9 "Other" 0 "Did not See Doctor" 10 "Refused/DK"
 label values howgetdoc howgetdoc
 
 
@@ -3033,148 +2658,82 @@ gen ind_imp_relig=.
 gen ind_imp_club=.
 gen ind_imp_goout=.
 
-replace ind_imp_visit=inlist(impvstfam,1,2) 
-replace ind_imp_relig=inlist(imprelser,1,2) 
-replace ind_imp_club=inlist(imparclub,1,2) 
-replace ind_imp_goout=inlist(impouteny,1,2) 
-
-note ind_imp_visit: impvstfam (1=1,2) (0=3)
-note ind_imp_visit: Very/somewhat important to visit friends/family in person 
-note ind_imp_relig: imprelser (1=1,2) (0=3)
-note ind_imp_relig: Very/somewhat important to attend religious services 
-note ind_imp_club: imparclub (1=1,2) (0=3)
-note ind_imp_club: Very/somewhat important to participate in clubs, classes, or other organized activities.
-note ind_imp_goout: impouteny (1=1,2) (0=3)
-note ind_imp_goout: Very/somewhat important to go out for enjoyment
-
-foreach x in visit relig club goout{
-note ind_imp_`x': Located in NHATS Setup, under Part 7.
-note ind_imp_`x': Created: 04/05/19-MH
+forvalues w=1/7 {
+replace ind_imp_visit=inlist(pa`w'impvstfam,1,2) if wave==`w'
+replace ind_imp_relig=inlist(pa`w'imprelser,1,2) if wave==`w'
+replace ind_imp_club=inlist(pa`w'imparclub,1,2) if wave==`w'
+replace ind_imp_goout=inlist(pa`w'impouteny,1,2) if wave==`w'
 }
-
 label var ind_imp_visit "Very/somewhat important to visit in person with friends/family"
 label var ind_imp_relig "Very/somewhat important to attend religious services"
 label var ind_imp_club "Very/somewhat important to participate in clubs, classes, etc."
 label var ind_imp_goout "Very/somewhat important to go out for enjoyment"
 
-
-foreach x in out insd bed eat bath toil dres {
+foreach x in out insd bed {
 	gen device_`x'=.
+	label var device_`x' "Uses any assistive device for mobility `x'"
 }
-
 label var device_out "Uses any assistive device for mobility outside"
 label var device_ins "Uses any assistive device for mobility inside"
 label var device_bed "Uses any assistive device to get out of bed"
-label var device_eat "Uses any assistive device for eating"
-label var device_bath "Uses any assistive device for bathing"
-label var device_toil "Uses any assistive device for toileting"
-label var device_dres "Uses any assistive device for dressing"
-
-/*
 foreach x in eat bath toil dres {
 	gen device_`x'=.
 	label var device_`x' "Uses assistive device for `x'ing"
 }
-*/
 
-foreach x in out insd bed eat bath toil dres{
-	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2)
-	note device_`x': d`x'devi (2=1,2); derived variable 
-	if "`x'"=="out"{
-		note device_`x': Go outside using devices
-	}
-	else if "`x'"=="insd"{
-		note device_`x': Move inside with devices
-	}
-	else if "`x'"=="bed"{
-		note device_`x': Device used to get out of bed
-	}	
-	else if "`x'"=="eat"{
-		note device_`x': Uses devices while eating
-	}
-	else if "`x'"=="bath"{
-		note device_`x': Uses devices while bathing
-	}
-	else if "`x'"=="toil"{
-		note device_`x': Uses devices while toileting
-	}
-	else if "`x'"=="dres"{
-		note device_`x': Uses devices while dressing
-	}
-	note device_`x': Located in NHATS Setup, under Part 7.
-	note device_`x': Created: 04/05/18-MH
+forvalues w=1/7 {
+foreach x in out insd bed {
+	replace device_`x'=mo`w'd`x'devi==2 if inlist(mo`w'd`x'devi,1,2) & wave==`w'
 }
 
-/*
 foreach x in eat bath toil dres {
-	replace device_`x'=d`x'devi==2 if inlist(d`x'devi,1,2) 
+	replace device_`x'=sc`w'd`x'devi==2 if inlist(sc`w'd`x'devi,1,2) & wave==`w'
 }
-*/
-replace device_bath=0 if dbathdevi==9 
-
+replace device_bath=0 if sc`w'dbathdevi==9 & wave==`w'
+}
 
 gen device_any=0
 foreach x in out ins bed eat bath toil dres {
 	replace device_any=1 if device_`x'==1
 }
-note device_any: Derived using device_ variables. 1 is any device used. 
-note device_any: Any devices used for ADL's. 
-note device_any: Located in NHATS Setup, under Part 7.
-note device_any: Created: 04/05/18-MH
-
 label var device_any "Uses any assistive device for ADLs"
 
-rename drives dtdrives //a drive flag exists in nhats
-//making our own drive variable
 gen drives=.
-replace drives=oftedrive>0 & oftedrive<5 
-
+forvalues w=1/7 {
+replace drives=dt`w'oftedrive>0 & dt`w'oftedrive<5 if wave==`w'
+}
 label var drives "Drives"
 
-note drives: oftedrive (1=1,2,3,4) (0=5)
-note drives: Did you ever drive. 
-note drives: Located in NHATS Setup, under Part 7.
-note drives: Created: 04/05/18-MH
-
 gen avoids=.
-replace avoids=0 if oftedrive>0 & oftedrive!=5 & avoidriv1==2 & avoidriv2==2 & avoidriv4==2
-
-local avoids avoidriv1 avoidriv2 avoidriv4
+forvalues w=1/7 {
+replace avoids=0 if dt`w'oftedrive>0 & dt`w'oftedrive!=5
+local avoids dt`w'avoidriv1 dt`w'avoidriv2 dt`w'avoidriv4
 
 foreach x of varlist `avoids' {
-	replace avoids=1 if `x'==1 
-	replace `x'=. if `x'<0 
+	replace avoids=1 if `x'==1
+	replace `x'=. if `x'<0
 }
-
+}
 label var avoids "Avoids driving alone/at night/in weather*"
-
-note avoids: oftedrive avoidriv1 avoidriv2 avoidriv4
-note avoids: a person drives and doesn't avoid driving.
-note avoids: Located in NHATS Setup, under Part 7.
-note avoids: Created: 04/05/18-MH
 
 gen miss=0
 gen ind_transp_disadv=.
 
-replace ind_transp_disadv=0 if oftedrive==. | inlist(oftedrive,5,6)
-local probs trkpfrvis trprrelsr trprkpfgr trprgoout
+forvalues w=1/7 {
+replace ind_transp_disadv=0 if (dt`w'oftedrive==. | inlist(dt`w'oftedrive,5,6)) & wave==`w'
+local probs pa`w'trkpfrvis pa`w'trprrelsr pa`w'trprkpfgr pa`w'trprgoout
 foreach x in `probs' {
-replace ind_transp_disadv=1 if `x'==1
-gen `x'2=`x'==1 if `x'>=0 & !missing(`x') 
+replace ind_transp_disadv=1 if `x'==1 & wave==`w'
+gen `x'2=`x'==1 if `x'>=0 & !missing(`x') & wave==`w'
 replace `x'=`x'2
 drop `x'2
-replace miss=miss+1 if missing(`x') 
+replace miss=miss+1 if missing(`x') & wave==`w'
 }
-
+}
 replace ind_transp_disadv=0 if !miss & missing(ind_transp_disadv)
 replace ind_transp_disadv=. if miss==4
 label var ind_transp_disadv "Any transportation disadvantage"
 drop miss
-
-note ind_transp_disadv: oftedrive trkpfrvis trprrelsr trprkpfgr trprgoout
-note ind_transp_disadv: Indicate any transportation disadvantage 
-note ind_transp_disadv: Located in NHATS Setup, under Part 7.
-note ind_transp_disadv: Created: 04/05/18-MH
 
 local lab1 Walked
 local lab2 Got ride
@@ -3188,20 +2747,15 @@ local l=1
 forvalues i=1/7 {
 gen get_places`i'=.
 }
-
-replace getoplcs3=0 if !missing(getoplcs7) & missing(getoplcs3)
+forvalues w=1/7 {
+replace dt`w'getoplcs3=0 if !missing(dt`w'getoplcs7) & missing(dt`w'getoplcs3)
 forvalues x=1/7  {
-	replace get_places`x'=getoplcs`x'==1 
-	replace get_places`x'=. if (inlist(getoplcs7,-1,.) | getoplcs`x'==.) 
+	replace get_places`x'=dt`w'getoplcs`x'==1 if wave==`w'
+	replace get_places`x'=. if (inlist(dt`w'getoplcs7,-1,.) | dt`w'getoplcs`x'==.) & wave==`w'
 	label var get_places`x' "Get places: `lab`x''"
-	note get_places`x': getoplcs`x'
-	note get_places`x': `lab`x'' to get to places
-	note get_places`x': Located in NHATS Setup, under Part 7.
-	note get_places`x': Created: 04/05/18-MH
 	local l=`l'+1
-	
 }
-
+}
 //marital status-3 vars: married, married_or_partnered
 
 gen married=maritalstat==1 if maritalstat!=. //married
@@ -3220,72 +2774,38 @@ label var marital_sep "Separated"
 label var marital_div "Divorced"
 label var marital_wid "Widowed"
 label var marital_nev "Never married"
-notes married : martlstat
-notes married : (Y/N)
+notes married : hh1martlstat
+notes married : "_"
 notes married : E:\nhats\nhats_code\NHATS data setup\NHATS_Setup, step-3 header for intermediate var and step-7 for final
-notes married : Updated: 04/05/18-MH
-
-foreach x in marital_sep marital_div marital_wid marital_nev marriedpartnered marital_sd{
-notes `x': martlstat dmarstat 
-	if "`x'"=="marital_sep"{
-	notes `x': Seperated, marital status.
-	}
-	if "`x'"=="marital_div"{
-	notes `x': Divorced, marital status.
-	}
-	if "`x'"=="marital_wid"{
-	notes `x': Widowed, marital status.
-	}
-	if "`x'"=="marital_nev"{
-	notes `x': Never Married, marital status.
-	}
-	if "`x'"=="marriedpartnered"{
-	notes `x': Married or Living with a partner.
-	}
-	if "`x'"=="marital_sep"{
-	notes `x': Seperated or Divorced, marital status.
-	}
-note `x': Located in NHATS Setup part 3 initial cleanup, part 7 final cleanup.
-note `x': Created: 04/05/18-MH
-}
 
 //lives with spouse
 gen resspouse=.
-replace resspouse=livwthspo==1 if livwthspo>0
-replace resspouse=0 if marriedpart==0
-
+forvalues i=1/7 {
+	replace resspouse=hh`i'livwthspo==1 if wave==`i' & hh`i'livwthspo>0
+	replace resspouse=0 if marriedpart==0
+}
 label var resspouse "Lives with Spouse/Partner"
-notes resspouse : livwthspo martlstat
-notes resspouse : Living with spouse or partner (Y/N)
-notes resspouse : Located in NHATS Setup, under Part 7.
-notes resspouse : Updated: 04/08/19-MH
 
 //household members
 gen hhm=.
-replace hhm=dhshldnum if dhshldnum>0 
-
+forvalues i=1/7 {
+	replace hhm=hh`i'dhshldnum if hh`i'dhshldnum>0 & wave==`i'
+}
 label var hhm "Number of household members"
-notes hhm : dhshldnum 
-notes hhm : Count of the number of household members. 
-notes hhm : Located in NHATS Setup, under Part 7.
-notes hhm : Updated: 04/08/19-MH
 
 //age categorical
 
 sort spid wave
-by spid: replace age=age[_n-1]+1 if missing(age)
+by spid: replace age=age[_n-1]+1 missing(age)
 label var age "Sensitive: age"
 
 gen agecat = .
-replace agecat= d2intvrage
+forvalues i=1/7 {
+replace agecat= r`i'd2intvrage if wave==`i'
+}
 replace agecat=. if agecat==-1
-label values agecat d2intvrage
+label values agecat r1d2intvrage
 label var agecat "Age, 5 yr categories"
-
-notes agecat : d2intvrage (same)
-notes agecat : Age cateory 65-59, 70-74, 75-79, 80-84, 85-89, 90+ 
-notes agecat : Located in NHATS Setup, under Part 7.
-notes agecat : Updated: 04/09/19-MH
 
 //activities past month
 
@@ -3295,17 +2815,17 @@ gen visitfrfam=. //visit fr. fam.
 gen impvisit=. //importance of visiting friends & fam
 gen attclub=. //participate in club, organized activity, class, etc.
 gen impclub=. //importance of such activities
-gen vigact=vigoractv //vigorous activities
+gen vigact=. //vigorous activities
 
-
-replace attrelig=attrelser==1 if attrelser>0 
-replace imprelig=imprelser if imprelser>0  
-replace visitfrfam=vistfrfam==1 if vistfrfam>0 
-replace impvisit=impvstfam if impvstfam>0 
-replace attclub=clbmtgrac==1 if clbmtgrac>0 
-replace impclub=imparclub if imparclub>0 
-//replace vigact=vigoractv==1 if vigoractv>0 
-
+forvalues i=1/7 {
+	replace attrelig=pa`i'attrelser==1 if pa`i'attrelser>0 & wave==`i'
+	replace imprelig=pa`i'imprelser if pa`i'imprelser>0 & wave==`i' 
+	replace visitfrfam=pa`i'vistfrfam==1 if pa`i'vistfrfam>0 & wave==`i'
+	replace impvisit=pa`i'impvstfam if pa`i'impvstfam>0 & wave==`i'
+	replace attclub=pa`i'clbmtgrac==1 if pa`i'clbmtgrac>0 & wave==`i'
+	replace impclub=pa`i'imparclub if pa`i'imparclub>0 & wave==`i'
+	replace vigact=pa`i'vigoractv==1 if pa`i'vigoractv>0 & wave==`i'
+}
 
 gen religvimp=imprelig==1 if imprelig!=. //very important binary
 
@@ -3322,149 +2842,72 @@ label values imprelig pa1imprelser
 label values impvisit pa1impvstfam
 label values impclub pa1imparclub
 
-notes attrelig : attrelser (same)
-notes attrelig : Ever attend religious services 
-notes attrelig : Located in NHATS Setup, under Part 7.
-notes attrelig : Updated: 04/09/19-MH
-
-notes imprelig : imprelser (same)
-notes imprelig : How important are religious services, very, somewhat, or not so important. 
-notes imprelig : Located in NHATS Setup, under Part 7.
-notes imprelig : Updated: 04/09/19-MH
-
-notes visitfrfam : visfrfam (same)
-notes visitfrfam : Ever visit in person with friends or family, not living with.
-notes visitfrfam : Located in NHATS Setup, under Part 7.
-notes visitfrfam : Updated: 04/09/19-MH
-
-notes impvisit : impvstfam (same)
-notes impvisit : How important to visit in person with friends or family not living with. 
-notes impvisit : Located in NHATS Setup, under Part 7.
-notes impvisit : Updated: 04/09/19-MH
-
-notes attclub : clbmtgrac (same)
-notes attclub : Ever participate in clubs, classes, or other organized activites. 
-notes attclub : Located in NHATS Setup, under Part 7.
-notes attclub : Updated: 04/09/19-MH
-
-notes vigact : vigoractv (same)
-notes vigact : Ever spend time on vigorous activites that increased heart rate. ///
-Working out, swimming, running, biking, or any sport.  
-notes vigact : Located in NHATS Setup, under Part 7.
-notes vigact : Updated: 04/09/19-MH
-
-
 //smokin'
 gen smokedever=. 
 gen smoke_start_age=.
 gen smoke_stop_age=.
-
 forvalues i=1(4)5 {
-	replace smokedever=smokedreg==1 if wave==`i' & smokedreg>0
-	replace smoke_start_age=agesrtsmk if wave==`i' & agesrtsmk>0
-	replace smoke_stop_age=agelstsmk if wave==`i' & agelstsmk>0
+	replace smokedever=sd`i'smokedreg==1 if wave==`i' & sd`i'smokedreg>0
+	replace smoke_start_age=sd`i'agesrtsmk if wave==`i' & sd`i'agesrtsmk>0
+	replace smoke_stop_age=sd`i'agelstsmk if wave==`i' & sd`i'agelstsmk>0
 }
 
 sort spid wave
-by spid: carryforward smokedever smoke_start_age smoke_stop_age, replace
-notes drop smokedever smoke_start_age smoke_stop_age
-rename smokesnow smokesnow_old
-
-notes smokedever: smokedreg 
-notes smokedever: Only in rounds 1,5. Ever smoke cigarettes regularly. 
-
-notes smoke_start_age: agesrtsmk 
-notes smoke_start_age: How old when first smoked, age.
-
-notes smoke_stop_age: agelstsmk  
-notes smoke_stop_age: How old when last smoked cigarettes regularly.
-
-foreach x in smokedever smoke_start_age smoke_stop_age{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x' : Updated: 04/10/19-MH
-}
-
+by spid: carryforward smoke*, replace
+notes drop smoke*
 gen smokesnow=.
-//Numcigever asked differently in rounds 1,5 then in other rounds. (Do you/ Did you)
-//Wanted to see the num. of cigs. smoked by non-smokers. 
-by spid, sort: egen numcigsever=max(numcigday) if inlist(wave,1,5) & smokesnow_old==2
-by spid: carryforward numcigsever if smokesnow_old==2, replace
-
-notes drop numcigsever
-
-notes numcigsever: numcigday
-notes numcigsever: Take max if they were a non-smoker. 
-
+by spid, sort: egen numcigsever=max(sd1numcigday)
 gen numcigsnow=.
 
-replace smokesnow=smokesnow_old==1 if smokesnow_old>0
-replace numcigsnow=numcigday if smokesnow==1
 
+forvalues i=1/7 {
+	replace smokesnow=sd`i'smokesnow==1 if wave==`i' & sd`i'smokesnow>0
+	replace numcigsnow=sd`i'numcigday if wave==`i' & smokesnow==1
+}
 replace smokedever=1 if smokesnow==1
 replace smokesnow=0 if smokedever==0
 replace numcigsnow=0 if smokesnow==0
 
-notes smokesnow: smokedever
-notes smokesnow: 
-
-
 label var smokedever "Ever smoked"
 label var smokesnow "Smokes now"
-label var numcigsever "Max number of cigarettes/day when smoked for current non-smokers"
+label var numcigsever "Number of cigarettes/day when smoked"
 label var numcigsnow "Number of cigarettes/day currently"
 label var smoke_start_age "Age started smoking"
 label var smoke_stop_age "Age stopped smoking"
 
-notes numcigsever: Located in NHATS Setup, under Part 7.
-notes numcigsever: Updated: 04/10/19-MH
-
 //pain
 gen ind_pain=.
-replace ind_pain=painb==1 if inrange(painb,0,2) 
+forvalues i=1/7 {
+	replace ind_pain=ss`i'painb==1 if inrange(ss`i'painb,0,2) & wave==`i'
+}
 label var ind_pain "Bothered by pain"
 
-notes ind_pain: painbothr
-notes ind_pain: Have been bothered by pain in the last month. 
 //weight
 
 gen wgt_curr=.
 gen height_ft=.
 gen height_in=.
 
-replace wgt_curr=currweigh if currweigh>0 
-replace height_ft=howtallft if howtallft>0 
-replace height_in=howtallin if howtallin>0 
+forvalues i=1/7 {
+	replace wgt_curr=hw`i'currweigh if hw`i'currweigh>0 & wave==`i'
+	replace height_ft=hw`i'howtallft if hw`i'howtallft>0 & wave==`i'
+	replace height_in=hw`i'howtallin if hw`i'howtallin>0 & wave==`i'
+}
 
 label var wgt_curr "Current weight, lbs."
 label var height_ft "Current height, feet"
 label var height_in "Current height, inches"
 
-notes wgt_curr: currweigh
-notes wgt_curr: Current Weight in pounds. 
-notes height_ft: howtallft
-notes height_ft: How tall in feet. 
-notes height_in: howtallin
-notes height_in: How tall in inches, after feet. 
-
 gen bmi=(wgt_curr/((height_ft*12+height_in)^2))*703
 
 label var bmi "Current BMI"
 
-notes bmi: wgt_curr height_ft height_in
-notes bmi: Body Mass Index calculation from weight and height. 
-
-foreach x in wgt_curr height_ft height_in bmi{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
-}
-
 //get the per round weight, cluster, and strata vars (and why is moved created like that?)
-//gen moved=.
-rename varunit varunit 
-rename varstrat varstrat 
-rename anfinwgt0 anfinwgt 
+gen moved=.
+rename w1varunit varunit
+rename w1varstrat varstrat
+rename w1anfinwgt0 anfinwgt
 
-/*
 forvalues i=2/7 {
 	replace moved=w`i'_moved if wave==`i'
 	foreach x in anfinwgt varstrat varunit {
@@ -3472,56 +2915,37 @@ forvalues i=2/7 {
 }
 drop w`i'_moved w`i'anfinwgt0 w`i'varstrat w`i'varunit 
 }
-*/
 label var moved "Moved since last ivw"
 
 ******************************************
 /*these are taken from Rebecca's code*/
 
 gen community_dwelling = 0
-gen SP_completed = 0
-forvalues w=1/$w {
-replace community_dwelling=1 if inlist(dresid,1,2) & wave==`w'
-replace SP_completed=1 if (inlist(dresid,1,2) & wave==1) | (inlist(dresid,1,2,4) & wave==`w')
+forvalues w=1/7 {
+	replace community_dwelling=1 if inlist(r`w'dresid,1,2)
 }
-notes community_dwelling: dresid = 1,2 
-notes community_dwelling: In the community. 
+replace community_dwelling = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | ///
+r3dresid == 1 | r3dresid == 2 | r4dresid == 1 | r4dresid == 2 
+gen SP_completed = 0
+replace SP_completed = 1 if r1dresid == 1 | r1dresid == 2 | r2dresid == 1 | r2dresid == 2 | r2dresid == 4 | r3dresid == 1 | r3dresid == 2 | r3dresid == 4 | r4dresid == 1 | r4dresid == 2 | r4dresid == 4
 
-gen nhres=dresid==4 if dresid!=. & wave==1
-gen rcfres=inlist(dresid,2,3) if dresid!=. & wave==1
-gen res_care=dresid>1 if dresid!=. & wave==1
+gen nhres=r1dresid==4 if r1dresid!=.
+gen rcfres=inlist(r1dresid,2,3) if r1dresid!=.
+gen res_care=r1dresid>1 if r1dresid!=.
 gen sp_status=1 
 gen deceased=0
 gen prob_dem=dem_3_cat==1 if !missing(dem_3_cat)
 label var prob_dem "Indicator probable dementia"
-
-forvalues w=2/7 {	
-replace nhres=inlist(dresid,4,5,8) if wave==`w'
-replace res_care=inlist(dresid,2,3,4,5,7,8) if wave==`w'
-replace rcfres=inlist(dresid,2,3,7) if wave==`w'
-replace deceased=inlist(r`w'status,62,86) if wave>=`w'
+forvalues i=2/7 {
+	replace nhres=inlist(r`i'dresid,4,5,8) if wave==`i'
+	replace res_care=inlist(r`i'dresid,2,3,4,5,7,8) if wave==`i'
+	replace rcfres=inlist(r`i'dresid,2,3,7) if wave==`i'
+	replace deceased=inlist(r`i'status,62,86) if wave>=`i'
 }
 
-note nhres : dresid
-notes nhres : Resid=4,5,8, Nursing Home. 
+note nhres : r*dresid
+notes nhres : Resid=4,5,8
 notes nhres : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
-
-notes rcfres: dresid (2,3)
-notes rcfres: Residential Care, excluding Nursing Home. 
-
-notes res_care: dresid (2-8)
-notes res_care: Residential Care, excluding Nursing Home. 
-
-notes deceased: status 62 68
-notes deceased: Died after round 1
-
-notes prob_dem: dem_cat_3, sr_dementia_ever
-notes prob_dem: Probable Dementia. 
-
-foreach x in community_dwelling rcfres res_care deceased prob_dem{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
-}
 
 
 replace sp_status=2 if res_care==1
@@ -3540,43 +2964,43 @@ gen adl_ins_help = .
 gen adl_ins_diff=.
 gen adl_ins_not_done=.
 
-replace adl_ins_help=1 if insdhlp==1 
-replace adl_ins_help=0 if insdhlp==2 
-replace adl_ins_help=0 if insdhlp==-1 & sp_ivw==1 
-replace adl_ins_help=-7 if insdhlp==-7 
-replace adl_ins_help=-8 if insdhlp==-8 
-replace adl_ins_diff=0 if insddif==1 
-replace adl_ins_diff=1 if insddif>1 
-replace adl_ins_diff=0 if insddif==-1 & sp_ivw==1 
-replace adl_ins_diff=-7 if insddif==-7 
-replace adl_ins_diff=-8 if insddif==-8 
-replace adl_ins_not_done=inlist(dinsdsfdf,1,8) 
-
+foreach w in 1 2 3 4 5 6 7{
+	replace adl_ins_help=1 if mo`w'insdhlp==1 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==2 & wave==`w'
+	replace adl_ins_help=0 if mo`w'insdhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_help=-7 if mo`w'insdhlp==-7 & wave==`w'
+	replace adl_ins_help=-8 if mo`w'insdhlp==-8 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==1 & wave==`w'
+	replace adl_ins_diff=1 if mo`w'insddif>1 & wave==`w'
+	replace adl_ins_diff=0 if mo`w'insddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_ins_diff=-7 if mo`w'insddif==-7 & wave==`w'
+	replace adl_ins_diff=-8 if mo`w'insddif==-8 & wave==`w'
+	replace adl_ins_not_done=inlist(mo`w'dinsdsfdf,1,8) if wave==`w'
+}
 
 *replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
-notes adl_ins_help : insdhlp
-notes adl_ins_help : "Anyone help you get arounbd inside house"
+notes adl_ins_help : mo*insdhlp
+notes adl_ins_help : "_"
 notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
-notes adl_ins_diff: insddif
-notes adl_ins_diff: How much difficulty getting around inside. 
+
 gen adl_bed_help = .
 gen adl_bed_diff=.
 gen adl_bed_not_done=.
-
-replace adl_bed_help=1 if bedhlp==1 
-replace adl_bed_help=0 if bedhlp==2 
-replace adl_bed_help=0 if bedhlp==-1 & sp_ivw==1 
-replace adl_bed_help=-7 if bedhlp==-7 
-replace adl_bed_help=-8 if bedhlp==-8 
-replace adl_bed_diff=0 if beddif==1 
-replace adl_bed_diff=1 if beddif>1 
-replace adl_bed_diff=0 if beddif==-1 & sp_ivw==1 
-replace adl_bed_diff=-7 if beddif==-7 
-replace adl_bed_diff=-8 if beddif==-8 
-replace adl_bed_not_done=inlist(dbedsfdf,1,8) 
-
+foreach w in 1 2 3 4 5 6 7{
+	replace adl_bed_help=1 if mo`w'bedhlp==1 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==2 & wave==`w'
+	replace adl_bed_help=0 if mo`w'bedhlp==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_help=-7 if mo`w'bedhlp==-7 & wave==`w'
+	replace adl_bed_help=-8 if mo`w'bedhlp==-8 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==1 & wave==`w'
+	replace adl_bed_diff=1 if mo`w'beddif>1 & wave==`w'
+	replace adl_bed_diff=0 if mo`w'beddif==-1 & sp_ivw==1 & wave==`w'
+	replace adl_bed_diff=-7 if mo`w'beddif==-7 & wave==`w'
+	replace adl_bed_diff=-8 if mo`w'beddif==-8 & wave==`w'
+	replace adl_bed_not_done=inlist(mo`w'dbedsfdf,1,8) if wave==`w'
+}
 label var adl_bed_help "Received help getting out of bed"
 *replace adl_bed_diff=1 if adl_bed_help==1
 notes adl_bed_help : mo*bedhlp
@@ -3586,51 +3010,29 @@ notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
-merge 1:1 spid wave using `resttrack', keep(match) nogen
-gen ivw_day=spstatdtdy
+gen ivw_day=1
 label define ivw_day 1 "Not provided" 
 label values ivw_day ivw_day
 gen ivw_month=.
 gen ivw_year=.
-forvalues w=1/$w {
-	replace ivw_month=r`w'spstatdtmt if wave==`w'
-	replace ivw_month=r`w'fqstatdtmt if wave==`w' & r`w'spstatdtmt==.
-	replace ivw_year=r`w'spstatdtyr if wave==`w'
-	replace ivw_year=201`w' if wave==`w' & r`w'spstatdtyr==.
+forvalues i=1/7 {
+	replace ivw_month=r`i'spstatdtmt if wave==`i'
+	replace ivw_month=r`i'fqstatdtmt if wave==`i' & r`i'spstatdtmt==.
+	replace ivw_year=r`i'spstatdtyr if wave==`i'
+	replace ivw_year=201`i' if wave==`i' & r`i'spstatdtyr==.
 }
-
 replace ivw_month=r1fqstatdtmt if wave==1 & ivw_month==.
 replace ivw_year=r1fqstatdty if wave==1 & ivw_year==.
-
-
-gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
-format ivw_date %td
-label var ivw_date "Interview date from restricted tracker"
-
-note ivw_date: ivw_month ivw_day ivw_year
-note ivw_date: Interview date from the restricted file. 
-
-gen ivw_date_sens=mdy(ivw_month,1,ivw_year)
-format ivw_date_sens %td
-label var ivw_date "Interview date, day of month set to one"
-
-note ivw_date_sens: ivw_month ivw_year 
-note ivw_date_sens: Using only month and year, all dates put as first of the month. 
-
-foreach x in ivw_date ivw_date_sens{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
-} 
 
 /// Changes to Dressing and Eating
 /*These changes were made because the help variables were not capturing everyone 
 who may have been impaired for the ADL*/ 
 //changes made 5/20/18
-
-	replace adl_dres_help=1 if dresoft==5
-	replace adl_eat_help=1 if eatdev==7
-	replace adl_ins_help=1 if ntlvrmslp==1
-
+forvalues w=1/7 {
+	replace adl_dres_help=1 if sc`w'dresoft==5
+	replace adl_eat_help=1 if sc`w'eatdev==7
+	replace adl_ins_help=1 if fl`w'ntlvrmslp==1
+}
 
 gen adl_index=0
 foreach i in eat bath toil dres bed ins {
@@ -3658,80 +3060,36 @@ foreach x in independent impair index {
 	notes adl_`x' : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 }
 
-note adl_index: adl_*_help
-note adl_index: Number of ADL's needing helped with.
-
-note adl_independnet: adl_index =0 
-note adl_independent: No ADL help for the individual.
-
-note adl_impair: adl_index >0 
-note adl_impair: ADl help for the individual.
-
-note iadl_index: iadl_*_help
-note iadl_index: Number of IADL's needing helped with.
-
-note iadl_independnet: iadl_index =0 
-note iadl_independent: No IADL help for the individual.
-
-note iadl_impair: iadl_index >0 
-note iadl_impair: IADl help for the individual.
 
 label var iadl_independent "Independent in IADLs"
 label var iadl_impair "Help with 1+ IADL"
 label var iadl_index "Index of help w/ IADLs"
 
-foreach x in adl_index adl_independnet adl_impair iadl_index iadl_independnet iadl_impair{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
-} 
+gen ivw_date=mdy(ivw_month,ivw_day,ivw_year)
+format ivw_date %td
 
 //addition of variables from Eric's homebound code
 gen meals_wheels=.
 gen noone_talk=.
 gen restrnt_takeout=.
 
-
-replace meals_wheels=dmealwhl 
-replace noone_talk=noonetalk
-replace restrnt_takeout=dmealtkot 
+forvalues i=1/7 {
+replace meals_wheels=ha`i'dmealwhl if wave==`i'
+replace noone_talk=fl`i'noonetalk if wave==`i'
+replace restrnt_takeout=ha`i'dmealtkot if wave==`i'
 foreach x in meals_wheels noone_talk restrnt_takeout {
 replace `x'=0 if `x'==.
 }
-
-notes meals_wheels: dmealwhl
-notes meals_wheels: Helper is meals on wheels
-
-notes noone_talk: noonetalk
-notes noone_talk: No one to talk to
-
-notes restrnt_takeout: dmealtkot
-notes restrnt_takeout: Helper is Restaurant takeout
-
-foreach x in meals_wheels noone_talk restrnt_takeout{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
 }
 
 label var meals_wheels "Meals on wheels"
 label var noone_talk "SP has no one to talk to"
 label var restrnt_takeout "Received help with restaurant/takeout"
 //pull in date of death, constructed from claims and nhats
-merge m:1 spid using "E:\nhats\data\NHATS CMS DUA 28016\Merged\Stata\death_date.dta", nogen
+merge m:1 spid using "E:\nhats\data\20180625 NHATS CMS Data\death_date.dta", nogen
 
 gen died_12=mofd(death_date)-mofd(ivw_date)<=12
 gen died_24=mofd(death_date)-mofd(ivw_date)<=24
-
-notes died_12: death_date ivw_date
-notes died_12: death_date-ivw_date<=12
-
-notes died_24: death_date ivw_date
-notes died_24: death_date-ivw_date<=24
-
-foreach x in died_12 died_24{
-notes `x': Located in NHATS Setup, under Part 7.
-notes `x': Updated: 04/10/19-MH
-}
-
 //note-the following has been superseded by the death date using claims
 /*
 
@@ -3756,14 +3114,14 @@ label var died_`i' "SP died w/in `i' months, per future wave status"
 gen dd=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
 gen nhats_death_day=. 
-forvalues w=2/$w {
+forvalues i=2/7 {
 	foreach j in mth yr {
-		replace pd`w'`j'died=. if pd`w'`j'<0
+		replace pd`i'`j'died=. if pd`i'`j'<0
 }
-	replace nhats_death_day=31 if inlist(pd`w'm,1,3,5,7,8,10,12)
-	replace nhats_death_day=30 if inlist(pd`w'm,4,6,9,11)
-	replace nhats_death_day=28 if inlist(pd`w'm,2)
-	replace dd=mdy(pd`w'mthdied,nhats_death_day,pd`w'yrdied) if pd`w'yrdied>0 & pd`w'yrdied!=.
+	replace nhats_death_day=31 if inlist(pd`i'm,1,3,5,7,8,10,12)
+	replace nhats_death_day=30 if inlist(pd`i'm,4,6,9,11)
+	replace nhats_death_day=28 if inlist(pd`i'm,2)
+	replace dd=mdy(pd`i'mthdied,nhats_death_day,pd`i'yrdied) if pd`i'yrdied>0 & pd`i'yrdied!=.
 }
 
 by spid, sort: egen nhats_death_date=max(dd)
@@ -3777,48 +3135,49 @@ label var nhats_death_`x' "Sensitive: SP death `x', from NHATS"
 
 drop dd
 
-
 gen eligible_nsoc=fl1dnsoc==1
 gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
 gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
 gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
 label var eligible  "Sensitive: Eligible for NSOC interview, wave 1 tracker"
 label var complete  "Sensitive: Completed Interview"
-label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Intertatus
+label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Interview"
+label var total_caregiver_elig "Sensitive: Total Caregivers Eligible for NSOC"
+rename r*status round*status
 
 //adverse consequences of unmet need
 
 gen adverse=0
-forvalues w=1/$w {
-	foreach x of varlist launwout shopwout mealwout bankwout eatwout bathwout toilwout dreswout {
-		replace adverse=1 if `x'==1 & wave==`w'
+forvalues i=1/7 {
+	foreach x of varlist ha`i'*out sc`i'*out {
+		replace adverse=1 if `x'==1 & wave==`i'
 }
 }
-label var adverse "Any adverse consequence of unmet need (excluding mobility)
+label var adverse "Any adverse consequence of unmet need (excluding mobility)"
 
 local ha laun shop meal bank
 local sc eat bath toil dres
 local mo out insd bed
 
-forvalues w=1/7{
+forvalues i=1/7{
 	foreach x in `ha'{
 		capture gen adverse_`x'=0
-		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+		replace adverse_`x'=1 if ha`i'`x'wout==1 & wave==`i'
 		
 	}
 }
 	
-forvalues w=1/$w{
+forvalues i=1/7{
 	foreach x in `sc'{
 		capture gen adverse_`x'=0
-		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+		replace adverse_`x'=1 if sc`i'`x'wout==1 & wave==`i'
 	}
 }
 
-forvalues w=1/$w {
+forvalues i=1/7{
 	foreach x in `mo'{
 		capture gen adverse_`x'=0
-		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
+		replace adverse_`x'=1 if mo`i'`x'wout==1 & wave==`i'
 	}
 }
 
@@ -3838,8 +3197,8 @@ label var adverse_bed "Ever go w/o leaving bed"
 capture drop lim_fav
 gen lim_fav=.
 
-forvalues w=1/5 { 
-	replace lim_fav=helmfvact==1 if helmfvact>=0 & wave==`w'
+forvalues i=1/5 { 
+	replace lim_fav=pa`i'helmfvact==1 if pa`i'helmfvact>=0 & wave==`i'
 }
 label var lim_fav "Last month ever kept from favorite activity by health/function"
 
@@ -3848,7 +3207,7 @@ capture drop lim_fav_yr
 ////NEW limited favorite activity
 gen lim_fav_yr=.
 forvalues w=6/7 {
-	replace lim_fav_yr=fvactlimyr==1 if fvactlimyr>=0 & wave==`w'
+	replace lim_fav_yr=pa`w'fvactlimyr==1 if pa`w'fvactlimyr>=0 & wave==`w'
 }
 
 label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
@@ -3856,17 +3215,14 @@ label var lim_fav_yr "Last year ever kept from favorite activity by health/funct
 
 //social cohesion
 gen cohesion_knowwell=.
-gen cohesion_willnghlp=.
-gen cohesion_peoptrstd=.
+gen cohesion_willing=.
+gen cohesion_peop=.
 
-forvalues w=1/$w {
-	foreach x in knowwell willnghlp peoptrstd {
-		replace cohesion_`x'=`x' if !missing(`x') & wave==`w'
+forvalues i=1/7 {
+	foreach x in know will peop {
+		replace cohesion_`x'=cm`i'`x' if !missing(cm`i'`x') & wave==`i'
 }
 }
-rename cohesion_willnghlp cohesion_willing
-rename cohesion_peoptrstd cohesion_peop
-
 gen cohesion=(cohesion_p+cohesion_k+cohesion_w==3) ///
 if !missing(cohesion_k) | !missing(cohesion_w) | !missing(cohesion_p)
 
@@ -3882,90 +3238,67 @@ gen home_disorder_outsd=.
 gen home_disorder_area=.
 gen home_disorder_clutter=.
 
-foreach x of varlist condhome* {
-replace `x'=. if `x'==7
-replace `x'=0 if `x'==2
-}
-foreach x of varlist areacond* {
-replace `x'=. if `x'==5
-replace `x'=0 if `x'==1
-replace `x'=`x'>1 if !missing(`x')
-}
-foreach x of varlist clutter* {
-replace `x'=. if `x'==4
-replace `x'=0 if `x'==1
-replace `x'=`x'>1 if !missing(`x')
-}
-foreach x of varlist condihom* {
-replace `x'=`x'==1 if !missing(`x')  
-}
-/*
-//forvalues w=1/$w{
-	foreach x of varlist condihom* condhome* areacond* clutter* {
-		replace `x'=. if   & wave==`w'
+forvalues i=1/7 {
+	foreach x of varlist ir`i'condihom* ir`i'condhome* ir`i'areacond* ir`i'clutter* {
+		replace `x'=. if `x'==7
 		qui sum `x'
-		if r(max)==2 replace `x'=`x'==1 if !missing(`x') & wave==`w'
-		if inlist(r(max),3,4) replace `x'=`x'>1 if !missing(`x') & wave==`w'
+		if r(max)==2 replace `x'=`x'==1 if !missing(`x')
+		if inlist(r(max),3,4) replace `x'=`x'>1 if !missing(`x')
 }
-*/
-	egen insd=rowtotal(condihom*), m 
-	egen outsd=rowtotal(condhome*), m 
-	egen area=rowtotal(areacond*), m 
-	egen clutter=rowtotal(clutter*), m 
-	
 
+	egen insd=rowtotal(ir`i'condihom*)
+	egen outsd=rowtotal(ir`i'condhome*)
+	egen area=rowtotal(ir`i'areacond*)
+	egen clutter=rowtotal(ir`i'clutter*)
 	foreach x in insd outsd area clutter {
-		replace home_disorder_`x'=`x'>=1 if !missing(`x')
+		replace home_disorder_`x'=`x'>=1 if wave==`i' & !missing(`x')
 		drop `x'
 }
-
+}
 
 label var home_disorder_insd "Disorder in home (peelng paint, pests, brkn furniture or floorbrds, trippng hazards)"
 label var home_disorder_outsd "Disorder outside (brkn windows, foundation, bricks/siding, roof, steps)"
 label var home_disorder_clutter "Disorder in home (clutter in interview or other rooms)"
 label var home_disorder_area "Disorder in immed area (litter/glass/graffiti/vacant houses/stores/foreclosures)"	
 
-//rename finhlpfam finhlpfam_old
-//rename fingftfam fingftfam_old
-//economic well-being---look at this section for strangeness 3/1/19
-foreach x in pycredbal crecardeb credcdmed amtcrdmed medpaovtm ampadovrt ///
-whohelfi1 whohelfi2 atchhelyr whregoth1 whregoth2 ///
-whregoth3 amthlpgiv progneed1 progneed2 progneed3 mealskip ///
-mealskip2 nopayhous nopayutil nopaymed {
+//economic well-being
+foreach x of varlist ew* {
 	replace `x'=. if `x'<0
 }
 
-foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash ///
-govtasst {
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
 	gen `x'=.
 }
 
-replace creditdebt=inlist(pycredbal,2,3) | !missing(crecardeb) if ///
- !missing(pycredbal) | !missing(crecardeb)
-replace medcreditdebt=credcdmed==1 if !missing(credcdmed)
-replace medbillsovertime=medpaovtm==1 if !missing(medpaovtm)
-replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | ///
+forvalues i=1/7 {
+gen creditdebt`i'=inlist(ew`i'pycredbal,2,3) | !missing(ew`i'crecardeb) if ///
+ !missing(ew`i'pycredbal) | !missing(ew`i'crecardeb)
+gen medcreditdebt`i'=ew`i'credcdmed==1 if !missing(ew`i'credcdmed)
+gen medbillsovertime`i'=ew`i'medpaovtm==1 if !missing(ew`i'medpaovtm)
+gen medpaynotcash`i'=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | ///
 !missing(medcreditdebt)
 
-gen finhlpfam_n=finhlpfam==1 if !missing(finhlpfam)
-gen fingftfam_n= fingftfam==1 if !missing(finhlpfam)
-replace govtasst=progneed1==1 | progneed2==1 | progneed3==1 if !missing(progneed1) ///
-| !missing(progneed2) | !missing(progneed3)
-
-
+gen finhlpfam`i'=ew`i'finhlpfam==1 if !missing(ew`i'finhlpfam)
+gen fingftfam`i'= ew`i'fingftfam==1 if !missing(ew`i'finhlpfam)
+gen govtasst`i'=ew`i'progneed1==1 | ew`i'progneed2==1 | ew`i'progneed3==1 if !missing(ew`i'progneed1) ///
+| !missing(ew`i'progneed2) | !missing(ew`i'progneed3)
+foreach x in creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
+fingftfam govtasst {
+	replace `x'=`x'`i' if wave==`i'
+	drop `x'`i'
+}
+}
 replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbillsovertime) | !missing(medcreditdebt)
 
 label var creditdebt "Has credit card debt or does not pay off in full monthly"
 label var medpaynotcash "Has medical credit card debt or pays bills over time"
 label var govtasst "Receives foodstamps or other food or gas/energy assistance"
 
-drop finhlpfam fingftfam
-rename finhlpfam_n finhlpfam
-rename fingftfam_n fingftfam
 //home ownership
 
-local homevars ownhome rent mortgagepaidoff paysmortgage /*mortpaymt*/ ///
-timeinmort owedonmort homevalue_n rentpaid section8
+local homevars ownhome rent mortgagepaidoff paysmortgage mortpaymt ///
+timeinmort owedonmort homevalue rentpaid section8
 
 foreach x of local homevars {
 	gen `x'=.
@@ -3984,55 +3317,52 @@ label var owedonmort "Amount left on mortgage"
 label define owedonmort 1 "<$50,000" 2 "$50,000-99,999.99" 3 "$100,000+"
 label values owedonmort owedonmort
 label var homevalue "Home value"
-label define homevalue_n 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K" ///
+label define homevalue 1 "<$50K" 2 "50-75K" 3 "75-100K" 4 "100-200K" 5 "200-300K" ///
 6 "300-500K" 7 "500-750K" 8 "$750K+"
-label values homevalue_n homevalue_n
+label values homevalue homevalue
 
-forvalues w=1/$w {
-tab ownrentot 
-replace ownhome=ownrentot==1 if wave==`w' & (!missing(ownrento) | res_care==1)
-replace rent=ownrentot==2 if wave==`w' & (!missing(ownrento) | res_care==1)
-tab mrtpadoff 
-replace mortgagepaidoff=mrtpadoff==1 if !missing(mrtpadoff)
-replace paysmortgage=mrtpadoff==2 if !missing(mrtpadoff)
-tab mortpaymt 
-replace mortpaymt= mortpaymt if wave==`w'
-qui replace mortpaymt=1 if wave==`w' & mthlymort<250
-qui replace mortpaymt=2 if wave==`w' & mthlymort>=250 & mthlymort<=499
-qui replace mortpaymt=3 if wave==`w' & mthlymort>=500 & mthlymort<1000
-qui replace mortpaymt=4 if wave==`w' & mthlymort>=1000 & !missing(mthlymort)
-tab whnpayoff 
-replace timeinmort=whnpayoff if wave==`w'
-tab amoutowed 
-replace owedonmort=amoutowed if wave==`w'
-qui replace owedonmort=1 if wave==`w' & amtstlowe<50000 
-qui replace owedonmort=2 if wave==`w' & amtstlowe>=50000 & amtstlowe<=100000
-qui replace owedonmort=3 if wave==`w' & amtstlowe>=100000 & !missing(amtstlowe)
-tab homvalamt 
-replace homevalue_n= homvalamt if wave==`w'
-qui replace homevalue_n=1 if wave==`w' & homevalue<50000 & homevalue>=0
-qui replace homevalue_n=2 if wave==`w' & homevalue>=50000 & homevalue<75000
-qui replace homevalue_n=3 if wave==`w' & homevalue>=75000 & homevalue<100000
-qui replace homevalue_n=4 if wave==`w' & homevalue>=100000 & homevalue<200000
-qui replace homevalue_n=5 if wave==`w' & homevalue>=200000 & homevalue<300000
-qui replace homevalue_n=6 if wave==`w' & homevalue>=300000 & homevalue<500000
-qui replace homevalue_n=7 if wave==`w' & homevalue>=500000 & homevalue<750000
-qui replace homevalue_n=8 if wave==`w' & homevalue>=750000 & !missing(homevalue)
+forvalues i=1/7 {
+tab hp`i'ownrentot 
+replace ownhome=hp`i'ownrentot==1 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+replace rent=hp`i'ownrentot==2 if wave==`i' & (!missing(hp`i'ownrento) | res_care==1)
+tab hp`i'mrtpadoff 
+replace mortgagepaidoff=hp`i'mrtpadoff==1 if !missing(hp`i'mrtpadoff)
+replace paysmortgage=hp`i'mrtpadoff==2 if !missing(hp`i'mrtpadoff)
+tab hp`i'mortpaymt 
+replace mortpaymt= hp`i'mortpaymt if wave==`i'
+qui replace mortpaymt=1 if wave==`i' & hp`i'mthlymort<250
+qui replace mortpaymt=2 if wave==`i' & hp`i'mthlymort>=250 & hp`i'mthlymort<=499
+qui replace mortpaymt=3 if wave==`i' & hp`i'mthlymort>=500 & hp`i'mthlymort<1000
+qui replace mortpaymt=4 if wave==`i' & hp`i'mthlymort>=1000 & !missing(hp`i'mthlymort)
+tab hp`i'whnpayoff 
+replace timeinmort=hp`i'whnpayoff if wave==`i'
+tab hp`i'amoutowed 
+replace owedonmort=hp`i'amoutowed if wave==`i'
+qui replace owedonmort=1 if wave==`i' & hp`i'amtstlowe<50000 
+qui replace owedonmort=2 if wave==`i' & hp`i'amtstlowe>=50000 & hp`i'amtstlowe<=100000
+qui replace owedonmort=3 if wave==`i' & hp`i'amtstlowe>=100000 & !missing(hp`i'amtstlowe)
+tab hp`i'homvalamt 
+replace homevalue= hp`i'homvalamt if wave==`i'
+qui replace homevalue=1 if wave==`i' & hp`i'homevalue<50000 & hp`i'homevalue>=0
+qui replace homevalue=2 if wave==`i' & hp`i'homevalue>=50000 & hp`i'homevalue<75000
+qui replace homevalue=3 if wave==`i' & hp`i'homevalue>=75000 & hp`i'homevalue<100000
+qui replace homevalue=4 if wave==`i' & hp`i'homevalue>=100000 & hp`i'homevalue<200000
+qui replace homevalue=5 if wave==`i' & hp`i'homevalue>=200000 & hp`i'homevalue<300000
+qui replace homevalue=6 if wave==`i' & hp`i'homevalue>=300000 & hp`i'homevalue<500000
+qui replace homevalue=7 if wave==`i' & hp`i'homevalue>=500000 & hp`i'homevalue<750000
+qui replace homevalue=8 if wave==`i' & hp`i'homevalue>=750000 & !missing(hp`i'homevalue)
 
-tab rentamou 
-replace rentpaid =rentamou if wave==`w'
-qui replace rentpaid=1 if wave==`w' & rentamt<250 & rentamt>=0
-qui replace rentpaid=2 if wave==`w' & rentamt>=250 & rentamt<=499
-qui replace rentpaid=3 if wave==`w' & rentamt>=500 & rentamt<1000
-qui replace rentpaid=4 if wave==`w' & rentamt>=1000 & !missing(rentamt)
+tab hp`i'rentamou 
+replace rentpaid =hp`i'rentamou if wave==`i'
+qui replace rentpaid=1 if wave==`i' & hp`i'rentamt<250 & hp`i'rentamt>=0
+qui replace rentpaid=2 if wave==`i' & hp`i'rentamt>=250 & hp`i'rentamt<=499
+qui replace rentpaid=3 if wave==`i' & hp`i'rentamt>=500 & hp`i'rentamt<1000
+qui replace rentpaid=4 if wave==`i' & hp`i'rentamt>=1000 & !missing(hp`i'rentamt)
 qui replace rentpaid=4 if inlist(rentpaid,5,6)
 replace mortpaymt=4 if inlist(mortpaymt,5,6)
-tab sec8pubsn
-replace section8=sec8pubsn==1 if wave==`w' & (!missing(sec8pubsn) |ownhome==1 | rent==1)
+tab hp1sec8pubsn
+replace section8=hp`i'sec8pubsn==1 if wave==`i' & (!missing(hp`i'sec8pubsn) |ownhome==1 | rent==1)
 }
-
-drop homevalue
-rename homevalue_n homevalue
 
 label var rentpaid "Amount rent paid"
 label define rentpaid 1 "<$250" 2 "250-499" 3 "500-999" 4 "$1000+"
@@ -4044,15 +3374,15 @@ label var finhlpfam "Received financial help/gifts from family"
 label var fingftfam "Provided financial help/gifts to family"
 label var paysmortgage "Pays a mortgage"
 gen n_social_network=.
-
-replace n_social_network=dnumsn if dnumsn>=0 
-
+forvalues i=1/7 {
+	replace n_social_network=sn`i'dnumsn if sn`i'dnumsn>=0 & wave==`i'
+}
 label var n_social_network "Number in social network"
 
 gen division=.
-
-replace division=dcensdiv if dcensdiv>0 
-
+forvalues w=1/7 {
+	replace division=re`w'dcensdiv if re`w'dcensdiv>0 & wave==`w'
+}
 gen region=division 
 recode region (1 2=1) (3 4=2) (5/7=3) (8 9=4)
 
@@ -4069,7 +3399,7 @@ replace midwest=1 if region==2
 replace south=1 if region==3
 replace west=1 if region==4
 
-/*and now drop all raw variables
+//and now drop all raw variables
 forvalues i=1/7 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
 	 pc`i'* cp`i'* cg`i'* mo`i'* ha`i'* sc`i'* mc`i'* pa`i'* sd`i'* hw`i'* ///
@@ -4077,8 +3407,8 @@ forvalues i=1/7 {
 }
 
 drop el1* rl1* ia1* ep2* pd2* pd3* pd4* pd5* pd6* pd7* ia3* ia5* ia7*
-*/
-//rename round*status r*status
+
+rename round*status r*status
 
 svyset varunit [pw=anfinwgt], strat(varstrat)
 
@@ -4089,27 +3419,7 @@ notes drop educ*
 
 //10/25/18--add in payer and other variables from Jenny's homebound project
 preserve
-/*local mo outoft outcane outwalkr outwlchr outsctr outhlp outslf outdif outyrgo ///
-outwout oftgoarea oflvslepr insdcane insdwalkr insdwlchr insdsctr oftholdwl ///
-insdhlp insdslf insddif insdyrgo insdwout beddev bedhlp bedslf beddif bedwout
 
-local sc eatdevoft eathlp eatoft eatdif eatwout showrbat1 showrbat2 showrbat3 ///
-prfrshbth scusgrbrs shtubseat bathhlp bathoft bathdif bathyrgo bathwout ///
-usvartoi1 usvartoi2 usvartoi3 usvartoi4 toilhlp toiloft toildif toilwout ///
-dresoft dresdev dreshlp dresyrgo dreswout 
-
-local ha laun launslf whrmachi1 whrmachi2 whrmachi3 whrmachi4 whrmachi5 ///
-whrmachi6 laundif launoft launwout shop shopslf howpaygr1 howpaygr2 howpaygr3 ///
- howpaygr4 howpaygr5 howpaygr6 howpaygr7 howgtstr1 howgtstr2 howgtstr3 howgtstr4 ///
- howgtstr5 howgtstr6 howgtstr7 howgtstr8 shopcart shoplean shopdif shopoft shopwout ///
- meal mealslf restamels oftmicrow mealdif mealoft mealwout bank bankslf bankdif ///
- bankoft bankwout money moneyhlp
-
-local mc meds medstrk medsslf whrgtmed1 whrgtmed2 whrgtmed3 whrgtmed4 howpkupm1 ///
-howpkupm2 howpkupm3 medsrem medsdif medsyrgo medsmis havregdoc regdoclyr hwgtregd1 ///
- hwgtregd2 hwgtregd3 hwgtregd4 hwgtregd5 hwgtregd6 hwgtregd7 hwgtregd8 hwgtregd9 ///
- ansitindr tpersevr1 tpersevr2 tpersevr3 tpersevr4 chginspln anhlpwdec
-*/
 //note--as of now, doesn't include round 7
 forvalues wave=1/7 {
 use "E:\nhats\data\NHATS Public\round_`wave'\NHATS_Round_`wave'_SP_File.dta", clear
@@ -4249,7 +3559,7 @@ duplicates drop
 tempfile paid`wave'
 save `paid`wave''
 
-use "E:\nhats\data\NHATS Cleaned\op_round_1_${w}" if wave==`wave' & opishelp==1, clear
+use "E:\nhats\data\NHATS Cleaned\op_round_1_7" if wave==`wave' & opishelp==1, clear
 tokenize spouse daughter son otherfamily paid otherinformal
 drop spouse daughter son paid
 forvalues i=1/6 {
@@ -4295,7 +3605,7 @@ label var aveincome "Income"
 label var residence "Type of residence"
 drop sr*raw ht_new pr_ad8* dem_via_proxy speaktosp date_item* date_sum* ///
 preslast presfirst vp* presvp* date_prvp clock_scorer irecall drecall ///
-wordrecall *65 kidm hrm paidm SP_completed deceased /*va*ser* el5 rl* */
+wordrecall *65 kidm hrm paidm SP_completed deceased va*ser* el5 rl*
 
 foreach x in eat bath toil dres {
 	label var adl_`x'_diff "Has difficulty while `x'ing last month"
@@ -4342,7 +3652,7 @@ label var iadlcount_j "IADL count: some/lot of difficulty or adverse consequence
 
 // 11/8/18 Making National Estimates using 2011 population (using original weights) Rds 1-4
 rename anfinwgt old_anfinwgt
-gen double anfinwgt=old_anfinwgt
+gen anfinwgt=old_anfinwgt
 replace anfinw=old_anfinwgt*5491440/4649902 if inrange(age,65,69) & female==0 & inrange(wave,1,4)
 replace anfinw=old_anfinwgt*4087340/4097017 if inrange(age,70,74) & female==0 & inrange(wave,1,4)
 replace anfinw=old_anfinwgt*3027820/3001146 if inrange(age,75,79) & female==0 & inrange(wave,1,4)
@@ -4468,40 +3778,6 @@ notes adl_toil_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step
 notes adl_dres_help : sc*dreshelp
 notes adl_dres_help : Help dresing in the last month
 notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
-
-
-keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
-help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind imputed_inc1 ///
-imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5 aveincome income_cat otherlang white black hisp other_race whiteoth maritalstat medicaid medigap mc_partd tricare ///
-private_ltc residence livearrang livealone srh srh_fp sr_ami_ever sr_ami_new sr_stroke_ever sr_stroke_new sr_cancer_ever sr_cancer_new sr_hip_ever sr_hip_new ///
-sr_heart_dis_ever sr_heart_dis_new sr_htn_ever sr_htn_new sr_ra_ever sr_ra_new sr_osteoprs_ever sr_osteoprs_new sr_diabetes_ever sr_diabetes_new sr_lung_dis_ever ///
-sr_lung_dis_new sr_dementia_ever sr_dementia_new sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score sr_phq2_depressed sr_gad2_score sr_gad2_anxiety ///
-dem_3_cat dem_2_cat memory sr_numconditions1 fall_last_month adl_eat_diff adl_eat_help adl_eat_not_done adl_bath_diff adl_bath_help adl_bath_not_done adl_toil_diff ///
-adl_toil_help adl_toil_not_done adl_dres_diff adl_dres_help adl_dres_not_done iadl_laun_help iadl_laun_diff iadl_laun_not_done iadl_shop_help iadl_shop_diff ///
-iadl_shop_not_done iadl_meal_help iadl_meal_diff iadl_meal_not_done iadl_bank_help iadl_bank_diff iadl_bank_not_done iadl_meds_help iadl_meds_diff iadl_meds_not_done ///
- ind_meds_diff ind_meds_mistake ind_meds_problem reg_doc_have reg_doc_seen reg_doc_homevisit sr_hosp_ind sr_hosp_stays prim_helper_opid prim_helper_cat ///
- tot_hrsmonth_help_i n_helpers tot_hrswk_help_i n_family_helpers ind_family_helper n_paid_helpers ind_paid_helper ind_rc_staff num_helpers_cat tot_hrsmonth_paid_i ///
- tot_hrswk_paid_i ind_no_helpers metro_ind no_acp formal_acp informal_acp acp old_an2011wgt trfinwgt tr2011wgt serarmfor dresslf dresdif ntlvrmslp eatdev income_quart ///
- placedied hospice1 hospice2 hospicelml gripsc1 walksec1 walkhndr1 gripsc2 walksec2 walkhndr2 origwksc nhatswksc nhatsgrav nhatsgrb lst10pnds trytolose evrgowalk vigoractv ///
- unwgtloss lowphysact lowenergy oftcheer oftbored oftfol oftupset lifemean confident giveup livingsit selfdeter findway adjchg agefeel mealskip nopayhous nopayutil ///
- nopaymed mealskipnum sr_skincancer_had sr_breastcancer_had sr_prostatecancer_had sr_bladdercancer_had sr_crvovrnutrncancer_had sr_coloncancer_had sr_kidneycancer_had ///
- sr_othercancer_had howgetdoc ind_imp_visit ind_imp_relig ind_imp_club ind_imp_goout device_out device_insd device_bed device_eat device_bath device_toil device_dres ///
- device_any drives avoids ind_transp_disadv get_places1 get_places2 get_places3 get_places4 get_places5 get_places6 get_places7 married marital_sep marital_div ///
- marital_wid marital_nev marriedpartnered marital_sd resspouse hhm agecat attrelig imprelig visitfrfam impvisit attclub impclub vigact religvimp smokedever ///
- smoke_start_age smoke_stop_age smokesnow numcigsever numcigsnow ind_pain wgt_curr height_ft height_in bmi moved community_dwelling nhres rcfres res_care sp_status ///
- prob_dem adl_ins_help adl_ins_diff adl_ins_not_done adl_bed_help adl_bed_diff adl_bed_not_done ivw_day ivw_month ivw_year adl_index adl_independent adl_impair ///
- iadl_index iadl_independent iadl_impair adl_diff_index adl_diff_ind iadl_diff_index iadl_diff_ind ivw_date meals_wheels noone_talk restrnt_takeout nhats_death_day ///
- nhats_death_date nhats_death_month nhats_death_year eligible_nsoc completed_nsoc total_caregiver_comp total_caregiver_elig adverse adverse_laun adverse_shop ///
- adverse_meal adverse_bank adverse_eat adverse_bath adverse_toil adverse_dres adverse_out adverse_insd adverse_bed lim_fav lim_fav_yr cohesion_knowwell cohesion_willing ///
- cohesion_peop cohesion home_disorder_insd home_disorder_outsd home_disorder_area home_disorder_clutter creditdebt medcreditdebt medbillsovertime medpaynotcash finhlpfam ///
- fingftfam govtasst ownhome rent mortgagepaidoff paysmortgage mortpaymt timeinmort owedonmort homevalue rentpaid section8 n_social_network division region northeast ///
- midwest south west n_children stairs_ind livesalone_ind ind_kids eat_jenny toil_jenny insd_jenny bed_jenny dres_jenny bath_jenny adlcount_jenny laun_jenny meds_jenny ///
- shop_jenny meal_jenny bank_jenny iadlcount_jenny device_mobility spouse_help_ind tot_spousehrs daughter_help_ind tot_daughterhrs son_help_ind tot_sonhrs otherfamily_help_ind ///
- tot_otherfamilyhrs paid_help_ind tot_paidhrs otherinformal_help_ind tot_otherinformalhrs any_paid_by_sp any_paid_by_gov any_paid_by_ins any_paid_by_unk any_paid_by_oth ///
- any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by_gov_cat_oth any_paid_by_gov_cat_unknown any_paid_by_medicare any_paid_by_medicaid any_paid_by_state ///
- ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid anfinwgt an2011wgt death_* died_12 died_24 *_lml qoc_lml_e
- 
-
 saveold "E:\nhats\data\NHATS cleaned\sp_round_1_7", replace version(12)
 
 gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
@@ -4509,16 +3785,14 @@ gen time2d=mofd(nhats_death_date)-mofd(ivw_date)
 foreach x in 12 24 {
 	gen nhats_died_`x'=time2d<=`x' if !lml
 	label var nhats_died_`x' "Died w/in `x' months (from NHATS)"
-
 }
 
-capture log close
 
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_variable_list.txt", text replace
 describe , fullnames
 log close
- 
-drop death_* died_12 died_24 ivw_day ivw_date
+
+drop death_* died_12 died_24
 
 drop time2d 
 
@@ -4544,10 +3818,6 @@ local i=`i'+1
 log using "E:\nhats\data\NHATS cleaned\NHATS variable documentation\sp_round_1_7_sensitive_variables.txt", text replace
 describe `senslabs', fullnames
 log close
-
-
-translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
-exit
 
 
 H="Codebook for SP dataset"
