@@ -1,8 +1,8 @@
----------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- opened on:   6 Mar 2019, 09:13:33
+ opened on:  12 Apr 2019, 12:50:47
 
 . local r1raw E:\nhats\data\NHATS Public\round_1\
 
@@ -231,21 +231,26 @@ file round_7_1.dta saved
 . if `w'!=1 local pd pd* 
   4. 
 . //keep selected variables only
-. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat  ///
+. local keepallwaves spid wave r`w'dresid w`w'varunit w`w'anfinwgt0 w`w'varstrat
+>   ///
 >         mo* r`w'd2intvrage hh`w'martlstat ///
->         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtricar ///
+>         ip`w'cmedicaid ip`w'mgapmedsp ip`w'nginsnurs ip`w'covmedcad ip`w'covtr
+> icar ///
 >         hh* hc* ss* pc* cp* cg* ha* sc* mc* sd* pa* hw* ///
->         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'dorigwksc ///
+>         is`w'* ht`w'placedesc fl`w'* ir* cm* ew* hp* sn* dt* `pd' gr* wa* r`w'
+> dorigwksc ///
 >         r`w'dnhatswksc r`w'dnhatsgrav r`w'dnhatsgrb wb* ho* cs*
   5. 
 . if `w'==1 {     
-  6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl ///
+  6. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspan
+> h el`w'higstschl ///
 > ia`w'*  re`w'resistrct re1dcensdiv va1serarmfor
   7. }
   8. 
 . if `w'==2 {     
   9. keep `keepallwaves' re2intplace re2newstrct re2spadrsnew re2dresistrct ///
->         re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livngwill
+>         re2dadrscorr re2dcensdiv ip2nginslast ep2eoltalk ep2poweratty ep2livng
+> will
  10. }
  11. 
 . if `w'==3 {     
@@ -257,8 +262,8 @@ file round_7_1.dta saved
 >         re4dcensdiv ip4nginslast
  16. }
  17. if `w'==5 {     
- 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspanh el`w'higstschl re5intplace re5newstrct re5spadrsnew r
-> e5dresistrct ///
+ 18. keep `keepallwaves' r`w'dgender rl`w'dracehisp rl`w'spkothlan rl`w'condspan
+> h el`w'higstschl re5intplace re5newstrct re5spadrsnew re5dresistrct ///
 >         re5dcensdiv ip5nginslast ia`w'* va5serarmfor w5an2011wgt0
  19. }       
  20. if `w'==6 {     
@@ -281,7 +286,8 @@ file round_6_ltd.dta saved
 file round_7_ltd.dta saved
 
 . 
-. //check sensitive data files, keep only some variables, merge with ltd datasets
+. //check sensitive data files, keep only some variables, merge with ltd dataset
+> s
 . foreach w in 1 2 3 4 5 6 7{
   2.         use "`r`w's'NHATS_Round_`w'_SP_Sen_Dem_File.dta"
   3.         sort spid 
@@ -357,7 +363,8 @@ file round_7_ltd.dta saved
 . 
 . //merge in sensitive data, use r1 as basis, added in cancer vars
 . merge m:1 spid using "`r1s'NHATS_Round_1_SP_Sen_Dem_File.dta", ///
->         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dspousage ///
+>         keepusing(r1dbirthmth r1dbirthyr r1dintvwrage hh1modob hh1yrdob hh1dsp
+> ousage ///
 >         rl1primarace rl1hisplatno hc1cancerty*) 
 
     Result                           # of obs.
@@ -480,12 +487,15 @@ file round_7_ltd.dta saved
 . //3B?
 . //merge in tracker status information
 . merge m:1 spid using "`r7raw'NHATS_Round_7_Tracker_File", ///
->         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spstatdtmt r7spstatdtyr r7fqstatdtmt ///
->          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr r6fqstatdtmt ///
->         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt 
-> r4spstatdtyr r4fqstatdtmt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
->                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqstatdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1sps
-> tatdtyr ///
+>         keepusing(yearsample w7trfinwgt0 w7tr2011wgt0 r7status r7spstat r7spst
+> atdtmt r7spstatdtyr r7fqstatdtmt ///
+>          w6trfinwgt0 w6tr2011wgt0 r6status r6spstat r6spstatdtmt r6spstatdtyr 
+> r6fqstatdtmt ///
+>         w5trfinwgt0 w5tr2011wgt0 r5status r5spstat r5spstatdtmt r5spstatdtyr r
+> 5fqstatdtmt w4trfinwgt0 r4status r4spstat r4spstatdtmt r4spstatdtyr r4fqstatdt
+> mt w3trfinwgt0 r3status r3spstat r3spstatdtmt r3spstatdtyr r3fqstatdtmt ///
+>                 w2trfinwgt0 r2status r2spstat r2spstatdtmt r2spstatdtyr r2fqst
+> atdtmt w1trfinwgt0 r1status r1spstat r1spstatdtmt r1spstatdtyr ///
 >                 r1fqstatdt*)
 
     Result                           # of obs.
@@ -524,12 +534,14 @@ file round_1_to_7.dta saved
 . forvalues w=1/7{
   2. clear all
   3. use "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File.dta"
-  4. saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata12.dta", replace version(12)
+  4. saveold "E:\nhats\data\NHATS Public\round_`w'\NHATS_Round_`w'_SP_File_stata
+> 12.dta", replace version(12)
   5. }
 (saving in Stata 12 format, which can be read by Stata 11 or 12)
 file E:\nhats\data\NHATS Public\round_1\NHATS_Round_1_SP_File_stata12.dta saved
 (saving in Stata 12 format, which can be read by Stata 11 or 12)
-  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode and thus may not display well in Stata 13.
+  note: variable label "R2 F SS DEAF PRIOR OR CURRENT ROUND " contains unicode
+        and thus may not display well in Stata 13.
 file E:\nhats\data\NHATS Public\round_2\NHATS_Round_2_SP_File_stata12.dta saved
 (saving in Stata 12 format, which can be read by Stata 11 or 12)
 file E:\nhats\data\NHATS Public\round_3\NHATS_Round_3_SP_File_stata12.dta saved
@@ -548,5 +560,5 @@ file E:\nhats\data\NHATS Public\round_7\NHATS_Round_7_SP_File_stata12.dta saved
       name:  <unnamed>
        log:  E:\nhats\nhats_code\NHATS data setup\logs\1_nhats_setup1.txt
   log type:  text
- closed on:   6 Mar 2019, 09:14:30
----------------------------------------------------------------------------------------------------------------------------------------
+ closed on:  12 Apr 2019, 12:52:04
+--------------------------------------------------------------------------------
