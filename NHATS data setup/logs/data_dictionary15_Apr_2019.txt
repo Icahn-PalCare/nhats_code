@@ -1,0 +1,184 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\\data_dictionary15_Apr_2019.txt
+  log type:  text
+ opened on:  15 Apr 2019, 13:32:54
+
+. 
+. // load dataset here
+. 
+. 
+. //set filename 
+. local filename sp_round_1_7.dta
+
+. 
+. 
+. 
+. // specify excel data dictionary file/filepath here
+. local wkbk `logpath'\sp_round_1_7_data_dictionary`date'.xlsx  // put excel data dictionary file/filepath here
+
+. 
+. 
+. assert "`filename'"!=""
+
+. use "`datapath'/`filename'", clear
+
+. 
+. 
+end of do-file
+
+. describe *help*
+------------------------------------------------------------------------------------------------------------------------------------------------------------- begin describe ---
+- version 9
+- local version : di "version " string(_caller()) ":"
+- syntax [anything] [using] [, SImple REPLACE *]
+- if ("`replace'"!="") {
+= if (""!="") {
+  describe_mk `0'
+  return add
+  exit
+  }
+- local varlist `"`anything'"'
+= local varlist `"*help*"'
+- if ("`simple'" == "") {
+= if ("" == "") {
+- `version' _describe `0'
+= version 15: _describe *help*
+
+              storage   display    value
+variable name   type    format     label      variable label
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+help_go_out     float   %9.0g                 Anyone ever help you leave home?
+needshelp       float   %9.0g                 Leaves home but with help
+helpdiff        float   %9.0g                 Either needs help or has difficulty going outside
+adl_eat_help    float   %9.0g               * Has help while eating
+adl_bath_help   float   %9.0g               * Has help while bathing
+adl_toil_help   float   %9.0g               * Has help while toileting
+adl_dres_help   float   %9.0g               * Has help while dressing
+iadl_laun_help  float   %9.0g                 Rec'd help doing laundry last month
+iadl_shop_help  float   %9.0g                 Rec'd help shopping last month
+iadl_meal_help  float   %9.0g                 Rec'd help preparing meals last month
+iadl_bank_help  float   %9.0g                 Rec'd help with banking last month
+iadl_meds_help  float   %9.0g                 Rec'd help taking medications last month
+prim_helper_o~d byte    %10.0g                Primary helper OPID
+prim_helper_cat float   %19.0g     helpcat    Primary helper relationship, missing if no helper
+tot_hrsmont~p_i float   %9.0g                 Hours / month help received, all helpers, imputed
+n_helpers       float   %9.0g                 Number helpers reported by SP
+tot_hrswk_hel~i float   %9.0g                 Hours / week help received, all helpers, imputed
+n_family_help~s float   %9.0g                 Number family helpers
+ind_family_he~r float   %9.0g                 Indicatory any family helpers
+n_paid_helpers  float   %9.0g                 Number paid helpers
+ind_paid_helper float   %9.0g                 Indicator any paid helpers
+num_helpers_cat float   %11.0g     num_helpers_cat
+                                              Categorical number of helpers
+ind_no_helpers  float   %9.0g                 Indicator no Helpers reported
+adl_ins_help    float   %9.0g               * Received help getting around inside
+adl_bed_help    float   %9.0g               * Received help getting out of bed
+spouse_help_ind float   %9.0g               * Has spouse helper
+daughter_help~d float   %9.0g               * Has daughter helper
+son_help_ind    float   %9.0g               * Has son helper
+otherfamily_h~d float   %9.0g               * Has other family helper
+paid_help_ind   float   %9.0g               * Has paid helper
+otherinformal~d float   %9.0g               * Has otherinformal helper
+- return add
+- }
+- else {
+  if (`"`options'"' != "") {
+  di as err "simple may not be combined with other options"
+  exit 198
+  }
+  if (`"`using'"' != "") {
+  qui `version' describe `varlist' `using', varlist
+  if "`varlist'" == "" {
+  local vars "`r(varlist)'"
+  }
+  else {
+  local vars "`varlist'"
+  }
+  local wid = 2
+  local n : list sizeof vars
+  if `n'==0 {
+  exit
+  }
+  if "`c(hasicu)'" == "1" {
+  foreach x of local vars {
+  local wid = max(`wid', udstrlen(`"`x'"'))
+  }
+  }
+  else {
+  foreach x of local vars {
+  local wid = max(`wid', strlen(`"`x'"'))
+  }
+  }
+  local wid = `wid' + 2
+  local cols = int((`c(linesize)'+1)/`wid')
+  if `cols' < 2 {
+  foreach x of local `vars' {
+  di as txt `col' `"`x'"'
+  }
+  exit
+  }
+  local lines = `n'/`cols'
+  local lines = int(cond(`lines'>int(`lines'), `lines'+1, `lines'))
+  forvalues i=1(1)`lines' {
+  local top = min((`cols')*`lines'+`i', `n')
+  local col = 1
+  forvalues j=`i'(`lines')`top' {
+  local x : word `j' of `vars'
+  di as txt _column(`col') "`x'" _c
+  local col = `col' + `wid'
+  }
+  di as txt
+  }
+  qui `version' describe `varlist' `using', short
+  return add
+  }
+  else {
+  ds `varlist'
+  qui `version' _describe `varlist', short
+  return add
+  }
+  }
+--------------------------------------------------------------------------------------------------------------------------------------------------------------- end describe ---
+
+. set trace off
+
+. describe *help*
+
+              storage   display    value
+variable name   type    format     label      variable label
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+help_go_out     float   %9.0g                 Anyone ever help you leave home?
+needshelp       float   %9.0g                 Leaves home but with help
+helpdiff        float   %9.0g                 Either needs help or has difficulty going outside
+adl_eat_help    float   %9.0g               * Has help while eating
+adl_bath_help   float   %9.0g               * Has help while bathing
+adl_toil_help   float   %9.0g               * Has help while toileting
+adl_dres_help   float   %9.0g               * Has help while dressing
+iadl_laun_help  float   %9.0g                 Rec'd help doing laundry last month
+iadl_shop_help  float   %9.0g                 Rec'd help shopping last month
+iadl_meal_help  float   %9.0g                 Rec'd help preparing meals last month
+iadl_bank_help  float   %9.0g                 Rec'd help with banking last month
+iadl_meds_help  float   %9.0g                 Rec'd help taking medications last month
+prim_helper_o~d byte    %10.0g                Primary helper OPID
+prim_helper_cat float   %19.0g     helpcat    Primary helper relationship, missing if no helper
+tot_hrsmont~p_i float   %9.0g                 Hours / month help received, all helpers, imputed
+n_helpers       float   %9.0g                 Number helpers reported by SP
+tot_hrswk_hel~i float   %9.0g                 Hours / week help received, all helpers, imputed
+n_family_help~s float   %9.0g                 Number family helpers
+ind_family_he~r float   %9.0g                 Indicatory any family helpers
+n_paid_helpers  float   %9.0g                 Number paid helpers
+ind_paid_helper float   %9.0g                 Indicator any paid helpers
+num_helpers_cat float   %11.0g     num_helpers_cat
+                                              Categorical number of helpers
+ind_no_helpers  float   %9.0g                 Indicator no Helpers reported
+adl_ins_help    float   %9.0g               * Received help getting around inside
+adl_bed_help    float   %9.0g               * Received help getting out of bed
+spouse_help_ind float   %9.0g               * Has spouse helper
+daughter_help~d float   %9.0g               * Has daughter helper
+son_help_ind    float   %9.0g               * Has son helper
+otherfamily_h~d float   %9.0g               * Has other family helper
+paid_help_ind   float   %9.0g               * Has paid helper
+otherinformal~d float   %9.0g               * Has otherinformal helper
+
+. exit, clear

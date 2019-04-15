@@ -428,6 +428,9 @@ replace switchffs=1 if switch_ffs_p==1
 gen switchma=switch_ma_n
 replace switchma=1 if switch_ma_p==1
 
+*make a variable for being in the cohort
+gen keep=1 if (switchma!=. | switchffs!=.) & hs_pre_study!=1
+
  *make a 4 category variable: MA switched/no switch FFS switched/noswitch
  
 gen sw4cat=.
@@ -437,6 +440,7 @@ replace sw4cat=3 if switch_ffs_n==1 | switch_ffs_p==1
 replace sw4cat=4 if switch_ffs_n==0 & switch_ffs_p==0
 replace sw4cat=. if hs_pre_study==1
 tab sw4cat
+
 
 H="cleaning variables: making quarter indicators"
 gen q0ind = .
@@ -485,7 +489,7 @@ replace q`n'ind=5 if q8ind==5
 }
 replace q0ind=5 if q8ind==5
 
-H="table 1, also merge w serious illness and cleaning covariates for table"
+H=" merge w serious illness and cleaning covariates for table"
 *look at the characteristics of those who switched  vs those who did not
 
 ***need to merge with rest of serious illness data
@@ -562,7 +566,43 @@ H="table 1, also merge w serious illness and cleaning covariates for table"
 *recode age
 	recode age (min/75=1 "65-75")(75/85=2 "75/85")(85/max=3 "85+"), gen(age3cat)
 	
-*TABLE 1
+	*prior medicaid status
+	sort spid wave
+	bysort spid: gen medicaid_prior=medicaid[_n-1] 
+	
+	*prior lived alone
+	sort spid wave
+	bysort spid: gen livealone_prior=livealone[_n-1] 
+
+	*prior self reported health
+	sort spid wave
+	bysort spid: gen srh_fp_prior=srh_fp[_n-1] 
+	
+	*prior dementia
+	sort spid wave
+	bysort spid: gen dem_2_cat_prior=dem_2_cat[_n-1] 
+	
+	*prior nhresident
+	sort spid wave
+	bysort spid: gen nhres_prior=nhres[_n-1] 
+	
+	*prior income cat
+	sort spid wave
+	bysort spid: gen income_less_15k_prior=income_less_15k[_n-1] 
+	
+	
+	*prior anxiety and depression
+	sort spid wave
+	bysort spid: gen sr_phq2_depressed_prior=sr_phq2_depressed[_n-1] 
+	sort spid wave
+	bysort spid: gen sr_gad2_anxiety_prior=sr_gad2_anxiety[_n-1] 
+
+	*not married partnered
+	
+	sort spid wave
+	bysort spid: gen not_marriedpartnered_prior=not_marriedpartnered[_n-1] 
+	
+	*TABLE 1
 tab female sw4cat, column chi2
 tabstat age, by(sw4cat) stats(mean sd)
 tab race_cat_2 sw4cat, column chi2
@@ -630,7 +670,6 @@ linktest, nolog
 
 logistic switchma race_cat_2 livealone not_marriedpartnered medicaid i.adl3catn ind_no_helpers dem_2_cat nhres ib3.homebound_3cat year age##age female
 fitstat
-female age race_cat_2 livealone not_marriedpartnered not_hs_educ income_less_15k medicaid i.adl3catn dem_2_cat nhres
 
 linktest, nolog
 logistic switchffs age race_cat_2 not_marriedpartnered not_hs_educ income_less_15k medicaid  ind_no_helpers died12mo year
@@ -689,7 +728,29 @@ replace persontime_p=months_hosp if months_hosp<persontime_p & months_hosp>0
 ir switch_pre firsthmo persontime_n if hs_pre_study!=1
 ir switch_post firsthmo persontime_p if hs_pre_study!=1
 
+ir switch_post firsthmo persontime_p if hs_pre_study!=1 & race_cat_2==1
+ir switch_post firsthmo persontime_p if hs_pre_study!=1 & race_cat_2==2
 
+H="new table 1"
+*table 1
+tab firsthmo if keep==1
+tab female firsthmo if keep==1, column chi2
+tabstat age if keep==1, by(firsthmo) stats(mean sd)
+tab race_cat_2 firsthmo if keep==1, column chi2
+tab not_hs_educ firsthmo if keep==1, column chi2
+tab income_less_15k_prior firsthmo if keep==1, column chi2
+
+ 
+tab nhres_prior firsthmo if keep==1, column chi2
+tab medicaid_prior firsthmo if keep==1, column chi2
+tab region firsthmo if keep==1, column chi2
+tab year firsthmo if keep==1, column chi2
+tab livealone_prior firsthmo if keep==1, column chi2
+tab dem_2_cat_prior firsthmo if keep==1, column chi2
+tab not_marriedpartnered_prior firsthmo if keep==1, column chi2
+tab sr_phq2_depressed_prior firsthmo if keep==1, column chi2
+tab sr_gad2_anxiety_prior firsthmo if keep==1, column chi2
+tab srh_fp_prior firsthmo if keep==1, column chi2
 
 
 H="***BELOW THIS LINE IS TRASH*****"

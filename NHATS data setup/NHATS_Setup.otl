@@ -1315,7 +1315,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 04/04/2019
+Date Updated: 04/15/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -1443,6 +1443,27 @@ la var sr_cancer_raw "Self report Cancer, Raw"
 la var sr_cancer_ever "Ever Self report Cancer"
 la var sr_cancer_new "Self report Cancer since prev year"
 
+notes sr_ami_raw: disescn1 
+notes sr_ami_raw: Had a heart attack or myocardial infarction (self-report).
+notes sr_stroke_raw: disescn8
+notes sr_stroke_raw: Had a stroke (self-report).
+notes sr_cancer_raw: disescn10
+notes sr_cancer_raw: Had cancer (self-report).
+
+notes sr_ami_ever: sr_ami_raw
+notes sr_ami_ever: If ever had a heart attack or myocardial infarction (self-report).
+notes sr_stroke_ever: sr_stroke_raw
+notes sr_stroke_ever: If ever had a stroke (self-report).
+notes sr_cancer_ever: sr_cancer_raw
+notes sr_cancer_ever: If ever had cancer (self-report). 
+
+notes sr_ami_new: sr_ami_raw
+notes sr_ami_new: If heart attack or myocardial infarction within last year (self-report).
+notes sr_stroke_new: sr_stroke_raw
+notes sr_stroke_new: If stroke within last year (self-report).
+notes sr_cancer_new: sr_cancer_raw
+notes sr_cancer_new: If cancer found within last year (self-report).
+
 //same question pattern, different variable name though, for hip fracture
 gen sr_hip_raw=.
 forvalues w=1/$w{
@@ -1464,6 +1485,19 @@ gen sr_hip_new=sr_hip_raw if inrange(wave,2,$w)
 la var sr_hip_raw "Self report Hip Fracture, Raw"
 la var sr_hip_ever "Ever Self report Hip Fracture (since age 50)"
 la var sr_hip_new "Self report Hip Fracture since prev year"
+
+notes sr_hip_raw: brokebon1
+notes sr_hip_raw: Had broken or fractured hip (self-report).
+notes sr_hip_ever: sr_hip_raw
+notes sr_hip_ever: Had ever broken or fractured hip (self-report).
+notes sr_hip_new: sr_hip_raw
+notes sr_hip_new: Had hip fracture since prev interview (self-report). 
+
+foreach x in sr_ami_raw sr_stroke_raw sr_cancer_raw sr_ami_ever sr_stroke_ever ///
+sr_ami_new sr_stroke_new sr_cancer_new sr_cancer_ever sr_hip_raw sr_hip_ever sr_hip_new{
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/15/19-MH
+}
 
 foreach dis in ami stroke cancer hip{
 tab sr_`dis'_raw wave if ivw_type==1, missing
@@ -1531,6 +1565,65 @@ la var sr_lung_dis_new "Self report Lung Disease since prev year"
 la var sr_dementia_ever "Self report Dementia"
 la var sr_dementia_new "Self report Dementia since prev year"
 
+
+notes sr_heart_dis_raw: disescn2
+notes sr_heart_dis_raw: Had any heart disease including angina or CHF (self-report)
+notes sr_heart_dis_ever: sr_heart_dis_raw
+notes sr_heart_dis_ever: Had heart disease ever (self-report)
+notes sr_heart_dis_new:  sr_heart_dis_raw
+notes sr_heart_dis_new: Had heart disease since prev interview (self-report). 
+
+notes sr_htn_raw: disescn3
+notes sr_htn_raw: Had High blood pressure (self-report)
+notes sr_htn_ever: sr_htn_raw
+notes sr_htn_ever: Had High blood pressure ever (self-report)
+notes sr_htn_new:  sr_htn_raw
+notes sr_htn_new: Had High blood pressure since prev interview (self-report). 
+
+notes sr_ra_raw: disescn4
+notes sr_ra_raw: Had arthritis (including osteo or rheumatoid) (self-report)
+notes sr_ra_ever: sr_ra_raw
+notes sr_ra_ever: Had arthritis ever (self-report)
+notes sr_ra_new:  sr_ra_raw
+notes sr_ra_new: Had arthritis since prev interview (self-report). 
+
+notes sr_osteoprs_raw: disescn5
+notes sr_osteoprs_raw: Had osteoporosis (self-report)
+notes sr_osteoprs_ever: sr_osteoprs_raw
+notes sr_osteoprs_ever: Had osteoporosis ever (self-report)
+notes sr_osteoprs_new:  sr_osteoprs_raw
+notes sr_osteoprs_new: Had osteoporosis since prev interview (self-report). 
+
+notes sr_diabetes_raw: disescn6
+notes sr_diabetes_raw: Had arthritis (including osteo or rheumatoid) (self-report)
+notes sr_diabetes_ever: sr_diabetes_raw
+notes sr_diabetes_ever: Had diabetes ever (self-report)
+notes sr_diabetes_new:  sr_diabetes_raw
+notes sr_diabetes_new: Had diabetes since prev interview (self-report). 
+
+notes sr_lung_dis_raw: disescn7
+notes sr_lung_dis_raw: Had any lung disease, such as emphysema, asthma, or chronic bronchitis (self-report)
+notes sr_lung_dis_ever: sr_lung_dis_raw
+notes sr_lung_dis_ever: Had lung disease ever (self-report)
+notes sr_lung_dis_new:  sr_lung_dis_raw
+notes sr_lung_dis_new: Had lung disease since prev interview (self-report). 
+
+notes sr_dementia_raw: disescn9
+notes sr_dementia_raw: Had dementia or Alzheimer's disease (self-report)
+notes sr_dementia_ever: sr_dementia_raw
+notes sr_dementia_ever: Had dementia ever (self-report)
+notes sr_dementia_new:  sr_dementia_raw
+notes sr_dementia_new: Had dementia since prev interview (self-report). 
+
+foreach x in sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever ///
+sr_htn_new sr_ra_raw sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new ///
+sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_raw sr_lung_dis_ever ///
+sr_lung_dis_new sr_dementia_raw sr_dementia_ever sr_dementia_new{
+
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/15/19-MH
+}	
+
 *************************************************
 //Depression & Anxiety
 //Over the last month how often have you:
@@ -1590,6 +1683,31 @@ la var sr_gad2_anxiety "Anxiety per GAD-2, score=3+"
 tab sr_gad2_score sr_gad2_anxiety if ivw_type==1, missing
 tab sr_gad2_anxiety wave, missing
 
+notes sr_depr_pqq1: deprsan1
+notes sr_depr_pqq1: Last month had little interest/pleasure in doing things.
+notes sr_depr_pqq2: deprsan2
+notes sr_depr_pqq2: Last month felt down/depressed/hopeless. 
+notes sr_anx_gad1: deprsan3
+notes sr_anx_gad1: Last month felt nervous/anxious/on edge. 
+notes sr_anx_gad2: deprsan4
+notes sr_anx_gad2: Last month how often been unable to stop/control worrying. 
+
+notes sr_phq2_score: deprsan1 deprsan2
+notes sr_phq2_score: sr_depr_pqq1 plus sr_depr_pqq2, measuring depression
+notes sr_phq2_depressed: deprsan1 deprsan2
+notes sr_phq2_depressed: sr_phq2_score >=3, depression indicator
+
+notes sr_gad2_score: sr_anx_gad1 sr_anx_gad2
+notes sr_gad2_score: sr_anx_gad1 plus sr_anx_gad2, measuring anxiety
+notes sr_gad2_anxiety: sr_anx_gad1 sr_anx_gad2
+notes sr_gad2_anxiety: sr_gad2_score >=3, anxiety indicator
+
+foreach x sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score ///
+sr_phq2_depressed sr_gad2_score sr_gad2_anxiety{
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/15/19-MH
+}	
+
 *************************************************
 //Dementia, based on NHATS technical paper no. 5, expanded for 3 waves
 //separate variables for proxy vs self interviews
@@ -1642,6 +1760,37 @@ forvalues w=1/$w{
 replace dem_3_cat=1 if dem_3_cat==. & dem_via_proxy==1 //if proxy ivw indicates dem
 replace dem_3_cat=3 if dem_3_cat==. & dem_via_proxy==0 & speaktosp==2  //proxy ind no dem
 tab dem_3_cat wave, missing
+
+
+notes dem_3_cat: sr_dementia_ever dem_via_proxy speaptosp
+notes dem_3_cat: 3 Category dementia 
+
+forvalues i=1/8{
+notes pr_ad8_`i': chgthink`i'
+}
+notes pr_ad8_1: Change caused by memeory problems remembering month or year. (from proxy)
+notes pr_ad8_2: Change caused by memeory problems repeating questions, stories, statements. (from proxy)
+notes pr_ad8_3: Change caused by memeory problems amount of difficulty remembering appointments. (from proxy)
+notes pr_ad8_4: Change caused by memeory problems amount of interest in hobbies/activities. (from proxy)
+notes pr_ad8_5: Change caused by memeory problems handling money matters. (from proxy)
+notes pr_ad8_6: Change caused by memeory problems trouble to use tools/gadgets/tv. (from proxy)
+notes pr_ad8_7: Change caused by memeory problems, problems with judgement. (from proxy)
+notes pr_ad8_8: Change caused by memeory problems, faily problems with thinking or memeory. (from proxy)
+ 
+
+notes pr_pd8_score: chgthink*
+notes pr_pd8_score: adding up pr_ad8_* (from proxy)
+
+notes dem_via_proxy: chgthink* pr_ad8_* pr_ad8_score
+notes dem_via_proxy: Dementia indicator from proxy. 
+
+foreach x dem_3_cat pr_ad8_1 pr_ad8_2 pr_ad8_3 pr_ad8_4 pr_ad8_5 pr_ad8_6 ///
+pr_ad8_7 pr_ad8_8 pr_pd8_score dem_via_proxy{
+
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/15/19-MH
+}	
+
 *************************************************
 //for self interviews
 *************************************************
@@ -3556,7 +3705,7 @@ replace adl_ins_not_done=inlist(dinsdsfdf,1,8)
 *replace adl_ins_dif=1 if adl_ins_help==1
 label var adl_ins_help "Received help getting around inside"
 notes adl_ins_help : insdhlp
-notes adl_ins_help : "Anyone help you get arounbd inside house"
+notes adl_ins_help : Anyone help you get arounbd inside house
 notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
 notes adl_ins_diff: insddif
@@ -3661,7 +3810,7 @@ foreach x in independent impair index {
 note adl_index: adl_*_help
 note adl_index: Number of ADL's needing helped with.
 
-note adl_independnet: adl_index =0 
+note adl_independent: adl_index =0 
 note adl_independent: No ADL help for the individual.
 
 note adl_impair: adl_index >0 
@@ -3670,7 +3819,7 @@ note adl_impair: ADl help for the individual.
 note iadl_index: iadl_*_help
 note iadl_index: Number of IADL's needing helped with.
 
-note iadl_independnet: iadl_index =0 
+note iadl_independent: iadl_index =0 
 note iadl_independent: No IADL help for the individual.
 
 note iadl_impair: iadl_index >0 
@@ -3680,7 +3829,7 @@ label var iadl_independent "Independent in IADLs"
 label var iadl_impair "Help with 1+ IADL"
 label var iadl_index "Index of help w/ IADLs"
 
-foreach x in adl_index adl_independnet adl_impair iadl_index iadl_independnet iadl_impair{
+foreach x in adl_index adl_independent adl_impair iadl_index iadl_independent iadl_impair{
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/10/19-MH
 } 
@@ -3755,6 +3904,7 @@ label var died_`i' "SP died w/in `i' months, per future wave status"
 //look at death month & year. don't have, so set date to last of month
 gen dd=.
 replace pd2yrdied=pd2yrdied+2010 if pd2yrdied>0
+
 gen nhats_death_day=. 
 forvalues w=2/$w {
 	foreach j in mth yr {
@@ -3775,8 +3925,12 @@ foreach x in month year {
 label var nhats_death_`x' "Sensitive: SP death `x', from NHATS"
 }
 
-drop dd
+notes nhats_death_date: pdmthdied nhats_death_day pdwyrdied
+notes nhats_death_date: Death date from sensitive variables. 
+notes nhats_death_date: Located in NHATS Setup, under Part 7.
+notes nhats_death_date: Updated: 04/11/19-MH 
 
+drop dd
 
 gen eligible_nsoc=fl1dnsoc==1
 gen completed_nsoc=fl1dnsoccomp>0 if fl1dnsoccomp!=.
@@ -3784,7 +3938,24 @@ gen total_caregiver_comp=fl1dnsoccomp if fl1dnsoccomp>0 & fl1dnsoccomp!=.
 gen total_caregiver_elig=fl1dnsoccnt if fl1dnsoccnt>0 & fl1dnsoccnt!=.
 label var eligible  "Sensitive: Eligible for NSOC interview, wave 1 tracker"
 label var complete  "Sensitive: Completed Interview"
-label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Intertatus
+label var total_caregiver_comp "Sensitive: Total Caregivers that Completed Interstatus"
+
+notes eligible_nsoc: fl1dnsoc
+notes eligible_nsoc: Eligible for NSOC
+
+notes completed_nsoc: fl1dnsoccomp
+notes completed_nsoc: Had an NSOC interview. 
+
+notes total_caregiver_comp: fl1dnsoccomp
+notes total_caregiver_comp: Count of caregivers NSOC.
+
+notes total_caregiver_elig: fl1dnsoccnt
+notes total_caregiver_elig: Count of helpers eligible NSOC.
+
+foreach x in eligible_nsoc completed_nsoc total_caregiver_comp total_caregiver_elig{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
 
 //adverse consequences of unmet need
 
@@ -3800,28 +3971,14 @@ local ha laun shop meal bank
 local sc eat bath toil dres
 local mo out insd bed
 
-forvalues w=1/7{
-	foreach x in `ha'{
+forvalues w=1/$w{
+	foreach x in `ha' `sc' `mo'{
 		capture gen adverse_`x'=0
 		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
 		
 	}
 }
 	
-forvalues w=1/$w{
-	foreach x in `sc'{
-		capture gen adverse_`x'=0
-		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
-	}
-}
-
-forvalues w=1/$w {
-	foreach x in `mo'{
-		capture gen adverse_`x'=0
-		replace adverse_`x'=1 if `x'wout==1 & wave==`w'
-	}
-}
-
 label var adverse_laun "Ever go w/o clean laundry"
 label var adverse_shop "Ever go w/o groceries/personal items"
 label var adverse_meal "Ever go w/o hot meal"
@@ -3834,6 +3991,37 @@ label var adverse_out "Ever go w/o going outside; stayed inside"
 label var adverse_insd "Ever go w/o moving inside b/c unmet need" 
 label var adverse_bed "Ever go w/o leaving bed"
 
+notes adverse: launwout shopwout mealwout bankwout eatwout bathwout toilwout dreswout
+notes adverse: Ever go without doing a task from the list. 
+notes adverse_laun: launwout
+notes adverse_laun: Ever go without clean laundry, b/c too difficult or no one there to help.
+notes adverse_shop: shopwout
+notes adverse_shop: Ever go without groceries/personal items, b/c too difficult or no one there to help.
+notes adverse_meal: mealwout
+notes adverse_meal: Ever go without hot meal, b/c too difficult or no one there to help.
+notes adverse_bank: bankwout
+notes adverse_bank: Ever go without handling bills and banking matters, b/c too difficult or no one there to help.
+notes adverse_eat: eatwout
+notes adverse_eat: Ever go without eating, b/c too difficult or no one there to help.
+notes adverse_bath: bathwout
+notes adverse_bath: Ever go without showering/taking a bath/washing up, b/c too difficult or no one there to help.
+notes adverse_toil: toilwout
+notes adverse_toil: Ever wet/soil self b/c no help or too difficult to get to toilet by self.
+notes adverse_dres: dreswout
+notes adverse_dres: Ever go without getting dressed, b/c too difficult or no one there to help.
+notes adverse_out: outwout
+notes adverse_out: Ever go without leaving home/building, b/c too difficult or no one there to help.
+notes adverse_insd: insdwout
+notes adverse_insd: Ever go without going into any places in home/building, b/c too difficult or no one there to help.
+notes adverse_bed: bedwout
+notes adverse_bed: Ever go without leaving your bed, b/c too difficult or no one there to help.
+
+foreach x in adverse adverse_laun adverse_shop adverse_meal adverse_bank adverse_eat ///
+adverse_bath adverse_toil adverse_dres adverse_out adverse_insd adverse_bed{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
+
 //limited favorite activity
 capture drop lim_fav
 gen lim_fav=.
@@ -3843,7 +4031,6 @@ forvalues w=1/5 {
 }
 label var lim_fav "Last month ever kept from favorite activity by health/function"
 
-
 capture drop lim_fav_yr
 ////NEW limited favorite activity
 gen lim_fav_yr=.
@@ -3852,6 +4039,18 @@ forvalues w=6/7 {
 }
 
 label var lim_fav_yr "Last year ever kept from favorite activity by health/function"
+
+notes lim_fav: helmfvact
+notes lim_fav: Did health or functioning ever keep you from favorite activity, last month
+
+notes lim_fav_yr: helmfvact
+notes lim_fav_yr: Did health or functioning ever keep you from favorite activity, last year.
+
+ foreach x in lim_fav lim_fav_yr {
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
+
 
 
 //social cohesion
@@ -3876,6 +4075,20 @@ label var cohesion_p "People can be trusted in the community"
 label define cohesion_ 1 "Agree a lot" 2 "Agree a little" 3 "Do not agree"
 label values cohesion_* cohesion_
 label var cohesion "High community cohesion (Highest on all 3 statements)"
+
+notes cohesion_knowwell: knowwell
+notes cohesion_knowwell: People in the community know each other well. Agree a lot, a little, do not agree.
+notes cohesion_willing: willinghlp
+notes cohesion_willing: People in the community are willing to help each other. Agree a lot, a little, do not agree.
+notes cohesion_knowwell: peoptrstd
+notes cohesion_knowwell: People in the community can be trusted. Agree a lot, a little, do not agree.
+notes cohesion: knowwell willinghlp peoptrstd
+notes cohesion: Agree a lot on all to get high community cohesion. 
+
+ foreach x in cohesion_knowwell cohesion_willing cohesion_knowwell cohesion {
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
 
 gen home_disorder_insd=.
 gen home_disorder_outsd=.
@@ -3919,6 +4132,19 @@ replace `x'=`x'==1 if !missing(`x')
 		drop `x'
 }
 
+notes home_disorder_outsd: condhome1 condhome2 condhome3 condhome4 condhome5 condhome6
+notes home_disorder_outsd: If "yes" to any problems, then flagged
+notes home_disorder_area: areacond1 areacond2 areacond3 areacond4
+notes home_disorder_area: If "yes" to any problems, then flagged 
+notes home_disorder_clutter: clutterr1 clutterr2
+notes home_disorder_clutter: If "yes" to any problems, then flagged 
+notes home_disorder_insd: condihom1 condihom2 condihom3 condihom4 condihom5
+notes home_disorder_insd: If "yes" to any problems, then flagged 
+
+ foreach x in home_disorder_outsd home_disorder_area home_disorder_clutter home_disorder_insd {
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
 
 label var home_disorder_insd "Disorder in home (peelng paint, pests, brkn furniture or floorbrds, trippng hazards)"
 label var home_disorder_outsd "Disorder outside (brkn windows, foundation, bricks/siding, roof, steps)"
@@ -3948,7 +4174,7 @@ replace medpaynotcash=medbillsovertime==1 | medcreditdebt==1 if !missing(medbill
 !missing(medcreditdebt)
 
 gen finhlpfam_n=finhlpfam==1 if !missing(finhlpfam)
-gen fingftfam_n= fingftfam==1 if !missing(finhlpfam)
+gen fingftfam_n= fingftfam==1 if !missing(fingftfam)
 replace govtasst=progneed1==1 | progneed2==1 | progneed3==1 if !missing(progneed1) ///
 | !missing(progneed2) | !missing(progneed3)
 
@@ -3959,9 +4185,32 @@ label var creditdebt "Has credit card debt or does not pay off in full monthly"
 label var medpaynotcash "Has medical credit card debt or pays bills over time"
 label var govtasst "Receives foodstamps or other food or gas/energy assistance"
 
+notes creditdebt: pycredbal crecardeb
+notes creditdebt: Have some balance on credit card.
+notes medpaynotcash: credcdmed
+notes medpaynotcash: Any amount owed on credit cards for medical care.
+notes govtasst: progneed1 progneed2 progneed3
+notes govtasst: Recieved food stamps, other food assistance, or gas energy assistance. 
+ foreach x in creditdebt medpaynotcash govtasst{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
+
 drop finhlpfam fingftfam
 rename finhlpfam_n finhlpfam
 rename fingftfam_n fingftfam
+
+notes finhlpfam: finhlpfam
+notes finhlpfam: Last year, you/spouse recieve any financial help or gifts from children/relatives; ///
+either regulary or as needed.
+notes fingftfam: fingftfam
+notes fingftfam: Last year, you/spouse give any financial help or gifts to children/relatives; ///
+either regulary or as needed.
+ foreach x in finhlpfam fingftfam{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
+
 //home ownership
 
 local homevars ownhome rent mortgagepaidoff paysmortgage /*mortpaymt*/ ///
@@ -4034,6 +4283,29 @@ replace section8=sec8pubsn==1 if wave==`w' & (!missing(sec8pubsn) |ownhome==1 | 
 drop homevalue
 rename homevalue_n homevalue
 
+notes ownhome: ownrentot
+notes ownhome: Do you/spouse/partner own home (apartment/condo).
+notes rent: ownrentot
+notes rent: Do you/spouse/partner rent home (apartment/condo).
+notes mortgagepaidoff: mrtpadoff
+notes mortgagepaidoff: Is your/spouse/partner mortage paidoff.
+notes paysmortgage: mrtpadoff
+notes paysmortgage: Are you/spouse/partner still making mortgage payments. 
+notes mortpaymt: mthlymort
+notes mortpaymt: How much monthly mortgage payment
+notes owedonmort: amoutowed amtstlowe
+notes owedonmort: Amount owed on mortgage. 
+notes homevalue: homvalamt
+notes homevalue: What is the present value of the home. Amount if sold today.
+notes rentpaid: rentamt
+notes rentpaid: Rent paid each month.
+notes section8: sec8pubsn
+notes section8: Home in section 8 or public housing or housing for low-income seniors. 
+ foreach x in ownhome rent mortgagepaidoff paysmortgage mortpaymt owedonmort homevalue rentpaid section8{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
+
 label var rentpaid "Amount rent paid"
 label define rentpaid 1 "<$250" 2 "250-499" 3 "500-999" 4 "$1000+"
 label values rentpaid rentpaid
@@ -4069,6 +4341,18 @@ replace midwest=1 if region==2
 replace south=1 if region==3
 replace west=1 if region==4
 
+notes division: dcensdiv
+notes division: Census division
+notes n_social_network: dnumsn
+notes n_social_network: Number in social network
+foreach x in northeast midwest south west{
+notes `x': dcensdiv
+notes `x': `x' census division
+}
+foreach x in division n_social_network northeast midwest south west {
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/11/19-MH
+}
 /*and now drop all raw variables
 forvalues i=1/7 {
 	drop r`i'* ip`i'* is`i'* re`i'* hc`i'* ht`i'* hh`i'* ss`i'* fl`i'* ///
@@ -4287,9 +4571,79 @@ foreach x in hours paid kids {
 
 restore
 
+
+
 merge 1:1 spid wave using `kids', keep(match master) gen(kidm)
 merge 1:1 spid wave using `hours', keep(match master) gen(hrm)
 merge 1:1 spid wave using `paid', keep(match master) gen(paidm)
+
+
+notes n_children: dnumchild
+notes n_children: Number of children
+notes stairs_ind: entrstair
+notes stairs_ind: Entrance you use most often, are their stairs. 
+notes livesalone_ind: dhshldnum
+notes livesalone_ind: total number in household. 
+notes ind_kids: dnumchild n_children
+notes ind_kids: Indicator have children
+foreach x in eat toil insd bed dres bath {
+notes `x'_jenny: `x'slf (3,4) `x'dif (3,4) `x'wout (1)
+notes `x'_jenny: ADL if did not do or rarely do, needed help, go without doing. 
+notes `x'_jenny: Located in NHATS Setup, under Part 7.
+notes `x'_jenny: Updated: 04/11/19-MH
+}
+notes adlcount: eat_jenny toil_jenny insd_jenny bed_jenny dres_jenny bath_jenny
+notes adlcount: count of Jenny's ADL measures
+foreach x in laun meds shop meal bank {
+notes `x'_jenny: `x'reas (1,3) `x'dif (3,4) `x'wout (1)
+notes `x'_jenny: ADL if did not do or rarely do, needed help, go without doing. 
+notes `x'_jenny: Located in NHATS Setup, under Part 7.
+notes `x'_jenny: Updated: 04/11/19-MH
+}
+notes iadlcount: laun_jenny meds_jenny shop_jenny meal_jenny bank_jenny
+notes iadlcount: count of Jenny's IADL measures
+notes device_mobility: insdwalk outwalk insdwl outwl insdsct outsct
+notes device_mobility: If annswered most or everytime to having mobility device for ///
+question indicated. 
+notes any_paid_by_medicare: paid_by_gov_cat_2 from progmpaid 
+notes any_paid_by_medicare: Medicare program paid for helper. 
+notes any_paid_by_sp: paid_by_sp from sppayshlp
+notes any_paid_by_sp: SP pays for help
+notes any_paid_by_gov: paid_by_gov from govpayshlp
+notes any_paid_by_gov: Government pays for help.
+notes any_paid_by_ins: paid_by_ins from inspayshlp
+notes any_paid_by_ins: Insurance pays for help.
+notes any_paid_by_oth: paid_by_oth from othpayshlp
+notes any_paid_by_oth: Other pays for help.
+notes any_paid_by_unk: paid_by_sp paid_by_oth paid_by_gov paid_by_ins ///
+paid_by_sp paid_by_oth paid_by_gov paid_by_ins
+notes any_paid_by_unk: Unknown who pays for help. 
+notes otherfamily_help_ind: relat
+notes otherfamily_help_ind: Other family helpers
+notes spouse_help_ind: relat
+notes spouse_help_ind: Spouse as helper.
+notes daughter_help_ind: relat
+notes daughter_help_ind: Daughter as helper
+notes son_help_ind: relat
+notes son_help_ind: Son as helper
+notes daughter_help_ind: relat
+notes daughter_help_ind: Daughter as helper
+notes paid_help_ind: relat
+notes paid_help_ind: Has paid helper
+notes otherinformal: relat
+notes otherinformal: Has other family helpers. 
+notes tot_otherfamilyhrs: hrswk
+notes tot_otherfamilyhrs: Other family hours. 
+notes tot_otherinformalhrs: hrswk
+notes tot_otherinformalhrs: From other unpaid sources. 
+
+foreach x in n_children stairs_ind livesalone_ind ind_kids adlcount iadlcount ///
+device_mobility any_paid_by_medicare any_paid_by_sp any_paid_by_gov any_paid_by_ins ///
+any_paid_by_oth any_paid_by_unk otherfamily_help_ind spouse_help_ind daughter_help_ind ///
+son_help_ind daughter_help_ind paid_help_ind otherinformal tot_otherfamilyhrs tot_otherinformalhrs { 
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/12/19-MH
+}
 
 label var aveincome "Income"
 label var residence "Type of residence"
@@ -4339,6 +4693,35 @@ rename adlcount adlcount_jenny
 label var adlcount_j "ADL count: some/lot of difficulty or adverse consequence of unmet need"
 rename iadlcount iadlcount_jenny 
 label var iadlcount_j "IADL count: some/lot of difficulty or adverse consequence of unmet need"
+
+notes adl_bed_diff: mo*beddif
+notes adl_bed_diff: How much difficulty getting out of bed. Any difficulty flagged. 
+notes adl_ins_diff: mo*insddif
+notes adl_ins_diff: How much difficulty getting around house. Any difficulty flagged. 
+notes adl_eat_diff: eatslfdif
+notes adl_eat_diff: How much difficulty eating by yourself. Any difficulty flagged. 
+notes adl_bath_diff: sc*bathdif
+notes adl_bath_diff: How much difficulty have bathing/showering. Any difficulty flagged. 
+notes adl_toil_diff: sc*toildif
+notes adl_toil_diff: How much difficulty using the toilet. Any difficulty flagged. 
+notes adl_dres_diff: sc*dresdif
+notes adl_dres_diff: How much difficulty getting dressed. Any difficulty flagged. 
+notes iadl_laun_diff: ha*laundif
+notes iadl_laun_diff: How much difficulty doing laundry. Any difficulty flagged. 
+notes iadl_shop_diff: ha*shopdif
+notes iadl_shop_diff: How much difficulty doing shop. Any difficulty flagged. 
+notes iadl_meal_diff: ha*dmealdif
+notes iadl_meal_diff: How much difficulty shopping for groceries or personal items. Any difficulty flagged. 
+notes iadl_bank_diff: ha*bankdif
+notes iadl_bank_diff: How much difficulty doing banking and handling bills. Any difficulty flagged.
+notes iadl_meds_diff: mc*medsdif
+notes iadl_meds_diff: How much difficulty keeping track of meds. Any difficulty flagged.
+
+foreach x in adl_bed_diff adl_ins_diff adl_eat_diff adl_bath_diff adl_toil_diff adl_dres_diff ///
+iadl_laun_diff iadl_shop_diff iadl_meal_diff iadl_bank_diff iadl_meds_diff{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 04/12/19-MH
+}
 
 // 11/8/18 Making National Estimates using 2011 population (using original weights) Rds 1-4
 rename anfinwgt old_anfinwgt
@@ -4548,6 +4931,15 @@ log close
 
 translate "${logs}/`name'.smcl" "${logs}/`name'.pdf"
 exit
+
+
+foreach var of varlist spid-nhats_died_24{
+notes `var'
+}
+
+
+
+
 
 
 H="Codebook for SP dataset"
@@ -6035,6 +6427,10 @@ H="Changelog"
 
 
 Updates:
+
+04/15/2019 MH
+----------
+Adding in notes to NHATS setup part 4 & 7. 
 
 04/06/2019 MH
 ----------
