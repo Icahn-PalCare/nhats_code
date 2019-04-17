@@ -1702,7 +1702,7 @@ notes sr_gad2_score: sr_anx_gad1 plus sr_anx_gad2, measuring anxiety
 notes sr_gad2_anxiety: sr_anx_gad1 sr_anx_gad2
 notes sr_gad2_anxiety: sr_gad2_score >=3, anxiety indicator
 
-foreach x sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score ///
+foreach x in sr_depr_pqq1 sr_depr_pqq2 sr_anx_gad1 sr_anx_gad2 sr_phq2_score ///
 sr_phq2_depressed sr_gad2_score sr_gad2_anxiety{
 notes `x': Located in NHATS Setup, under Part 4.
 notes `x': Updated: 04/15/19-MH
@@ -1778,14 +1778,14 @@ notes pr_ad8_7: Change caused by memeory problems, problems with judgement. (fro
 notes pr_ad8_8: Change caused by memeory problems, faily problems with thinking or memeory. (from proxy)
  
 
-notes pr_pd8_score: chgthink*
-notes pr_pd8_score: adding up pr_ad8_* (from proxy)
+notes pr_ad8_score: chgthink*
+notes pr_ad8_score: adding up pr_ad8_* (from proxy)
 
 notes dem_via_proxy: chgthink* pr_ad8_* pr_ad8_score
 notes dem_via_proxy: Dementia indicator from proxy. 
 
-foreach x dem_3_cat pr_ad8_1 pr_ad8_2 pr_ad8_3 pr_ad8_4 pr_ad8_5 pr_ad8_6 ///
-pr_ad8_7 pr_ad8_8 pr_pd8_score dem_via_proxy{
+foreach x in dem_3_cat pr_ad8_1 pr_ad8_2 pr_ad8_3 pr_ad8_4 pr_ad8_5 pr_ad8_6 ///
+pr_ad8_7 pr_ad8_8 pr_ad8_score dem_via_proxy{
 
 notes `x': Located in NHATS Setup, under Part 4.
 notes `x': Updated: 04/15/19-MH
@@ -1807,6 +1807,21 @@ forvalues i = 1/4{
 //count date questions correct
 gen date_sum=date_item1+date_item2+date_item3+date_item4
 tab date_sum wave, missing
+
+local i=1
+foreach x in Month Day Year "Day of Week"{
+notes date_item`i': todaydat`i'
+notes date_item`i': Did SP say correct `x'
+notes date_item`i': Located in NHATS Setup, under Part 4.
+notes date_item`i': Updated: 04/16/19-MH
+local i=`i'+1
+}
+
+notes date_sum: todaydat1 todaydat2 todaydat3 todaydat4
+notes date_sum: Count of date_item1-date_item4
+notes date_sum: Located in NHATS Setup, under Part 4.
+notes date_sum: Updated: 04/16/19-MH
+
 
 //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
 forvalues w=1/$w{
@@ -1841,6 +1856,8 @@ president vpfirst vpname3
 //count president questions correct
 gen presvp=preslast+presfirst+vplast+vpfirst
 tab presvp wave, missing
+
+
 
 //add categories for proxy says can't speak to sp or proxy says can speak but sp unble to answer
 forvalues w=1/$w{
@@ -1931,6 +1948,10 @@ la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
 la val memory mem
 tab memory wave, missing
 
+notes memory: ratememry memrygood
+notes memory: Rate your memory.
+notes memory: Located in NHATS Setup, under Part 4.
+notes memory: Updated: 04/17/19-MH
 *************************************************
 //total number self reported medical conditions, ever
 //note that depression and anxeity are from the specific interview questions
@@ -1942,7 +1963,9 @@ egen sr_numconditions1=anycount(sr_ami_ever sr_stroke_ever sr_cancer_ever ///
 replace sr_numconditions1=. if ivw_type!=1
 la var 	sr_numconditions1 "Count medical conditions"
 tab sr_numconditions1 wave, missing
-
+notes sr_numconditions1: Counting number of medical conditions. 
+notes sr_numconditions1: Located in NHATS Setup, under Part 4.
+notes sr_numconditions1: Updated: 04/17/19-MH
 
 local ivars srh srh_fp sr_ami_raw sr_ami_ever sr_ami_new sr_stroke_raw sr_stroke_ever sr_stroke_new sr_cancer_raw sr_cancer_ever sr_cancer_new ///
 sr_hip_raw sr_hip_ever sr_hip_new sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever sr_htn_new sr_ra_raw ///
@@ -2016,6 +2039,10 @@ forvalues w=1/$w{
 }
 la var fall_last_month "Fall down in last month"
 tab fall_last_month wave, missing
+notes fall_last_month: fllsinmth
+notes fall_last_month: Fallen down in last month.
+notes fall_last_month: Located in NHATS Setup, under Part 5.
+notes fall_last_month: Updated: 04/17/19-MH
 
 *********************************************
 //self care help, using the derived variables in the SC section
@@ -2049,6 +2076,21 @@ selfcare eat
 selfcare bath
 selfcare toil
 selfcare dres
+
+notes adl_eat_not_done: eatslfoft
+
+foreach x in bath toil dres{
+notes adl_`x'_not_done: `x'oft
+}
+foreach x in eat bath toil {
+notes adl_`x'_not_done: How often `x' by self and without help.
+}
+notes adl_dres_not_done: How often you dress.  
+
+foreach x in eat bath toil dres{
+notes adl_`x'_not_done: Located in NHATS Setup, under Part 5.
+notes adl_`x'_not_done: Updated: 04/17/19-MH
+}
 
 la var adl_eat_help "Has help while eating"
 la var adl_bath_help "Has help while bathing"
@@ -2094,7 +2136,18 @@ la var iadl_laun_help "Rec'd help doing laundry last month"
 la var iadl_shop_help "Rec'd help shopping last month"
 la var iadl_meal_help "Rec'd help preparing meals last month"
 la var iadl_bank_help "Rec'd help with banking last month"
- 
+
+foreach x in laun shop meal bank{ 
+notes iadl_`x'_help: d`x'sfdf d`x'reas
+notes iadl_`x'_help: `x' difficulty level and if `x' done by others
+notes iadl_`x'_help: Located in NHATS Setup, under Part 5.
+notes iadl_`x'_help: Updated: 04/17/19-MH
+notes iadl_`x'_not_done: ha*`x'
+notes iadl_`x'_not_done: How `x' made/completed.
+notes iadl_`x'_not_done: Located in NHATS Setup, under Part 5.
+notes iadl_`x'_not_done: Updated: 04/17/19-MH
+}
+
 //taking medications, questions slightly different and in mc section
 //set to =0 if do not take medications
 tab dmedssfdf dmedsreas if wave==1, missing
@@ -2113,7 +2166,7 @@ forvalues w=1/$w{
 	replace iadl_meds_help=-8 if dmedssfdf == 7 & wave==`w' 
 	replace iadl_meds_help=-8 if inlist(dmedssfdf,1,8) & ///
 		inlist(dmedsreas,-7,-8) & wave==`w'
-	replace iadl_meds_dif=medsdif>1 if medsdif>0 & wave==`w'
+	replace iadl_meds_diff=medsdif>1 if medsdif>0 & wave==`w'
 	replace iadl_meds_not_done=inlist(dmedssfdf,1,8) if wave==`w'
 }	
 
@@ -2121,6 +2174,21 @@ la var iadl_meds_help "Rec'd help taking medications last month"
 tab iadl_meds_help wave, missing
 tab iadl_meds_help wave if ivw_type==1, missing
 replace iadl_meds_diff=1 if iadl_meds_help==1
+
+notes iadl_meds_help: dmedssfdf dmedsreas
+notes iadl_meds_help: Difficulty level of medications, medicine reason with others. 
+
+notes iadl_meds_diff: medsdif
+notes iadl_meds_diff: Difficulty in keeping track of medicines.
+   
+notes iadl_meds_not_done: dmedssfdf
+notes iadl_meds_not_done: Difficulty level of medications
+
+foreach x in help diff not_done{
+notes iadl_meds_`x': Located in NHATS Setup, under Part 5.
+notes iadl_meds_`x': Updated: 04/17/19-MH
+}
+
 //other meds questions, for treatment burden
 gen ind_meds_diff=.
 gen ind_meds_mistake=.
@@ -2148,6 +2216,9 @@ la var reg_doc_have "Have regular doctor"
 tab reg_doc_have wave, missing
 tab reg_doc_have wave if ivw_type==1, missing
 
+notes reg_doc_have: haveregdoc
+notes reg_doc_have: Do you have a go to doctor, who you go to for advice.
+
 gen reg_doc_seen = .
 forvalues w=1/$w{
 	replace reg_doc_seen=1 if regdoclyr==1 & wave==`w'
@@ -2158,6 +2229,9 @@ forvalues w=1/$w{
 la var reg_doc_seen "Seen regular doctor within last year"
 tab reg_doc_seen wave, missing
 tab reg_doc_seen wave if ivw_type==1, missing
+
+notes reg_doc_seen: regdoclyr
+notes reg_doc_seen: Have you seen your regular doctor within the last year. 
 
 //home visit, missing if did not see regular doctor within the last year
 tab regdoclyr hwgtregd8 if wave==1, missing
@@ -2174,6 +2248,14 @@ la var reg_doc_homevisit "Was regular doctor visit a home visit?"
 tab reg_doc_homevisit wave, missing
 tab reg_doc_homevisit wave if ivw_type==1, missing
 
+notes reg_doc_homevisit: hwgtregd8
+notes reg_doc_homevisit: Was doctor visit a home visit. 
+
+foreach x in reg_doc_have reg_doc_seen reg_doc_homevisit{
+notes `x': Located in NHATS Setup, under Part 5.
+notes `x': Updated: 04/17/19-MH
+}
+
 //hospital stay last 12 months?
 tab hosptstay, missing
 
@@ -2188,6 +2270,9 @@ la var sr_hosp_ind "Hospital stay in the last year 1=yes"
 tab sr_hosp_ind wave, missing
 tab sr_hosp_ind wave if ivw_type==1, missing
 
+notes sr_hosp_ind: hosptstay
+notes sr_hosp_ind: Had an overnight hospital stay since last interview/year.
+
 //number of separate hospital stays?
 tab hosovrnht hosptstay, missing //if ind=no above, raw variable is n/a
 gen sr_hosp_stays=.
@@ -2198,6 +2283,14 @@ replace sr_hosp_stays=0 if sr_hosp_ind==0 //set to 0 if none reported in y/n ? a
 la var sr_hosp_stays "Number unique hospital stays last year"
 tab sr_hosp_stays wave, missing
 tab sr_hosp_stays wave if ivw_type==1, missing
+
+notes sr_hosp_stays: hosovrnht hosptstay
+notes  sr_hosp_stays: How many seperate overnight hospital stays. 
+
+foreach x in sr_hosp_ind sr_hosp_stay{
+notes `x': Located in NHATS Setup, under Part 5.
+notes `x': Updated: 04/17/19-MH
+} 
 
 save round_1_${w}_cleanv3.dta, replace
 
@@ -2551,9 +2644,10 @@ merge 1:1 spid wave using `metro', keep(match master) nogen
 gen qoc_lml_e=.
 replace qoc_lml_e=1 if ratecare==1
 replace qoc_lml_e=0 if inrange(ratecare,2,5)
+note qoc_lml_e: ratecare (1=1)
 note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+) 
 note qoc_lml_e: Located in NHATS Setup, under Part 7.
-note qoc_lml_e: Created: 3/21/19-MH  
+note qoc_lml_e: Updated: 4/16/19-MH Created: 3/21/19-MH  
 /*
 gen qoc_lml=ratecare
 replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
@@ -2564,17 +2658,20 @@ gen unmet_`x'_lml=.
 replace unmet_`x'_lml=0 if inrange(`x', 1, 2)
 replace unmet_`x'_lml=1 if (`x'==1 & `x'hlp==2) | (`x'==1 & `x'hlp==1 & `x'hlpam==1)  
 }
+note unmet_pain_lml: pain painhlp painhlpam
 note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, LM1B (Waves 2+) 
 note unmet_pain_lml: Located in NHATS Setup, under Part 7.
-note unmet_pain_lml: Created: 3/21/19-MH  
+note unmet_pain_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
+note unmet_bre_lml: bre brehlp brehlpam
 note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming from LM2, LM2A, LM2B (Waves 2+) 
 note unmet_bre_lml: Located in NHATS Setup, under Part 7.
-note unmet_bre_lml: Created: 3/21/19-MH  
+note unmet_bre_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
+note unmet_sad_lml: sad sadhlp sadhlpam
 note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from LM3, LM3A, LM3B (Waves 2+) 
 note unmet_sad_lml: Located in NHATS Setup, under Part 7.
-note unmet_sad_lml: Created: 3/21/19-MH  
+note unmet_sad_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
 foreach x in respect informed{
 gen `x'_lml=.
@@ -2582,13 +2679,15 @@ replace `x'_lml=0 if inrange(`x', 1, 4)
 replace `x'_lml=1 if inrange(`x', 2,4)
 }
 
+note respect_lml: respect
 note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
 note respect_lml: Located in NHATS Setup, under Part 7.
-note respect_lml: Created: 3/21/19-MH  
+note respect_lml: Updated: 4/16/19-MH Created: 3/21/19-MH    
 
+note informed_lml: informed
 note informed_lml: Family not always informed for individuals condition. Coming from LM8 (Waves 2+) 
 note informed_lml: Located in NHATS Setup, under Part 7.
-note informed_lml: Created: 3/21/19-MH  
+note informed_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
 foreach x in caredecis carenowan{
 gen `x'_lml=. 
@@ -2596,13 +2695,15 @@ replace `x'_lml=0 if inlist(`x', 1, 2)
 replace `x'_lml=1 if `x'==1
 }
 
+note caredecis_lml: caredecis
 note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Waves 2+) 
 note caredecis_lml: Located in NHATS Setup, under Part 7.
-note caredecis_lml: Created: 3/21/19-MH  
+note caredecis_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
+note carenowan_lml: carenowan
 note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from LM5 (Waves 2+) 
 note carenowan_lml: Located in NHATS Setup, under Part 7.
-note carenowan_lml: Created: 3/21/19-MH  
+note carenowan_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
 
 
 //1/28/2019-Advance Care Planning based off of Ornstein instructions
@@ -6427,6 +6528,13 @@ H="Changelog"
 
 
 Updates:
+04/17/2019 MH
+----------
+Adding in notes for part 5.
+
+04/16/2019 MH
+----------
+Updating notes. 
 
 04/15/2019 MH
 ----------
