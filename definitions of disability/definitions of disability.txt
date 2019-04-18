@@ -4,2312 +4,263 @@ H="First Heading: Macros"
 /*
 ********************HEADING******************** 
 
-Project Name: Katherine Advance Care Planning Matchy-Matchy
+Project Name: Definitions of disability
 
-Date Started: 01/28/2019
+Date Started: 04/17/2019
 
-Primary Investigator: Katherine Ornstein 
+Primary Investigator: Claire Ankuda
 Funding Source:
 
 Created by: Mohammed 
 
-Primary Analyst: Mohammed 
-Secondary Analyst: Evan
+Primary Analyst: claire
+Secondary Analyst: tbd
 
-Datasets Used: NHATS Round 2, HRS 2012 Data
+Datasets Used: NHATS 2010-2017
 
 Simple Outline:
-Looking to match together ACP questions from both NHATS and HRS data. 
+Comparing LSC and ADLs 
 
 
 */
  
 //STATA
-// Global Macros use $ symbol to be called. 
-//File paths for raw data
 
-global logs E:\nhats\data\projects\ACP\logs\
 
 
 
+H="making dataset"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta" 
+
+
+H="variable cleaning"
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta" 
+
+*VARIABLES FOR DISABILITY
+tab adl_index
+tab adlcount_jenny
+tab freq_go_out, nolab
+
+gen keep=.
+replace keep=1 if wave<7
+
+recode adl_index (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(adl_3cat)
+recode adlcount_jenny (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(jennyadl_3cat)
+recode freq_go_out (1=1 "1_every day")(2=2 "2_most days")(3=3 "3_some days")(4/5=4 "4_rarely never"), gen(freqout)
+
+sort spid wave
+by spid: gen srhosp_oneyear= sr_hosp_ind[_n+1]
+
+recode adl_index(0=0)(1/6=1), gen(anyadl)
+recode freq_go_out (1/2=0)(3/5=1), gen(anylcs)
+
+*making variable keep
+gen keep=.
+replace keep=1 if wave<7
+replace keep=. if adl_index==.
+*3,248
+replace keep=. if freq_go_out==.
+*31
+replace keep=. if nhats_died_12==.
+*1,753
+
+
+*COVARIATES
+recode n_social_network (0=0 "0_none") (1=1 "1_one")(2/5=2 "2_ 2+ people"), gen(networkcat)
+
+
+H="analysis"
+*ANALYSIS
+svyset varunit [pweight=anfinwgt], strata(varstrat)
+
+*table 1
+tab keep
+svy, subpop(keep): tab female
+svy, subpop(keep): mean age
+svy, subpop(keep): tab race_cat
+svy, subpop(keep): tab proxy_ivw
+svy, subpop(keep): tab livealone
+svy, subpop(keep): tab networkcat
+svy, subpop(keep): tab nopaymed
+svy, subpop(keep): tab nopayutil
+svy, subpop(keep): tab medicaid
+svy, subpop(keep): tab sr_heart_dis_ever
+svy, subpop(keep): tab sr_htn_ever
+svy, subpop(keep): tab sr_stroke_ever 
+svy, subpop(keep): tab sr_cancer_ever 
+svy, subpop(keep): tab sr_osteoprs_ever 
+svy, subpop(keep): tab sr_diabetes_ever 
+svy, subpop(keep): tab sr_lung_dis_ever 
+svy, subpop(keep): tab dem_2_cat
+svy, subpop(keep): tab sr_phq2_depressed 
+svy, subpop(keep): tab sr_gad2_anxiety
+svy, subpop(keep): mean sr_numconditions1
+svy, subpop(keep): tab srh_fp
+svy, subpop(keep): tab fall_last_month
+svy, subpop(keep): tab ind_pain
+
+*figure
+*NEW FIGURE 2
+
+tab freqout adl_3cat if keep==1
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==2
 
-H="NHATS ACP"
-/*
+svy, subpop(keep): tab nhats_died_12 freqout, column
+svy, subpop(keep): tab nhats_died_12 adl_3cat, column
 
-Created by: Mohammed 
-Date Created: 01/25/2019
+*hospitalization
+svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==0
+svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==1
+svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==2
 
-Updated by: MH
-Date Updated: 02/15/2019
+svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==0
+svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==1
+svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==2
 
-Description: Inital exploration, data cleaning, table creation.
+svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==0
+svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==1
+svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==2
 
+svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==0
+svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==1
+svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==2
 
+svy, subpop(keep): tab srhosp_oneyear freqout, column
+svy, subpop(keep): tab srhosp_oneyear adl_3cat, column
 
-**************************************************
-*/
+*table 3
+*died*
+logistic nhats_died_12 female age if keep==1
+lroc, nograph
+predict c1, xb
 
-local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_ACP_`date'
-di "`name'"
+qui logistic nhats_died_12 female age adl_index if keep==1
+lroc, nograph
+predict c2, xb
+roccomp nhats_died_12 c1 c2, graph summary
 
-capture log close 
-clear all
+qui logistic nhats_died_12 female age freqout if keep==1
+lroc, nograph
+predict c3, xb
+roccomp nhats_died_12 c2 c3, graph summary
 
-set more off
-version 12
-set linesize 80
-set maxvar 10000
+qui logistic nhats_died_12 female age freqout adl_index if keep==1
+lroc, nograph
+predict c4, xb
+roccomp nhats_died_12 c2 c4, graph summary
 
+*hospitalized*
+logistic srhosp_oneyear female age if keep==1
+lroc, nograph
+predict h1, xb
 
-log using "${logs}/`name'.smcl", text replace
+qui logistic srhosp_oneyear female age adl_index if keep==1
+lroc, nograph
+predict h2, xb
 
+qui logistic srhosp_oneyear female age freqout if keep==1 & nhats_died_12==0
+lroc, nograph
+predict h3, xb
+roccomp srhosp_oneyear c2 c3, graph summary
 
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
+qui logistic sr_hosp_ind female age freqout adl_index if keep==1
+lroc, nograph
+predict c4, xb
+roccomp srhosp_oneyear c2 c4, graph summary
 
-Data format is multiple observations per subject, one for each round
-*/
+*NEW TABLE 4
 
+*****LEFT OFF HERE****
+svy, subpop(keep): tab anyadl
+svy, subpop(keep): tab anylcs
 
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
+svy, subpop(keep): tab anyadl female, row ci
+svy, subpop(keep): tab anylcs female, row ci
 
-gen soc_iso=1 if n_social_network!=.
-replace soc_iso=0 if n_social_network==0
+svy, subpop(keep): tab anyadl agecat2, row ci
+svy, subpop(keep): tab anylcs agecat2, row ci
 
-gen n=1 if acp!=.
+svy, subpop(keep): tab anyadl racehisp, row ci
+svy, subpop(keep): tab anylcs racehisp, row ci
 
-gen male=0
-replace male=1 if female==0
+svy, subpop(keep): tab anyadl proxy, row ci
+svy, subpop(keep): tab anylcs proxy, row ci
 
-foreach x in education income_quart race_cat maritalstat imprelig {
-tab `x', gen(`x')
-}
+svy, subpop(keep): tab anyadl livealone, row ci
+svy, subpop(keep): tab anylcs livealone, row ci
 
-gen live_alone=.
-replace live_alone=0 if inrange(livearrang,2,4)
-replace live_alone=1 if livearrang==1
+svy, subpop(keep): tab anyadl nomoneymed, row ci
+svy, subpop(keep): tab anylcs nomoneymed, row ci
 
-gen live_other=.
-replace live_other=0 if livearrang==1
-replace live_other=1 if inrange(livearrang,2,4)
+svy, subpop(keep): tab anyadl nomoneyutils, row ci
+svy, subpop(keep): tab anylcs nomoneyutils, row ci
 
-foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
-gen `x'0=0 if `x'==1
-replace `x'0=1 if `x'==0
-}
+svy, subpop(keep): tab anyadl medicaid, row ci
+svy, subpop(keep): tab anylcs medicaid, row ci
 
-label var male "Male"
-label var ownhome0 "No Own Home"
-label var srh_fp0 "Self reported health==Good+"
-label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
-label var sr_dementia_ever0 "No Self report Dementia"
-label var sr_phq2_depressed0 "Not Depressed"
-label var sr_gad2_anxiety0 "No Anxiety"
-label var soc_iso0 "No one in social network"
-label var soc_iso ">=1 in social network"
-label var live_alone "Lives Alone"
-label var live_other "Lives w/Others"
+svy, subpop(keep): tab anyadl heartattack, row ci
+svy, subpop(keep): tab anylcs heartattack, row ci
 
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
+svy, subpop(keep): tab anyadl heartdis, row ci
+svy, subpop(keep): tab anylcs heartdis, row ci
 
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
+svy, subpop(keep): tab anyadl htn, row ci
+svy, subpop(keep): tab anylcs htn, row ci
 
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
+svy, subpop(keep): tab anyadl arthritis, row ci
+svy, subpop(keep): tab anylcs arthritis, row ci
 
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
+svy, subpop(keep): tab anyadl osteoporosis, row ci
+svy, subpop(keep): tab anylcs osteoporosis, row ci
 
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
+svy, subpop(keep): tab anyadl diabetes, row ci
+svy, subpop(keep): tab anylcs diabetes, row ci
 
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
+svy, subpop(keep): tab anyadl lungdis, row ci
+svy, subpop(keep): tab anylcs lungdis, row ci
 
-// table
+svy, subpop(keep): tab anyadl stroke, row ci
+svy, subpop(keep): tab anylcs stroke, row ci
 
-putexcel set "E:\nhats\data\Projects\ACP\logs\NHATS.xls", replace
-tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
-local lab1 " "
-local lab2 Full Sample
-local lab3 ACP (a)
-local lab4 Discussions Only (b)
-local lab5 No ACP (c)
-local lab6 Formal Only (d)
-local lab7 Significant Subgroup Differences
+svy, subpop(keep): tab anyadl dementia, row ci
+svy, subpop(keep): tab anylcs dementia, row ci
 
+svy, subpop(keep): tab anyadl cancer, row ci
+svy, subpop(keep): tab anylcs cancer, row ci
 
-local demo1 age 
+svy, subpop(keep): tab anyadl depressed, row ci
+svy, subpop(keep): tab anylcs depressed, row ci
 
-local demo2 male female education1 education2 education3 education4 income_quart1 ///
-income_quart2 income_quart3 income_quart4 race_cat1 race_cat2 race_cat3 race_cat4 ///
-ownhome0 ownhome
+svy, subpop(keep): tab anyadl fphealth, row ci
+svy, subpop(keep): tab anylcs fphealth, row ci
 
-local sn maritalstat1 maritalstat2 maritalstat3 maritalstat4 maritalstat5 maritalstat6 ///
-live_alone live_other
+svy, subpop(keep): tab anyadl fallmnth, row ci
+svy, subpop(keep): tab anylcs fallmnth, row ci
 
-local sn1 n_children 
+svy, subpop(keep): tab anyadl painbothr, row ci
+svy, subpop(keep): tab anylcs painbothr, row ci
 
-local health soc_iso0 soc_iso srh_fp0 srh_fp sr_hosp_ind0 sr_hosp_ind sr_dementia_ever0 ///
-sr_dementia_ever sr_phq2_depressed0 sr_phq2_depressed 
+svy, subpop(keep): tab anyadl socalone, row ci
+svy, subpop(keep): tab anylcs socalone, row ci
 
-local psy imprelig1 imprelig2 imprelig3 sr_gad2_anxiety0 sr_gad2_anxiety 
-
-local rn: word count 1 1 `demo1' `demo2' `sn' `sn1' `health' `psy'
-
-forvalues i=1/7{
-putexcel ``i''3=("`lab`i''")
-}
-
-mat tab=J(`rn',5,.)
-//mat stars=J(`rn',15,0)
-local c=1 
-local r=1
-
-foreach q in n acp informal_acp no_acp formal_acp{
-local r=1
-di `r'
-
-foreach x in `demo1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-local t=4
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `demo2' `sn'{
-sum `x' if  `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `sn1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `health' `psy'{
-sum `x' if  `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-sum n
-local z `r(N)'
-sum n if `q'==1 
-mat tab[`r', `c']=`r(N)'
-mat tab[`r'+1, `c']=(`r(N)'/`z')*100
-local c=`c'+1
-
-}
-putexcel (B4)=mat(tab)
-
-local r=4
-foreach x in `demo1' `demo2' `sn' `sn1' `health' `psy'{
-local lab: var label `x'
-putexcel A`r'=("`lab'")
-local r=`r'+1
-}
-putexcel A`r'=("N")
-local r=`r'+1
-putexcel A`r'=("%")
-
-putexcel A1=("Table 1: NHATS Statistics by ACP Classification")
-
-
-
-foreach x in no_acp formal_acp informal_acp acp {
-tab `x' if wave==2 , m
-}
-
-capture log close
-
-
-H="HRS "
-/*
-
-Created by: Mohammed 
-Date Created: 01/31/2019
-
-Updated by: MH
-Date Updated: 03/29/2019
-
-Description: Inital exploration, data cleaning, table creation.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name HRS_ACP_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
-
-Data format is multiple observations per subject, one for each round
-*/
-
-
-clear all
-
-set maxvar 100000
-
-use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
-
-tab nt245,m
-tab nt246,m
-tab nt250,m
-
-
-gen no_acp=0
-replace no_acp=1 if inlist(nt245, 5, 8, 9) & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace no_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen formal_acp=0
-replace formal_acp=1 if inlist(nt245, 5, 8, 9) & (nt246==1 | nt250==1)
-replace formal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen informal_acp=0
-replace informal_acp=1 if nt245==1 & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace informal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen acp=0
-replace acp=1 if nt245==1 & (nt246==1 | nt250==1)
-replace acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-label var no_acp "No Advance care planning, 1=yes"
-label var formal_acp "Formal Advance care planning, 1=yes"
-label var informal_acp "Informal Advance care planning, 1=yes"
-label var acp "Advance care planning (Formal & Informal), 1=yes"
-label define acp  0 "No" 1 "Yes" 
-
-foreach x in no_acp formal_acp informal_acp acp {
-label values `x' acp
-}
-
-
-foreach x in no_acp formal_acp informal_acp acp {
-tab `x', m
-}
-
-tempfile a
-save `a'
-
-
-use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
-
-merge 1:1 hhid pn core_year using "E:\data\hrs_public_2014\rand2014\family\family_r_clean_98_14.dta", nogen keepusing(living_kids_ind) keep(matched)
-
-merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
-
-rename hhid HHID 
-rename pn PN
-merge 1:1 HHID PN using "E:\data\hrs_tracking_2016\TRK2016TR_R.dta", keepusing(NLIVARR) keep(matched) nogen
-
-rename NLIVARR, l
-rename HHID,l
-rename PN,l
-
-format %td birth_date
-
-gen age= c_ivw_date-birth_date
-replace age=floor(age/365.25)
-
-gen male=0 if !missing(female)
-replace male=1 if female==0
-
-gen live_alone=0
-replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
-
-gen live_others=0
-replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
-
-gen cesd_tot_ge3_n=0
-replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
-
-foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
-gen `x'0=0 
-replace `x'0=1 if `x'==0
-}
-
-
-//reverse coding for scales
-//conc
-tab nlb033v
-gen nlb033v_n=nlb033v
-foreach x in nlb033e nlb033i nlb033z_5 nlb033n  {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen consc= rowmean(nlb033e_n nlb033i_n nlb033z_5_n nlb033n_n nlb033v_n) if ///
-!missing(nlb033e_n, nlb033i_n, nlb033z_5_n, nlb033n_n, nlb033v_n)
-
-//neuro
-tab nlb033q
-gen nlb033q_n=nlb033q
-foreach x in nlb033h nlb033d {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d_n, nlb033q_n)
-
-tab degree, gen(degree)
-tab imprelig, gen(imprelig)
-
-//education var
-gen educ1=0
-replace educ1=1 if degree1==1
-gen educ2=0
-replace educ2=1 if degree2==1 | degree3==1
-gen educ3=0
-replace educ3=1 if degree4==1 | degree8==1
-gen educ4=0 
-replace educ4=1 if degree5==1 | degree6==1 | degree7==1
-
-//fixing dementia
-gen dem=.
-replace dem=0 if alz_hrs==0 & dem_hrs==0
-replace dem=1 if alz_hrs==1 | dem_hrs==1
-
-gen dem0=.
-replace dem0=0 if dem==1
-replace dem0=1 if dem==0
-
-/*hispanic other
-gen hispoth=.
-replace hispoth=0 if inlist(race_cat,1,2)
-replace hispoth=1 if inlist(race_cat,3,4)
-*/
-lab var educ1 "<HS"
-lab var educ2 "HS/GED"
-lab var educ3 "Some College, 2yr degree"
-lab var educ4 "College degree, higher"
-lab var dem "SR Dementia (incl. Alz)"
-lab var dem0 "No SR Dementia (incl. Alz.)"
-lab var age "Age"
-lab var male "Male"
-lab var degree1 "None"
-lab var degree2 "GED"
-lab var degree3 "High school"
-lab var degree4 "2 yr college"
-lab var degree5 "4 yr college"
-lab var degree6 "Masters"
-lab var degree7 "Professional"
-lab var degree8 "Unknown, some college"
-lab var h12wohous0 "Does not own home"
-lab var h12wohous "Owns home"
-lab var live_alone "Lives alone"
-lab var live_others "Lives with others"
-lab var soc_visit0 "No social visits with neighbors"
-lab var srh_pf0 "Self Rates Health: Good+"
-lab var hosp_last_2yr0 "No hospitalization"
-lab var dem_hrs0 "No SR Dementia"
-lab var cesd_tot_ge3_n0 "No Depression"
-lab var cesd_tot_ge3_n "Depression"
-lab var consc "Conscientiousness (non-missing q's)"
-lab var neuro "Neuroticism (non-missing q's)"
-lab var imprelig1 "Importance of Religion: very important"
-lab var imprelig2 "Importance of Religion: somewhat important"
-lab var imprelig3 "Importance of Religion: not too "
-lab var dem_hrs "SR Dementia"
-
-//lab var hisp_oth "Hispanic, Other"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-gen n=1 if acp!=.
-notes n: TS only indicated for people with ACP
-
-// table 1 --full sample
-
-putexcel set "E:\nhats\data\Projects\ACP\logs\hrs.xls", replace
-tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
-local lab1 " "
-local lab2 Full Sample
-local lab3 ACP (a)
-local lab4 Discussions Only (b)
-local lab5 No ACP (c)
-local lab6 Formal Only (d)
-local lab7 Significant Subgroup Differences
-
-local demo1 age 
-
-local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
-nw_highest 
-
-local race white black hisp_eth other_na_api_race 
-
-local demo3 h12wohous0 h12wohous
-
-local sn married marital_nev marital_wid marital_div marital_sep ///
-live_alone live_others
-
-local sn1 child 
-
-local sn2 living_kids_ind
-
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
-dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
-
-local psy imprelig1 imprelig2 imprelig3 
-
-local psy1 consc neuro
-
-local rn: word count 1 1 `demo1' `demo2' `race' `demo3' `sn' `sn1' `sn2' `health' `psy' `psy1' 
-
-forvalues i=1/7{
-putexcel ``i''3=("`lab`i''")
-}
-
-mat tab=J(`rn',5,.)
-
-local c=1 
-local r=1
-
-foreach q in n acp informal_acp no_acp formal_acp{
-local r=1
-di `r'
-
-foreach x in `demo1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-local t=4
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `demo2'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `race' {
-sum `x' if `q'==1
-if `r(mean)'*`r(N)'>=11 | `r(mean)'*`r(N)'==0{
-mat tab[`r',`c']=`r(mean)'*100
-}
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-
-}
-foreach x in `demo3' `sn'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `sn1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `sn2'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `health' `psy'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `psy1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-sum n
-local z `r(N)'
-sum n if `q'==1 
-mat tab[`r', `c']=`r(N)'
-mat tab[`r'+1, `c']=(`r(N)'/`z')*100
-local c=`c'+1
-
-}
-putexcel (B4)=mat(tab)
-
-local r=4
-foreach x in `demo1' `demo2' `race' `demo3' `sn' `sn1' `sn2' `health' `psy' `psy1'{
-local lab: var label `x'
-putexcel A`r'=("`lab'")
-local r=`r'+1
-}
-putexcel A`r'=("N")
-local r=`r'+1
-putexcel A`r'=("%")
-
-putexcel A1=("Table 1: HRS Statistics by ACP Classification Full")
-
-
-// table 2-- only individuals who had leave behind survey
-gen lb=1 if !missing(neuro, consc)
-preserve
-
-keep if lb==1
-
-putexcel set "E:\nhats\data\Projects\ACP\logs\hrs_lb.xls", replace
-tokenize A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE
-local lab1 " "
-local lab2 Full Sample
-local lab3 ACP (a)
-local lab4 Discussions Only (b)
-local lab5 No ACP (c)
-local lab6 Formal Only (d)
-local lab7 Significant Subgroup Differences
-
-local demo1 age 
-
-local demo2 male female educ1 educ2 educ3 educ4 nw_lowest nw_midlow nw_midhigh ///
-nw_highest 
-
-local race white black hisp_eth other_na_api_race 
-
-local demo3 h12wohous0 h12wohous
-
-local sn married marital_nev marital_wid marital_div marital_sep ///
-live_alone live_others
-
-local sn1 child 
-
-local sn2 living_kids_ind
-
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
-dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
-
-local psy imprelig1 imprelig2 imprelig3 
-
-local psy1 consc neuro
-
-
-local rn: word count 1 1 `demo1' `demo2' `race' `demo3' `sn' `sn1' `sn2' `health' `psy' `psy1'
-
-forvalues i=1/7{
-putexcel ``i''3=("`lab`i''")
-}
-
-mat tab=J(`rn',5,.)
-
-local c=1 
-local r=1
-
-foreach q in n acp informal_acp no_acp formal_acp{
-local r=1
-di `r'
-
-foreach x in `demo1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-local t=4
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `demo2'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `race' {
-sum `x' if `q'==1
-if `r(mean)'*`r(N)'>=11 | `r(mean)'*`r(N)'==0{
-mat tab[`r',`c']=`r(mean)'*100
-}
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-
-}
-foreach x in `demo3' `sn'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `sn1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `sn2'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `health' `psy'{
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)'*100
-
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-foreach x in `psy1' {
-sum `x' if `q'==1
-mat tab[`r',`c']=`r(mean)' 
-
-local `x'sig
-foreach m in ab ac ad bc bd cd{
-anova `x' `m'
-
-if Ftail(e(df_m), e(df_r), e(F))<.05 local `x'sig ``x'sig' `m'
-}	
-putexcel (G`t')=("``x'sig'")
-
-
-local r=`r'+1
-local t=`t'+1
-}
-
-
-sum n
-local z `r(N)'
-sum n if `q'==1 
-mat tab[`r', `c']=`r(N)'
-mat tab[`r'+1, `c']=(`r(N)'/`z')*100
-local c=`c'+1
-}
-putexcel (B4)=mat(tab)
-
-local r=4
-foreach x in `demo1' `demo2' `race' `demo3' `sn' `sn1' `sn2' `health' `psy' `psy1'{
-local lab: var label `x'
-putexcel A`r'=("`lab'")
-local r=`r'+1
-}
-putexcel A`r'=("N")
-local r=`r'+1
-putexcel A`r'=("%")
-
-putexcel A1=("Table 1: HRS Statistics by ACP Classification Leave Behind only")
-
-capture log close
-
-
-H="*****************Regression"
-
-
-H="NHATS MLOGIT Model"
-/*
-
-Created by: Mohammed 
-Date Created: 03/07/2019
-
-Updated by: MH
-Date Updated: 03/18/2019
-
-Description: Multinomial Logit model with base being no ACP
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_ACP_logit_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*
-Using Wave 2 NHATS data b/c that is where ACP questions are asked.
-Using a Multinomail Logisitic Regression with the base being not having
-ACP. 
-
-*/
-
-
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
-
-gen soc_iso=1 if n_social_network!=.
-replace soc_iso=0 if n_social_network==0
-
-gen n=1 if acp!=.
-
-gen male=0
-replace male=1 if female==0
-
-foreach x in education income_quart race_cat maritalstat imprelig {
-tab `x', gen(`x')
-}
-
-gen live_alone=.
-replace live_alone=0 if inrange(livearrang,2,4)
-replace live_alone=1 if livearrang==1
-
-gen live_other=.
-replace live_other=0 if livearrang==1
-replace live_other=1 if inrange(livearrang,2,4)
-
-foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
-gen `x'0=0 if `x'==1
-replace `x'0=1 if `x'==0
-}
-
-label var male "Male"
-label var ownhome0 "No Own Home"
-label var srh_fp0 "Self reported health==Good+"
-label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
-label var sr_dementia_ever0 "No Self report Dementia"
-label var sr_phq2_depressed0 "Not Depressed"
-label var sr_gad2_anxiety0 "No Anxiety"
-label var soc_iso0 "No one in social network"
-label var soc_iso ">=1 in social network"
-label var live_alone "Lives Alone"
-label var live_other "Lives w/Others"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-//MLOGIT Regression
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen non_white=0 
-replace non_white=1 if white==0
-
-gen lninc=ln(aveincome)
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married ind_kids soc_iso0 srh_fp sr_dementia_ever sr_hosp_ind sr_phq2_depressed ///
-sr_gad2_anxiety
-
-mlogit cat `vars', rrr b(0) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & soc_iso0!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_dementia_ever!=.
-local `x'=`r(N)'
-}
-
-
-outreg using "${logs}mlogit_nhats", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal(`1') vs Base(`0')" \ ///
-"2-Formal(`2') vs Base(`0')" \ "3-Two-Pronged(`3') vs Base(`0')") replace 
-
-
-
-
-
-H="HRS MLOGIT Model"
-/*
-
-Created by: Mohammed 
-Date Created: 01/31/2019
-
-Updated by: MH
-Date Updated: 03/29/2019
-
-Description: Inital exploration, data cleaning, table creation.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name HRS_ACP_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
-
-Data format is multiple observations per subject, one for each round
-*/
-
-
-clear all
-
-set maxvar 100000
-
-use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
-
-tab nt245,m
-tab nt246,m
-tab nt250,m
-
-
-gen no_acp=0
-replace no_acp=1 if inlist(nt245, 5, 8, 9) & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace no_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen formal_acp=0
-replace formal_acp=1 if inlist(nt245, 5, 8, 9) & (nt246==1 | nt250==1)
-replace formal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen informal_acp=0
-replace informal_acp=1 if nt245==1 & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace informal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen acp=0
-replace acp=1 if nt245==1 & (nt246==1 | nt250==1)
-replace acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-label var no_acp "No Advance care planning, 1=yes"
-label var formal_acp "Formal Advance care planning, 1=yes"
-label var informal_acp "Informal Advance care planning, 1=yes"
-label var acp "Advance care planning (Formal & Informal), 1=yes"
-label define acp  0 "No" 1 "Yes" 
-
-foreach x in no_acp formal_acp informal_acp acp {
-label values `x' acp
-}
-
-
-foreach x in no_acp formal_acp informal_acp acp {
-tab `x', m
-}
-
-tempfile a
-save `a'
-
-
-use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
-
-merge 1:1 hhid pn core_year using "E:\data\hrs_public_2014\rand2014\family\family_r_clean_98_14.dta", nogen keepusing(living_kids_ind) keep(matched)
-
-merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
-
-rename hhid HHID 
-rename pn PN
-merge 1:1 HHID PN using "E:\data\hrs_tracking_2016\TRK2016TR_R.dta", keepusing(NLIVARR) keep(matched) nogen
-
-rename NLIVARR, l
-rename HHID,l
-rename PN,l
-
-format %td birth_date
-
-gen age= c_ivw_date-birth_date
-replace age=floor(age/365.25)
-
-gen male=0 if !missing(female)
-replace male=1 if female==0
-
-gen live_alone=0
-replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
-
-gen live_others=0
-replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
-
-gen cesd_tot_ge3_n=0
-replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
-
-foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
-gen `x'0=0 
-replace `x'0=1 if `x'==0
-}
-
-
-//reverse coding for scales
-//conc
-tab nlb033v
-gen nlb033v_n=nlb033v
-foreach x in nlb033e nlb033i nlb033z_5 nlb033n  {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen consc= rowmean(nlb033e_n nlb033i_n nlb033z_5_n nlb033n_n nlb033v_n) if ///
-!missing(nlb033e_n, nlb033i_n, nlb033z_5_n, nlb033n_n, nlb033v_n)
-
-//neuro
-tab nlb033q
-gen nlb033q_n=nlb033q
-foreach x in nlb033h nlb033d {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d_n, nlb033q_n)
-
-tab degree, gen(degree)
-tab imprelig, gen(imprelig)
-
-//education var
-gen educ1=0
-replace educ1=1 if degree1==1
-gen educ2=0
-replace educ2=1 if degree2==1 | degree3==1
-gen educ3=0
-replace educ3=1 if degree4==1 | degree8==1
-gen educ4=0 
-replace educ4=1 if degree5==1 | degree6==1 | degree7==1
-
-//fixing dementia
-gen dem=.
-replace dem=0 if alz_hrs==0 & dem_hrs==0
-replace dem=1 if alz_hrs==1 | dem_hrs==1
-
-gen dem0=.
-replace dem0=0 if dem==1
-replace dem0=1 if dem==0
-
-/*hispanic other
-gen hispoth=.
-replace hispoth=0 if inlist(race_cat,1,2)
-replace hispoth=1 if inlist(race_cat,3,4)
-*/
-lab var educ1 "<HS"
-lab var educ2 "HS/GED"
-lab var educ3 "Some College, 2yr degree"
-lab var educ4 "College degree, higher"
-lab var dem "SR Dementia (incl. Alz)"
-lab var dem0 "No SR Dementia (incl. Alz.)"
-lab var age "Age"
-lab var male "Male"
-lab var degree1 "None"
-lab var degree2 "GED"
-lab var degree3 "High school"
-lab var degree4 "2 yr college"
-lab var degree5 "4 yr college"
-lab var degree6 "Masters"
-lab var degree7 "Professional"
-lab var degree8 "Unknown, some college"
-lab var h12wohous0 "Does not own home"
-lab var h12wohous "Owns home"
-lab var live_alone "Lives alone"
-lab var live_others "Lives with others"
-lab var soc_visit0 "No social visits with neighbors"
-lab var srh_pf0 "Self Rates Health: Good+"
-lab var hosp_last_2yr0 "No hospitalization"
-lab var dem_hrs0 "No SR Dementia"
-lab var cesd_tot_ge3_n0 "No Depression"
-lab var cesd_tot_ge3_n "Depression"
-lab var consc "Conscientiousness (non-missing q's)"
-lab var neuro "Neuroticism (non-missing q's)"
-lab var imprelig1 "Importance of Religion: very important"
-lab var imprelig2 "Importance of Religion: somewhat important"
-lab var imprelig3 "Importance of Religion: not too "
-lab var dem_hrs "SR Dementia"
-
-//lab var hisp_oth "Hispanic, Other"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-gen n=1 if acp!=.
-notes n: TS only indicated for people with ACP
-
-
-gen lb=1 if !missing(neuro, consc)
-
-
-keep if lb==1
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen lnassets=ln(h12atota)
-
-gen non_white=.
-replace non_white=0 if white==1
-replace non_white=1 if white==0
-
-local vars age female educ4 lnassets non_white h12wohous live_alone living_kids_ind married soc_visit0 ///
-srh_pf dem hosp_last_2yr cesd_tot_ge3_n consc neuro
-
-
-mlogit cat `vars', b(0) rr
-
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & dem!=. & hosp_last_2yr!=. & living_kids_ind!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_hrs", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("HRS Multinomial Logistic Model") note("Base is No ACP received" \ "1-Informal (`1') vs Base (`0')" \ ///
-"2-Formal (`2') vs Base (`0')" \ "3-Two-Pronged (`3') vs Base (`0')" ) replace 
-
-
-
-
-H="NHATS MLOGIT Model (Both ACP BASE)"
-/*
-
-Created by: Mohammed 
-Date Created: 03/07/2019
-
-Updated by: MH
-Date Updated: 03/22/2019
-
-Description: Multinomial Logit model with base being Both ACP
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_ACP_logit_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*
-Using Wave 2 NHATS data b/c that is where ACP questions are asked.
-Using a Multinomail Logisitic Regression with the base being not having
-ACP. 
-
-*/
-
-
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
-
-gen soc_iso=1 if n_social_network!=.
-replace soc_iso=0 if n_social_network==0
-
-gen n=1 if acp!=.
-
-gen male=0
-replace male=1 if female==0
-
-foreach x in education income_quart race_cat maritalstat imprelig {
-tab `x', gen(`x')
-}
-
-gen live_alone=.
-replace live_alone=0 if inrange(livearrang,2,4)
-replace live_alone=1 if livearrang==1
-
-gen live_other=.
-replace live_other=0 if livearrang==1
-replace live_other=1 if inrange(livearrang,2,4)
-
-foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
-gen `x'0=0 if `x'==1
-replace `x'0=1 if `x'==0
-}
-
-label var male "Male"
-label var ownhome0 "No Own Home"
-label var srh_fp0 "Self reported health==Good+"
-label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
-label var sr_dementia_ever0 "No Self report Dementia"
-label var sr_phq2_depressed0 "Not Depressed"
-label var sr_gad2_anxiety0 "No Anxiety"
-label var soc_iso0 "No one in social network"
-label var soc_iso ">=1 in social network"
-label var live_alone "Lives Alone"
-label var live_other "Lives w/Others"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-//MLOGIT Regression
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen non_white=0 
-replace non_white=1 if white==0
-
-gen lninc=ln(aveincome)
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married ind_kids soc_iso0 srh_fp sr_dementia_ever sr_hosp_ind sr_phq2_depressed ///
-sr_gad2_anxiety
-
-mlogit cat `vars', rrr b(3) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & soc_iso0!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_dementia_ever!=.
-local `x'=`r(N)'
-}
-
-
-outreg using "${logs}mlogit_nhats_acp_base", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal & Informal ACP received" \ "0-No ACP(`0') vs Base(`3')" \ ///
-"1-Informal(`1') vs Base(`3')" \ "2-Formal(`2') vs Base(`3')") replace 
-
-
-
-
-
-H="HRS MLOGIT Model (Both ACP Base)"
-/*
-
-Created by: Mohammed 
-Date Created: 01/31/2019
-
-Updated by: MH
-Date Updated: 03/29/2019
-
-Description: Inital exploration, data cleaning, table creation.
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name HRS_ACP_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*Combines rounds 1 and 2 sample person SP interview files,
-sensitive demo files and the round 2 cumulative tracker file case 
-status l into a single file
-
-Data format is multiple observations per subject, one for each round
-*/
-
-
-clear all
-
-set maxvar 100000
-
-use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
-
-tab nt245,m
-tab nt246,m
-tab nt250,m
-
-
-gen no_acp=0
-replace no_acp=1 if inlist(nt245, 5, 8, 9) & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace no_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen formal_acp=0
-replace formal_acp=1 if inlist(nt245, 5, 8, 9) & (nt246==1 | nt250==1)
-replace formal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen informal_acp=0
-replace informal_acp=1 if nt245==1 & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace informal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen acp=0
-replace acp=1 if nt245==1 & (nt246==1 | nt250==1)
-replace acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-label var no_acp "No Advance care planning, 1=yes"
-label var formal_acp "Formal Advance care planning, 1=yes"
-label var informal_acp "Informal Advance care planning, 1=yes"
-label var acp "Advance care planning (Formal & Informal), 1=yes"
-label define acp  0 "No" 1 "Yes" 
-
-foreach x in no_acp formal_acp informal_acp acp {
-label values `x' acp
-}
-
-
-foreach x in no_acp formal_acp informal_acp acp {
-tab `x', m
-}
-
-tempfile a
-save `a'
-
-
-use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
-
-merge 1:1 hhid pn core_year using "E:\data\hrs_public_2014\rand2014\family\family_r_clean_98_14.dta", nogen keepusing(living_kids_ind) keep(matched)
-
-merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
-
-rename hhid HHID 
-rename pn PN
-merge 1:1 HHID PN using "E:\data\hrs_tracking_2016\TRK2016TR_R.dta", keepusing(NLIVARR) keep(matched) nogen
-
-rename NLIVARR, l
-rename HHID,l
-rename PN,l
-
-format %td birth_date
-
-gen age= c_ivw_date-birth_date
-replace age=floor(age/365.25)
-
-gen male=0 if !missing(female)
-replace male=1 if female==0
-
-gen live_alone=0
-replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
-
-gen live_others=0
-replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
-
-gen cesd_tot_ge3_n=0
-replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
-
-foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
-gen `x'0=0 
-replace `x'0=1 if `x'==0
-}
-
-
-//reverse coding for scales
-//conc
-tab nlb033v
-gen nlb033v_n=nlb033v
-foreach x in nlb033e nlb033i nlb033z_5 nlb033n  {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen consc= rowmean(nlb033e_n nlb033i_n nlb033z_5_n nlb033n_n nlb033v_n) if ///
-!missing(nlb033e_n, nlb033i_n, nlb033z_5_n, nlb033n_n, nlb033v_n)
-
-//neuro
-tab nlb033q
-gen nlb033q_n=nlb033q
-foreach x in nlb033h nlb033d {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d_n, nlb033q_n)
-
-tab degree, gen(degree)
-tab imprelig, gen(imprelig)
-
-//education var
-gen educ1=0
-replace educ1=1 if degree1==1
-gen educ2=0
-replace educ2=1 if degree2==1 | degree3==1
-gen educ3=0
-replace educ3=1 if degree4==1 | degree8==1
-gen educ4=0 
-replace educ4=1 if degree5==1 | degree6==1 | degree7==1
-
-//fixing dementia
-gen dem=.
-replace dem=0 if alz_hrs==0 & dem_hrs==0
-replace dem=1 if alz_hrs==1 | dem_hrs==1
-
-gen dem0=.
-replace dem0=0 if dem==1
-replace dem0=1 if dem==0
-
-/*hispanic other
-gen hispoth=.
-replace hispoth=0 if inlist(race_cat,1,2)
-replace hispoth=1 if inlist(race_cat,3,4)
-*/
-lab var educ1 "<HS"
-lab var educ2 "HS/GED"
-lab var educ3 "Some College, 2yr degree"
-lab var educ4 "College degree, higher"
-lab var dem "SR Dementia (incl. Alz)"
-lab var dem0 "No SR Dementia (incl. Alz.)"
-lab var age "Age"
-lab var male "Male"
-lab var degree1 "None"
-lab var degree2 "GED"
-lab var degree3 "High school"
-lab var degree4 "2 yr college"
-lab var degree5 "4 yr college"
-lab var degree6 "Masters"
-lab var degree7 "Professional"
-lab var degree8 "Unknown, some college"
-lab var h12wohous0 "Does not own home"
-lab var h12wohous "Owns home"
-lab var live_alone "Lives alone"
-lab var live_others "Lives with others"
-lab var soc_visit0 "No social visits with neighbors"
-lab var srh_pf0 "Self Rates Health: Good+"
-lab var hosp_last_2yr0 "No hospitalization"
-lab var dem_hrs0 "No SR Dementia"
-lab var cesd_tot_ge3_n0 "No Depression"
-lab var cesd_tot_ge3_n "Depression"
-lab var consc "Conscientiousness (non-missing q's)"
-lab var neuro "Neuroticism (non-missing q's)"
-lab var imprelig1 "Importance of Religion: very important"
-lab var imprelig2 "Importance of Religion: somewhat important"
-lab var imprelig3 "Importance of Religion: not too "
-lab var dem_hrs "SR Dementia"
-
-//lab var hisp_oth "Hispanic, Other"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-gen n=1 if acp!=.
-notes n: TS only indicated for people with ACP
-
-
-gen lb=1 if !missing(neuro, consc)
-
-
-keep if lb==1
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen lnassets=ln(h12atota)
-
-gen non_white=.
-replace non_white=0 if white==1
-replace non_white=1 if white==0
-
-local vars age female educ4 lnassets non_white h12wohous live_alone living_kids_ind married soc_visit0 ///
-srh_pf dem hosp_last_2yr cesd_tot_ge3_n consc neuro
-
-
-mlogit cat `vars', b(3) rr
-
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & dem!=. & hosp_last_2yr!=. & living_kids_ind!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_hrs_acp_base", varlabels stats(e_b e_ci) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal & Informal ACP received" \ "0-No ACP(`0') vs Base(`3')" \ ///
-"1-Informal(`1') vs Base(`3')" \ "2-Formal(`2') vs Base(`3')") replace 
-
-
-
-
-H="NHATS MLOGIT 3 model"
-/*
-
-Created by: Mohammed 
-Date Created: 03/25/2019
-
-Updated by: MH
-Date Updated: 04/02/2019
-
-Description: Multinomial Logit model with base being no ACP. 3 different model 
-specifications created. 
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_ACP_logit_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*
-Using Wave 2 NHATS data b/c that is where ACP questions are asked.
-Using a Multinomail Logisitic Regression with the base being Formal ACP. 
-3 different specifications. 
-
-*/
-
-
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
-
-gen soc_iso=1 if n_social_network!=.
-replace soc_iso=0 if n_social_network==0
-
-gen n=1 if acp!=.
-
-gen male=0
-replace male=1 if female==0
-
-foreach x in education income_quart race_cat maritalstat imprelig {
-tab `x', gen(`x')
-}
-
-gen live_alone=.
-replace live_alone=0 if inrange(livearrang,2,4)
-replace live_alone=1 if livearrang==1
-
-gen live_other=.
-replace live_other=0 if livearrang==1
-replace live_other=1 if inrange(livearrang,2,4)
-
-foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
-gen `x'0=0 if `x'==1
-replace `x'0=1 if `x'==0
-}
-
-label var male "Male"
-label var ownhome0 "No Own Home"
-label var srh_fp0 "Self reported health==Good+"
-label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
-label var sr_dementia_ever0 "No Self report Dementia"
-label var sr_phq2_depressed0 "Not Depressed"
-label var sr_gad2_anxiety0 "No Anxiety"
-label var soc_iso0 "No one in social network"
-label var soc_iso ">=1 in social network"
-label var live_alone "Lives Alone"
-label var live_other "Lives w/Others"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-//MLOGIT Regression
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen non_white=0 
-replace non_white=1 if white==0
-
-gen lninc=ln(aveincome)
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso ind_kids srh_fp
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") replace 
-
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso ind_kids srh_fp sr_hosp_ind
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
-
-
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married soc_iso ind_kids srh_fp sr_hosp_ind sr_phq2_depressed sr_gad2_anxiety
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & soc_iso!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_phq2_depressed!=. & sr_gad2_anxiety!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
-
-
-
-H="HRS MLOGIT 3 model "
-/*
-
-Created by: Mohammed 
-Date Created: 03/25/2019
-
-Updated by: MH
-Date Updated: 04/01/2019
-
-Description: Multinomial Logit model with base being no ACP. 3 different model 
-specifications created. 
-
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name HRS_ACP_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*
-HRS ACP section 3 different model sepcification. 
-*/
-
-
-clear all
-
-set maxvar 100000
-
-use "E:\nhats\data\Projects\ACP\int_data\h12t_r.dta", clear
-
-tab nt245,m
-tab nt246,m
-tab nt250,m
-
-
-gen no_acp=0
-replace no_acp=1 if inlist(nt245, 5, 8, 9) & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace no_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen formal_acp=0
-replace formal_acp=1 if inlist(nt245, 5, 8, 9) & (nt246==1 | nt250==1)
-replace formal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen informal_acp=0
-replace informal_acp=1 if nt245==1 & inlist(nt246, 5, 8, 9) & inlist(nt250, 5, 8, 9) 
-replace informal_acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-gen acp=0
-replace acp=1 if nt245==1 & (nt246==1 | nt250==1)
-replace acp=. if inlist(nt245, .) | inlist(nt246, .) | inlist(nt250, .) 
-
-label var no_acp "No Advance care planning, 1=yes"
-label var formal_acp "Formal Advance care planning, 1=yes"
-label var informal_acp "Informal Advance care planning, 1=yes"
-label var acp "Advance care planning (Formal & Informal), 1=yes"
-label define acp  0 "No" 1 "Yes" 
-
-foreach x in no_acp formal_acp informal_acp acp {
-label values `x' acp
-}
-
-
-foreach x in no_acp formal_acp informal_acp acp {
-tab `x', m
-}
-
-tempfile a
-save `a'
-
-
-use "E:\data\hrs_cleaned\core_00_to_14.dta" if core_year==2012, replace 
-
-merge 1:1 hhid pn core_year using "E:\data\hrs_public_2014\rand2014\family\family_r_clean_98_14.dta", nogen keepusing(living_kids_ind) keep(matched)
-
-merge 1:1 hhid pn using "`a'", keepusing(no_acp acp formal_acp informal_acp) nogen keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_cleaned\restr_tracker_v2014.dta" , nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\nhats\data\Projects\ACP\int_data\H12LB_R.dta", nogen force keep(matched)
-
-merge 1:1 hhid pn using "E:\data\hrs_public_2014\rand2014\wealth\randIWPstataSE\incwlth_p.dta", keepusing(h12wohous) nogen keep(matched)
-
-rename hhid HHID 
-rename pn PN
-merge 1:1 HHID PN using "E:\data\hrs_tracking_2016\TRK2016TR_R.dta", keepusing(NLIVARR) keep(matched) nogen
-
-rename NLIVARR, l
-rename HHID,l
-rename PN,l
-
-format %td birth_date
-
-gen age= c_ivw_date-birth_date
-replace age=floor(age/365.25)
-
-gen male=0 if !missing(female)
-replace male=1 if female==0
-
-gen live_alone=0
-replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
-
-gen live_others=0
-replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
-
-gen cesd_tot_ge3_n=0
-replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
-
-foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
-gen `x'0=0 
-replace `x'0=1 if `x'==0
-}
-
-
-//reverse coding for scales
-//conc
-tab nlb033v
-gen nlb033v_n=nlb033v
-foreach x in nlb033e nlb033i nlb033z_5 nlb033n  {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen consc= rowmean(nlb033e_n nlb033i_n nlb033z_5_n nlb033n_n nlb033v_n) if ///
-!missing(nlb033e_n, nlb033i_n, nlb033z_5_n, nlb033n_n, nlb033v_n)
-
-//neuro
-tab nlb033q
-gen nlb033q_n=nlb033q
-foreach x in nlb033h nlb033d {
-tab `x'
-gen `x'_n=5-`x'
-}
-egen neuro=rowmean(nlb033h_n nlb033d_n nlb033q_n) if !missing(nlb033h_n, nlb033d_n, nlb033q_n)
-
-tab degree, gen(degree)
-tab imprelig, gen(imprelig)
-
-//education var
-gen educ1=0
-replace educ1=1 if degree1==1
-gen educ2=0
-replace educ2=1 if degree2==1 | degree3==1
-gen educ3=0
-replace educ3=1 if degree4==1 | degree8==1
-gen educ4=0 
-replace educ4=1 if degree5==1 | degree6==1 | degree7==1
-
-//fixing dementia
-gen dem=.
-replace dem=0 if alz_hrs==0 & dem_hrs==0
-replace dem=1 if alz_hrs==1 | dem_hrs==1
-
-gen dem0=.
-replace dem0=0 if dem==1
-replace dem0=1 if dem==0
-
-/*hispanic other
-gen hispoth=.
-replace hispoth=0 if inlist(race_cat,1,2)
-replace hispoth=1 if inlist(race_cat,3,4)
-*/
-lab var educ1 "<HS"
-lab var educ2 "HS/GED"
-lab var educ3 "Some College, 2yr degree"
-lab var educ4 "College degree, higher"
-lab var dem "SR Dementia (incl. Alz)"
-lab var dem0 "No SR Dementia (incl. Alz.)"
-lab var age "Age"
-lab var male "Male"
-lab var degree1 "None"
-lab var degree2 "GED"
-lab var degree3 "High school"
-lab var degree4 "2 yr college"
-lab var degree5 "4 yr college"
-lab var degree6 "Masters"
-lab var degree7 "Professional"
-lab var degree8 "Unknown, some college"
-lab var h12wohous0 "Does not own home"
-lab var h12wohous "Owns home"
-lab var live_alone "Lives alone"
-lab var live_others "Lives with others"
-lab var soc_visit0 "No social visits with neighbors"
-lab var srh_pf0 "Self Rates Health: Good+"
-lab var hosp_last_2yr0 "No hospitalization"
-lab var dem_hrs0 "No SR Dementia"
-lab var cesd_tot_ge3_n0 "No Depression"
-lab var cesd_tot_ge3_n "Depression"
-lab var consc "Conscientiousness (non-missing q's)"
-lab var neuro "Neuroticism (non-missing q's)"
-lab var imprelig1 "Importance of Religion: very important"
-lab var imprelig2 "Importance of Religion: somewhat important"
-lab var imprelig3 "Importance of Religion: not too "
-lab var dem_hrs "SR Dementia"
-
-//lab var hisp_oth "Hispanic, Other"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-gen n=1 if acp!=.
-notes n: TS only indicated for people with ACP
-
-
-gen lb=1 if !missing(neuro, consc)
-
-
-keep if lb==1
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen lnassets=ln(h12atota)
-
-gen non_white=.
-replace non_white=0 if white==1
-replace non_white=1 if white==0
-
-local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-living_kids_ind srh_pf 
-
-
-mlogit cat `vars', b(2) rr
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & lnassets!=. & non_white!=. & srh_pf!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=. & living_kids_ind!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_hrs_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP (`0') vs Base (`2')" \ ///
-"1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) replace 
-
-
-local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-living_kids_ind srh_pf hosp_last_2yr
-
-mlogit cat `vars', b(2) rr
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=. & living_kids_ind!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_hrs_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP (`0') vs Base (`2')" \ ///
-"1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) addtable replace 
-
-
-local vars age female educ4 lnassets non_white h12wohous live_alone married soc_visit ///
-living_kids_ind srh_pf hosp_last_2yr cesd_tot_ge3_n consc neuro 
-
-mlogit cat `vars', b(2) rr
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & soc_visit!=. & living_kids_ind!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_hrs_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP (`0') vs Base (`2')" \ ///
-"1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) addtable replace 
-
+svy, subpop(keep): tab anyadl fallmnth, row ci
+svy, subpop(keep): tab anylcs fallmnth, row ci
 
 H="Changelog"
 
 
 ********************Change Log******************** 
-
-
-
-Updates:
-
-04/03/2019 MH
-------------
-Adding in p-values to Mlogit 3 model outreg tables. 
-
-04/01/2019 MH
-------------
-Adding in living children indicator variable to the 3 models.  
-
-03/29/2019 MH
-------------
-Adding in living children indicator variable. Added in different model specifications. Reran tables and analysis. 
-
-03/18/2019 MH
-------------
-Adding in sample sizes to the tables for MLOGIT.
-
-03/07/2019 MH
-------------
-ACP Regression in NHATS and HRS using MLOGIT. Created tables. 
-
-02/28/2019 MH
-------------
-In HRS file added in 2016 Tracker file, to use LIVARR variable. 
-
-02/15/2019 MH
-------------
-In HRS used hisp_eth instead of hisp. Changed how livind arrangement variable defined in NHATS. 
-
-02/07/2019 MH
-------------
-Fixed variable and removed cell size restrictions. 
- 
-02/06/2019 MH
-------------
-Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 
-
-02/01/2019 MH
-------------
-Created table for HRS under HRS tab. Done for summary statistics. Created vars for neuroticism and conscientiousness.
-
-01/31/2019 MH
-------------
-Table for NHATS under NHATS ACP for ACP summary statistics.
-
-
-*/

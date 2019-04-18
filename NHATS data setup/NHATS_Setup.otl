@@ -2039,10 +2039,6 @@ forvalues w=1/$w{
 }
 la var fall_last_month "Fall down in last month"
 tab fall_last_month wave, missing
-notes fall_last_month: fllsinmth
-notes fall_last_month: Fallen down in last month.
-notes fall_last_month: Located in NHATS Setup, under Part 5.
-notes fall_last_month: Updated: 04/17/19-MH
 
 *********************************************
 //self care help, using the derived variables in the SC section
@@ -2076,21 +2072,6 @@ selfcare eat
 selfcare bath
 selfcare toil
 selfcare dres
-
-notes adl_eat_not_done: eatslfoft
-
-foreach x in bath toil dres{
-notes adl_`x'_not_done: `x'oft
-}
-foreach x in eat bath toil {
-notes adl_`x'_not_done: How often `x' by self and without help.
-}
-notes adl_dres_not_done: How often you dress.  
-
-foreach x in eat bath toil dres{
-notes adl_`x'_not_done: Located in NHATS Setup, under Part 5.
-notes adl_`x'_not_done: Updated: 04/17/19-MH
-}
 
 la var adl_eat_help "Has help while eating"
 la var adl_bath_help "Has help while bathing"
@@ -2137,17 +2118,6 @@ la var iadl_shop_help "Rec'd help shopping last month"
 la var iadl_meal_help "Rec'd help preparing meals last month"
 la var iadl_bank_help "Rec'd help with banking last month"
 
-foreach x in laun shop meal bank{ 
-notes iadl_`x'_help: d`x'sfdf d`x'reas
-notes iadl_`x'_help: `x' difficulty level and if `x' done by others
-notes iadl_`x'_help: Located in NHATS Setup, under Part 5.
-notes iadl_`x'_help: Updated: 04/17/19-MH
-notes iadl_`x'_not_done: ha*`x'
-notes iadl_`x'_not_done: How `x' made/completed.
-notes iadl_`x'_not_done: Located in NHATS Setup, under Part 5.
-notes iadl_`x'_not_done: Updated: 04/17/19-MH
-}
-
 //taking medications, questions slightly different and in mc section
 //set to =0 if do not take medications
 tab dmedssfdf dmedsreas if wave==1, missing
@@ -2174,20 +2144,6 @@ la var iadl_meds_help "Rec'd help taking medications last month"
 tab iadl_meds_help wave, missing
 tab iadl_meds_help wave if ivw_type==1, missing
 replace iadl_meds_diff=1 if iadl_meds_help==1
-
-notes iadl_meds_help: dmedssfdf dmedsreas
-notes iadl_meds_help: Difficulty level of medications, medicine reason with others. 
-
-notes iadl_meds_diff: medsdif
-notes iadl_meds_diff: Difficulty in keeping track of medicines.
-   
-notes iadl_meds_not_done: dmedssfdf
-notes iadl_meds_not_done: Difficulty level of medications
-
-foreach x in help diff not_done{
-notes iadl_meds_`x': Located in NHATS Setup, under Part 5.
-notes iadl_meds_`x': Updated: 04/17/19-MH
-}
 
 //other meds questions, for treatment burden
 gen ind_meds_diff=.
@@ -2216,9 +2172,6 @@ la var reg_doc_have "Have regular doctor"
 tab reg_doc_have wave, missing
 tab reg_doc_have wave if ivw_type==1, missing
 
-notes reg_doc_have: haveregdoc
-notes reg_doc_have: Do you have a go to doctor, who you go to for advice.
-
 gen reg_doc_seen = .
 forvalues w=1/$w{
 	replace reg_doc_seen=1 if regdoclyr==1 & wave==`w'
@@ -2229,9 +2182,6 @@ forvalues w=1/$w{
 la var reg_doc_seen "Seen regular doctor within last year"
 tab reg_doc_seen wave, missing
 tab reg_doc_seen wave if ivw_type==1, missing
-
-notes reg_doc_seen: regdoclyr
-notes reg_doc_seen: Have you seen your regular doctor within the last year. 
 
 //home visit, missing if did not see regular doctor within the last year
 tab regdoclyr hwgtregd8 if wave==1, missing
@@ -2248,14 +2198,6 @@ la var reg_doc_homevisit "Was regular doctor visit a home visit?"
 tab reg_doc_homevisit wave, missing
 tab reg_doc_homevisit wave if ivw_type==1, missing
 
-notes reg_doc_homevisit: hwgtregd8
-notes reg_doc_homevisit: Was doctor visit a home visit. 
-
-foreach x in reg_doc_have reg_doc_seen reg_doc_homevisit{
-notes `x': Located in NHATS Setup, under Part 5.
-notes `x': Updated: 04/17/19-MH
-}
-
 //hospital stay last 12 months?
 tab hosptstay, missing
 
@@ -2270,9 +2212,6 @@ la var sr_hosp_ind "Hospital stay in the last year 1=yes"
 tab sr_hosp_ind wave, missing
 tab sr_hosp_ind wave if ivw_type==1, missing
 
-notes sr_hosp_ind: hosptstay
-notes sr_hosp_ind: Had an overnight hospital stay since last interview/year.
-
 //number of separate hospital stays?
 tab hosovrnht hosptstay, missing //if ind=no above, raw variable is n/a
 gen sr_hosp_stays=.
@@ -2284,13 +2223,6 @@ la var sr_hosp_stays "Number unique hospital stays last year"
 tab sr_hosp_stays wave, missing
 tab sr_hosp_stays wave if ivw_type==1, missing
 
-notes sr_hosp_stays: hosovrnht hosptstay
-notes  sr_hosp_stays: How many seperate overnight hospital stays. 
-
-foreach x in sr_hosp_ind sr_hosp_stay{
-notes `x': Located in NHATS Setup, under Part 5.
-notes `x': Updated: 04/17/19-MH
-} 
 
 save round_1_${w}_cleanv3.dta, replace
 
@@ -2564,7 +2496,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 04/05/2019
+Date Updated: 04/18/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -4913,9 +4845,6 @@ notes proxy_ivw : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 h
 notes age : r*dintvwrage r*ddeathage
 notes age : Age at interview if living or death if LML
 notes age : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
-notes female : r*dgender
-notes female : "_"
-notes female : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
 notes educ_hs_ind : el*higstschl
 notes educ_hs_ind : Completed HS+ (includes GED)
 notes educ_hs_ind : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-3 header
@@ -4952,7 +4881,111 @@ notes adl_toil_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step
 notes adl_dres_help : sc*dreshelp
 notes adl_dres_help : Help dresing in the last month
 notes adl_dres_help : E:\nhats\nhats_code\NHATS_data_setup\NHATS_Setup.otl, Step-5 header
+notes fall_last_month: fllsinmth
+notes fall_last_month: Fallen down in last month.
+notes fall_last_month: Located in NHATS Setup, under Part 5.
+notes fall_last_month: Updated: 04/17/19-MH
+notes adl_eat_not_done: eatslfoft
+foreach x in bath toil dres{
+notes adl_`x'_not_done: `x'oft
+}
+foreach x in eat bath toil {
+notes adl_`x'_not_done: How often `x' by self and without help.
+}
+notes adl_dres_not_done: How often you dress.  
+foreach x in eat bath toil dres{
+notes adl_`x'_not_done: Located in NHATS Setup, under Part 5.
+notes adl_`x'_not_done: Updated: 04/17/19-MH
+}
+foreach x in laun shop meal bank{ 
+notes iadl_`x'_help: d`x'sfdf d`x'reas
+notes iadl_`x'_help: `x' difficulty level and if `x' done by others
+notes iadl_`x'_help: Located in NHATS Setup, under Part 5.
+notes iadl_`x'_help: Updated: 04/17/19-MH
+notes iadl_`x'_not_done: ha*`x'
+notes iadl_`x'_not_done: How `x' made/completed.
+notes iadl_`x'_not_done: Located in NHATS Setup, under Part 5.
+notes iadl_`x'_not_done: Updated: 04/17/19-MH
+}
+notes iadl_meds_help: dmedssfdf dmedsreas
+notes iadl_meds_help: Difficulty level of medications, medicine reason with others. 
+notes iadl_meds_diff: medsdif
+notes iadl_meds_diff: Difficulty in keeping track of medicines.
+notes iadl_meds_not_done: dmedssfdf
+notes iadl_meds_not_done: Difficulty level of medications
+foreach x in help diff not_done{
+notes iadl_meds_`x': Located in NHATS Setup, under Part 5.
+notes iadl_meds_`x': Updated: 04/17/19-MH
+}
+notes reg_doc_have: haveregdoc
+notes reg_doc_have: Do you have a go to doctor, who you go to for advice.
+notes reg_doc_seen: regdoclyr
+notes reg_doc_seen: Have you seen your regular doctor within the last year. 
+notes reg_doc_homevisit: hwgtregd8
+notes reg_doc_homevisit: Was doctor visit a home visit. 
+foreach x in reg_doc_have reg_doc_seen reg_doc_homevisit{
+notes `x': Located in NHATS Setup, under Part 5.
+notes `x': Updated: 04/17/19-MH
+}
+notes sr_hosp_ind: hosptstay
+notes sr_hosp_ind: Had an overnight hospital stay since last interview/year.
+notes sr_hosp_stays: hosovrnht hosptstay
+notes  sr_hosp_stays: How many seperate overnight hospital stays. 
+foreach x in sr_hosp_ind sr_hosp_stay{
+notes `x': Located in NHATS Setup, under Part 5.
+notes `x': Updated: 04/17/19-MH
+} 
+foreach x in female race_cat education income_cat ///
+otherlang imputed_inc1 imputed_inc2 imputed_inc3 imputed_inc4 imputed_inc5 aveincome{
+notes drop `x'
+}
+notes female: dgender
+notes female: Gender variable only asked in wave 1 & 5.
+notes race_cat: dracehisp
+notes race_cat: Race and Hispanic ethnicity only asked in wave 1 & 5.
+notes education: higstschl 
+notes education: Highest degree/ level of schooling only asked in wave 1 & 5.
+notes educ_hs_ind: higstschl
+notes educ_hs_ind: Indicator having HS+
+forvalues i=1/5{
+notes imputed_inc`i': toincim`i'
+notes imputed_inc`i': Imputed income
+notes imputed_inc`i': Located in NHATS Setup, under Part 3.
+notes imputed_inc`i': Updated: 04/18/19-MH
+}
+notes aveincome: imputed_inc1-imputed_inc5
+notes aveincome: Took mean of imputed income. Not done for wave 2. 
+notes income_cat: aveincome imputed_inc1-imputed_inc5
+notes income_cat: Make income categories. 
+notes otherlang: spkothlan condspanh
+notes otherlang: Speak other language than English; Interview being conducted in Spanish. 
+notes freq_go_out: outoft
+notes freq_go_out: How often went outside.
+notes help_go_out: outhlp
+notes help_go_out: Anyone help you go outside.
+notes out_on_own: outoft outhlp
+notes out_on_own: Left home by self.
+notes needshelp: help_go_out out_on_own
+notes needshelp: Leaves home with help if never leaves by self and has help to leave.
+notes hasdifficulty: outdif
+notes hasdifficulty: How much difficulty to go outside (even with devices)
+notes helpdiff: help_go_out out_on_own outdif
+notes helpdiff: Has difficulty or needs help going outside. 
+notes independent: outhlp outdif
+notes independent: Doesn't have difficulty and no help to leave home.
+notes homebound_cat: outoft outoft outhlp help_go_out out_on_own outdif 
+notes homebound_cat: homebound categorical variable. 
+notes indeplow: outoft outhlp outdif
+notes indeplow: Rarely leaves home, but is independent. 
+notes indephigh: outoft outhlp outdif
+notes indephigh: Goes out often, but is independent. 
 
+foreach x in female race_cat education income_cat otherlang aveincome freq_go_out ///
+help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat ///
+indeplow indephigh{
+notes `x': Located in NHATS Setup, under Part 3.
+notes `x': Updated: 04/18/19-MH
+}
 
 keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
 help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind imputed_inc1 ///
