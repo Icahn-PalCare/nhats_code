@@ -1443,27 +1443,6 @@ la var sr_cancer_raw "Self report Cancer, Raw"
 la var sr_cancer_ever "Ever Self report Cancer"
 la var sr_cancer_new "Self report Cancer since prev year"
 
-notes sr_ami_raw: disescn1 
-notes sr_ami_raw: Had a heart attack or myocardial infarction (self-report).
-notes sr_stroke_raw: disescn8
-notes sr_stroke_raw: Had a stroke (self-report).
-notes sr_cancer_raw: disescn10
-notes sr_cancer_raw: Had cancer (self-report).
-
-notes sr_ami_ever: sr_ami_raw
-notes sr_ami_ever: If ever had a heart attack or myocardial infarction (self-report).
-notes sr_stroke_ever: sr_stroke_raw
-notes sr_stroke_ever: If ever had a stroke (self-report).
-notes sr_cancer_ever: sr_cancer_raw
-notes sr_cancer_ever: If ever had cancer (self-report). 
-
-notes sr_ami_new: sr_ami_raw
-notes sr_ami_new: If heart attack or myocardial infarction within last year (self-report).
-notes sr_stroke_new: sr_stroke_raw
-notes sr_stroke_new: If stroke within last year (self-report).
-notes sr_cancer_new: sr_cancer_raw
-notes sr_cancer_new: If cancer found within last year (self-report).
-
 //same question pattern, different variable name though, for hip fracture
 gen sr_hip_raw=.
 forvalues w=1/$w{
@@ -1485,19 +1464,6 @@ gen sr_hip_new=sr_hip_raw if inrange(wave,2,$w)
 la var sr_hip_raw "Self report Hip Fracture, Raw"
 la var sr_hip_ever "Ever Self report Hip Fracture (since age 50)"
 la var sr_hip_new "Self report Hip Fracture since prev year"
-
-notes sr_hip_raw: brokebon1
-notes sr_hip_raw: Had broken or fractured hip (self-report).
-notes sr_hip_ever: sr_hip_raw
-notes sr_hip_ever: Had ever broken or fractured hip (self-report).
-notes sr_hip_new: sr_hip_raw
-notes sr_hip_new: Had hip fracture since prev interview (self-report). 
-
-foreach x in sr_ami_raw sr_stroke_raw sr_cancer_raw sr_ami_ever sr_stroke_ever ///
-sr_ami_new sr_stroke_new sr_cancer_new sr_cancer_ever sr_hip_raw sr_hip_ever sr_hip_new{
-notes `x': Located in NHATS Setup, under Part 4.
-notes `x': Updated: 04/15/19-MH
-}
 
 foreach dis in ami stroke cancer hip{
 tab sr_`dis'_raw wave if ivw_type==1, missing
@@ -1564,65 +1530,6 @@ la var sr_lung_dis_ever "Self report Lung Disease"
 la var sr_lung_dis_new "Self report Lung Disease since prev year"
 la var sr_dementia_ever "Self report Dementia"
 la var sr_dementia_new "Self report Dementia since prev year"
-
-
-notes sr_heart_dis_raw: disescn2
-notes sr_heart_dis_raw: Had any heart disease including angina or CHF (self-report)
-notes sr_heart_dis_ever: sr_heart_dis_raw
-notes sr_heart_dis_ever: Had heart disease ever (self-report)
-notes sr_heart_dis_new:  sr_heart_dis_raw
-notes sr_heart_dis_new: Had heart disease since prev interview (self-report). 
-
-notes sr_htn_raw: disescn3
-notes sr_htn_raw: Had High blood pressure (self-report)
-notes sr_htn_ever: sr_htn_raw
-notes sr_htn_ever: Had High blood pressure ever (self-report)
-notes sr_htn_new:  sr_htn_raw
-notes sr_htn_new: Had High blood pressure since prev interview (self-report). 
-
-notes sr_ra_raw: disescn4
-notes sr_ra_raw: Had arthritis (including osteo or rheumatoid) (self-report)
-notes sr_ra_ever: sr_ra_raw
-notes sr_ra_ever: Had arthritis ever (self-report)
-notes sr_ra_new:  sr_ra_raw
-notes sr_ra_new: Had arthritis since prev interview (self-report). 
-
-notes sr_osteoprs_raw: disescn5
-notes sr_osteoprs_raw: Had osteoporosis (self-report)
-notes sr_osteoprs_ever: sr_osteoprs_raw
-notes sr_osteoprs_ever: Had osteoporosis ever (self-report)
-notes sr_osteoprs_new:  sr_osteoprs_raw
-notes sr_osteoprs_new: Had osteoporosis since prev interview (self-report). 
-
-notes sr_diabetes_raw: disescn6
-notes sr_diabetes_raw: Had arthritis (including osteo or rheumatoid) (self-report)
-notes sr_diabetes_ever: sr_diabetes_raw
-notes sr_diabetes_ever: Had diabetes ever (self-report)
-notes sr_diabetes_new:  sr_diabetes_raw
-notes sr_diabetes_new: Had diabetes since prev interview (self-report). 
-
-notes sr_lung_dis_raw: disescn7
-notes sr_lung_dis_raw: Had any lung disease, such as emphysema, asthma, or chronic bronchitis (self-report)
-notes sr_lung_dis_ever: sr_lung_dis_raw
-notes sr_lung_dis_ever: Had lung disease ever (self-report)
-notes sr_lung_dis_new:  sr_lung_dis_raw
-notes sr_lung_dis_new: Had lung disease since prev interview (self-report). 
-
-notes sr_dementia_raw: disescn9
-notes sr_dementia_raw: Had dementia or Alzheimer's disease (self-report)
-notes sr_dementia_ever: sr_dementia_raw
-notes sr_dementia_ever: Had dementia ever (self-report)
-notes sr_dementia_new:  sr_dementia_raw
-notes sr_dementia_new: Had dementia since prev interview (self-report). 
-
-foreach x in sr_heart_dis_raw sr_heart_dis_ever sr_heart_dis_new sr_htn_raw sr_htn_ever ///
-sr_htn_new sr_ra_raw sr_ra_ever sr_ra_new sr_osteoprs_raw sr_osteoprs_ever sr_osteoprs_new ///
-sr_diabetes_raw sr_diabetes_ever sr_diabetes_new sr_lung_dis_raw sr_lung_dis_ever ///
-sr_lung_dis_new sr_dementia_raw sr_dementia_ever sr_dementia_new{
-
-notes `x': Located in NHATS Setup, under Part 4.
-notes `x': Updated: 04/15/19-MH
-}	
 
 *************************************************
 //Depression & Anxiety
@@ -4959,10 +4866,106 @@ notes income_cat: aveincome imputed_inc1-imputed_inc5
 notes income_cat: Make income categories. 
 notes otherlang: spkothlan condspanh
 notes otherlang: Speak other language than English; Interview being conducted in Spanish. 
-
-foreach x in female race_cat education income_cat otherlang aveincome{
+notes freq_go_out: outoft
+notes freq_go_out: How often went outside.
+notes help_go_out: outhlp
+notes help_go_out: Anyone help you go outside.
+notes out_on_own: outoft outhlp
+notes out_on_own: Left home by self.
+notes needshelp: help_go_out out_on_own
+notes needshelp: Leaves home with help if never leaves by self and has help to leave.
+notes hasdifficulty: outdif
+notes hasdifficulty: How much difficulty to go outside (even with devices)
+notes helpdiff: help_go_out out_on_own outdif
+notes helpdiff: Has difficulty or needs help going outside. 
+notes independent: outhlp outdif
+notes independent: Doesn't have difficulty and no help to leave home.
+notes homebound_cat: outoft outoft outhlp help_go_out out_on_own outdif 
+notes homebound_cat: homebound categorical variable. 
+notes indeplow: outoft outhlp outdif
+notes indeplow: Rarely leaves home, but is independent. 
+notes indephigh: outoft outhlp outdif
+notes indephigh: Goes out often, but is independent. 
+notes never_go_out: freq_go_out outoft
+notes never_go_out: Never goes out.
+notes whiteoth: race_cat
+notes whiteoth: White non-hispanic or other, combined category.
+notes maritalstat: martlstat dmarstat 
+notes maritalstat: Marital status category. 
+notes mc_partd: covmedcad
+notes mc_partd: Currently have Medicare, Part D  coverage.
+notes tricare: covtricar 
+notes tricare: Health care for active and retired Armed forces, their families, and survivors. 
+notes private_ltc: nginsnurs
+notes private_ltc: Have insurance that would pay for more than a year of care in ///
+nursing home, assisted living, and in own home.  
+notes moved: dadrscorr spadrsnew
+notes moved: Address same or different address.
+notes residence: resistrct dresistrct 
+notes residence: Residence physical structure. 
+notes livearrang: lvngarrg dlvngarrg
+notes livearrang: Living arrangement.
+notes livealone: livearrang dlvngarrg
+notes livealone: Lives alone
+foreach x in female race_cat education income_cat otherlang aveincome freq_go_out ///
+help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat ///
+indeplow indephigh never_go_out whiteoth maritalstat mc_partd tricare private_ltc ///
+moved residence livearrang livealone {
 notes `x': Located in NHATS Setup, under Part 3.
 notes `x': Updated: 04/18/19-MH
+}
+
+notes sr_ami_ever: sr_ami_raw disescn1 
+notes sr_ami_ever: If ever had a heart attack or myocardial infarction (self-report).
+notes sr_stroke_ever: sr_stroke_raw disescn8
+notes sr_stroke_ever: If ever had a stroke (self-report).
+notes sr_cancer_ever: sr_cancer_raw disescn10
+notes sr_cancer_ever: If ever had cancer (self-report). 
+notes sr_ami_new: sr_ami_raw disescn1
+notes sr_ami_new: If heart attack or myocardial infarction within last year (self-report).
+notes sr_stroke_new: sr_stroke_raw disescn8 
+notes sr_stroke_new: If stroke within last year (self-report).
+notes sr_cancer_new: sr_cancer_raw disescn10
+notes sr_cancer_new: If cancer found within last year (self-report).
+notes sr_hip_ever: sr_hip_raw brokebon1
+notes sr_hip_ever: Had ever broken or fractured hip (self-report).
+notes sr_hip_new: sr_hip_raw brokebon1
+notes sr_hip_new: Had hip fracture since prev interview (self-report). 
+notes sr_heart_dis_ever: sr_heart_dis_raw disescn2
+notes sr_heart_dis_ever: Had heart disease ever (self-report)
+notes sr_heart_dis_new:  sr_heart_dis_raw disescn2
+notes sr_heart_dis_new: Had heart disease since prev interview (self-report). 
+notes sr_htn_ever: sr_htn_raw disescn3
+notes sr_htn_ever: Had High blood pressure ever (self-report)
+notes sr_htn_new:  sr_htn_raw disescn3
+notes sr_htn_new: Had High blood pressure since prev interview (self-report). 
+notes sr_ra_ever: sr_ra_raw disescn4
+notes sr_ra_ever: Had arthritis ever (self-report)
+notes sr_ra_new:  sr_ra_raw disescn4
+notes sr_ra_new: Had arthritis since prev interview (self-report). 
+notes sr_osteoprs_ever: sr_osteoprs_raw disescn5
+notes sr_osteoprs_ever: Had osteoporosis ever (self-report)
+notes sr_osteoprs_new:  sr_osteoprs_raw disescn5
+notes sr_osteoprs_new: Had osteoporosis since prev interview (self-report). 
+notes sr_diabetes_ever: sr_diabetes_raw disescn6
+notes sr_diabetes_ever: Had diabetes ever (self-report)
+notes sr_diabetes_new:  sr_diabetes_raw disescn6
+notes sr_diabetes_new: Had diabetes since prev interview (self-report). 
+notes sr_lung_dis_ever: sr_lung_dis_raw disescn7
+notes sr_lung_dis_ever: Had lung disease ever (self-report)
+notes sr_lung_dis_new:  sr_lung_dis_raw disescn7
+notes sr_lung_dis_new: Had lung disease since prev interview (self-report). 
+notes sr_dementia_ever: sr_dementia_raw disescn9
+notes sr_dementia_ever: Had dementia ever (self-report)
+notes sr_dementia_new:  sr_dementia_raw disescn9
+notes sr_dementia_new: Had dementia since prev interview (self-report). 
+
+foreach x in sr_ami_ever sr_stroke_ever sr_ami_new sr_stroke_new sr_cancer_new ///
+sr_cancer_ever sr_hip_ever sr_hip_new sr_heart_dis_ever sr_heart_dis_new ///
+sr_htn_ever sr_htn_new sr_ra_ever sr_ra_new sr_osteoprs_ever sr_osteoprs_new ///
+sr_diabetes_ever sr_diabetes_new sr_lung_dis_ever sr_lung_dis_new sr_dementia_ever sr_dementia_new{
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/15/19-MH
 }
 
 keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
