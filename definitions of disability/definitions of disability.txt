@@ -33,233 +33,6 @@ H="making dataset"
 use "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta" 
 
 
-H="variable cleaning"
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta" 
-
-*VARIABLES FOR DISABILITY
-tab adl_index
-tab adlcount_jenny
-tab freq_go_out, nolab
-
-gen keep=.
-replace keep=1 if wave<7
-
-recode adl_index (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(adl_3cat)
-recode adlcount_jenny (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(jennyadl_3cat)
-recode freq_go_out (1=1 "1_every day")(2=2 "2_most days")(3=3 "3_some days")(4/5=4 "4_rarely never"), gen(freqout)
-
-sort spid wave
-by spid: gen srhosp_oneyear= sr_hosp_ind[_n+1]
-
-recode adl_index(0=0)(1/6=1), gen(anyadl)
-recode freq_go_out (1/2=0)(3/5=1), gen(anylcs)
-
-*making variable keep
-gen keep=.
-replace keep=1 if wave<7
-replace keep=. if adl_index==.
-*3,248
-replace keep=. if freq_go_out==.
-*31
-replace keep=. if nhats_died_12==.
-*1,753
-
-
-*COVARIATES
-recode n_social_network (0=0 "0_none") (1=1 "1_one")(2/5=2 "2_ 2+ people"), gen(networkcat)
-
-
-H="analysis"
-*ANALYSIS
-svyset varunit [pweight=anfinwgt], strata(varstrat)
-
-*table 1
-tab keep
-svy, subpop(keep): tab female
-svy, subpop(keep): mean age
-svy, subpop(keep): tab race_cat
-svy, subpop(keep): tab proxy_ivw
-svy, subpop(keep): tab livealone
-svy, subpop(keep): tab networkcat
-svy, subpop(keep): tab nopaymed
-svy, subpop(keep): tab nopayutil
-svy, subpop(keep): tab medicaid
-svy, subpop(keep): tab sr_heart_dis_ever
-svy, subpop(keep): tab sr_htn_ever
-svy, subpop(keep): tab sr_stroke_ever 
-svy, subpop(keep): tab sr_cancer_ever 
-svy, subpop(keep): tab sr_osteoprs_ever 
-svy, subpop(keep): tab sr_diabetes_ever 
-svy, subpop(keep): tab sr_lung_dis_ever 
-svy, subpop(keep): tab dem_2_cat
-svy, subpop(keep): tab sr_phq2_depressed 
-svy, subpop(keep): tab sr_gad2_anxiety
-svy, subpop(keep): mean sr_numconditions1
-svy, subpop(keep): tab srh_fp
-svy, subpop(keep): tab fall_last_month
-svy, subpop(keep): tab ind_pain
-
-*figure
-*NEW FIGURE 2
-
-tab freqout adl_3cat if keep==1
-svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==0
-svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==1
-svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==2
-
-svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==0
-svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==1
-svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==2
-
-svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==0
-svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==1
-svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==2
-
-svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==0
-svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==1
-svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==2
-
-svy, subpop(keep): tab nhats_died_12 freqout, column
-svy, subpop(keep): tab nhats_died_12 adl_3cat, column
-
-*hospitalization
-svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==0
-svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==1
-svy, subpop(keep): tab srhosp_oneyear if freqout==1 & adl_3cat==2
-
-svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==0
-svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==1
-svy, subpop(keep): tab srhosp_oneyear if freqout==2 & adl_3cat==2
-
-svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==0
-svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==1
-svy, subpop(keep): tab srhosp_oneyear if freqout==3 & adl_3cat==2
-
-svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==0
-svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==1
-svy, subpop(keep): tab srhosp_oneyear if freqout==4 & adl_3cat==2
-
-svy, subpop(keep): tab srhosp_oneyear freqout, column
-svy, subpop(keep): tab srhosp_oneyear adl_3cat, column
-
-*table 3
-*died*
-logistic nhats_died_12 female age if keep==1
-lroc, nograph
-predict c1, xb
-
-qui logistic nhats_died_12 female age adl_index if keep==1
-lroc, nograph
-predict c2, xb
-roccomp nhats_died_12 c1 c2, graph summary
-
-qui logistic nhats_died_12 female age freqout if keep==1
-lroc, nograph
-predict c3, xb
-roccomp nhats_died_12 c2 c3, graph summary
-
-qui logistic nhats_died_12 female age freqout adl_index if keep==1
-lroc, nograph
-predict c4, xb
-roccomp nhats_died_12 c2 c4, graph summary
-
-*hospitalized*
-logistic srhosp_oneyear female age if keep==1
-lroc, nograph
-predict h1, xb
-
-qui logistic srhosp_oneyear female age adl_index if keep==1
-lroc, nograph
-predict h2, xb
-
-qui logistic srhosp_oneyear female age freqout if keep==1 & nhats_died_12==0
-lroc, nograph
-predict h3, xb
-roccomp srhosp_oneyear c2 c3, graph summary
-
-qui logistic sr_hosp_ind female age freqout adl_index if keep==1
-lroc, nograph
-predict c4, xb
-roccomp srhosp_oneyear c2 c4, graph summary
-
-*NEW TABLE 4
-
-*****LEFT OFF HERE****
-svy, subpop(keep): tab anyadl
-svy, subpop(keep): tab anylcs
-
-svy, subpop(keep): tab anyadl female, row ci
-svy, subpop(keep): tab anylcs female, row ci
-
-svy, subpop(keep): tab anyadl agecat2, row ci
-svy, subpop(keep): tab anylcs agecat2, row ci
-
-svy, subpop(keep): tab anyadl racehisp, row ci
-svy, subpop(keep): tab anylcs racehisp, row ci
-
-svy, subpop(keep): tab anyadl proxy, row ci
-svy, subpop(keep): tab anylcs proxy, row ci
-
-svy, subpop(keep): tab anyadl livealone, row ci
-svy, subpop(keep): tab anylcs livealone, row ci
-
-svy, subpop(keep): tab anyadl nomoneymed, row ci
-svy, subpop(keep): tab anylcs nomoneymed, row ci
-
-svy, subpop(keep): tab anyadl nomoneyutils, row ci
-svy, subpop(keep): tab anylcs nomoneyutils, row ci
-
-svy, subpop(keep): tab anyadl medicaid, row ci
-svy, subpop(keep): tab anylcs medicaid, row ci
-
-svy, subpop(keep): tab anyadl heartattack, row ci
-svy, subpop(keep): tab anylcs heartattack, row ci
-
-svy, subpop(keep): tab anyadl heartdis, row ci
-svy, subpop(keep): tab anylcs heartdis, row ci
-
-svy, subpop(keep): tab anyadl htn, row ci
-svy, subpop(keep): tab anylcs htn, row ci
-
-svy, subpop(keep): tab anyadl arthritis, row ci
-svy, subpop(keep): tab anylcs arthritis, row ci
-
-svy, subpop(keep): tab anyadl osteoporosis, row ci
-svy, subpop(keep): tab anylcs osteoporosis, row ci
-
-svy, subpop(keep): tab anyadl diabetes, row ci
-svy, subpop(keep): tab anylcs diabetes, row ci
-
-svy, subpop(keep): tab anyadl lungdis, row ci
-svy, subpop(keep): tab anylcs lungdis, row ci
-
-svy, subpop(keep): tab anyadl stroke, row ci
-svy, subpop(keep): tab anylcs stroke, row ci
-
-svy, subpop(keep): tab anyadl dementia, row ci
-svy, subpop(keep): tab anylcs dementia, row ci
-
-svy, subpop(keep): tab anyadl cancer, row ci
-svy, subpop(keep): tab anylcs cancer, row ci
-
-svy, subpop(keep): tab anyadl depressed, row ci
-svy, subpop(keep): tab anylcs depressed, row ci
-
-svy, subpop(keep): tab anyadl fphealth, row ci
-svy, subpop(keep): tab anylcs fphealth, row ci
-
-svy, subpop(keep): tab anyadl fallmnth, row ci
-svy, subpop(keep): tab anylcs fallmnth, row ci
-
-svy, subpop(keep): tab anyadl painbothr, row ci
-svy, subpop(keep): tab anylcs painbothr, row ci
-
-svy, subpop(keep): tab anyadl socalone, row ci
-svy, subpop(keep): tab anylcs socalone, row ci
-
-svy, subpop(keep): tab anyadl fallmnth, row ci
-svy, subpop(keep): tab anylcs fallmnth, row ci
-
 H="hospitalizations post interview"
 //note--elsewhere, this project uses the sensitive/public only dataset, but the dates are restricted (as are claims, obviously)
 
@@ -353,6 +126,232 @@ label var n_ip_admit_p12m "Number IP admissions 12m post-ivw"
 gen ind_ip_admit_p12m=n_ip_admit_p12m>0
 label var ind_ip_admit_p12m "Any IP admissions 12m post-ivw"
 
+
+H="variable cleaning"
+*VARIABLES FOR DISABILITY
+tab adl_index
+tab adlcount_jenny
+tab freq_go_out, nolab
+
+
+recode adl_index (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(adl_3cat)
+recode adlcount_jenny (0=0 "0_none")(1/2=1 "1_1-2 ADLs")(3/max=2 "2_3-7 ADLs"), gen(jennyadl_3cat)
+recode freq_go_out (1=1 "1_every day")(2=2 "2_most days")(3=3 "3_some days")(4/5=4 "4_rarely never"), gen(freqout)
+
+sort spid wave
+by spid: gen srhosp_oneyear= sr_hosp_ind[_n+1]
+
+recode adl_index(0=0)(1/6=1), gen(anyadl)
+recode freq_go_out (1/2=0)(3/5=1), gen(anylcs)
+
+*making variable keep
+gen keep=.
+replace keep=1 if wave<7
+replace keep=. if adl_index==.
+*3,248
+replace keep=. if freq_go_out==.
+*31
+replace keep=. if nhats_died_12==.
+*1,753
+
+
+*COVARIATES
+recode n_social_network (0=0 "0_none") (1=1 "1_one")(2/5=2 "2_ 2+ people"), gen(networkcat)
+
+*making the hospitalization indicator=1 if in claims
+gen new_srhosp_oneyear=srhosp_oneyear
+replace new_srhosp_oneyear=1 if ind_ip_admit_p12m==1
+
+recode age (min/74=1 "1_ 65-74")(75/84=2 "2_75-84")(85/max=3 "3_85+"),gen(agecat2)
+
+H="analysis"
+*ANALYSIS
+svyset varunit [pweight=anfinwgt], strata(varstrat)
+
+*table 1
+
+svy, subpop(keep): tab female
+svy, subpop(keep): mean age
+svy, subpop(keep): tab race_cat
+svy, subpop(keep): tab proxy_ivw
+svy, subpop(keep): tab livealone
+svy, subpop(keep): tab networkcat
+svy, subpop(keep): tab nopaymed
+svy, subpop(keep): tab nopayutil
+svy, subpop(keep): tab medicaid
+svy, subpop(keep): tab sr_heart_dis_ever
+svy, subpop(keep): tab sr_htn_ever
+svy, subpop(keep): tab sr_stroke_ever 
+svy, subpop(keep): tab sr_cancer_ever 
+svy, subpop(keep): tab sr_osteoprs_ever 
+svy, subpop(keep): tab sr_diabetes_ever 
+svy, subpop(keep): tab sr_lung_dis_ever 
+svy, subpop(keep): tab dem_2_cat
+svy, subpop(keep): tab sr_phq2_depressed 
+svy, subpop(keep): tab sr_gad2_anxiety
+svy, subpop(keep): mean sr_numconditions1
+svy, subpop(keep): tab srh_fp
+svy, subpop(keep): tab fall_last_month
+svy, subpop(keep): tab ind_pain
+
+*figure
+*NEW FIGURE 2
+
+tab freqout adl_3cat if keep==1
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==1 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==2 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==3 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==0
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==1
+svy, subpop(keep): tab nhats_died_12 if freqout==4 & adl_3cat==2
+
+svy, subpop(keep): tab nhats_died_12 freqout, column
+svy, subpop(keep): tab nhats_died_12 adl_3cat, column
+
+*hospitalization
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==1 & adl_3cat==0
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==1 & adl_3cat==1
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==1 & adl_3cat==2
+
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==2 & adl_3cat==0
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==2 & adl_3cat==1
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==2 & adl_3cat==2
+
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==3 & adl_3cat==0
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==3 & adl_3cat==1
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==3 & adl_3cat==2
+
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==4 & adl_3cat==0
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==4 & adl_3cat==1
+svy, subpop(keep): tab new_srhosp_oneyear if freqout==4 & adl_3cat==2
+
+svy, subpop(keep): tab new_srhosp_oneyear freqout, column
+svy, subpop(keep): tab new_srhosp_oneyear adl_3cat, column
+
+*table 3
+*died*
+logistic nhats_died_12 female age if keep==1
+lroc, nograph
+predict c1, xb
+
+qui logistic nhats_died_12 female age adl_index if keep==1
+lroc, nograph
+predict c2, xb
+roccomp nhats_died_12 c1 c2, graph summary
+
+qui logistic nhats_died_12 female age freqout if keep==1
+lroc, nograph
+predict c3, xb
+roccomp nhats_died_12 c2 c3, graph summary
+
+qui logistic nhats_died_12 female age freqout adl_index if keep==1
+lroc, nograph
+predict c4, xb
+roccomp nhats_died_12 c2 c4, graph summary
+
+*hospitalized*
+logistic new_srhosp_oneyear female age if keep==1
+lroc, nograph
+predict nh1, xb
+
+qui logistic new_srhosp_oneyear female age adl_index if keep==1
+lroc, nograph
+predict nh2, xb
+
+qui logistic new_srhosp_oneyear female age freqout if keep==1 
+lroc, nograph
+predict h3, xb
+roccomp srhosp_oneyear c2 c3, graph summary
+
+qui logistic new_srhosp_oneyear female age freqout adl_index if keep==1
+lroc, nograph
+predict nh4, xb
+roccomp srhosp_oneyear nh2 nh4, graph summary
+
+*NEW TABLE 4
+
+*****LEFT OFF HERE****
+svy, subpop(keep): tab anyadl
+svy, subpop(keep): tab anylcs
+
+svy, subpop(keep): tab anyadl anylcs, row ci
+svy, subpop(keep): tab anyadl anylcs, column ci
+
+svy, subpop(keep): tab anyadl female, row ci
+svy, subpop(keep): tab anylcs female, row ci
+
+svy, subpop(keep): tab anyadl agecat2, row ci
+svy, subpop(keep): tab anylcs agecat2, row ci
+
+svy, subpop(keep): tab anyadl race_cat, row ci
+svy, subpop(keep): tab anylcs race_cat, row ci
+
+svy, subpop(keep): tab anyadl proxy_ivw, row ci
+svy, subpop(keep): tab anylcs proxy_ivw, row ci
+
+svy, subpop(keep): tab anyadl livealone, row ci
+svy, subpop(keep): tab anylcs livealone, row ci
+
+svy, subpop(keep): tab anyadl networkcat, row ci
+svy, subpop(keep): tab anylcs networkcat, row ci
+
+svy, subpop(keep): tab anyadl nopaymed, row ci
+svy, subpop(keep): tab anylcs nopaymed, row ci
+
+svy, subpop(keep): tab anyadl nopayutil, row ci
+svy, subpop(keep): tab anylcs nopayutil, row ci
+
+svy, subpop(keep): tab anyadl medicaid, row ci
+svy, subpop(keep): tab anylcs medicaid, row ci
+
+svy, subpop(keep): tab anyadl sr_heart_dis_ever, row ci
+svy, subpop(keep): tab anylcs sr_heart_dis_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_htn_ever, row ci
+svy, subpop(keep): tab anylcs sr_htn_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_stroke_ever, row ci
+svy, subpop(keep): tab anylcs sr_stroke_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_cancer_ever, row ci
+svy, subpop(keep): tab anylcs sr_cancer_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_osteoprs_ever, row ci
+svy, subpop(keep): tab anylcs sr_osteoprs_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_diabetes_ever, row ci
+svy, subpop(keep): tab anylcs sr_diabetes_ever, row ci
+
+svy, subpop(keep): tab anyadl sr_lung_dis_ever, row ci
+svy, subpop(keep): tab anylcs sr_lung_dis_ever, row ci
+
+svy, subpop(keep): tab anyadl dem_2_cat, row ci
+svy, subpop(keep): tab anylcs dem_2_cat, row ci
+
+svy, subpop(keep): tab anyadl sr_phq2_depressed, row ci
+svy, subpop(keep): tab anylcs sr_phq2_depressed, row ci
+
+svy, subpop(keep): tab anyadl sr_gad2_anxiety, row ci
+svy, subpop(keep): tab anylcs sr_gad2_anxiety, row ci
+
+
+svy, subpop(keep): tab anyadl srh_fp, row ci
+svy, subpop(keep): tab anylcs srh_fp, row ci
+
+svy, subpop(keep): tab anyadl fall_last_month, row ci
+svy, subpop(keep): tab anylcs fall_last_month, row ci
+
+svy, subpop(keep): tab anyadl ind_pain, row ci
+svy, subpop(keep): tab anylcs ind_pain, row ci
 
 H="Changelog"
 ********************Change Log******************** 

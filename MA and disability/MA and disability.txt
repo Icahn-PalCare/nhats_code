@@ -258,6 +258,16 @@ merge 1:1 spid using "E:\nhats\data\Projects\MA after disability\bene spid and h
 keep if _merge==3
 drop _merge
 
+***to prepare to merge, keep a variable for wave at first disability
+gen wave=.
+foreach n of numlist 2/6 {
+replace wave=`n' if dm`n'datehelp==index_date
+replace wave=`n' if wave==. & ds`n'datehelp==index_date
+}
+
+merge 1:1 spid wave using "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta"
+
+
 H="cleaning all variables"
 /* VARIABLE CLEANING
  Step 1: make month of index (first disability)
@@ -590,8 +600,9 @@ replace q0ind=5 if q8ind==5
 	bysort spid: gen not_marriedpartnered_prior=not_marriedpartnered[_n-1] 
 	
 	tab region, generate (regdum)
-	
-	
+	tab adl3cat, generate (adlcatdum)
+	tab homebound_3cat, generate (homebound_3catdum)
+
 	
 	*CODING VARIABLES FOR INCIDENCE AND PERSONTIME OF SWITCHES
 	*NUMBER OF SWITCHES FOR MA AND FFS before and after disability
@@ -690,9 +701,153 @@ tab sr_phq2_depressed_prior firsthmo if keep==1, column chi2
 tab sr_gad2_anxiety_prior firsthmo if keep==1, column chi2
 tab srh_fp_prior firsthmo if keep==1, column chi2
 
+
 *FIGURE 1
 ir switch_pre firsthmo persontime_n if hs_pre_study!=1
 ir switch_post firsthmo persontime_p if hs_pre_study!=1
+
+*TABLE 2 WEIGHTED
+*make a new keep variable for start in MA vs start in TM
+gen keepMA=keep
+replace keepMA=0 if firsthmo==0
+gen keepFFS=keep
+replace keepFFS=0 if firsthmo==1
+
+*make a variable for switching
+recode sw4cat (1=1)(2=0)(3=1)(4=0), gen(switch_any)
+tab switch_any
+
+*started in MA
+svy, subpop(keepMA): tab 		female 					switch_any, column 
+svy, subpop(keepMA): logistic  	switch_any 				female 
+
+svy, subpop(keepMA): mean 		age, 					over(switch_any)
+svy, subpop(keepMA): logistic 	switch_any				age
+
+svy, subpop(keepMA): tab 		race_cat_2 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				race_cat_2
+
+svy, subpop(keepMA): tab 		livealone 				switch_any, column
+svy, subpop(keepMA): logistic 	switch_any				livealone
+
+svy, subpop(keepMA): tab 		not_marriedpartnered 	switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				not_marriedpartnered
+
+svy, subpop(keepMA): tab 		region				 	switch_any, column
+svy, subpop(keepMA): logistic 	switch_any				regdum1
+svy, subpop(keepMA): logistic 	switch_any				regdum2
+svy, subpop(keepMA): logistic 	switch_any				regdum3
+svy, subpop(keepMA): logistic 	switch_any				regdum4
+
+svy, subpop(keepMA): tab 		not_hs_educ 			switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				not_hs_educ
+
+svy, subpop(keepMA): tab 		income_less_15k 		switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				income_less_15k
+
+svy, subpop(keepMA): tab 		medicaid 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				medicaid
+
+svy, subpop(keepMA): tab 		adl3cat 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				adlcatdum1
+svy, subpop(keepMA): logistic 	switch_any				adlcatdum2
+svy, subpop(keepMA): logistic 	switch_any				adlcatdum3
+
+svy, subpop(keepMA): tab 		ind_no_helpers 			switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				ind_no_helpers
+
+svy, subpop(keepMA): tab 		dem_2_cat 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				dem_2_cat
+
+svy, subpop(keepMA): tab 		nhres 					switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				nhres
+
+svy, subpop(keepMA): tab 		homebound_3cat 			switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				homebound_3catdum1
+svy, subpop(keepMA): logistic 	switch_any				homebound_3catdum2
+svy, subpop(keepMA): logistic 	switch_any				homebound_3catdum3
+
+svy, subpop(keepMA): tab 		sr_phq2_depressed 		switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				sr_phq2_depressed
+
+svy, subpop(keepMA): tab 		sr_gad2_anxiety 		switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				sr_gad2_anxiety
+
+svy, subpop(keepMA): tab 		srh_fp 					switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				srh_fp
+
+svy, subpop(keepMA): tab 		died12mo 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				died12mo
+
+svy, subpop(keepMA): tab 		year 				switch_any, column 
+svy, subpop(keepMA): logistic 	switch_any				year
+
+
+*started in TM
+svy, subpop(keepFFS): tab 		female 					switch_any, column 
+svy, subpop(keepFFS): logistic  	switch_any 				female 
+
+svy, subpop(keepFFS): mean 		age, 					over(switch_any)
+svy, subpop(keepFFS): logistic 	switch_any				age
+
+svy, subpop(keepFFS): tab 		race_cat_2 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				race_cat_2
+
+svy, subpop(keepFFS): tab 		livealone 				switch_any, column
+svy, subpop(keepFFS): logistic 	switch_any				livealone
+
+svy, subpop(keepFFS): tab 		not_marriedpartnered 	switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				not_marriedpartnered
+
+svy, subpop(keepFFS): tab 		region				 	switch_any, column
+svy, subpop(keepFFS): logistic 	switch_any				regdum1
+svy, subpop(keepFFS): logistic 	switch_any				regdum2
+svy, subpop(keepFFS): logistic 	switch_any				regdum3
+svy, subpop(keepFFS): logistic 	switch_any				regdum4
+
+svy, subpop(keepFFS): tab 		not_hs_educ 			switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				not_hs_educ
+
+svy, subpop(keepFFS): tab 		income_less_15k 		switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				income_less_15k
+
+svy, subpop(keepFFS): tab 		medicaid 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				medicaid
+
+svy, subpop(keepFFS): tab 		adl3cat 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				adlcatdum1
+svy, subpop(keepFFS): logistic 	switch_any				adlcatdum2
+svy, subpop(keepFFS): logistic 	switch_any				adlcatdum3
+
+svy, subpop(keepFFS): tab 		ind_no_helpers 			switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				ind_no_helpers
+
+svy, subpop(keepFFS): tab 		dem_2_cat 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				dem_2_cat
+
+svy, subpop(keepFFS): tab 		nhres 					switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				nhres
+
+svy, subpop(keepFFS): tab 		homebound_3cat 			switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				homebound_3catdum1
+svy, subpop(keepFFS): logistic 	switch_any				homebound_3catdum2
+svy, subpop(keepFFS): logistic 	switch_any				homebound_3catdum3
+
+svy, subpop(keepFFS): tab 		sr_phq2_depressed 		switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				sr_phq2_depressed
+
+svy, subpop(keepFFS): tab 		sr_gad2_anxiety 		switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				sr_gad2_anxiety
+
+svy, subpop(keepFFS): tab 		srh_fp 					switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				srh_fp
+
+svy, subpop(keepFFS): tab 		died12mo 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				died12mo
+
+svy, subpop(keepFFS): tab 		year 				switch_any, column 
+svy, subpop(keepFFS): logistic 	switch_any				year
+
 
 *TABLE 2
 	*TABLE 1

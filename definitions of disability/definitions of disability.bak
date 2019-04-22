@@ -268,6 +268,7 @@ rename ivw_date index_date
 keep spid wave index_date
 merge m:1 spid using  "E:\nhats\data\NHATS CMS DUA 28016\Crosswalks\xwalk_2016.dta", ///
 keepusing(bene_id) keep(match) nogen
+drop if missing(index_date)
 
 forvalues i=1/7 {
 	preserve
@@ -284,6 +285,7 @@ forvalues i=1/7 {
 	restore
 }
 
+preserve
 use `t1', clear
 forvalues i=2/7 {
 	append using `t`i''
@@ -291,8 +293,61 @@ forvalues i=2/7 {
 tempfile tempall
 save `tempall'
 
+restore
+//get FFS counts per wave, as above
+forvalues i=1/7 {
+	preserve
+	keep if wave==`i'
+	merge 1:m bene_id using "E:\nhats\data\NHATS CMS DUA 28016\Merged\Stata\mbsf_06_17.dta", ///
+	keep(match) nogen keepusing(buyin12 hmoind12 year)
+	gen month=month(index_date)
+	rename *12 *
+	reshape wide buyin hmoind, i(bene_id) j(year)
+	order spid bene_id wave buyin* hmoind*
+	foreach x of varlist buyin* hmoind* {
+		replace `x'="NA" if missing(`x')
+}
+	foreach x in buyin hmoind {
+		gen `x'pre=""
+		gen `x'post=""
+	forvalues j=1/7 {
+		egen a=concat(`x'2006-`x'201`j')
+		egen b=concat(`x'201`j'-`x'2017)
+		replace `x'pre=substr(reverse(a),13-month,.) if wave==`j'
+		replace `x'post=substr(b,month,.) if wave==`j'
+		drop a b
+}
+}
+	//Acceptable Buyin only 3 or C so for Buyin don't know how to do it in one stage, HMO only 0
+		//Could replace values in one step, might be quicker in the future (e.g.,0,1,2,A,B=0; 3,C=1)
+	foreach x in pre post {
+		gen buyin`x'2=length(buyin`x')
+		foreach y in 0 1 2 A B NA {
+			replace buyin`x'2=strpos(buyin`x',"`y'") if strpos(buyin`x',"`y'")<buyin`x'2 & strpos(buyin`x',"`y'")!=0
+}
+		gen hmoind`x'2=indexnot(hmoind`x',"0")
+		replace hmoind`x'2=length(hmoind`x') if hmoind`x'2==0
+}
+	gen cont_ffs_n_mos=buyinpre2-1
+	replace cont_ffs_n_mos=hmoindpre2-1 if hmoindpre2<buyinpre2
+	gen cont_ffs_p_mos=buyinpost2-1
+	replace cont_ffs_p_mos=hmoindpost2-1 if hmoindpost2<buyinpost2
+	tempfile ffs`i'
+	save `ffs`i''
+	restore
+}
+use `ffs1', clear
+forvalues i=2/7 {
+	append using `ffs`i''
+}
+tempfile ffsall
+save `ffsall'
+
+
 use "E:\nhats\data\NHATS cleaned\sp_round_1_7_public_sens_only.dta", clear 
 merge 1:1 spid wave using `tempall', nogen
+merge 1:1 spid wave using `ffsall', nogen
+
 replace n_ip_admit_p12m=0 if missing(n_ip_admit_p12m)
 label var n_ip_admit_p12m "Number IP admissions 12m post-ivw"
 gen ind_ip_admit_p12m=n_ip_admit_p12m>0
@@ -301,4 +356,6 @@ label var ind_ip_admit_p12m "Any IP admissions 12m post-ivw"
 
 H="Changelog"
 ********************Change Log******************** 
+04/19/19-ebl-added FFS determination to hospitalizations header
+
 04/18/19-ebl-added hospitalizations post interview
