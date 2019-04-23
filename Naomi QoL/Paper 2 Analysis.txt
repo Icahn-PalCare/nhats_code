@@ -126,7 +126,8 @@ if death_date^=. then dxtodeath=death_date-firstdxt;
 
 run;
 
-proc freq data=nhats(where=(wave=1)); tables sample2; run;
+proc freq data=nhats(where=(wave=1)); tables sample2 adl_impair*adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help; run;
 proc univariate data=nhats(where=(wave=1 and sample=1)); var death_date; run;
 proc print data=nhats(where=(wave=1 and sample=1 and death_date=20635.0)); 
 var spid wave death_date sample sample2 n1_int p1_int; format death_date n1_int p1_int date9.; run;
@@ -138,13 +139,15 @@ format death_date n1_int p1_int date9. ; run;
 /*Run GEE without accounting for weights*/
 data n1; set nhats(where=(ivw_date=n1_int and sample2=1)); 
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time  firstdx
-age marstat income_quartile income2cat;
+age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help srh;
 time=0;
 run;
 
 data p1; set nhats(where=(ivw_date=p1_int and sample2=1));
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time firstdx
-age marstat income_quartile income2cat; 
+age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help srh; 
 time=1;
 run;
 
@@ -157,7 +160,7 @@ proc freq data=p1; tables social_isolation; run;*/
 
 /*demographics*/
 data demo; set nhats(where=(ivw_date=n1_int and sample2=1)); keep bene_id age_firstdx firstdx 
-sample2 female race_recode race2gp HS education n1_cancer_time cancer_p1_time;;
+sample2 female race_recode race2gp HS education n1_cancer_time cancer_p1_time p1_int n1_int;;
 run;
 
 proc sort data=demo; by bene_id; run;
@@ -180,9 +183,14 @@ income2cat sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair)*firstdx
 
 proc freq data=long2(where=(time=0)); tables (sr_phq2_depressed sr_gad2_anxiety adl_impair)*firstdx/chisq exact; run;
 
-proc means data=long2(where=(time=0)) mean stderr; var age_firstdx age n1_cancer_time cancer_p1_time ; 
-class firstdx;
+proc means data=long2(where=(time=0)) mean stderr min max; var age_firstdx age n1_cancer_time cancer_p1_time ; 
+/*class firstdx;*/
 run;
+
+proc univariate data=long2 (where=(time=0)); var n1_cancer_time cancer_p1_time; run;
+data test; set long2(where=(time=0)); time_between=p1_int-n1_int; run;
+proc univariate data=test; var time_between ;run;
+
 
 proc glm data=long2(where=(time=0));
 class firstdx;
@@ -198,7 +206,23 @@ proc npar1way data=long2(where=(time=0));
 class firstdx;
 var age;
 run;
+proc npar1way data=long2(where=(time=0));
+class firstdx;
+var sr_numconditions1;
+run;
+proc means data=long2(where=(time=0));
+/*class firstdx; */
+var sr_numconditions1; run;
 
+
+/*Description of ADLs*/
+proc freq data=long2; tables (adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help srh)*time; run;
+
+proc freq data=long2(where=(adl_impair=1)); tables (adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help srh)*time; run;
+
+/*McNemar's Test*/
 
 data n1a; set n1;
 rename sr_phq2_depressed=depressed1 sr_gad2_anxiety= anxiety1  srh_fp=srh_fp1
@@ -267,9 +291,10 @@ proc genmod data=long2  descending;
 class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") /param=glm;
-model adl_impair=time time*firstdx firstdx age_firstdx female race2gp HS marstat income2cat /d=bin link=logit type3;
+model sr_phq2_depressed=time /*time*firstdx*/ firstdx age_firstdx  /*female*/ race2gp HS marstat income2cat 
+ /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
-slice time*firstdx/nof ilink sliceby=firstdx diff;
+/*slice time*firstdx/nof ilink sliceby=firstdx diff;*/
 run; 
 
 
