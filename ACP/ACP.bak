@@ -1957,10 +1957,10 @@ H="HRS MLOGIT 3 model "
 /*
 
 Created by: Mohammed 
-Date Created: 03/25/2019
+Date Created: 04/22/2019
 
 Updated by: MH
-Date Updated: 04/01/2019
+Date Updated: 04/22/2019
 
 Description: Multinomial Logit model with base being no ACP. 3 different model 
 specifications created. 
@@ -2258,242 +2258,14 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 "1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) addtable replace 
 
 
-H="Changelog"
-
-
-********************Change Log******************** 
-
-
-
-Updates:
-
-04/03/2019 MH
-------------
-Adding in p-values to Mlogit 3 model outreg tables. 
-
-04/01/2019 MH
-------------
-Adding in living children indicator variable to the 3 models.  
-
-03/29/2019 MH
-------------
-Adding in living children indicator variable. Added in different model specifications. Reran tables and analysis. 
-
-03/18/2019 MH
-------------
-Adding in sample sizes to the tables for MLOGIT.
-
-03/07/2019 MH
-------------
-ACP Regression in NHATS and HRS using MLOGIT. Created tables. 
-
-02/28/2019 MH
-------------
-In HRS file added in 2016 Tracker file, to use LIVARR variable. 
-
-02/15/2019 MH
-------------
-In HRS used hisp_eth instead of hisp. Changed how livind arrangement variable defined in NHATS. 
-
-02/07/2019 MH
-------------
-Fixed variable and removed cell size restrictions. 
- 
-02/06/2019 MH
-------------
-Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 
-
-02/01/2019 MH
-------------
-Created table for HRS under HRS tab. Done for summary statistics. Created vars for neuroticism and conscientiousness.
-
-01/31/2019 MH
-------------
-Table for NHATS under NHATS ACP for ACP summary statistics.
-
-
-*/
-
-H="NHATS var change 3 mlogit model"
+H="HRS social var change 3 mlogit model"
 /*
 
 Created by: Mohammed 
-Date Created: 03/25/2019
+Date Created: 04/22/2019
 
 Updated by: MH
-Date Updated: 04/02/2019
-
-Description: Multinomial Logit model with base being no ACP. 3 different model 
-specifications created. 
-
-
-**************************************************
-*/
-
-local date = subinstr("$S_DATE"," ","_",.) 
-local name NHATS_ACP_logit_`date'
-di "`name'"
-
-capture log close 
-clear all
-
-set more off
-version 12
-set linesize 80
-set maxvar 10000
-
-
-log using "${logs}/`name'.smcl", text replace
-
-
-/*
-Using Wave 2 NHATS data b/c that is where ACP questions are asked.
-Using a Multinomail Logisitic Regression with the base being Formal ACP. 
-3 different specifications. 
-
-*/
-
-
-use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
-
-gen soc_iso=1 if n_social_network!=.
-replace soc_iso=0 if n_social_network==0
-
-gen n=1 if acp!=.
-
-gen male=0
-replace male=1 if female==0
-
-foreach x in education income_quart race_cat maritalstat imprelig {
-tab `x', gen(`x')
-}
-
-gen live_alone=.
-replace live_alone=0 if inrange(livearrang,2,4)
-replace live_alone=1 if livearrang==1
-
-gen live_other=.
-replace live_other=0 if livearrang==1
-replace live_other=1 if inrange(livearrang,2,4)
-
-foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
-gen `x'0=0 if `x'==1
-replace `x'0=1 if `x'==0
-}
-
-gen noone_talk1=0 if noone_talk==1
-replace noone_talk1=1 if noone_talk==0
-
-label var male "Male"
-label var ownhome0 "No Own Home"
-label var srh_fp0 "Self reported health==Good+"
-label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
-label var sr_dementia_ever0 "No Self report Dementia"
-label var sr_phq2_depressed0 "Not Depressed"
-label var sr_gad2_anxiety0 "No Anxiety"
-label var soc_iso0 "No one in social network"
-label var soc_iso ">=1 in social network"
-label var live_alone "Lives Alone"
-label var live_other "Lives w/Others"
-label var noone_talk "SP has people to talk to"
-
-gen ab=.
-replace ab=0 if informal==1
-replace ab=1 if acp==1
-
-gen ac=.
-replace ac=0 if no_acp==1
-replace ac=1 if acp==1
-
-gen ad=.
-replace ad=0 if formal==1
-replace ad=1 if acp==1
-
-gen bc=.
-replace bc=0 if no_acp==1
-replace bc=1 if informal==1
-
-gen bd=.
-replace bd=0 if formal==1
-replace bd=1 if informal==1
-
-gen cd=.
-replace cd=0 if formal==1
-replace cd=1 if no_acp==1
-
-//MLOGIT Regression
-
-gen cat=0 if no_acp==1
-replace cat=1 if informal_acp==1
-replace cat=2 if formal_acp==1
-replace cat=3 if acp==1
-
-gen non_white=0 
-replace non_white=1 if white==0
-
-gen lninc=ln(aveincome)
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married noone_talk1 ind_kids srh_fp
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") replace 
-
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married noone_talk1 ind_kids srh_fp sr_hosp_ind
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
-
-
-
-local vars age female education4 lninc non_white ownhome livesalone_ind ///
-married noone_talk1 ind_kids srh_fp sr_hosp_ind sr_phq2_depressed sr_gad2_anxiety
-
-mlogit cat `vars', rrr b(2) 
-
-///getting sample sizes for each group
-forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
-ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_phq2_depressed!=. & sr_gad2_anxiety!=. & ind_kids!=.
-local `x'=`r(N)'
-}
-
-outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
-title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
-"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
-
-
-
-H="HRS var change 3 mlogit model"
-/*
-
-Created by: Mohammed 
-Date Created: 03/25/2019
-
-Updated by: MH
-Date Updated: 04/01/2019
+Date Updated: 04/22/2019
 
 Description: Multinomial Logit model with base being no ACP. 3 different model 
 specifications created. 
@@ -2799,3 +2571,236 @@ local `x'=`r(N)'
 outreg using "${logs}mlogit_hrs_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
 title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP (`0') vs Base (`2')" \ ///
 "1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) addtable replace 
+
+
+H="NHATS social var change 3 mlogit model"
+/*
+
+Created by: Mohammed 
+Date Created: 03/25/2019
+
+Updated by: MH
+Date Updated: 04/02/2019
+
+Description: Multinomial Logit model with base being no ACP. 3 different model 
+specifications created. 
+
+
+**************************************************
+*/
+
+local date = subinstr("$S_DATE"," ","_",.) 
+local name NHATS_ACP_logit_`date'
+di "`name'"
+
+capture log close 
+clear all
+
+set more off
+version 12
+set linesize 80
+set maxvar 10000
+
+
+log using "${logs}/`name'.smcl", text replace
+
+
+/*
+Using Wave 2 NHATS data b/c that is where ACP questions are asked.
+Using a Multinomail Logisitic Regression with the base being Formal ACP. 
+3 different specifications. 
+
+*/
+
+
+use "E:\nhats\data\NHATS cleaned\sp_round_1_7.dta" if wave==2, clear
+
+gen soc_iso=1 if n_social_network!=.
+replace soc_iso=0 if n_social_network==0
+
+gen n=1 if acp!=.
+
+gen male=0
+replace male=1 if female==0
+
+foreach x in education income_quart race_cat maritalstat imprelig {
+tab `x', gen(`x')
+}
+
+gen live_alone=.
+replace live_alone=0 if inrange(livearrang,2,4)
+replace live_alone=1 if livearrang==1
+
+gen live_other=.
+replace live_other=0 if livearrang==1
+replace live_other=1 if inrange(livearrang,2,4)
+
+foreach x in ownhome srh_fp sr_hosp_ind sr_dementia_ever sr_phq2_depressed sr_gad2_anxiety soc_iso{
+gen `x'0=0 if `x'==1
+replace `x'0=1 if `x'==0
+}
+
+gen noone_talk1=0 if noone_talk==1
+replace noone_talk1=1 if noone_talk==0
+
+label var male "Male"
+label var ownhome0 "No Own Home"
+label var srh_fp0 "Self reported health==Good+"
+label var sr_hosp_ind0 "Hospital stay in the last year 0=No"
+label var sr_dementia_ever0 "No Self report Dementia"
+label var sr_phq2_depressed0 "Not Depressed"
+label var sr_gad2_anxiety0 "No Anxiety"
+label var soc_iso0 "No one in social network"
+label var soc_iso ">=1 in social network"
+label var live_alone "Lives Alone"
+label var live_other "Lives w/Others"
+label var noone_talk "SP has people to talk to"
+
+gen ab=.
+replace ab=0 if informal==1
+replace ab=1 if acp==1
+
+gen ac=.
+replace ac=0 if no_acp==1
+replace ac=1 if acp==1
+
+gen ad=.
+replace ad=0 if formal==1
+replace ad=1 if acp==1
+
+gen bc=.
+replace bc=0 if no_acp==1
+replace bc=1 if informal==1
+
+gen bd=.
+replace bd=0 if formal==1
+replace bd=1 if informal==1
+
+gen cd=.
+replace cd=0 if formal==1
+replace cd=1 if no_acp==1
+
+//MLOGIT Regression
+
+gen cat=0 if no_acp==1
+replace cat=1 if informal_acp==1
+replace cat=2 if formal_acp==1
+replace cat=3 if acp==1
+
+gen non_white=0 
+replace non_white=1 if white==0
+
+gen lninc=ln(aveincome)
+
+local vars age female education4 lninc non_white ownhome livesalone_ind ///
+married noone_talk1 ind_kids srh_fp
+
+mlogit cat `vars', rrr b(2) 
+
+///getting sample sizes for each group
+forvalues x=0/3{
+sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
+ownhome!=. & srh_fp!=. & ind_kids!=.
+local `x'=`r(N)'
+}
+
+outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
+title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
+"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") replace 
+
+
+local vars age female education4 lninc non_white ownhome livesalone_ind ///
+married noone_talk1 ind_kids srh_fp sr_hosp_ind
+
+mlogit cat `vars', rrr b(2) 
+
+///getting sample sizes for each group
+forvalues x=0/3{
+sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
+ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & ind_kids!=.
+local `x'=`r(N)'
+}
+
+outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
+title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
+"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
+
+
+
+local vars age female education4 lninc non_white ownhome livesalone_ind ///
+married noone_talk1 ind_kids srh_fp sr_hosp_ind sr_phq2_depressed sr_gad2_anxiety
+
+mlogit cat `vars', rrr b(2) 
+
+///getting sample sizes for each group
+forvalues x=0/3{
+sum `vars' if cat==`x' & cat!=. & noone_talk1!=. & lninc!=. & education4!=. & ///
+ownhome!=. & srh_fp!=. & sr_hosp_ind!=. & sr_phq2_depressed!=. & sr_gad2_anxiety!=. & ind_kids!=.
+local `x'=`r(N)'
+}
+
+outreg using "${logs}mlogit_nhats_3model", varlabels stats(e_b e_ci p) ctitles(" " " " "Relative Risk Ratios") ///
+title("NHATS Multinomial Logistic Model") note("Base is Formal received" \ "0-No ACP(`0') vs Base(`2')" \ ///
+"1-Informal(`1') vs Base(`2')" \ "3-Two-Pronged(`3') vs Base(`2')") addtable replace 
+
+
+
+H="Changelog"
+
+
+********************Change Log******************** 
+
+
+
+Updates:
+
+04/22/2019 MH
+------------
+Changed which social varaible to use in both HRS and NHATS.
+
+04/03/2019 MH
+------------
+Adding in p-values to Mlogit 3 model outreg tables. 
+
+04/01/2019 MH
+------------
+Adding in living children indicator variable to the 3 models.  
+
+03/29/2019 MH
+------------
+Adding in living children indicator variable. Added in different model specifications. Reran tables and analysis. 
+
+03/18/2019 MH
+------------
+Adding in sample sizes to the tables for MLOGIT.
+
+03/07/2019 MH
+------------
+ACP Regression in NHATS and HRS using MLOGIT. Created tables. 
+
+02/28/2019 MH
+------------
+In HRS file added in 2016 Tracker file, to use LIVARR variable. 
+
+02/15/2019 MH
+------------
+In HRS used hisp_eth instead of hisp. Changed how livind arrangement variable defined in NHATS. 
+
+02/07/2019 MH
+------------
+Fixed variable and removed cell size restrictions. 
+ 
+02/06/2019 MH
+------------
+Used degree variable for education in HRS, added percentage for HRS and NHATS. Created SMCL files. 
+
+02/01/2019 MH
+------------
+Created table for HRS under HRS tab. Done for summary statistics. Created vars for neuroticism and conscientiousness.
+
+01/31/2019 MH
+------------
+Table for NHATS under NHATS ACP for ACP summary statistics.
+
+
+*/
