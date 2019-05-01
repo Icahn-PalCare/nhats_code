@@ -1,0 +1,104 @@
+--------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  E:\nhats\nhats_code\NHATS data setup\logs\6_nhats_cleaning__1_May_2
+> 019.smcl
+  log type:  text
+ opened on:   1 May 2019, 15:49:34
+
+. 
+. 
+. 
+. *********************************************
+. 
+. 
+. //Pull dates from restricted tracker
+. use "E:\nhats\data\NHATS Restricted\NHATS Round 7 Tracker Restricted STATA\NHA
+> TS_Round_7_Tracker_Restricted.dta", clear
+
+. keep spid r*spstatdtdy
+
+. rename r*spstatdtdy spstatdtdy*
+
+. reshape long spstatdtdy, i(spid) j(wave)
+(note: j = 1 2 3 4 5 6 7)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                    19530   ->  136710
+Number of variables                   8   ->       3
+j variable (7 values)                     ->   wave
+xij variables:
+spstatdtdy1 spstatdtdy2 ... spstatdtdy7   ->   spstatdtdy
+-----------------------------------------------------------------------------
+
+. tempfile resttrack
+
+. save `resttrack'
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_2775ac_000001.tmp saved
+
+. 
+. //Does not need to change, unless get new metro file. 
+. 
+. //7/13/17--add in metro/nonmetro var
+. use "E:\nhats\data\NHATS Public\NHATS_Round_1_6_MetNonmet_STATA\NHATS_Round_1_
+> 6_MetNonmet.dta", clear
+
+. forvalues w=1/6 {
+  2. gen metro_ind`w'=r`w'd==1 if inrange(r`w'd,1,2)
+  3. }
+(4,182 missing values generated)
+(5,352 missing values generated)
+(6,628 missing values generated)
+(7,690 missing values generated)
+(4,093 missing values generated)
+(5,151 missing values generated)
+
+. reshape long metro_ind, i(spid) j(wave)
+(note: j = 1 2 3 4 5 6)
+
+Data                               wide   ->   long
+-----------------------------------------------------------------------------
+Number of obs.                    12427   ->   74562
+Number of variables                  13   ->       9
+j variable (6 values)                     ->   wave
+xij variables:
+   metro_ind1 metro_ind2 ... metro_ind6   ->   metro_ind
+-----------------------------------------------------------------------------
+
+. label var metro_ind "Lives in metropolitan area"
+
+. note metro_ind: From metro non-metro file, r(wave)dmetnomet raw variable. 
+
+. 
+. label define metro_ind  0 "Non-Metro" 1 "Metro" 
+
+. label values metro_ind metro_ind
+
+. 
+. tempfile metro
+
+. save `metro'
+file C:\Users\husaim03\AppData\Local\Temp\9\ST_2775ac_000002.tmp saved
+
+. 
+. cd "${work}"
+E:\nhats\data\NHATS working data
+
+. 
+. use round_1_$w_clean_helper_added.dta
+
+. merge 1:1 spid wave using `metro', keep(match master) nogen
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         6,312
+        from master                     6,312  
+        from using                          0  
+
+    matched                            41,466  
+    -----------------------------------------
+
+. 
+. 
+end of do-file
+

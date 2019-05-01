@@ -1854,11 +1854,6 @@ la var memory "Rate memory 1=Excell, 5=Poor"
 la def mem 1"Excellent" 2"Very good" 3"Good" 4"Fair" 5"Poor"
 la val memory mem
 tab memory wave, missing
-
-notes memory: ratememry memrygood
-notes memory: Rate your memory.
-notes memory: Located in NHATS Setup, under Part 4.
-notes memory: Updated: 04/17/19-MH
 *************************************************
 //total number self reported medical conditions, ever
 //note that depression and anxeity are from the specific interview questions
@@ -4959,7 +4954,6 @@ notes sr_dementia_ever: sr_dementia_raw disescn9
 notes sr_dementia_ever: Had dementia ever (self-report)
 notes sr_dementia_new:  sr_dementia_raw disescn9
 notes sr_dementia_new: Had dementia since prev interview (self-report). 
-
 foreach x in sr_ami_ever sr_stroke_ever sr_ami_new sr_stroke_new sr_cancer_new ///
 sr_cancer_ever sr_hip_ever sr_hip_new sr_heart_dis_ever sr_heart_dis_new ///
 sr_htn_ever sr_htn_new sr_ra_ever sr_ra_new sr_osteoprs_ever sr_osteoprs_new ///
@@ -4967,6 +4961,70 @@ sr_diabetes_ever sr_diabetes_new sr_lung_dis_ever sr_lung_dis_new sr_dementia_ev
 notes `x': Located in NHATS Setup, under Part 4.
 notes `x': Updated: 04/15/19-MH
 }
+notes lml_ivw_yes: r*spstat r*status
+notes lml_ivw_yes: Last wave of life interview. 
+notes srh: hc*health
+notes srh: Self-reported health. As is.
+foreach x in lml_ivw_yes srh{
+notes `x': Located in NHATS Setup, under Part 3.
+notes `x': Updated: 04/25/19-MH
+}
+notes prim_helper_opid: Opid
+notes prim_helper_opid: Primary helper opid. 
+notes prim_helper_cat: op_hrsmth_i max_hrs_helped  opishelper_allw
+notes prim_helper_cat: Primary helper is the OP with most hours. 
+notes tot_hrsmonth_help_i: op_hrsmth_i 
+notes tot_hrsmonth_help_i: imputed total number of helper hours received per month. 
+notes n_helpers: op_hrsmth_i 
+notes n_helpers: Number of helpers per spid wave. 
+notes tot_hrswk_help_i: op_hrsmth_i
+notes tot_hrswk_help_i: imputed total number of helper hours received per week.
+notes n_family_helpers: op_relationship_cat
+notes n_family_helpers: OP is a family helper.
+notes ind_family_helper: op_relationship_cat
+notes ind_family_helper: Indicate a family helper. 
+notes n_paid_helpers: paid
+notes n_paid_helpers: Number paid helpers.
+notes ind_paid_helper: n_paid_helper
+notes ind_paid_helper: Indicate any paid helper.
+notes ind_rc_staff: rc_staff
+notes ind_rc_staff: Indicate facility staff.
+notes num_helpers_cat: n_helpers
+notes num_helpers_cat: Categorical number of helpers, 0-2, 3-6, 7+
+notes tot_hrsmonth_paid_i: phrs
+notes tot_hrsmonth_paid_i:  Imputed help received hours per month, for paid helpers
+notes tot_hrswk_paid_i: tot_hrsmonth_paid_i
+notes tot_hrswk_paid_i: Imputed help received hours per week, for paid helpers
+notes ind_no_helpers: n_helpers
+notes ind_no_helpers: No reported helpers.
+foreach x in prim_helper_opid prim_helper_cat tot_hrsmonth_help_i n_helpers tot_hrswk_help_i ///
+n_family_helpers ind_family_helper n_paid_helpers ind_paid_helper ind_rc_staff num_helpers_cat ///
+tot_hrsmonth_paid_i tot_hrswk_paid_i ind_no_helpers{
+notes `x': Located in NHATS Setup, under Part 6.
+notes `x': Updated: 04/25/19-MH
+}
+notes sr_phq2_score: depresan1 depresan2 made into sr_depr_pqq1 sr_depr_pqq2
+notes sr_phq2_score: Adding sr_depr_pqq1 and sr_depr_pqq2 to get a score. Had little ///
+interest doing things; felt hopeless, down, or depressed.
+notes sr_phq2_depressed: sr_phq2_score
+notes sr_phq2_depressed: If score is greater 3 or more, then classified as depressed per PHQ-2.
+notes sr_gad2_score: sr_anx_gad1 sr_anx_gad2
+notes sr_gad2_score: Adding sr_anx_gad1 and sr_anx_gad2 to get a score. Felt nervous, anxious, or on edge; ///
+been unable to stop or control worrying. 
+notes sr_gad2_anxiety: sr_gad2_score
+notes sr_gad2_anxiety: If score is greater 3 or more, then classified as having anxiety per GAD-2.
+notes dem_3_cat: disescn9 dem_via_proxy speaktosp
+notes dem_3_cat: Indicates if SP reported dementia, from either SP themselves or through proxy.
+notes dem_2_cat: disescn9 dem_via_proxy speaktosp
+notes dem_2_cat: Indicates if SP reported dementia. Possible/ probable dementia status. 
+notes memory: ratememry memrygood 
+notes memory: Rate your memory. 
+foreach x in sr_phq2_score sr_phq2_depressed sr_gad2_score sr_gad2_anxiety dem_3_cat memory{
+notes `x': Located in NHATS Setup, under Part 4.
+notes `x': Updated: 04/29/19-MH
+}
+
+
 
 keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
 help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind imputed_inc1 ///
@@ -5065,9 +5123,10 @@ version 15
 
 
 //filepath globals should be set in the first NoteTab header, or you can change these below
-local logpath $logpath
-local datapath $datapath
-local outpath $outpath
+local logs "E:\nhats\codebooks\"
+local datapath "E:\nhats\data\NHATS cleaned"
+
+//local outpath $outpath
 
 //date
 local date = subinstr("$S_DATE"," ","_",.)
@@ -5153,9 +5212,7 @@ label variable n_missing		"Number missing"
 local i = 1
 
 
-
 foreach v of var * {
-
 
 
 	
@@ -5227,6 +5284,7 @@ replace type = "Date" in `i'
 
 
 sum `v' , d
+
 foreach x in mean sd min p25 p50 p75 max {
 	local `x' : di %-12.5gc `r(`x')'
 	replace `x' = "``x''" in `i'
@@ -5239,7 +5297,7 @@ sum n
 replace n_observations="`r(N)'" in `i'
 drop n
 
-// section creates fills in idicator var based off of start of var label 
+// section creates fills in indicator var based off of start of var label 
 // 		- project specific and would need to add indicator variable generate statement and
 //		add var to keep statement 
 // local varlabel : var label `v'
@@ -5298,7 +5356,7 @@ assert "`wkbk'" != ""  // redundant check
 
 
 //1/4/19--ebl--put in quotes, since My Documents filepath (where I dumped it) has spaces
-export excel using "`wkbk'" , firstrow(varlabels) replace 
+export excel using `logs'/`wkbk' , firstrow(varlabels) replace 
 
 
 log close

@@ -140,14 +140,14 @@ format death_date n1_int p1_int date9. ; run;
 data n1; set nhats(where=(ivw_date=n1_int and sample2=1)); 
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time  firstdx
 age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
-adl_dres_help adl_ins_help adl_bed_help srh;
+adl_dres_help adl_ins_help adl_bed_help srh sr_gad2_score sr_phq2_score;
 time=0;
 run;
 
 data p1; set nhats(where=(ivw_date=p1_int and sample2=1));
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time firstdx
 age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
-adl_dres_help adl_ins_help adl_bed_help srh; 
+adl_dres_help adl_ins_help adl_bed_help srh srh sr_gad2_score sr_phq2_score; 
 time=1;
 run;
 
@@ -181,9 +181,13 @@ proc freq data=long2(where=(time=0)); tables firstdx; run;
 proc freq data=long2(where=(time=0)); tables (female race_recode race2gp marstat education hs income_quartile
 income2cat sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair)*firstdx/chisq; run;
 
-proc freq data=long2(where=(time=0)); tables (sr_phq2_depressed sr_gad2_anxiety adl_impair)*firstdx/chisq exact; run;
+proc freq data=long2(where=(time=0)); tables (sr_phq2_depressed sr_gad2_anxiety adl_impair ind_pain srh_fp
+srh)*firstdx/chisq /*exact*/; run;
 
-proc means data=long2(where=(time=0)) mean stderr min max; var age_firstdx age n1_cancer_time cancer_p1_time ; 
+proc freq data=long2; tables srh*time; run;
+
+proc means data=long2(where=(time=1)) mean stderr min max; var age_firstdx age n1_cancer_time cancer_p1_time 
+sr_phq2_score sr_gad2_score adl_index; 
 /*class firstdx;*/
 run;
 
@@ -210,6 +214,22 @@ proc npar1way data=long2(where=(time=0));
 class firstdx;
 var sr_numconditions1;
 run;
+
+proc npar1way data=long2(where=(time=0));
+class firstdx;
+var sr_phq2_score;
+run;
+
+proc npar1way data=long2(where=(time=0));
+class firstdx;
+var sr_gad2_score;
+run;
+
+proc npar1way data=long2(where=(time=0));
+class firstdx;
+var adl_index;
+run;
+
 proc means data=long2(where=(time=0));
 /*class firstdx; */
 var sr_numconditions1; run;
@@ -221,6 +241,10 @@ adl_dres_help adl_ins_help adl_bed_help srh)*time; run;
 
 proc freq data=long2(where=(adl_impair=1)); tables (adl_index adl_eat_help adl_bath_help adl_toil_help
 adl_dres_help adl_ins_help adl_bed_help srh)*time; run;
+
+proc freq data=long2; tables (adl_index adl_eat_help adl_bath_help adl_toil_help
+adl_dres_help adl_ins_help adl_bed_help srh)*time; run;
+
 
 /*McNemar's Test*/
 
@@ -291,13 +315,53 @@ proc genmod data=long2  descending;
 class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") /param=glm;
-model sr_phq2_depressed=time /*time*firstdx*/ firstdx age_firstdx  /*female*/ race2gp HS marstat income2cat 
+model sr_gad2_anxiety=time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat 
+ /d=bin link=logit type3;
+repeated subject=bene_id/type=exch;
+slice time*firstdx/nof ilink sliceby=firstdx diff;
+run; 
+
+
+/*sensitivity with depression and anxiety without cut point, number of ADLs, all SRH categories*/
+proc genmod data=long2;
+class srh  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
+race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
+income2cat (ref="1") /param=glm;
+model srh=time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat 
+ /d=multinomial link=cumlogit type3;
+repeated subject=bene_id/type=ind;
+slice time*firstdx/nof ilink sliceby=firstdx diff;
+estimate "LogOR1vs0" time 1 -1/exp;
+run; 
+
+/* continuous*/
+proc genmod data=long2;
+class  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
+race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
+income2cat (ref="1") /param=glm;
+model adl_index=time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat 
+ /d=normal link=log type3;
+repeated subject=bene_id/type=ind;
+slice time*firstdx/nof ilink sliceby=firstdx diff;
+run; 
+
+/*stratified by gender*/
+proc genmod data=long2 (where=(female=1))  descending;
+class bene_id time(ref="0")  /*firstdx (ref="pc")*/ firstdx (ref="bc") 
+race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
+income2cat (ref="1") /param=glm;
+model adl_impair=time /*time*firstdx*/ firstdx age_firstdx  race2gp HS /*marstat*/ income2cat 
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 /*slice time*firstdx/nof ilink sliceby=firstdx diff;*/
 run; 
 
+proc freq data=long2(where=(female=1)); tables (firstdx race2gp hs marstat income2cat)*time income2cat*race2gp; run;
+proc corr data=long2(where=(female=1)); var  (firstdx race2gp hs marstat income2cat)*time; run;
 
+/*********************************************************************************************************************/
+/*                                      SENSITITIVY ANALYSES    
+***********************************************************************************************************************/
 
 /*with weight, no strata or cluster*/
 data nonsample; set nhats(where=(wave=1 and sample2=0)); keep bene_id anfinwgt varstrat varunit sample2; run;
@@ -388,6 +452,12 @@ slice time*firstdx/nof ilink sliceby=firstdx diff;
 run;
 
 
+
+
+
+/*******************************************************************************************************/
+/*                COMPARE SAMPLE TO THOSE WITHOUT FOLLOW UP        
+/*******************************************************************************************************/
 /**Compare our sample to cancer sample without follow up*/
 proc univariate data=nhats(where=(ivw_date=n1_int and sample=1)); var dxtodeath; run;
 proc freq data=nhats(where=(ivw_date=n1_int)); tables sample sample1 sample2; run;
@@ -522,6 +592,10 @@ domain sample3; weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
 run;
 
 
+
+/******************************************************************************************************/
+/*                     COMPARE OUR SAMPLE TO SIMILAR NON CANCER SAMPLE                                */
+/*****************************************************************************************************/
 /*General population numbers- those with no history of cancer, and not in sample 1 (don't develop cancer)*/
 /*Look at Wave 1 and Wave 2 for those that have both*/
 data no_cancer_hist; set out.no_cancer_hist_id; run;
@@ -554,7 +628,7 @@ run;
 proc freq data=nhats2(where=(wave=1)); tables no_cancer_group; run; /*3042 people*/
 proc freq data=nhats2(where=(wave=2)); tables no_cancer_group; run; /*3042*/
 
-
+/*
 data nhats2; set nhats2; 
 if sample2=1 or no_cancer_group=1 then domain=1; else domain=0;
 run;
@@ -565,7 +639,13 @@ data no_cancer; set nhats2(where=(wave=1 and no_cancer_group=1)); run;
 data sample; set nhats2(where=(ivw_date=n1_int and sample2=1)); run;
 data nosample; set nhats2(where=(wave=1 and domain=0)); run;
 
-data baseline; set no_cancer sample nosample; run;
+data baseline; set no_cancer sample nosample; run;*/
+
+data nhats2; set nhats2; 
+if sample2=1 or no_cancer_group=1;
+run;
+
+proc freq data=nhats2(where=(wave=1)); tables sample2; run;
 
 /*compare baseline values*/
 proc surveyfreq data=baseline; tables domain*sample2*(female race_recode race2gp marstat education hs income_quartile
@@ -600,6 +680,228 @@ srh_fp*srh_fp2 ind_pain*ind_pain2 adl_impair*adl2/agree;
 run;
 
 
+
+/******************************************************************************************************/
+/*          COMPARE OUR SAMPLE TO SIMILAR NON CANCER SAMPLE- NO WEIGHTING, MEDICARE EXCLUSION         */
+/*****************************************************************************************************/
+/*General population numbers- those with no history of cancer, and not in sample 1 (don't develop cancer)*/
+/*Look at Wave 1 and Wave 2 for those that have both*/
+data no_cancer_hist; set out.no_cancer_hist_id; run;
+data inc_cancer; set nhats(where=(wave=1 and sample=1)); keep spid bene_id; run;
+
+/*remove the incident cancer cases from those with no history of cancer*/
+proc sort data=no_cancer_hist; by bene_id; run;
+proc sort data=inc_cancer; by bene_id; run;
+
+data no_cancer; merge no_cancer_hist inc_cancer(in=a); by bene_id; if a=0; run; /*3594*/
+
+/*merge back with NHATS and select wave 1 and 2 for those who have both*/
+proc sort data=nhats; by bene_id; run;
+
+data nhats2; merge nhats no_cancer (in=a); by bene_id;
+if a=1 then no_cancer_group=1;
+if no_cancer_group=1;
+run;
+
+proc freq data=nhats2(where=(wave=1)); tables no_cancer_group; run; /*3594*/
+
+data wave1; set nhats2(where=(wave=1 and no_cancer_group=1)); keep bene_id; run; /*3594*/
+data wave2; set nhats2(where=(wave=2 and no_cancer_group=1)); keep bene_id; run; /*3042*/
+
+data no_cancer_id; merge wave1 (in=a) wave2 (in=b); by bene_id; if a; if b; run; /*3042 patients*/
+
+data nhats2; merge nhats2 no_cancer_id (in=a); by bene_id;
+if a=1;
+run;
+
+proc freq data=nhats2(where=(wave=1)); tables no_cancer_group; run; /*3042 people*/
+proc freq data=nhats2(where=(wave=2)); tables no_cancer_group; run; /*3042*/
+
+
+proc print data=nhats2 (obs=20); var ivw_date; run;
+proc print data=long2 (obs=20); var ivw_date; run;
+
+/**12 months of Medicare coverage after 1st survey*/
+libname medicare "E:\nhats\data\20180625 NHATS CMS Data\merged";
+data mbsf; set medicare.mbsf_06_16; run;
+
+data id; set nhats2(where=(wave=1)); keep spid bene_id ivw_date ivw_month; run;
+proc sort data=id; by bene_id; run;
+proc sort data=mbsf; by bene_id; run;
+data mbsf; merge mbsf id(in=a); by bene_id; if a; run;
+
+data mbsf; set mbsf(where=(BENE_ENROLLMT_REF_YR in (2011,2012))); run;
+proc freq data=mbsf; tables BENE_ENROLLMT_REF_YR; run;
+
+proc freq data=mbsf(where=(BENE_ENROLLMT_REF_YR=2011)); tables ivw_month; run;
+
+data mbsf; set mbsf;
+array Ind {12}$ BENE_MDCR_ENTLMT_BUYIN_IND_01-BENE_MDCR_ENTLMT_BUYIN_IND_12;
+array AB {12} AB1-AB12;
+array HMOind{12} $BENE_HMO_IND_01-BENE_HMO_IND_12;
+array HMO {12} HMO1-HMO12;
+
+do i=1 to 12;
+if Ind(i) in ("3", "C") then AB(i)=1; else AB(i)=0;
+
+if HMOind(i)="0" then HMO(i)=0; else HMO(i)=1;
+end;
+
+ABsum=sum(of AB1-AB12);
+HMOsum=sum(of HMO1-HMO12);
+
+if ivw_month=5 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB5=1 and AB6=1 and AB7=1 and AB8=1 and AB9=1 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO5=1 or HMO6=1 or HMO7=1 or HMO8=1 or HMO9=1
+or HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if ivw_month=6 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB6=1 and AB7=1 and AB8=1 and AB9=1 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO6=1 or HMO7=1 or HMO8=1 or HMO9=1
+or HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if ivw_month=7 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB7=1 and AB8=1 and AB9=1 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO7=1 or HMO8=1 or HMO9=1
+or HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 and AB6=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if ivw_month=8 then do;
+if BENE_ENROLLMT_REF_YR=2011 and AB8=1 and AB9=1 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO8=1 or HMO9=1
+or HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 and AB6=1 and AB7=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1 or HMO7=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if ivw_month=9 then do;
+if BENE_ENROLLMT_REF_YR=2011  and AB9=1 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO9=1
+or HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 and AB6=1 and AB7=1 
+and AB8=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1 or HMO7=1
+or HMO8=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if ivw_month=10 then do;
+if BENE_ENROLLMT_REF_YR=2011 
+and AB10=1 and AB11=1 and AB12=1 then AB2011=1; else AB2011=0;
+if BENE_ENROLLMT_REF_YR=2011 and (HMO10=1 or HMO11=1 or HMO12=1) then HMO2011=1; else HMO2011=0;
+if BENE_ENROLLMT_REF_YR=2012 and AB1=1 and AB2=1 and AB3=1 and AB4=1 and AB5=1 and AB6=1 and AB7=1 
+and AB8=1 and AB9=1 then AB2012=1; else AB2012=0;
+if BENE_ENROLLMT_REF_YR=2012 and (HMO1=1 or HMO2=1 or HMO3=1 or HMO4=1 or HMO5=1 or HMO6=1 or HMO7=1
+or HMO8=1 or HMO9=1) then HMO2012=1; else HMO2012=0;
+end;
+
+if AB2011=1 and HMO2011=0 then FFS2011=1; else FFS2011=0;
+if AB2012=1 and HMO2012=0 then FFS2012=1; else FFS2012=0;
+
+run;
+
+proc freq data=mbsf; tables FFS2011*FFS2012; run;
+
+proc print data=mbsf(obs=10); var bene_id BENE_ENROLLMT_REF_YR 
+ivw_month AB1-AB12 HMO1-HMO12 AB2011 AB2012 HMO2011 HMO2012 FFS2011 FFS2012; run;
+
+data FFS2011; set mbsf(where=(BENE_ENROLLMT_REF_YR=2011)); keep bene_id FFS2011; run;
+data FFS2012; set mbsf(where=(BENE_ENROLLMT_REF_YR=2012)); keep bene_id FFS2012; run;
+
+data FFS; merge FFS2011 FFS2012; by bene_id; 
+if FFS2011=1 and FFS2012=1 then FFS=1; else FFS=0;
+run;
+
+proc freq data=FFS; tables FFS; run;
+
+data nhats2; merge nhats2 FFS; by bene_id; 
+if FFS=1;
+run;
+
+
+proc freq data=nhats2 (where=(wave=1)); tables no_cancer_group; run;
+
+/*select wave 1 and wave 2*/
+data w1; set nhats2 (where=(wave=1)); keep bene_id; run;
+data w2; set nhats2(where=(wave=2)); keep bene_id; run;
+
+data w2; merge w1 (in=a) w2 (in=b); by bene_id; if a; if b; run;
+
+data nhats2; merge w2 (in=a) nhats2; by bene_id; if a; run;
+data nhats2; set nhats2 (where=(wave=1 or wave=2)); run;
+
+proc freq data=nhats2; tables wave; run;
+
+data comparison; set nhats2 long2; run;
+
+proc freq data=comparison; tables sample2; run;
+
+proc contents data=comparison; run;
+
+/**baseline comparison**/
+data pre_cancer; set comparison (where=(wave=1 or time=0)); run;
+
+proc freq data=pre_cancer; tables sample2; run;
+
+
+/*compare baseline values*/
+proc freq data=pre_cancer; tables (female race_recode race2gp marstat education hs income_quartile
+income2cat sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair)*sample2/chisq;
+run;
+
+/*wave 1 and wave 2 for non cancer group*/
+proc freq data=nhats2(where=(wave=1)); tables no_cancer_group*(sr_phq2_depressed sr_gad2_anxiety 
+srh_fp ind_pain adl_impair)/row;
+weight W1_anfinwgt; strata W1_Varstrat; cluster W1_varunit;
+run;
+
+proc surveyfreq data=nhats2(where=(wave=2)); tables no_cancer_group*(sr_phq2_depressed sr_gad2_anxiety 
+srh_fp ind_pain adl_impair)/row;
+weight anfinwgt; strata Varstrat; cluster varunit;
+run;
+
+
+data wave1; set nhats2(where=(wave=1 and no_cancer_group=1)); keep sr_phq2_depressed sr_gad2_anxiety
+srh_fp ind_pain adl_impair bene_id; run;
+
+data wave2; set nhats2(where=(wave=2 and no_cancer_group=1));keep sr_phq2_depressed sr_gad2_anxiety
+srh_fp ind_pain adl_impair bene_id;
+rename sr_phq2_depressed=depressed2 sr_gad2_anxiety=anxiety2 srh_fp=srh_fp2 ind_pain=ind_pain2 adl_impair=adl2;
+run;
+
+data wide; merge wave1 wave2; by bene_id; run;
+
+proc freq data=wide; tables sr_phq2_depressed*depressed2 sr_gad2_anxiety*anxiety2
+srh_fp*srh_fp2 ind_pain*ind_pain2 adl_impair*adl2/agree;
+run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*******************************************************************************************************/
+/*                        TIME TO DEATH               
+********************************************************************************************************/
 /*time to death in sample 1*/
 /*76/235 died-->32%*/
 /*those that died, died an average of 12.8 months after diagnosis*/
