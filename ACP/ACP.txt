@@ -1061,7 +1061,7 @@ Created by: Mohammed
 Date Created: 04/22/2019
 
 Updated by: MH
-Date Updated: 04/22/2019
+Date Updated: 05/02/2019
 
 Description: Data cleaning section.
 
@@ -1166,17 +1166,17 @@ replace age=floor(age/365.25)
 gen male=0 if !missing(female)
 replace male=1 if female==0
 
-gen live_alone=0
+gen live_alone=0 if (resspouse==1 | reschil_d==1)
 replace live_alone=1 if (resspouse==0 & reschil_d==0) //| nlivarr==5
 
-gen live_others=0
+gen live_others=0 if (resspouse==0 & reschil_d==0)
 replace live_others=1 if resspouse==1 | reschil_d==1 //| inlist(nlivarr, 1, 3, 4)
 
-gen cesd_tot_ge3_n=0
+gen cesd_tot_ge3_n=0 if !missing(cesd1, cesd2, cesd4, cesd5, cesd6, cesd7, cesd8)
 replace cesd_tot_ge3_n=1 if (cesd1+ cesd2+ cesd4+ cesd5+ cesd6+ cesd7+ cesd8)>2
 
 foreach x in srh_pf soc_visit hosp_last_2yr h12wohous dem_hrs cesd_tot_ge3_n{
-gen `x'0=0 
+gen `x'0=0 if !missing(`x')
 replace `x'0=1 if `x'==0
 }
 
@@ -1209,13 +1209,13 @@ tab degree, gen(degree)
 tab imprelig, gen(imprelig)
 
 //education var
-gen educ1=0
+gen educ1=0 if !missing(degree1)
 replace educ1=1 if degree1==1
-gen educ2=0
+gen educ2=0 if !missing(degree2, degree3)
 replace educ2=1 if degree2==1 | degree3==1
-gen educ3=0
+gen educ3=0 if !missing(degree4, degree8)
 replace educ3=1 if degree4==1 | degree8==1
-gen educ4=0 
+gen educ4=0 if !missing(degree5, degree6, degree7)
 replace educ4=1 if degree5==1 | degree6==1 | degree7==1
 
 //fixing dementia
@@ -1229,6 +1229,17 @@ replace dem0=1 if dem==0
 
 replace nlb020g=1 if nlb020g==2
 replace nlb020g=0 if nlb020g==3
+
+//replace nlb020f=1 if nlb020f==2
+//replace nlb020f=0 if nlb020f==3
+
+gen talk=nlb020f
+replace talk=1 if nlb020f==2 //yes someone to talk to
+replace talk=0 if nlb020f==3 //no one to talk to
+ 
+gen noone_talk=0 if talk==1 
+replace noone_talk=1 if talk==0
+
 
 /*hispanic other
 gen hispoth=.
@@ -1268,6 +1279,8 @@ lab var imprelig2 "Importance of Religion: somewhat important"
 lab var imprelig3 "Importance of Religion: not too "
 lab var dem_hrs "SR Dementia"
 lab var nlb020g "People you can turn to"
+lab var talk "People you can talk to"
+lab var noone_talk "No one to talk to"
 
 //lab var hisp_oth "Hispanic, Other"
 
@@ -1316,6 +1329,7 @@ replace non_white=0 if white==1
 replace non_white=1 if white==0
 
 capture drop close
+
 
 H="*********TABLES***********"
 
@@ -1502,7 +1516,7 @@ Created by: Mohammed
 Date Created: 01/31/2019
 
 Updated by: MH
-Date Updated: 03/29/2019
+Date Updated: 05/02/2019
 
 Description: HRS table creation.
 
@@ -1552,7 +1566,7 @@ local sn1 child
 
 local sn2 living_kids_ind
 
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
+local health soc_visit0 soc_visit talk noone_talk srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
 dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
 
 local psy imprelig1 imprelig2 imprelig3 
@@ -1771,7 +1785,7 @@ local sn1 child
 
 local sn2 living_kids_ind
 
-local health soc_visit0 soc_visit srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
+local health soc_visit0 soc_visit talk noone_talk srh_pf srh_pf0 hosp_last_2yr0 hosp_last_2yr dem0 ///
 dem cesd_tot_ge3_n0 cesd_tot_ge3_n  
 
 local psy imprelig1 imprelig2 imprelig3 
@@ -2496,7 +2510,7 @@ Created by: Mohammed
 Date Created: 04/22/2019
 
 Updated by: MH
-Date Updated: 04/22/2019
+Date Updated: 05/02/2019
 
 Description: Multinomial Logit model with base being no ACP. 3 different model 
 specifications created. Social varaible changed.
@@ -2522,16 +2536,19 @@ HRS ACP section 3 different model sepcification.
 */
 
 
-local vars age female educ4 lnassets non_white h12wohous live_alone married nlb020g ///
+local vars age female educ4 lnassets non_white h12wohous live_alone married talk ///
 living_kids_ind srh_pf 
 
+foreach x in `vars'{
+tab `x', m
+}
 
 mlogit cat `vars', b(2) rr
 
 ///getting sample sizes for each group
 forvalues x=0/3{
-sum `vars' if cat==`x' & cat!=. & lnassets!=. & non_white!=. & srh_pf!=. & h12wohous!=. ///
-& live_alone!=. & nlb020g!=. & living_kids_ind!=.
+sum `vars' if cat==`x' & cat!=. & female!=. & lnassets!=. & non_white!=. & srh_pf!=. & h12wohous!=. ///
+& live_alone!=. & talk!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2540,7 +2557,7 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 "1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) replace 
 
 
-local vars age female educ4 lnassets non_white h12wohous live_alone married nlb020g ///
+local vars age female educ4 lnassets non_white h12wohous live_alone married talk ///
 living_kids_ind srh_pf hosp_last_2yr
 
 mlogit cat `vars', b(2) rr
@@ -2548,7 +2565,7 @@ mlogit cat `vars', b(2) rr
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & nlb020g!=. & living_kids_ind!=.
+& live_alone!=. & talk!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2557,7 +2574,7 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 "1-Informal (`1') vs Base (`2')" \ "3-Two-Pronged (`3') vs Base (`2')" ) addtable replace 
 
 
-local vars age female educ4 lnassets non_white h12wohous live_alone married nlb020g ///
+local vars age female educ4 lnassets non_white h12wohous live_alone married talk ///
 living_kids_ind srh_pf hosp_last_2yr cesd_tot_ge3_n consc neuro 
 
 mlogit cat `vars', b(2) rr
@@ -2565,7 +2582,7 @@ mlogit cat `vars', b(2) rr
 ///getting sample sizes for each group
 forvalues x=0/3{
 sum `vars' if cat==`x' & lnassets!=. & non_white!=. & srh_pf!=. & hosp_last_2yr!=. & h12wohous!=. ///
-& live_alone!=. & nlb020g!=. & living_kids_ind!=.
+& live_alone!=. & talk!=. & living_kids_ind!=.
 local `x'=`r(N)'
 }
 
@@ -2576,6 +2593,7 @@ title("HRS Multinomial Logistic Model") note("Base is Formal received" \ "0-No A
 
 capture log close
 
+
 H="Changelog"
 
 
@@ -2584,6 +2602,10 @@ H="Changelog"
 
 
 Updates:
+
+05/02/2019 MH
+------------
+Variable change made in HRS. Correcting missing variables in HRS to be missing and not coded as 0. 
 
 04/29/2019 MH
 ------------
@@ -2641,6 +2663,9 @@ Table for NHATS under NHATS ACP for ACP summary statistics.
 */
 
 H="Decisions made"
+5/2/2019
+---------
+Changed HRS from nlb020g (people can turn to) to nlb020f (people can talk to). 
 
 4/22/2019
 ---------
