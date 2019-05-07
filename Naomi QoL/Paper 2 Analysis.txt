@@ -8,6 +8,10 @@ dbms=dta replace;
 run;
 
 proc contents data=test; run;
+proc print data=test (obs=10); var spid wave sr_numconditions1 sr_heart_dis_ever sr_heart_dis_new; run;
+proc freq data=test(where=(wave=2)); 
+tables sr_heart_dis_ever sr_heart_dis_new sr_heart_dis_ever*sr_heart_dis_new
+sr_heart_dis_ever*sr_ami_ever/missing; format _all_; run;
 
 /*list of ids of people who self reported cancer before Medicare picked them up*/
 data srcancer_id; set out.srcancer_id_icd10; keep bene_id spid; run; proc print data=srcancer_id; run;
@@ -124,7 +128,16 @@ format quartile2cat quartile.;
 
 if death_date^=. then dxtodeath=death_date-firstdxt; 
 
+/*define count of comorbidities*/
+sr_numconditions2=sum(sr_ami_ever, sr_heart_dis_ever, sr_htn_ever, sr_ra_ever, sr_osteoprs_ever, sr_diabetes_ever, 
+sr_lung_dis_ever, sr_stroke_ever, sr_hip_ever); label sr_numconditions2="Count of Medical Conditions (heart disease, htn, arth, osteo, diab, lung dis, stroke, hip fracture)"; 
+
 run;
+
+proc freq data=nhats(where=(wave=1)); tables sr_hip_ever; run;
+proc print data=nhats(obs=20); var spid wave sr_numconditions2 sr_heart_dis_ever sr_htn_ever sr_ra_ever sr_osteoprs_ever 
+sr_diabetes_ever sr_lung_dis_ever sr_stroke_ever sr_hip_ever; run;
+proc freq data=nhats(where=(wave=1)); tables sr_numconditions2*sr_numconditions1; run;
 
 proc freq data=nhats(where=(wave=1)); tables sample2 adl_impair*adl_index adl_eat_help adl_bath_help adl_toil_help
 adl_dres_help adl_ins_help adl_bed_help; run;
@@ -139,14 +152,14 @@ format death_date n1_int p1_int date9. ; run;
 /*Run GEE without accounting for weights*/
 data n1; set nhats(where=(ivw_date=n1_int and sample2=1)); 
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time  firstdx
-age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
+age marstat income_quartile income2cat sr_numconditions1 sr_numconditions2 adl_index adl_eat_help adl_bath_help adl_toil_help
 adl_dres_help adl_ins_help adl_bed_help srh sr_gad2_score sr_phq2_score;
 time=0;
 run;
 
 data p1; set nhats(where=(ivw_date=p1_int and sample2=1));
 keep bene_id sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair time firstdx
-age marstat income_quartile income2cat sr_numconditions1 adl_index adl_eat_help adl_bath_help adl_toil_help
+age marstat income_quartile income2cat sr_numconditions1 sr_numconditions2 adl_index adl_eat_help adl_bath_help adl_toil_help
 adl_dres_help adl_ins_help adl_bed_help srh srh sr_gad2_score sr_phq2_score; 
 time=1;
 run;
@@ -160,14 +173,16 @@ proc freq data=p1; tables social_isolation; run;*/
 
 /*demographics*/
 data demo; set nhats(where=(ivw_date=n1_int and sample2=1)); keep bene_id age_firstdx firstdx 
-sample2 female race_recode race2gp HS education n1_cancer_time cancer_p1_time p1_int n1_int sr_numconditions1;;
-rename sr_numconditions1=ncomorb_baseline;
+sample2 female race_recode race2gp HS education n1_cancer_time cancer_p1_time p1_int n1_int sr_numconditions1
+sr_numconditions2;;
+rename sr_numconditions1=ncomorb_baseline sr_numconditions2=ncomorb_baseline2;
 run;
 
 proc sort data=demo; by bene_id; run;
 data long1; merge long demo; by bene_id; run;
 proc print data=long1; run;
-proc print data=long1 (obs=20); var bene_id time sr_numconditions1 ncomorb_baseline; run;
+proc print data=long1 (obs=20); var bene_id time sr_numconditions1 ncomorb_baseline 
+sr_numconditions2 ncomorb_baseline2; run;
 
 /*wave 1 weights*/
 data weights; set nhats(where=(wave=1 and sample2=1));keep bene_id anfinwgt varstrat varunit; run;
@@ -189,6 +204,7 @@ srh)*firstdx/chisq /*exact*/; run;
 proc freq data=long2; tables srh*time; run;
 
 proc means data=long2(where=(time=0)) mean stderr min q1 q3 max; var age_firstdx age n1_cancer_time cancer_p1_time 
+sr_numconditions2 
 sr_phq2_score sr_gad2_score adl_index; 
 class firstdx;
 run;
@@ -214,7 +230,7 @@ var age;
 run;
 proc npar1way data=long2(where=(time=0));
 class firstdx;
-var sr_numconditions1;
+var sr_numconditions2;
 run;
 
 proc npar1way data=long2(where=(time=0));
@@ -232,9 +248,6 @@ class firstdx;
 var adl_index;
 run;
 
-proc means data=long2(where=(time=0)) mean stderr;
-class firstdx; 
-var sr_numconditions1; run;
 
 
 /*Description of ADLs*/
@@ -317,8 +330,8 @@ run;
 proc genmod data=long2  descending;
 class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
-income2cat (ref="1") adl_impair  /param=glm;
-model adl_impair =time  firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline
+income2cat (ref="1") adl_impair /param=glm;
+model adl_impair  =time  firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline2
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 run; 
@@ -328,7 +341,7 @@ proc genmod data=long2  descending;
 class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") adl_impair/param=glm;
-model adl_impair =time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline
+model adl_impair =time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline2
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 slice time*firstdx/nof ilink sliceby=firstdx diff;
@@ -337,10 +350,10 @@ run;
 
 /*sensitivity with depression and anxiety without cut point, number of ADLs, all SRH categories*/
 proc genmod data=long2;
-class adl_index  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
+class srh bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") /param=glm;
-model adl_index =time  firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline
+model srh =time  firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline2
  /d=multinomial link=cumlogit type3;
 repeated subject=bene_id/type=ind;
 estimate "LogOR1vs0" time 1 -1/exp;
@@ -348,10 +361,10 @@ run;
 
 /*interaction*/
 proc genmod data=long2;
-class adl_index  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
+class srh  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") /param=glm;
-model adl_index =time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline
+model srh =time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline2
  /d=multinomial link=cumlogit type3;
 repeated subject=bene_id/type=ind;
 slice time*firstdx/nof ilink sliceby=firstdx diff;
@@ -362,7 +375,7 @@ proc genmod data=long2;
 class  bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1")  /param=glm;
-model adl_index=time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline
+model adl_index=time time*firstdx firstdx age_firstdx  female race2gp HS marstat income2cat ncomorb_baseline2
  /d=normal link=log type3;
 repeated subject=bene_id/type=ind;
 slice time*firstdx/nof ilink sliceby=firstdx diff;
@@ -373,7 +386,7 @@ proc genmod data=long2  descending;
 class bene_id time(ref="0")  firstdx (ref="pc") 
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") adl_impair/param=glm;
-model adl_impair =time  firstdx age_firstdx  race2gp HS marstat income2cat ncomorb_baseline
+model adl_impair =time  firstdx age_firstdx  race2gp HS marstat income2cat ncomorb_baseline2
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 run; 
@@ -383,7 +396,7 @@ proc genmod data=long2   descending;
 class bene_id time(ref="0")  firstdx (ref="pc")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") adl_impair/param=glm;
-model adl_impair  =time time*firstdx firstdx age_firstdx  race2gp HS marstat income2cat ncomorb_baseline
+model adl_impair =time time*firstdx firstdx age_firstdx  race2gp HS marstat income2cat ncomorb_baseline2
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 slice time*firstdx/nof ilink sliceby=firstdx diff;
@@ -397,11 +410,19 @@ proc corr data=long2(where=(female=1)); var  (firstdx race2gp hs marstat income2
 ***********************************************************************************************************************/
 
 /*with weight, no strata or cluster*/
+proc contents data=long2; run;
 data nonsample; set nhats(where=(wave=1 and sample2=0)); keep bene_id anfinwgt varstrat varunit sample2; run;
 
 data long3; set long2 nonsample; 
 /*is this right*/
 /*if sample2=1 then anfinwght=anfinwgt/2;*/
+
+/*array change _numeric_;
+do over change;
+if sample2=0 and change=. then change=1;
+end;
+
+if sample2=0 then firstdx="bc";*/
 run;
 
 proc freq data=long3; tables sample2; run;
@@ -411,7 +432,7 @@ income2cat sr_phq2_depressed sr_gad2_anxiety ind_pain srh_fp  adl_impair)/chisq 
 weight anfinwgt; strata varstrat; cluster varunit;
 run;
 
-proc surveymeans data=long3(where=(time^=1)) mean stderr; var age_firstdx age; 
+proc surveymeans data=long3(where=(time^=1)) mean stderr; var age_firstdx age sr_numconditions1; 
 weight anfinwgt; strata varstrat; cluster varunit; 
 run;
 
@@ -464,7 +485,7 @@ class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") sr_phq2_depressed(ref="0") sr_gad2_anxiety(ref="0") 
 ind_pain(ref="0") srh_fp(ref="0") adl_impair(ref="0")/param=glm;
-model adl_impair=time firstdx age_firstdx female race2gp HS marstat income2cat ;
+model adl_impair=time firstdx age_firstdx female race2gp HS marstat income2cat ncomorb_baseline2 ;
 domain sample2;
 weight anfinwgt;
 strata varstrat;
@@ -476,7 +497,7 @@ class bene_id time(ref="0") firstdx (ref="pc") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") sr_phq2_depressed(ref="0") sr_gad2_anxiety(ref="0")
 ind_pain(ref="0") srh_fp(ref="0") adl_impair(ref="0")/param=glm;
-model adl_impair=time firstdx time*firstdx age_firstdx female race2gp HS marstat income2cat;
+model adl_impair=time firstdx time*firstdx age_firstdx female race2gp HS marstat income2cat ncomorb_baseline2;
 domain sample2;
 weight anfinwgt;
 strata varstrat;
@@ -864,7 +885,7 @@ if FFS=1;
 run;
 
 
-proc freq data=nhats2 (where=(wave=1)); tables no_cancer_group; run;
+proc freq data=nhats2 (where=(wave=1)); tables no_cancer_group sample2; run;
 
 /*select wave 1 and wave 2*/
 data w1; set nhats2 (where=(wave=1)); keep bene_id; run;
@@ -879,7 +900,7 @@ proc freq data=nhats2; tables wave; run;
 
 data comparison; set nhats2 long2; run;
 
-proc freq data=comparison; tables sample2; run;
+proc freq data=comparison; tables sample2 sr_numconditions2 ncomorb_baseline2; run;
 
 proc contents data=comparison; run;
 
@@ -888,16 +909,18 @@ data pre_cancer; set comparison (where=(wave=1 or time=0)); run;
 
 proc freq data=pre_cancer; tables sample2; run;
 
+proc freq data=pre_cancer; tables sr_numconditions2; run;
+
 
 /*compare baseline values*/
 proc freq data=pre_cancer; tables (female race_recode race2gp marstat education hs income_quartile
 income2cat sr_phq2_depressed sr_gad2_anxiety srh_fp ind_pain adl_impair)*sample2/chisq;
 run;
 
-proc means data=pre_cancer n mean stderr; var age sr_numconditions1; 
+proc means data=pre_cancer n mean stderr; var age sr_numconditions2; 
 class sample2; run;
 
-proc ttest data=pre_cancer; var age sr_numconditions1;
+proc ttest data=pre_cancer; var age sr_numconditions2;
 class sample2; run;
 
 /*wave 1 and wave 2 for non cancer group*/
@@ -925,28 +948,43 @@ if sample2=0 and wave=1 then time=0;
 if sample2=0 and wave=2 then time=1;
 run;
 
-proc freq data=comparison; tables time*sample2; run;
+proc freq data=comparison; tables time*sample2 sr_numconditions2 ncomorb_baseline2; run;
+proc print data=comparison(obs=20); var bene_id sample2 time sr_numconditions2 ncomorb_baseline2; run;
 
 /*add ncomorb at baseline*/
-data comorb; set comparison (where=(time=0)); keep bene_id sample2 sr_numconditions1; 
-rename sr_numconditions1=ncomorb_baseline;
+data comorb; set comparison (where=(time=0)); keep bene_id sample2 sr_numconditions2; 
+rename sr_numconditions2=ncomorb_baseline2;
 run;
 
 proc contents data=comorb; run;
-proc freq data=comorb; tables sample2; run;
+proc print data=comorb(obs=20); run;
+
+proc freq data=comorb; tables sample2 ncomorb_baseline2; run;
 proc sort data=comorb; by bene_id; run;
 proc sort data=comparison; by bene_id; run;
 
-data comparison; merge comparison comorb; by bene_id; run;
-proc print data=comparison (obs=20); var bene_id time sr_numconditions1 ncomorb_baseline; run;
+data time1; set comparison (where=(time=0)); run;
+data time2; set comparison (where=(time=1)); run;
+
+data time1a; merge time1 comorb; by bene_id; run;
+proc print data=time1a (obs=20); var time sr_numconditions2 ncomorb_baseline2; run;
+data time2a; merge time2 comorb; by bene_id; run;
+proc print data=time2a (obs=20); var time sr_numconditions2 ncomorb_baseline2; run;
+
+data comparison1; set time1a time2a; run;
+proc contents data=comparison1; run;
+
+proc sort data=comparison1; by bene_id time; run;
+proc print data=comparison1 (obs=20); var bene_id time sample2 sr_numconditions2 ncomorb_baseline2; run;
+proc freq data=comparison1; tables time*ncomorb_baseline2/missing; run;
 
 /**MODEL**/
 /*multivariate*/
-proc genmod data=comparison  descending;
-class adl_impair(ref="0") bene_id time(ref="0") sample2(ref="0") female (ref="Male")
+proc genmod data=comparison1  descending;
+class sr_gad2_anxiety(ref="0") bene_id time(ref="0") sample2(ref="0") female (ref="Male")
 race2gp(ref="Non-Hispanic White") HS (ref="<=HS") marstat (ref="Married/Living with Partner")
 income2cat (ref="1") /param=glm;
-model adl_impair=time time*sample2 sample2 age  female race2gp HS marstat income2cat ncomorb_baseline 
+model sr_gad2_anxiety=time time*sample2 sample2 age  female race2gp HS marstat income2cat ncomorb_baseline2 
  /d=bin link=logit type3;
 repeated subject=bene_id/type=exch;
 slice time*sample2/nof ilink sliceby=sample2 diff;

@@ -2398,7 +2398,7 @@ Created by: --
 Date Created: --
 
 Updated by: MH
-Date Updated: 04/05/2019
+Date Updated: 05/03/2019
 
 Description: This section uses the SP and OP data files and imputes
 hours of help provided to SP per methods in NHATS Technical Paper #7
@@ -2460,7 +2460,7 @@ gen metro_ind`w'=r`w'd==1 if inrange(r`w'd,1,2)
 reshape long metro_ind, i(spid) j(wave)
 label var metro_ind "Lives in metropolitan area"
 note metro_ind: From metro non-metro file, r(wave)dmetnomet raw variable. 
-
+note metro_ind: Metropolitan area. 
 label define metro_ind  0 "Non-Metro" 1 "Metro" 
 label values metro_ind metro_ind
 
@@ -2473,6 +2473,18 @@ use round_1_$w_clean_helper_added.dta
 merge 1:1 spid wave using `metro', keep(match master) nogen
 
 
+// 5/1/2018 P01 Aldridge
+
+gen unmet_relg_lml=.
+replace unmet_relg_lml=1 if relg==2
+replace unmet_relg_lml=0 if relg==1
+label var unmet_relg_lml "Unmet Spiritual need, LML"
+
+note unmet_relg_lml: relg
+note unmet_relg_lml: Doctors, nurses, or other health care professionals talk ///
+about religious beliefs. 
+note unmet_relg_lml: Located in NHATS Setup, under Part 7.
+note unmet_relg_lml: Created: 5/1/19-MH  
 // 3/21/2019--Adding LM questions from LML interview section, P01 Aldridge
 
 gen qoc_lml_e=.
@@ -2482,6 +2494,7 @@ note qoc_lml_e: ratecare (1=1)
 note qoc_lml_e: Quality of Care rated as excellent. Coming from LM11 (Waves 2+) 
 note qoc_lml_e: Located in NHATS Setup, under Part 7.
 note qoc_lml_e: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var qoc_lml_e "Quality of Care rated excellent, LML"
 /*
 gen qoc_lml=ratecare
 replace qoc_lml=. if inlist(ratecare,-8,-7,-1,6)
@@ -2496,16 +2509,19 @@ note unmet_pain_lml: pain painhlp painhlpam
 note unmet_pain_lml: Unmet needs for pain management. Coming from LM1, LM1A, LM1B (Waves 2+) 
 note unmet_pain_lml: Located in NHATS Setup, under Part 7.
 note unmet_pain_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var unmet_pain_lml "Unmet need for pain management, LML"
 
 note unmet_bre_lml: bre brehlp brehlpam
 note unmet_bre_lml: Unmet needs for dyspnea (breathing) management. Coming from LM2, LM2A, LM2B (Waves 2+) 
 note unmet_bre_lml: Located in NHATS Setup, under Part 7.
 note unmet_bre_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var unmet_bre_lml "Unmet need for dyspnea (breathing) management, LML"
 
 note unmet_sad_lml: sad sadhlp sadhlpam
 note unmet_sad_lml: Unmet needs for sadness (anxiety) management. Coming from LM3, LM3A, LM3B (Waves 2+) 
 note unmet_sad_lml: Located in NHATS Setup, under Part 7.
 note unmet_sad_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var unmet_sad_lml "Unmet need for sadness (anxiety) management, LML"
 
 foreach x in respect informed{
 gen `x'_lml=.
@@ -2517,11 +2533,13 @@ note respect_lml: respect
 note respect_lml: Not always treated with respect. Coming from LM7 (Waves 2+) 
 note respect_lml: Located in NHATS Setup, under Part 7.
 note respect_lml: Updated: 4/16/19-MH Created: 3/21/19-MH    
+label var respect_lml "Not always treated with respect, LML"
 
 note informed_lml: informed
 note informed_lml: Family not always informed for individuals condition. Coming from LM8 (Waves 2+) 
 note informed_lml: Located in NHATS Setup, under Part 7.
 note informed_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var informed_lml "Family not informed about SP's condition, LML"
 
 foreach x in caredecis carenowan{
 gen `x'_lml=. 
@@ -2533,12 +2551,13 @@ note caredecis_lml: caredecis
 note caredecis_lml: Inadequate input about care decisions. Coming from LM4 (Waves 2+) 
 note caredecis_lml: Located in NHATS Setup, under Part 7.
 note caredecis_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
+label var caredecis_lml " Inadequate input about care decisions, LML"
 
 note carenowan_lml: carenowan
 note carenowan_lml: Care not consistent with goals. Unwanted Care. Coming from LM5 (Waves 2+) 
 note carenowan_lml: Located in NHATS Setup, under Part 7.
 note carenowan_lml: Updated: 4/16/19-MH Created: 3/21/19-MH  
-
+label var carenowan_lml "Care not consistent with goals, LML"
 
 //1/28/2019-Advance Care Planning based off of Ornstein instructions
 
@@ -2615,10 +2634,10 @@ label var serarmfor "Served in Armed Forces"
 sort spid wave
 by spid: carryforward serarmfor, replace
 notes drop serarmfor
-note serarmfor: Asked in rounds 1,5. Used serarmfor to find. 
-note serarmfor: Served in Arm Forces variable, carried previous value to new wave. 
-note formal_acp: Located in NHATS Setup, under Part 7.
-note formal_acp: Created: 7/3/18-MH
+note serarmfor: serarmfor
+note serarmfor: Served in Arm Forces variable, carried previous value to new wave. Asked in waves 1,5.
+note serarmfor: Located in NHATS Setup, under Part 7.
+note serarmfor: Created: 7/3/18-MH
 
 
 //Add in 4/6/18
@@ -3407,35 +3426,33 @@ label values impclub pa1imparclub
 
 notes attrelig : attrelser (same)
 notes attrelig : Ever attend religious services 
-notes attrelig : Located in NHATS Setup, under Part 7.
-notes attrelig : Updated: 04/09/19-MH
 
 notes imprelig : imprelser (same)
 notes imprelig : How important are religious services, very, somewhat, or not so important. 
-notes imprelig : Located in NHATS Setup, under Part 7.
-notes imprelig : Updated: 04/09/19-MH
 
 notes visitfrfam : visfrfam (same)
 notes visitfrfam : Ever visit in person with friends or family, not living with.
-notes visitfrfam : Located in NHATS Setup, under Part 7.
-notes visitfrfam : Updated: 04/09/19-MH
 
 notes impvisit : impvstfam (same)
 notes impvisit : How important to visit in person with friends or family not living with. 
-notes impvisit : Located in NHATS Setup, under Part 7.
-notes impvisit : Updated: 04/09/19-MH
+
+notes impclub: imparclub 
+notes impclub: Importance of club/class/etc. participation
 
 notes attclub : clbmtgrac (same)
 notes attclub : Ever participate in clubs, classes, or other organized activites. 
-notes attclub : Located in NHATS Setup, under Part 7.
-notes attclub : Updated: 04/09/19-MH
 
 notes vigact : vigoractv (same)
 notes vigact : Ever spend time on vigorous activites that increased heart rate. ///
 Working out, swimming, running, biking, or any sport.  
-notes vigact : Located in NHATS Setup, under Part 7.
-notes vigact : Updated: 04/09/19-MH
 
+notes religvimp: imprelig 
+notes religvimp: Religious services are important, binary. 
+
+foreach x in attrelig imprelig visitfrfam impvisit impclub attclub vigact religvimp {
+notes `x' : Located in NHATS Setup, under Part 7.
+notes `x' : Updated: 04/09/19-MH
+}
 
 //smokin'
 gen smokedever=. 
@@ -3488,8 +3505,9 @@ replace smokesnow=0 if smokedever==0
 replace numcigsnow=0 if smokesnow==0
 
 notes smokesnow: smokedever
-notes smokesnow: 
-
+notes smokesnow: Smokes at this wave
+notes smokesnow: Located in NHATS Setup, under Part 7.
+notes smokesnow: Updated: 05/03/19-MH
 
 label var smokedever "Ever smoked"
 label var smokesnow "Smokes now"
@@ -3500,6 +3518,11 @@ label var smoke_stop_age "Age stopped smoking"
 
 notes numcigsever: Located in NHATS Setup, under Part 7.
 notes numcigsever: Updated: 04/10/19-MH
+
+notes numcigsnow: numcigday smokesnow
+notes numcigsnow: Number of cigarettes/day currently
+notes numcigsnow: Located in NHATS Setup, under Part 7.
+notes numcigsnow: Updated: 05/03/19-MH
 
 //pain
 gen ind_pain=.
@@ -3644,6 +3667,11 @@ notes adl_ins_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 he
 
 notes adl_ins_diff: insddif
 notes adl_ins_diff: How much difficulty getting around inside. 
+notes adl_ins_not_done: dinsdsfdf
+notes adl_ins_not_done: Move inside by self
+notes adl_ins_not_done:  E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
+
+
 gen adl_bed_help = .
 gen adl_bed_diff=.
 gen adl_bed_not_done=.
@@ -3666,6 +3694,10 @@ notes adl_bed_help : mo*bedhlp
 notes adl_bed_help : "_"
 notes adl_bed_help : E:\nhats\nhats\code\NHATS data setup\NHATS_Setup, step-7 header
 
+notes adl_bed_not_done: dbedsfdf
+notes adl_bed_not_done: Get out of bed
+notes adl_bed_not_done: Located in NHATS Setup, under Part 7.
+notes adl_bed_not_done: Updated: 05/03/19-MH
 
 //construct date of ivw--use 1st of month for all, because only have mo & yr
 
@@ -4014,12 +4046,12 @@ notes cohesion_knowwell: knowwell
 notes cohesion_knowwell: People in the community know each other well. Agree a lot, a little, do not agree.
 notes cohesion_willing: willinghlp
 notes cohesion_willing: People in the community are willing to help each other. Agree a lot, a little, do not agree.
-notes cohesion_knowwell: peoptrstd
-notes cohesion_knowwell: People in the community can be trusted. Agree a lot, a little, do not agree.
+notes cohesion_peop: peoptrstd
+notes cohesion_peop: People in the community can be trusted. Agree a lot, a little, do not agree.
 notes cohesion: knowwell willinghlp peoptrstd
 notes cohesion: Agree a lot on all to get high community cohesion. 
 
- foreach x in cohesion_knowwell cohesion_willing cohesion_knowwell cohesion {
+ foreach x in cohesion_knowwell cohesion_willing cohesion_peop cohesion {
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/11/19-MH
 }
@@ -4067,13 +4099,13 @@ replace `x'=`x'==1 if !missing(`x')
 }
 
 notes home_disorder_outsd: condhome1 condhome2 condhome3 condhome4 condhome5 condhome6
-notes home_disorder_outsd: If "yes" to any problems, then flagged
+notes home_disorder_outsd: If yes to any problems, then flagged
 notes home_disorder_area: areacond1 areacond2 areacond3 areacond4
-notes home_disorder_area: If "yes" to any problems, then flagged 
+notes home_disorder_area: If yes to any problems, then flagged 
 notes home_disorder_clutter: clutterr1 clutterr2
-notes home_disorder_clutter: If "yes" to any problems, then flagged 
+notes home_disorder_clutter: If yes to any problems, then flagged 
 notes home_disorder_insd: condihom1 condihom2 condihom3 condihom4 condihom5
-notes home_disorder_insd: If "yes" to any problems, then flagged 
+notes home_disorder_insd: If yes to any problems, then flagged 
 
  foreach x in home_disorder_outsd home_disorder_area home_disorder_clutter home_disorder_insd {
 notes `x': Located in NHATS Setup, under Part 7.
@@ -4125,7 +4157,11 @@ notes medpaynotcash: credcdmed
 notes medpaynotcash: Any amount owed on credit cards for medical care.
 notes govtasst: progneed1 progneed2 progneed3
 notes govtasst: Recieved food stamps, other food assistance, or gas energy assistance. 
- foreach x in creditdebt medpaynotcash govtasst{
+notes medcreditdebt: credcdmed
+notes medcreditdebt: Any amount owed on credit cards for medial care.
+notes medbillsovertime: medpaovtm
+notes medbillsovertime: Have any medical bills being paid off over time. 
+ foreach x in creditdebt medpaynotcash govtasst medcreditdebt medbillsovertime{
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/11/19-MH
 }
@@ -4235,7 +4271,9 @@ notes rentpaid: rentamt
 notes rentpaid: Rent paid each month.
 notes section8: sec8pubsn
 notes section8: Home in section 8 or public housing or housing for low-income seniors. 
- foreach x in ownhome rent mortgagepaidoff paysmortgage mortpaymt owedonmort homevalue rentpaid section8{
+notes timeinmort: whnpayoff
+notes timeinmort: How much longer are you planning to be in mortgage. (5, 10, 10+)
+ foreach x in ownhome rent mortgagepaidoff paysmortgage mortpaymt owedonmort homevalue rentpaid section8 timeinmort{
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/11/19-MH
 }
@@ -4277,13 +4315,15 @@ replace west=1 if region==4
 
 notes division: dcensdiv
 notes division: Census division
+notes region: dcensdiv
+notes region: 4 regions
 notes n_social_network: dnumsn
 notes n_social_network: Number in social network
-foreach x in northeast midwest south west{
+foreach x in northeast midwest south west {
 notes `x': dcensdiv
 notes `x': `x' census division
 }
-foreach x in division n_social_network northeast midwest south west {
+foreach x in division n_social_network northeast midwest south west region {
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/11/19-MH
 }
@@ -4541,6 +4581,10 @@ notes device_mobility: If annswered most or everytime to having mobility device 
 question indicated. 
 notes any_paid_by_medicare: paid_by_gov_cat_2 from progmpaid 
 notes any_paid_by_medicare: Medicare program paid for helper. 
+notes any_paid_by_medicaid: paid_by_gov_cat_1 from progmpaid 
+notes any_paid_by_medicaid: Medicaid program paid for helper. 
+notes any_paid_by_state: paid_by_gov_cat_3 from progmpaid 
+notes any_paid_by_state: State Program paid for helper. 
 notes any_paid_by_sp: paid_by_sp from sppayshlp
 notes any_paid_by_sp: SP pays for help
 notes any_paid_by_gov: paid_by_gov from govpayshlp
@@ -4570,11 +4614,26 @@ notes tot_otherfamilyhrs: hrswk
 notes tot_otherfamilyhrs: Other family hours. 
 notes tot_otherinformalhrs: hrswk
 notes tot_otherinformalhrs: From other unpaid sources. 
-
+notes any_paid_by_gov_cat_1: op*progmpaid 
+notes any_paid_by_gov_cat_1: Medicaid paid for helper.
+notes any_paid_by_gov_cat_2: op*progmpaid 
+notes any_paid_by_gov_cat_2: Medicare paid for helper.
+notes any_paid_by_gov_cat_3: op*progmpaid 
+notes any_paid_by_gov_cat_3: State Program paid for helper.
+notes any_paid_by_gov_cat_oth: op*progmpaid 
+notes any_paid_by_gov_cat_oth: Other program paid for helper.
+notes any_paid_by_gov_cat_unknown: op*progmpaid 
+notes any_paid_by_gov_cat_unknown: DK/RF, who paid for helper.
+notes ind_gt20hrs_wk_inf: tot_hrswk_help_i
+notes ind_gt20hrs_wk_inf: Greater than 20 hours of informal help, imputed
+notes ind_gt20hrs_wk_paid: tot_hrswk_help_i
+notes ind_gt20hrs_wk_paid: Greater than 20 hours of paid help, imputed
 foreach x in n_children stairs_ind livesalone_ind ind_kids adlcount iadlcount ///
 device_mobility any_paid_by_medicare any_paid_by_sp any_paid_by_gov any_paid_by_ins ///
 any_paid_by_oth any_paid_by_unk otherfamily_help_ind spouse_help_ind daughter_help_ind ///
-son_help_ind daughter_help_ind paid_help_ind otherinformal tot_otherfamilyhrs tot_otherinformalhrs { 
+son_help_ind daughter_help_ind paid_help_ind otherinformal tot_otherfamilyhrs ///
+tot_otherinformalhrs any_paid_by_gov_cat_1 any_paid_by_gov_cat_2 any_paid_by_gov_cat_3 any_paid_by_gov_cat_oth ///
+any_paid_by_gov_cat_unknown any_paid_by_medicaid any_paid_by_state ind_gt20hrs_wk_inf ind_gt20hrs_wk_paid{ 
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/12/19-MH
 }
@@ -4650,9 +4709,24 @@ notes iadl_bank_diff: ha*bankdif
 notes iadl_bank_diff: How much difficulty doing banking and handling bills. Any difficulty flagged.
 notes iadl_meds_diff: mc*medsdif
 notes iadl_meds_diff: How much difficulty keeping track of meds. Any difficulty flagged.
+notes adl_diff_index: adl*index
+notes adl_diff_index: Count of ADL difficulties. Missing is zero.
+notes adl_diff_ind: adl_diff_index
+notes adl_diff_ind: Indicator of any ADL difficulty reported. Missing is zero.
+notes iadl_diff_index: iadl*index
+notes iadl_diff_index: Count of IADL difficulties. Missing is zero.
+notes iadl_diff_ind: iadl_diff_index
+notes iadl_diff_ind: Indicator of any IADL difficulty reported. Missing is zero. 
+notes ind_meds_diff: medsdif meds dmedsrea medstrk
+notes ind_meds_diff: Any difficulty keping track of meds
+notes ind_meds_mistake: medsmis
+notes ind_meds_mistake: Mistake taking meds.
+notes ind_meds_problem: ind_meds_diff ind_meds_mistake
+notes ind_meds_problem: Keeping track of or mistake taking meds.
 
 foreach x in adl_bed_diff adl_ins_diff adl_eat_diff adl_bath_diff adl_toil_diff adl_dres_diff ///
-iadl_laun_diff iadl_shop_diff iadl_meal_diff iadl_bank_diff iadl_meds_diff{
+iadl_laun_diff iadl_shop_diff iadl_meal_diff iadl_bank_diff iadl_meds_diff adl_diff_index ///
+adl_diff_ind iadl_diff_index iadl_diff_ind {
 notes `x': Located in NHATS Setup, under Part 7.
 notes `x': Updated: 04/12/19-MH
 }
@@ -4736,6 +4810,7 @@ notes old_an2011wgt : Freedman, VA and BC Spillman. Making National Estimates...
 
 /*Add notes for raw variables or variables that were created in earlier headers*/
 notes varstrat : r*varstrat
+notes varstrat: Stratified sampling
 notes varunit : r*varunit
 notes wave : "_"
 notes wave : Wave assigned to round number
@@ -5002,6 +5077,14 @@ tot_hrsmonth_paid_i tot_hrswk_paid_i ind_no_helpers{
 notes `x': Located in NHATS Setup, under Part 6.
 notes `x': Updated: 04/25/19-MH
 }
+notes sr_depr_pqq1: depresan1
+notes sr_depr_pqq1: Little interest or pleasure doing things.
+notes sr_depr_pqq2: depresan2
+notes sr_depr_pqq2: Felt down, depressed, hopeless.
+notes sr_anx_gad1: depresan3
+notes sr_anx_gad1: Felt nervous, anxious, on edge.
+notes sr_anx_gad2: depresan4
+notes sr_anx_gad2: Been unable to stop or control worrying. 
 notes sr_phq2_score: depresan1 depresan2 made into sr_depr_pqq1 sr_depr_pqq2
 notes sr_phq2_score: Adding sr_depr_pqq1 and sr_depr_pqq2 to get a score. Had little ///
 interest doing things; felt hopeless, down, or depressed.
@@ -5023,7 +5106,66 @@ notes `x': Located in NHATS Setup, under Part 4.
 notes `x': Updated: 04/29/19-MH
 }
 
-
+notes spid: spid
+notes spid: Sample person identifier
+notes ntlvrmslp: ntlvrmslp
+notes ntlvrmslp: Did not leave bedroom flag
+notes eatdev: eatdev
+notes eatdev: Use eating adapted eating utensils. 
+notes dresslf: dresslf
+notes dresslf: How often get dressed by self with no help.
+notes dresdif: dresdif
+notes dresdif: Use special items to help you get dressed. 
+notes yearsample: "_"
+notes yearsample: Year SP entered sample. 
+forvalues w=1/$w{
+notes r`w'status: r`w'status
+notes r`w'status: status from traker file
+}
+notes trfinwgt: trfinwgt
+notes trfinwgt: Tracker weight
+notes tr2011wgt: tr2011wgt
+notes tr2011wgt: 2011 Tracker weight
+notes sp_status: nhres res_care deceased
+notes sp_status: Status of the SP in that wave. 
+notes ivw_day: spstatdtdy
+notes ivw_day: From restricted tracker day of interview
+notes ivw_month: spstatdtmt fqstatdtmt 
+notes ivw_month: From restricted tracker month of interview
+notes ivw_year: spstatdtyr 
+notes ivw_year: From restricted tracker year of interview
+notes death_date: dd_claims dd_nhats
+notes death_date: from claims or tracker
+notes death_month: dd_claims dd_nhats
+notes death_month: from claims or tracker
+notes death_year: dd_claims dd_nhats
+notes death_year: from claims or tracker
+notes death_source: dd_claims dd_nhats
+notes death_source: Death date source from claims, nhats, both. 
+notes nhats_death_day: pd*mthdied pd*yrdied
+notes nhats_death_day: NHATS death date
+notes nhats_death_month: pd*mthdied
+notes nhats_death_month: NHATS death month
+notes nhats_death_year: pd*yrdied
+notes nhats_death_year: NHATS death year
+notes tot_spousehrs: op_hrswk_i 
+notes tot_spousehrs: Hours of help from spouse sources
+notes tot_daughterhrs: op_hrswk_i 
+notes tot_daughterhrs: Hours of help from daughter sources
+notes tot_sonhrs: op_hrswk_i 
+notes tot_sonhrs: Hours of help from son sources
+notes tot_paidhrs: op_hrswk_i 
+notes tot_paidhrs: Hours of help from paid sources
+foreach x in sp_status nhats_death_day nhats_death_month nhats_death_year ///
+death_source death_year death_month death_date ivw_year ivw_month ivw_day ///
+tot_spousehrs tot_daughterhrs tot_sonhrs tot_paidhrs{
+notes `x': Located in NHATS Setup, under Part 7.
+notes `x': Updated: 05/03/19-MH
+}
+notes ivw_type: r*spstat r*status
+notes ivw_type: Determining if SP or Proxy completed interview. 
+notes sp_ivw_yes: r*spstat
+notes sp_ivw_yes: If SP completed interview
 
 keep spid old_anfinwgt varstrat varunit wave yearsample r7status r6status r5status r4status r3status r2status r1status ivw_type sp_ivw_yes lml_ivw_yes proxy_ivw freq_go_out ///
 help_go_out out_on_own needshelp hasdifficulty helpdiff independent homebound_cat never_go_out indeplow indephigh age female race_cat education educ_hs_ind imputed_inc1 ///
@@ -6599,6 +6741,10 @@ H="Changelog"
 
 
 Updates:
+05/01/2019 MH
+----------
+Adding in Unmet Religious need from LML interview. 
+
 04/19/2019 MH
 ----------
 Adding Notes, rewriting code. 
